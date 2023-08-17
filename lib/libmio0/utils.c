@@ -1,16 +1,17 @@
-#include <dirent.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(_WIN32)
   #include <io.h>
   #include <sys/utime.h>
+  #include <nposix/dirent.h>
 #else
   #include <unistd.h>
   #include <utime.h>
+  #include <dirent.h>
 #endif
 
 #include "utils.h"

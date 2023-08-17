@@ -3,6 +3,7 @@
 extern "C" {
 #include <libmio0/mio0.h>
 }
+#include <stdexcept>
 
 std::unordered_map<uint32_t, std::vector<char>> MIO0Decoder::gCachedChunks;
 
@@ -11,7 +12,7 @@ std::vector<char>& MIO0Decoder::Decode(std::vector<uint8_t>& buffer, uint32_t of
 
 	mio0_header_t head;
 	if(!mio0_decode_header(in_buf, &head)){
-        throw std::runtime_error("Invalid MIO0 header");
+        throw std::runtime_error("Failed to decode MIO0 header");
     }
 
     uint8_t* decompressed = new uint8_t[head.dest_size];
