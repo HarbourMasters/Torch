@@ -15,6 +15,6 @@
 class RawFactory {
 public:
     RawFactory() = default;
-    virtual void process(LUS::BinaryWriter* write, nlohmann::json& data, std::vector<uint8_t>& buffer) = 0;
+    virtual bool process(LUS::BinaryWriter* write, nlohmann::json& data, std::vector<uint8_t>& buffer) = 0;
     void WriteHeader(LUS::BinaryWriter* write, LUS::ResourceType resType, int32_t version);
 };

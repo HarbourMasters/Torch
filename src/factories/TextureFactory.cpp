@@ -29,35 +29,34 @@ static const std::unordered_map <std::string, TextureType> gTextureTypes = {
 	{ ".ia16", TextureType::GrayscaleAlpha16bpp },
 };
 
-void TextureFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std::vector<uint8_t>& buffer) {
+bool TextureFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std::vector<uint8_t>& buffer) {
 	std::string path = data["path"];
 	std::string ext = fs::path(path).extension().string();
 
 	bool isTileTexture = path.find("cake") != std::string::npos || path.find("skyboxes") != std::string::npos;
 
 	if(isTileTexture) {
-		return;
+		return false;
 	}
 
 	if(!gTextureTypes.contains(ext)) {
-		throw std::runtime_error("Invalid texture type: " + ext);
+		return false;
 	}
 
     auto metadata = data["offsets"];
 	if(!metadata[3].contains("us")){
-		return;
+		return false;
 	}
 
 	// Path: [Width, Height, Size, { Country : [Rom Offset, MIO0 Size] }],
 
 	TextureType type = isTileTexture ? TextureType::RGBA32bpp : gTextureTypes.at(ext);
 
-    WRITE_HEADER(LUS::ResourceType::Texture, 1);
+    WRITE_HEADER(LUS::ResourceType::Texture, 0);
 
     WRITE_U32(type); // Texture Type
     WRITE_U32(metadata[0]); // Width
     WRITE_U32(metadata[1]); // Height
-
 	size_t size = metadata[2];
 	auto offsets = metadata[3]["us"];
 
@@ -75,4 +74,5 @@ void TextureFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, st
 
 	delete[] texture;
 	std::cout << "Processed " << path << '\n';
+	return true;
 }

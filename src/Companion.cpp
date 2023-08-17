@@ -48,10 +48,14 @@ void Companion::ProcessAssets() {
             { "path", path },
             { "offsets", data }
         };
-        gFactories.at(extension)->process(&write, entry, this->gRomData);
+        if(!gFactories.at(extension)->process(&write, entry, this->gRomData)){
+            std::cout << "Failed to process " << asset << '\n';
+            continue;
+        }
 
         auto buffer = write.ToVector();
-        wrapper.CreateFile(path, buffer);
+        // TODO: Change this that we all know its going to crash with other assets
+        wrapper.CreateFile(path.substr(0, path.find_last_of('.')), buffer);
         write.Close();
     }
 
