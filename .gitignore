@@ -4,3 +4,6 @@ cmake-build-*/
 *.otr
 *.log
 .DS_Store
+debug/
+*.z64
+*.n64

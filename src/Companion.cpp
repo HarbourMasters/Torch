@@ -3,6 +3,7 @@
 #include "storm/SWrapper.h"
 #include "utils/MIODecoder.h"
 #include "factories/RawFactory.h"
+#include "factories/BlobFactory.h"
 #include "factories/TextureFactory.h"
 
 #include <fstream>
@@ -14,7 +15,9 @@ using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 static const std::unordered_map<std::string, RawFactory*> gFactories = {
-    { ".png", new TextureFactory() }
+    { ".png", new TextureFactory() },
+    { ".bin", new BlobFactory(LUS::ResourceType::Blob) },
+    { ".sbox", new BlobFactory(LUS::ResourceType::Blob, true) },
 };
 
 void Companion::Start() {
@@ -48,14 +51,29 @@ void Companion::ProcessAssets() {
             { "path", path },
             { "offsets", data }
         };
-        if(!gFactories.at(extension)->process(&write, entry, this->gRomData)){
+        RawFactory* factory = gFactories.at(extension);
+
+        if(!factory->process(&write, entry, this->gRomData)){
             std::cout << "Failed to process " << asset << '\n';
             continue;
         }
 
+	    std::cout << "Processed " << path << std::endl;
+        bool isTexture = typeid(*factory) == typeid(TextureFactory);
+
         auto buffer = write.ToVector();
         // TODO: Change this that we all know its going to crash with other assets
-        wrapper.CreateFile(path.substr(0, path.find_last_of('.')), buffer);
+        wrapper.CreateFile(isTexture ? path.substr(0, path.find_last_of('.')) : path, buffer);
+
+        if(!isTexture) {
+            // Write to file too
+            std::string dpath = "debug/" + path;
+            fs::create_directories(fs::path(dpath).parent_path());
+            std::ofstream output(dpath, std::ios::binary);
+            output.write((char*)buffer.data(), buffer.size());
+            output.close();
+        }
+
         write.Close();
     }
 
