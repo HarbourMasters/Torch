@@ -73,6 +73,5 @@ bool TextureFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, st
 	WRITE_ARRAY(texture, size); // Texture Data
 
 	delete[] texture;
-	std::cout << "Processed " << path << '\n';
 	return true;
 }

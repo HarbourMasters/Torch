@@ -5,6 +5,7 @@
 #include "factories/RawFactory.h"
 #include "factories/BlobFactory.h"
 #include "factories/TextureFactory.h"
+#include "factories/AnimFactory.h"
 
 #include <fstream>
 #include <iostream>
@@ -16,8 +17,10 @@ namespace fs = std::filesystem;
 
 static const std::unordered_map<std::string, RawFactory*> gFactories = {
     { ".png", new TextureFactory() },
+    { ".anim", new AnimFactory() },
     { ".bin", new BlobFactory(LUS::ResourceType::Blob) },
     { ".sbox", new BlobFactory(LUS::ResourceType::Blob, true) },
+    { ".aud", new BlobFactory(LUS::ResourceType::Blob, false) },
 };
 
 void Companion::Start() {
@@ -58,7 +61,6 @@ void Companion::ProcessAssets() {
             continue;
         }
 
-	    std::cout << "Processed " << path << std::endl;
         bool isTexture = typeid(*factory) == typeid(TextureFactory);
 
         auto buffer = write.ToVector();
@@ -73,6 +75,8 @@ void Companion::ProcessAssets() {
             output.write((char*)buffer.data(), buffer.size());
             output.close();
         }
+
+        std::cout << "Processed " << path << std::endl;
 
         write.Close();
     }

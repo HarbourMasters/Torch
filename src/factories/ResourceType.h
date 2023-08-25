@@ -18,5 +18,6 @@ enum class ResourceType {
     // CubeOS
     Demo = 0x44454D4F,        // DEMO
     Skybox = 0x534B5942,      // SKYB
+    Anim = 0x414E494D,        // ANIM
 };
 } // namespace LUS
