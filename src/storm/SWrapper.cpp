@@ -16,10 +16,6 @@ SWrapper::SWrapper(const std::string& path) {
     }
 }
 
-SWrapper::~SWrapper() {
-    SFileCloseArchive(this->hMpq);
-}
-
 bool SWrapper::CreateFile(std::string path, std::vector<char> data) {
     HANDLE hFile;
 #ifdef _WIN32
@@ -63,5 +59,9 @@ bool SWrapper::CreateFile(std::string path, std::vector<char> data) {
 }
 
 void SWrapper::Close() {
+    if(this->hMpq == nullptr) {
+        std::cout << "Archive already closed" << std::endl;
+        return;
+    }
     SFileCloseArchive(this->hMpq);
 }

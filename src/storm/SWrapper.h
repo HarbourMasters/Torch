@@ -7,7 +7,6 @@
 class SWrapper {
 public:
     SWrapper(const std::string& path);
-    ~SWrapper();
 
     std::vector<char> ReadFile(std::string path);
     bool CreateFile(std::string path, std::vector<char> data);
