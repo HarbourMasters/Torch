@@ -64,9 +64,9 @@ bool TextureFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, st
 
     if(offsets.size() > 1){
         auto mio0 = MIO0Decoder::Decode(buffer, offsets[0]);
-        memcpy(texture, mio0.data() + offsets[1], size);
+        memcpy(texture, mio0.data() + (size_t)offsets[1], size);
     } else {
-        memcpy(texture, buffer.data() + offsets[0], size);
+        memcpy(texture, buffer.data() + (size_t)offsets[0], size);
     }
 
 	WRITE_U32(size); // Texture Data Size

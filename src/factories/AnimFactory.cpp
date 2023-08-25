@@ -9,7 +9,7 @@
 namespace fs = std::filesystem;
 
 void WriteAnimationHeader(LUS::BinaryWriter* writer, nlohmann::json& offsets, std::vector<uint8_t>& buffer) {
-	LUS::BinaryReader reader((char*) buffer.data() + offsets[0], offsets[1]);
+	LUS::BinaryReader reader((char*) buffer.data() + (size_t)offsets[0], offsets[1]);
 	reader.SetEndianness(LUS::Endianness::Big);
 
 	auto flags = reader.ReadInt16();
@@ -33,7 +33,7 @@ void WriteAnimationHeader(LUS::BinaryWriter* writer, nlohmann::json& offsets, st
 }
 
 void WriteAnimationIndex(LUS::BinaryWriter* writer, nlohmann::json& offsets, std::vector<uint8_t>& buffer) {
-	LUS::BinaryReader reader((char*) buffer.data() + offsets[0], offsets[1]);
+	LUS::BinaryReader reader((char*) buffer.data() + (size_t)offsets[0], offsets[1]);
 	reader.SetEndianness(LUS::Endianness::Big);
 	size_t entries = ((size_t) offsets[1]);
 	WRITE_U32(entries);
@@ -44,7 +44,7 @@ void WriteAnimationIndex(LUS::BinaryWriter* writer, nlohmann::json& offsets, std
 }
 
 void WriteAnimationValues(LUS::BinaryWriter* writer, nlohmann::json& offsets, std::vector<uint8_t>& buffer) {
-	LUS::BinaryReader reader((char*) buffer.data() + offsets[0], offsets[1]);
+	LUS::BinaryReader reader((char*) buffer.data() + (size_t)offsets[0], offsets[1]);
 	reader.SetEndianness(LUS::Endianness::Big);
 	size_t entries = ((size_t) offsets[1]);
 	WRITE_U32(entries);

@@ -25,9 +25,9 @@ bool BlobFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std::
 	auto* blob = new uint8_t[size];
 	if(this->isMIOChunk){
 		auto mio0 = MIO0Decoder::Decode(buffer, offsets[0]);
-        memcpy(blob, mio0.data() + offsets[1], size);
+        memcpy(blob, mio0.data() + (size_t)offsets[1], size);
 	} else {
-    	memcpy(blob, buffer.data() + offsets[0], size);
+    	memcpy(blob, buffer.data() + (size_t)offsets[0], size);
 	}
 
 	WRITE_U32(size); // Blob Data Size

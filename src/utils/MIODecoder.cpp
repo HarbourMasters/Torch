@@ -4,6 +4,7 @@ extern "C" {
 #include <libmio0/mio0.h>
 }
 #include <stdexcept>
+#include <cstdint>
 
 std::unordered_map<uint32_t, std::vector<char>> MIO0Decoder::gCachedChunks;
 

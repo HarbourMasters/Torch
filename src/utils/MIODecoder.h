@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <cstdint>
 
 class MIO0Decoder {
 public:
