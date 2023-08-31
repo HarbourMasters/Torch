@@ -525,8 +525,6 @@
 "actors/yoshi_egg/yoshi_egg_5_unused.rgba16.png": [32,32,2048,{"jp":[1215456,32696],"us":[1222624,32696],"eu":[1094592,32696],"sh":[1071104,32696]}],
 "actors/yoshi_egg/yoshi_egg_6_unused.rgba16.png": [32,32,2048,{"jp":[1215456,34744],"us":[1222624,34744],"eu":[1094592,34744],"sh":[1071104,34744]}],
 "actors/yoshi_egg/yoshi_egg_7_unused.rgba16.png": [32,32,2048,{"jp":[1215456,36792],"us":[1222624,36792],"eu":[1094592,36792],"sh":[1071104,36792]}],
-"sound/sequences.aud": [114432, { "us": [8063072] }],
-"sound/bank_sets.aud": [159, { "us": [8177185] }],
 "assets/demos/bbh.bin": [988,{"jp":[5733368],"us":[5741664],"eu":[5620584],"sh":[5589632]}],
 "assets/demos/bitdw.bin": [1412,{"us":[5747100],"sh":[5595068]}],
 "assets/demos/ccm.bin": [1320,{"jp":[5734356],"us":[5742652],"eu":[5621572],"sh":[5590620]}],
@@ -1088,6 +1086,7 @@
 "sound/sequences/sh/20_cutscene_ending.m64": [1887,{"sh":[7981824]}],
 "sound/sequences/sh/21_menu_file_select.m64": [786,{"sh":[7983712]}],
 "sound/sequences/sh/22_cutscene_lakitu.m64": [317,{"sh":[7984512]}],
+"sound/sequences/us/00_sound_player.m64": [13452,{"us":[8063360]}],
 "sound/sequences/us/01_cutscene_collect_star.m64": [619,{"us":[8076816]}],
 "sound/sequences/us/02_menu_title_screen.m64": [8254,{"us":[8077440]}],
 "sound/sequences/us/03_level_grass.m64": [5122,{"us":[8085696]}],
@@ -1122,6 +1121,13 @@
 "sound/sequences/us/20_cutscene_ending.m64": [1882,{"us":[8174192]}],
 "sound/sequences/us/21_menu_file_select.m64": [781,{"us":[8176080]}],
 "sound/sequences/us/22_cutscene_lakitu.m64": [313,{"us":[8176864]}],
+"@sound.aiff": {
+    "us": {
+        "bank_sets": [8177184, 160],
+        "sound_ctl": [5748512, 97856],
+        "sound_tbl": [5846368, 2216704]
+    }
+},
 "textures/cave/hmc_textures.00000.rgba16.png": [32,64,4096,{"jp":[3432432,0],"us":[3439184,0],"eu":[3312784,0],"sh":[3287152,0]}],
 "textures/cave/hmc_textures.01000.rgba16.png": [32,32,2048,{"jp":[3432432,4096],"us":[3439184,4096],"eu":[3312784,4096],"sh":[3287152,4096]}],
 "textures/cave/hmc_textures.01800.rgba16.png": [32,64,4096,{"jp":[3432432,6144],"us":[3439184,6144],"eu":[3312784,6144],"sh":[3287152,6144]}],

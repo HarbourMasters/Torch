@@ -11,6 +11,7 @@
 #define WRITE_U16(value) writer->Write((uint16_t) value)
 #define WRITE_U32(value) writer->Write((uint32_t) value)
 #define WRITE_U64(value) writer->Write((uint64_t) value)
+#define WRITE_I8(value) writer->Write((int8_t) value)
 #define WRITE_I16(value) writer->Write((int16_t) value)
 #define WRITE_DATA(vec) writer->Write((char*) vec.data(), data.size())
 #define WRITE_ARRAY(data, size) writer->Write((char*) data, size)
