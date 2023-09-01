@@ -34,6 +34,8 @@ class BinaryReader {
     uint16_t ReadUInt16();
     uint32_t ReadUInt32();
     uint64_t ReadUInt64();
+    unsigned short ReadUShort();
+    short ReadShort();
     float ReadFloat();
     double ReadDouble();
     std::string ReadString();

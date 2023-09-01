@@ -1121,7 +1121,7 @@
 "sound/sequences/us/20_cutscene_ending.m64": [1882,{"us":[8174192]}],
 "sound/sequences/us/21_menu_file_select.m64": [781,{"us":[8176080]}],
 "sound/sequences/us/22_cutscene_lakitu.m64": [313,{"us":[8176864]}],
-"@sound.aiff": {
+"@sound_data": {
     "us": {
         "bank_sets": [8177184, 160],
         "sound_ctl": [5748512, 97856],

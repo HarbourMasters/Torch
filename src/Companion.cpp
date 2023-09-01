@@ -2,6 +2,7 @@
 
 #include "storm/SWrapper.h"
 #include "utils/MIODecoder.h"
+#include "audio/AudioManager.h"
 #include "factories/RawFactory.h"
 #include "factories/BlobFactory.h"
 #include "factories/AudioFactory.h"
@@ -35,6 +36,9 @@ void Companion::Start() {
     // TODO: Validate hash
 
     std::cout << "Detected Rom Size: " << this->gRomData.size() << '\n';
+
+    AudioManager::Instance = new AudioManager();
+    AudioManager::Instance->initialize(this->gRomData);
 
     this->ProcessAssets();
 }
