@@ -1,6 +1,7 @@
 #include "AudioFactory.h"
 
 #include <vector>
+#include "audio/AudioManager.h"
 #include "binarytools/BinaryReader.h"
 
 bool AudioFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std::vector<uint8_t>& buffer) {
@@ -17,11 +18,13 @@ bool AudioFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std:
 			WRITE_I16(BSWAP16(value));
 		}
 		writer->Write(raw + 0x46, 0x5A);
+        return true;
 	}
 
-	if(path.ends_with(".aiff")){
-
+    if(!metadata[1].contains("us")){
+        return false;
     }
 
-	return false;
+    AudioManager::Instance->create_aifc(metadata[1]["us"][1], *writer);
+    return true;
 }

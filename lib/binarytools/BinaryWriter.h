@@ -33,8 +33,9 @@ class BinaryWriter {
     void Write(uint64_t value);
     void Write(float value);
     void Write(double value);
-    void Write(const std::string& str);
+    void Write(const std::string& str, bool writeLength = true);
     void Write(char* srcBuffer, size_t length);
+    void WriteByte(char value);
 
     std::vector<char> ToVector();
 

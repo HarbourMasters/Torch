@@ -51,7 +51,7 @@ void Companion::ProcessAssets() {
     for( auto& [asset, data] : assets.items() ) {
         std::string extension = fs::path(asset).extension().string();
         if( gFactories.find(extension) == gFactories.end() ) {
-            // std::cout << "No factory found for " << asset << '\n';
+             std::cout << "No factory found for " << asset << '\n';
             continue;
         }
         LUS::BinaryWriter write = LUS::BinaryWriter();
@@ -63,7 +63,7 @@ void Companion::ProcessAssets() {
         RawFactory* factory = gFactories.at(extension);
 
         if(!factory->process(&write, entry, this->gRomData)){
-            // std::cout << "Failed to process " << asset << '\n';
+             std::cout << "Failed to process " << asset << '\n';
             continue;
         }
 
@@ -84,7 +84,7 @@ void Companion::ProcessAssets() {
             output.close();
         }
 
-        // std::cout << "Processed " << path << std::endl;
+         std::cout << "Processed " << path << std::endl;
 
         write.Close();
     }

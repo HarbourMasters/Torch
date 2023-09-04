@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <unordered_map>
+#include "binarytools/BinaryWriter.h"
 
 #define NONE 0xFFFF
 #define ALIGN(val, al) (size_t) ((val + (al - 1)) & -al)
@@ -77,15 +78,15 @@ struct SampleBank {
     std::string name;
     uint32_t offset;
     std::vector<uint8_t> data;
-    std::unordered_map<uint32_t, AifcEntry> entries;
+    std::unordered_map<uint32_t, AifcEntry*> entries;
 
-    AifcEntry AddSample(uint32_t addr, size_t sampleSize, const Book& book, const Loop& loop);
+    AifcEntry* AddSample(uint32_t addr, size_t sampleSize, const Book& book, const Loop& loop);
 };
 
 struct TBLFile {
-    std::vector<SampleBank> banks;
+    std::vector<SampleBank*> banks;
     std::vector<std::string> tbls;
-    std::unordered_map<std::string, uint32_t> map;
+    std::unordered_map<std::string, SampleBank*> map;
 };
 
 struct CTLHeader {
@@ -103,13 +104,13 @@ struct Envelope {
 
 struct Bank {
     std::string name;
-    SampleBank sampleBank;
+    SampleBank* sampleBank;
     std::vector<Inst> insts;
     std::vector<Drum> drums;
     std::vector<std::variant<Inst, std::vector<Drum>>> allInsts;
     std::vector<uint32_t> instOffsets;
     std::unordered_map<uint32_t, Envelope> envelopes;
-    std::unordered_map<uint32_t, AifcEntry> samples;
+    std::unordered_map<uint32_t, AifcEntry*> samples;
     void print() const;
 };
 
@@ -117,8 +118,12 @@ class AudioManager {
 public:
     static AudioManager* Instance;
     void initialize(std::vector<uint8_t>& buffer);
+    void create_aifc(int32_t index, LUS::BinaryWriter& writer);
 
 private:
+    std::vector<Bank> banks;
+    TBLFile loaded_tbl;
+
     static std::vector<Entry> parse_seq_file(std::vector<uint8_t>& buffer, uint32_t offset, bool isCTL);
     static CTLHeader parse_ctl_header(std::vector<uint8_t>& data);
     static std::optional<Sound> parse_sound(std::vector<uint8_t> data);
@@ -126,10 +131,10 @@ private:
     static Inst parse_inst(std::vector<uint8_t>& data, uint32_t addr);
     static Loop parse_loop(uint32_t addr, std::vector<uint8_t>& bankData);
     static Book parse_book(uint32_t addr, std::vector<uint8_t>& bankData);
-    static AifcEntry parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank& sampleBank);
+    static AifcEntry* parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank);
     static std::vector<EnvelopeData> parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank);
-    static Bank parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank bank, uint32_t index);
+    static Bank parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank* bank, uint32_t index);
     static TBLFile parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& entries);
 
-    std::vector<Bank> banks;
+    static void write_aifc(AifcEntry* entry, LUS::BinaryWriter& writer);
 };
