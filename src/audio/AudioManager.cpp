@@ -8,7 +8,6 @@
 #include "hj/pyutils.h"
 #include "binarytools/BinaryReader.h"
 #include "hj/zip.h"
-#include "AIFCWriter.h"
 #include <nlohmann/json.hpp>
 
 std::unordered_map<std::string, uint32_t> name_table;
@@ -435,7 +434,6 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer) {
 
     auto zipped = zip(PyUtils::range(0, ctl.size()), ctl, this->loaded_tbl.tbls);
 
-//    std::cout << "================================" << std::endl;
     for (const auto& item : zipped) {
         auto [index, ctrl, sample_bank_name] = item;
         auto sample_bank = this->loaded_tbl.map[sample_bank_name];
@@ -444,8 +442,6 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer) {
         auto header = parse_ctl_header(headerRaw);
         auto bank = parse_ctl(header, PyUtils::slice(entry, 16), sample_bank, index);
         banks.push_back(bank);
-//        bank.print();
-//        std::cout << "================================" << std::endl;
     }
 
 

@@ -23,6 +23,7 @@ class BinaryReader {
 
     void Seek(int32_t offset, SeekOffsetType seekType);
     uint32_t GetBaseAddress();
+    size_t GetLength();
 
     void Read(int32_t length);
     void Read(char* buffer, int32_t length);

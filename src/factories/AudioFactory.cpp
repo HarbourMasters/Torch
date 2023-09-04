@@ -2,6 +2,7 @@
 
 #include <vector>
 #include "audio/AudioManager.h"
+#include "audio/AIFCDecode.h"
 #include "binarytools/BinaryReader.h"
 
 bool AudioFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std::vector<uint8_t>& buffer) {
@@ -25,6 +26,12 @@ bool AudioFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std:
         return false;
     }
 
-    AudioManager::Instance->create_aifc(metadata[1]["us"][1], *writer);
+    LUS::BinaryWriter aifcWriter;
+    AudioManager::Instance->create_aifc(metadata[1]["us"][1], aifcWriter);
+    std::vector<char> aifcData = aifcWriter.ToVector();
+    aifcWriter.Close();
+
+    write_aiff(aifcData, *writer);
+
     return true;
 }

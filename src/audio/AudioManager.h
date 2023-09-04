@@ -9,6 +9,19 @@
 #define NONE 0xFFFF
 #define ALIGN(val, al) (size_t) ((val + (al - 1)) & -al)
 
+namespace AIFC {
+    enum MagicValues {
+        FORM = 0x464f524d,
+        AIFC = 0x41494643,
+        COMM = 0x434f4d4d,
+        INST = 0x494e5354,
+        VAPC = 0x56415043,
+        SSND = 0x53534e44,
+        AAPL = 0x4150504c,
+        stoc = 0x73746f63,
+    };
+}
+
 struct Entry {
     uint32_t offset;
     uint32_t length;

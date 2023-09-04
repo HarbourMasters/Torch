@@ -58,7 +58,6 @@ int16_t LUS::BinaryReader::ReadInt16() {
     if (mEndianness != Endianness::Native) {
         result = BSWAP16(result);
     }
-
     return result;
 }
 
@@ -192,6 +191,7 @@ std::string LUS::BinaryReader::ReadString() {
     for (int i = 0; i < numChars; i++) {
         res += ReadChar();
     }
+
     return res;
 }
 
@@ -209,6 +209,10 @@ std::string LUS::BinaryReader::ReadCString() {
     } while (c != '\0');
 
     return res;
+}
+
+size_t LUS::BinaryReader::GetLength() {
+    return mStream->GetLength();
 }
 
 std::vector<char> LUS::BinaryReader::ToVector() {
