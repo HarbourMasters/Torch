@@ -2,6 +2,7 @@
 #include "MemoryStream.h"
 #include <cmath>
 #include <stdexcept>
+#include <locale>
 
 LUS::BinaryReader::BinaryReader(char* nBuffer, size_t nBufferSize) {
     mStream = std::make_shared<MemoryStream>(nBuffer, nBufferSize);
@@ -57,7 +58,6 @@ int16_t LUS::BinaryReader::ReadInt16() {
     if (mEndianness != Endianness::Native) {
         result = BSWAP16(result);
     }
-
     return result;
 }
 
@@ -108,6 +108,28 @@ uint64_t LUS::BinaryReader::ReadUInt64() {
 
     if (mEndianness != Endianness::Native) {
         result = BSWAP64(result);
+    }
+
+    return result;
+}
+
+unsigned short LUS::BinaryReader::ReadUShort() {
+    unsigned short result = 0;
+    mStream->Read((char*)&result, sizeof(unsigned short));
+
+    if (mEndianness != Endianness::Native) {
+        result = BSWAP16(result);
+    }
+
+    return result;
+}
+
+short LUS::BinaryReader::ReadShort() {
+    short result = 0;
+    mStream->Read((char*)&result, sizeof(short));
+
+    if (mEndianness != Endianness::Native) {
+        result = BSWAP16(result);
     }
 
     return result;
@@ -169,6 +191,7 @@ std::string LUS::BinaryReader::ReadString() {
     for (int i = 0; i < numChars; i++) {
         res += ReadChar();
     }
+
     return res;
 }
 
@@ -186,6 +209,10 @@ std::string LUS::BinaryReader::ReadCString() {
     } while (c != '\0');
 
     return res;
+}
+
+size_t LUS::BinaryReader::GetLength() {
+    return mStream->GetLength();
 }
 
 std::vector<char> LUS::BinaryReader::ToVector() {

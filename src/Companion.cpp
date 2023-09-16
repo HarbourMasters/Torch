@@ -2,8 +2,10 @@
 
 #include "storm/SWrapper.h"
 #include "utils/MIODecoder.h"
+#include "audio/AudioManager.h"
 #include "factories/RawFactory.h"
 #include "factories/BlobFactory.h"
+#include "factories/AudioFactory.h"
 #include "factories/TextureFactory.h"
 #include "factories/AnimFactory.h"
 
@@ -18,9 +20,12 @@ namespace fs = std::filesystem;
 static const std::unordered_map<std::string, RawFactory*> gFactories = {
     { ".png", new TextureFactory() },
     { ".anim", new AnimFactory() },
+    { ".aiff", new AudioFactory() },
+    { ".bnk", new AudioFactory() },
+    { ".bset", new AudioFactory() },
+    { ".m64", new AudioFactory() },
     { ".bin", new BlobFactory(LUS::ResourceType::Blob) },
     { ".sbox", new BlobFactory(LUS::ResourceType::Blob, true) },
-    { ".aud", new BlobFactory(LUS::ResourceType::Blob, false) },
 };
 
 void Companion::Start() {
@@ -34,6 +39,9 @@ void Companion::Start() {
 
     std::cout << "Detected Rom Size: " << this->gRomData.size() << '\n';
 
+    AudioManager::Instance = new AudioManager();
+    AudioManager::Instance->initialize(this->gRomData);
+
     this->ProcessAssets();
 }
 
@@ -45,7 +53,7 @@ void Companion::ProcessAssets() {
     for( auto& [asset, data] : assets.items() ) {
         std::string extension = fs::path(asset).extension().string();
         if( gFactories.find(extension) == gFactories.end() ) {
-            std::cout << "No factory found for " << asset << '\n';
+             std::cout << "No factory found for " << asset << '\n';
             continue;
         }
         LUS::BinaryWriter write = LUS::BinaryWriter();
@@ -57,7 +65,7 @@ void Companion::ProcessAssets() {
         RawFactory* factory = gFactories.at(extension);
 
         if(!factory->process(&write, entry, this->gRomData)){
-            std::cout << "Failed to process " << asset << '\n';
+             std::cout << "Failed to process " << asset << '\n';
             continue;
         }
 
@@ -70,13 +78,15 @@ void Companion::ProcessAssets() {
         if(!isTexture) {
             // Write to file too
             std::string dpath = "debug/" + path;
-            fs::create_directories(fs::path(dpath).parent_path());
+            if(!fs::exists(fs::path(dpath).parent_path())){
+                fs::create_directories(fs::path(dpath).parent_path());
+            }
             std::ofstream output(dpath, std::ios::binary);
             output.write((char*)buffer.data(), buffer.size());
             output.close();
         }
 
-        std::cout << "Processed " << path << std::endl;
+         std::cout << "Processed " << path << std::endl;
 
         write.Close();
     }

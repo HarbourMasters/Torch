@@ -13,11 +13,7 @@ bool BlobFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std::
 		return false;
 	}
 
-	if(this->bigEndian){
-		WRITE_BHEADER(this->type, 0);
-	} else {
-		WRITE_HEADER(this->type, 0);
-	}
+	WRITE_HEADER(this->type, 0);
 
 	size_t size = metadata[0];
 	auto offsets = metadata[1]["us"];

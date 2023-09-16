@@ -132,10 +132,11 @@ void LUS::BinaryWriter::Write(double value) {
     mStream->Write((char*)&value, sizeof(double));
 }
 
-void LUS::BinaryWriter::Write(const std::string& str) {
-    int strLen = str.size();
-    Write(strLen);
-
+void LUS::BinaryWriter::Write(const std::string& str, bool writeLength) {
+    if(writeLength){
+        int strLen = str.size();
+        Write(strLen);
+    }
     for (char c : str) {
         mStream->WriteByte(c);
     }
@@ -143,6 +144,10 @@ void LUS::BinaryWriter::Write(const std::string& str) {
 
 void LUS::BinaryWriter::Write(char* srcBuffer, size_t length) {
     mStream->Write(srcBuffer, length);
+}
+
+void LUS::BinaryWriter::WriteByte(char value) {
+    mStream->WriteByte(value);
 }
 
 std::vector<char> LUS::BinaryWriter::ToVector() {
