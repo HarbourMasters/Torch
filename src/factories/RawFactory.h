@@ -8,11 +8,13 @@
 
 #define WRITE_HEADER(type, version) this->WriteHeader(writer, type, version)
 #define WRITE_BHEADER(type, version) this->WriteHeader(writer, type, version, true)
+#define WRITE_U8(value) writer->Write((uint8_t) value)
 #define WRITE_U16(value) writer->Write((uint16_t) value)
 #define WRITE_U32(value) writer->Write((uint32_t) value)
 #define WRITE_U64(value) writer->Write((uint64_t) value)
 #define WRITE_I8(value) writer->Write((int8_t) value)
 #define WRITE_I16(value) writer->Write((int16_t) value)
+#define WRITE_I32(value) writer->Write((int32_t) value)
 #define WRITE_DATA(vec) writer->Write((char*) vec.data(), data.size())
 #define WRITE_ARRAY(data, size) writer->Write((char*) data, size)
 

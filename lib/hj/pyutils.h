@@ -44,6 +44,14 @@ std::vector<T> keys(std::unordered_map<T, X> const &map) {
     }
     return result;
 }
+template<typename T, typename X>
+std::vector<T> keys(std::map<T, X> const &map) {
+    std::vector<T> result;
+    for (auto const &pair: map) {
+        result.push_back(pair.first);
+    }
+    return result;
+}
 }
 
 template <typename T>

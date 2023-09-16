@@ -21,6 +21,8 @@ static const std::unordered_map<std::string, RawFactory*> gFactories = {
     { ".png", new TextureFactory() },
     { ".anim", new AnimFactory() },
     { ".aiff", new AudioFactory() },
+    { ".bnk", new AudioFactory() },
+    { ".bset", new AudioFactory() },
     { ".bin", new BlobFactory(LUS::ResourceType::Blob) },
     { ".m64", new BlobFactory(LUS::ResourceType::Blob) },
     { ".sbox", new BlobFactory(LUS::ResourceType::Blob, true) },

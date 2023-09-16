@@ -19,5 +19,7 @@ enum class ResourceType {
     Demo = 0x44454D4F,        // DEMO
     Skybox = 0x534B5942,      // SKYB
     Anim = 0x414E494D,        // ANIM
+    Bank = 0x42414E4B,        // BANK
+    Audio = 0x41554643,       // AIFC
 };
 } // namespace LUS

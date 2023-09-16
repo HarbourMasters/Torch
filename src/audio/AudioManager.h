@@ -1,9 +1,9 @@
 #pragma once
 
+#include <map>
 #include <vector>
 #include <string>
 #include <iostream>
-#include <unordered_map>
 #include "binarytools/BinaryWriter.h"
 
 #define NONE 0xFFFF
@@ -27,31 +27,32 @@ struct Entry {
     uint32_t length;
 };
 
-struct Sound {
+struct AudioBankSound {
     uint32_t offset;
     float tuning;
-    bool operator==(const Sound& other) const {
+    bool operator==(const AudioBankSound& other) const {
         return offset == other.offset && tuning == other.tuning;
     }
 };
 
-struct Inst {
+struct Instrument {
+    bool valid;
     std::string name;
     uint32_t offset;
     uint8_t releaseRate;
     uint8_t normalRangeLo;
     uint8_t normalRangeHi;
     uint32_t envelope;
-    std::optional<Sound> soundLo;
-    std::optional<Sound> soundMed;
-    std::optional<Sound> soundHi;
+    std::optional<AudioBankSound> soundLo;
+    std::optional<AudioBankSound> soundMed;
+    std::optional<AudioBankSound> soundHi;
 };
 
-struct Book {
-    uint32_t order{};
-    uint32_t npredictors{};
-    std::vector<short> table;
-    bool operator==(const Book& other) const {
+struct AdpcmBook {
+    int32_t order{};
+    int32_t npredictors{};
+    std::vector<int16_t> table;
+    bool operator==(const AdpcmBook& other) const {
         return order == other.order && npredictors == other.npredictors && table == other.table;
     }
 };
@@ -62,28 +63,28 @@ struct Drum {
     uint8_t releaseRate;
     uint8_t pan;
     uint32_t envelope;
-    Sound sound;
+    AudioBankSound sound;
     bool operator==(const Drum& other) const {
         return name == other.name && offset == other.offset && releaseRate == other.releaseRate && pan == other.pan && envelope == other.envelope && sound == other.sound;
     }
 };
 
-struct Loop {
+struct AdpcmLoop {
     uint32_t start{};
     uint32_t end{};
     int32_t count{};
     uint32_t pad{};
-    std::optional<std::vector<short>> state;
-    bool operator==(const Loop& other) const {
+    std::optional<std::vector<int16_t>> state;
+    bool operator==(const AdpcmLoop& other) const {
         return start == other.start && end == other.end && count == other.count && pad == other.pad && state == other.state;
     }
 };
 
-struct AifcEntry {
+struct AudioBankSample {
     std::string name;
     std::vector<uint8_t> data;
-    Book book;
-    Loop loop;
+    AdpcmBook book;
+    AdpcmLoop loop;
     std::vector<float> tunings;
 };
 
@@ -91,15 +92,15 @@ struct SampleBank {
     std::string name;
     uint32_t offset;
     std::vector<uint8_t> data;
-    std::unordered_map<uint32_t, AifcEntry*> entries;
+    std::map<uint32_t, AudioBankSample*> entries;
 
-    AifcEntry* AddSample(uint32_t addr, size_t sampleSize, const Book& book, const Loop& loop);
+    AudioBankSample* AddSample(uint32_t addr, size_t sampleSize, const AdpcmBook& book, const AdpcmLoop& loop);
 };
 
 struct TBLFile {
     std::vector<SampleBank*> banks;
     std::vector<std::string> tbls;
-    std::unordered_map<std::string, SampleBank*> map;
+    std::map<std::string, SampleBank*> map;
 };
 
 struct CTLHeader {
@@ -108,22 +109,25 @@ struct CTLHeader {
     uint32_t shared;
 };
 
-typedef std::pair<unsigned short, unsigned short> EnvelopeData;
+struct AdsrEnvelope {
+    int16_t delay;
+    int16_t arg;
+};
 
 struct Envelope {
     std::string name;
-    std::vector<EnvelopeData> entries;
+    std::vector<AdsrEnvelope> entries;
 };
 
 struct Bank {
     std::string name;
     SampleBank* sampleBank;
-    std::vector<Inst> insts;
+    std::vector<Instrument> insts;
     std::vector<Drum> drums;
-    std::vector<std::variant<Inst, std::vector<Drum>>> allInsts;
+    std::vector<std::variant<Instrument, std::vector<Drum>>> allInsts;
     std::vector<uint32_t> instOffsets;
-    std::unordered_map<uint32_t, Envelope> envelopes;
-    std::unordered_map<uint32_t, AifcEntry*> samples;
+    std::map<uint32_t, Envelope> envelopes;
+    std::map<uint32_t, AudioBankSample*> samples;
     void print() const;
 };
 
@@ -132,22 +136,26 @@ public:
     static AudioManager* Instance;
     void initialize(std::vector<uint8_t>& buffer);
     void create_aifc(int32_t index, LUS::BinaryWriter& writer);
+    AudioBankSample get_aifc(int32_t index);
+    std::map<uint32_t, Bank> get_banks();
+    uint32_t get_index(AudioBankSample* bank);
 
 private:
-    std::vector<Bank> banks;
+    std::map<uint32_t, Bank> banks;
+    std::map<AudioBankSample*, uint32_t> sampleMap;
     TBLFile loaded_tbl;
 
     static std::vector<Entry> parse_seq_file(std::vector<uint8_t>& buffer, uint32_t offset, bool isCTL);
     static CTLHeader parse_ctl_header(std::vector<uint8_t>& data);
-    static std::optional<Sound> parse_sound(std::vector<uint8_t> data);
+    static std::optional<AudioBankSound> parse_sound(std::vector<uint8_t> data);
     static Drum parse_drum(std::vector<uint8_t>& data, uint32_t addr);
-    static Inst parse_inst(std::vector<uint8_t>& data, uint32_t addr);
-    static Loop parse_loop(uint32_t addr, std::vector<uint8_t>& bankData);
-    static Book parse_book(uint32_t addr, std::vector<uint8_t>& bankData);
-    static AifcEntry* parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank);
-    static std::vector<EnvelopeData> parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank);
+    static Instrument parse_inst(std::vector<uint8_t>& data, uint32_t addr);
+    static AdpcmLoop parse_loop(uint32_t addr, std::vector<uint8_t>& bankData);
+    static AdpcmBook parse_book(uint32_t addr, std::vector<uint8_t>& bankData);
+    static AudioBankSample* parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank);
+    static std::vector<AdsrEnvelope> parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank);
     static Bank parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank* bank, uint32_t index);
     static TBLFile parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& entries);
 
-    static void write_aifc(AifcEntry* entry, LUS::BinaryWriter& writer);
+    static void write_aifc(AudioBankSample* entry, LUS::BinaryWriter& writer);
 };

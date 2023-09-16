@@ -28,14 +28,14 @@ std::string gen_name(const std::string& prefix){
     return prefix + std::to_string(name_table[prefix]++);
 }
 
-AifcEntry* SampleBank::AddSample(uint32_t addr, size_t sampleSize, const Book& book, const Loop& loop){
+AudioBankSample* SampleBank::AddSample(uint32_t addr, size_t sampleSize, const AdpcmBook& book, const AdpcmLoop& loop){
     assert(sampleSize % 2 == 0);
     if(sampleSize % 9 != 0){
         assert(sampleSize % 9 == 1);
         sampleSize -= 1;
     }
 
-    AifcEntry* entry;
+    AudioBankSample* entry;
 
     if(this->entries.contains(addr)){
         entry = this->entries[addr];
@@ -43,7 +43,7 @@ AifcEntry* SampleBank::AddSample(uint32_t addr, size_t sampleSize, const Book& b
         assert(entry->loop == loop);
         assert(entry->data.size() == sampleSize);
     } else {
-        entry = new AifcEntry{ gen_name("aifc"), PyUtils::slice(this->data, addr, addr + sampleSize), book, loop };
+        entry = new AudioBankSample{ gen_name("aifc"), PyUtils::slice(this->data, addr, addr + sampleSize), book, loop };
         this->entries[addr] = entry;
     }
 
@@ -68,8 +68,8 @@ std::vector<Entry> AudioManager::parse_seq_file(std::vector<uint8_t>& buffer, ui
     reader.SetEndianness(LUS::Endianness::Big);
     reader.Seek(offset, LUS::SeekOffsetType::Start);
 
-    unsigned short magic = reader.ReadUInt16();
-    unsigned short num_entries = reader.ReadUInt16();
+    uint16_t magic = reader.ReadUInt16();
+    uint16_t num_entries = reader.ReadUInt16();
     uint32_t prev = ALIGN(4 + num_entries * 8, 16);
 
     assert(magic == (isCTL ? 1 : 2));
@@ -103,149 +103,6 @@ CTLHeader AudioManager::parse_ctl_header(std::vector<uint8_t>& data){
     return header;
 }
 
-std::optional<Sound> AudioManager::parse_sound(std::vector<uint8_t> data) {
-    LUS::BinaryReader reader((char*) data.data(), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
-
-    uint32_t addr = reader.ReadUInt32();
-    float tuning = reader.ReadFloat();
-
-    if(addr == 0){
-        assert(tuning == 0.0f);
-        return std::nullopt;
-    }
-
-    Sound sound = { addr, tuning };
-
-    reader.Close();
-    return sound;
-}
-
-Drum AudioManager::parse_drum(std::vector<uint8_t>& data, uint32_t addr) {
-    LUS::BinaryReader reader((char*) data.data(), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
-    std::string name = gen_name("drum");
-
-    uint8_t releaseRate = reader.ReadInt8();
-    uint8_t pan = reader.ReadInt8();
-
-    reader.Seek(12, LUS::SeekOffsetType::Start);
-    Sound sound = parse_sound(PyUtils::slice(data, 4, 12)).value();
-    uint32_t envOffset = reader.ReadInt32();
-    assert(envOffset != 0);
-
-    Drum drum = { name, addr, releaseRate, pan, envOffset, sound };
-
-    return drum;
-}
-
-Inst AudioManager::parse_inst(std::vector<uint8_t>& data, uint32_t addr) {
-    std::string name = gen_name("inst");
-    uint8_t normalRangeLo = data[1];
-    uint8_t normalRangeHi = data[2];
-    uint8_t releaseRate = data[3];
-
-    uint32_t envAddr;
-    memcpy(&envAddr, (char*) data.data() + 4, 4);
-    envAddr = BSWAP32(envAddr);
-
-    assert(envAddr != 0);
-
-    auto soundLo  = parse_sound(PyUtils::slice(data, 8, 16));
-    auto soundMed = parse_sound(PyUtils::slice(data, 16, 24));
-    auto soundHi  = parse_sound(PyUtils::slice(data, 24));
-
-    if (soundLo == std::nullopt) {
-        assert(normalRangeLo == 0);
-    }
-    if (soundHi == std::nullopt) {
-        assert(normalRangeHi == 127);
-    }
-
-    Inst inst = { name, addr, releaseRate, normalRangeLo, normalRangeHi, envAddr, soundLo, soundMed, soundHi };
-    return inst;
-}
-
-Loop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData){
-    LUS::BinaryReader reader((char*) bankData.data(), bankData.size());
-    reader.SetEndianness(LUS::Endianness::Big);
-    reader.Seek(addr, LUS::SeekOffsetType::Start);
-
-    std::optional<std::vector<short>> state = std::nullopt;
-    uint32_t start = reader.ReadUInt32();
-    uint32_t end = reader.ReadUInt32();
-    int32_t count = reader.ReadInt32();
-    uint32_t pad = reader.ReadUInt32();
-    if(count != 0){
-        state = std::vector<short>();
-        for (size_t i = 0; i < 16; ++i) {
-            state.value().push_back(reader.ReadShort());
-        }
-    }
-    Loop loop = { start, end, count, pad, state };
-    return loop;
-}
-
-Book AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData){
-    LUS::BinaryReader reader((char*) bankData.data(), bankData.size());
-    reader.SetEndianness(LUS::Endianness::Big);
-    reader.Seek(addr, LUS::SeekOffsetType::Start);
-
-    uint32_t order = reader.ReadInt32();
-    uint32_t npredictors = reader.ReadInt32();
-    std::vector<short> table;
-    std::vector<uint8_t> tableData = PyUtils::slice(bankData, addr + 8, addr + 8 + 16 * order * npredictors);
-    for (size_t i = 0; i < ( 16 * order * npredictors ); i += 2) {
-        short dtable;
-        memcpy(&dtable, tableData.data() + i, 2);
-        table.push_back(BSWAP16(dtable));
-    }
-
-    Book book = { order, npredictors, table };
-    return book;
-}
-
-AifcEntry* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank){
-    LUS::BinaryReader reader((char*) data.data(), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
-
-    uint32_t zero = reader.ReadUInt32();
-    uint32_t addr = reader.ReadUInt32();
-    uint32_t loop = reader.ReadUInt32();
-    uint32_t book = reader.ReadUInt32();
-    uint32_t sampleSize = reader.ReadUInt32();
-    assert(zero == 0);
-    assert(loop != 0);
-    assert(book != 0);
-
-    Loop loopData = parse_loop(loop, bankData);
-    Book bookData = parse_book(book, bankData);
-
-    reader.Close();
-    return sampleBank->AddSample(addr, sampleSize, bookData, loopData);
-}
-
-
-std::vector<EnvelopeData> AudioManager::parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank){
-    std::vector<EnvelopeData> entries;
-    LUS::BinaryReader reader((char*) dataBank.data(), dataBank.size());
-    reader.SetEndianness(LUS::Endianness::Big);
-
-    while(true){
-        reader.Seek(addr, LUS::SeekOffsetType::Start);
-        unsigned short delay = reader.ReadUShort();
-        unsigned short arg = reader.ReadUShort();
-        entries.emplace_back(delay, arg);
-        addr += 4;
-        if (1 <= (-delay) % ((uint32_t) pow(2, 16)) <= 3.0){
-            break;
-        }
-    }
-
-    reader.Close();
-    return entries;
-}
-
 Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank* bank, uint32_t index) {
     name_table.clear();
     std::ostringstream ss;
@@ -262,11 +119,16 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     std::vector<uint32_t> drumOffsets;
 
     if(numDrums != 0){
+        assert(drumBaseAddr != 0);
         for (size_t i = 0; i < numDrums; ++i) {
             uint32_t drumOffset;
-            memcpy(&drumOffset, rawData + drumBaseAddr + (i * 4), 4);
-            drumOffsets.push_back(BSWAP32(drumOffset));
+            memcpy(&drumOffset, rawData + drumBaseAddr + i * 4, 4);
+            drumOffset = BSWAP32(drumOffset);
+            assert(drumOffset != 0);
+            drumOffsets.push_back(drumOffset);
         }
+    } else {
+        assert(drumBaseAddr == 0);
     }
 
     uint32_t instrumentBaseAddr = 4;
@@ -275,22 +137,28 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
 
     for (size_t i = 0; i < numInstruments; ++i) {
         uint32_t instOffset;
-        memcpy(&instOffset, rawData + (instrumentBaseAddr + (i * 4)), 4);
+        memcpy(&instOffset, rawData + (instrumentBaseAddr + i * 4), 4);
         instOffset = BSWAP32(instOffset);
         if(instOffset == 0){
             instrumentList.push_back(NONE);
+            instrumentOffsets.push_back(NONE);
         } else {
             instrumentOffsets.push_back(instOffset);
             instrumentList.push_back(instOffset);
         }
     }
 
-    std::sort(instrumentOffsets.begin(), instrumentOffsets.end());
+//    std::sort(instrumentOffsets.begin(), instrumentOffsets.end());
 
-    std::vector<Inst> insts;
+    std::vector<Instrument> insts;
     for(auto &offset : instrumentOffsets){
+        if(offset == NONE){
+            Instrument invalid = { .valid = false };
+            insts.push_back(invalid);
+            continue;
+        }
         auto rInst = PyUtils::slice(data, offset, offset + 32);
-        Inst inst = parse_inst(rInst, offset);
+        Instrument inst = parse_inst(rInst, offset);
         insts.push_back(inst);
     }
 
@@ -322,12 +190,12 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     // Put drums somewhere in the middle of the instruments to make sample
     // addresses come in increasing order. (This logic isn't totally right,
     // but it works for our purposes.)
-    std::vector<std::variant<Inst, std::vector<Drum>>> allInsts;
+    std::vector<std::variant<Instrument, std::vector<Drum>>> allInsts;
     bool needDrums = !drums.empty();
     for(auto &inst : insts){
-        std::vector<std::optional<Sound>> sounds = {inst.soundLo, inst.soundMed, inst.soundHi};
+        std::vector<std::optional<AudioBankSound>> sounds = {inst.soundLo, inst.soundMed, inst.soundHi};
 
-        if(needDrums && std::any_of(sounds.cbegin(), sounds.cend(), [&drums](std::optional<Sound> sound){ return sound.has_value() && sound.value().offset > drums[0].sound.offset; })){
+        if(needDrums && std::any_of(sounds.cbegin(), sounds.cend(), [&drums](std::optional<AudioBankSound> sound){ return sound.has_value() && sound.value().offset > drums[0].sound.offset; })){
             allInsts.emplace_back(drums);
             needDrums = false;
         }
@@ -340,18 +208,18 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         allInsts.emplace_back(drums);
     }
 
-    std::unordered_map<uint32_t, AifcEntry*> samples;
+    std::map<uint32_t, AudioBankSample*> samples;
     std::sort(sampleOffsets.begin(), sampleOffsets.end());
     for(auto &offset : sampleOffsets){
         auto rSample = PyUtils::slice(data, offset, offset + 20);
-        AifcEntry* sample = parse_sample(rSample, data, bank);
+        AudioBankSample* sample = parse_sample(rSample, data, bank);
         for(auto &tuning : tunings){
             sample->tunings.push_back(tuning.second);
         }
         samples[offset] = sample;
     }
 
-    std::unordered_map<uint32_t, std::vector<EnvelopeData>> envData;
+    std::unordered_map<uint32_t, std::vector<AdsrEnvelope>> envData;
     std::vector<uint32_t> usedEnvOffsets;
     std::sort(envOffsets.begin(), envOffsets.end());
     for(auto &offset : envOffsets){
@@ -383,7 +251,7 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         }
     }
 
-    std::unordered_map<uint32_t, Envelope> envelopes;
+    std::map<uint32_t, Envelope> envelopes;
     for(auto &entry : envData){
         Envelope env = { gen_name("envelope"), entry.second };
         envelopes[entry.first] = env;
@@ -391,6 +259,156 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
 
     Bank bankData = { name, bank, insts, drums, allInsts, instrumentList, envelopes, samples };
     return bankData;
+}
+
+std::optional<AudioBankSound> AudioManager::parse_sound(std::vector<uint8_t> data) {
+    LUS::BinaryReader reader((char*) data.data(), data.size());
+    reader.SetEndianness(LUS::Endianness::Big);
+
+    uint32_t addr = reader.ReadUInt32();
+    float tuning = reader.ReadFloat();
+
+    if(addr == 0){
+        assert(tuning == 0.0f);
+        return std::nullopt;
+    }
+
+    AudioBankSound sound = { addr, tuning };
+
+    reader.Close();
+    return sound;
+}
+
+Drum AudioManager::parse_drum(std::vector<uint8_t>& data, uint32_t addr) {
+    LUS::BinaryReader reader((char*) data.data(), data.size());
+    reader.SetEndianness(LUS::Endianness::Big);
+    std::string name = gen_name("drum");
+
+    uint8_t releaseRate = reader.ReadInt8();
+    uint8_t pan = reader.ReadInt8();
+
+    reader.Seek(12, LUS::SeekOffsetType::Start);
+    AudioBankSound sound = parse_sound(PyUtils::slice(data, 4, 12)).value();
+    uint32_t envOffset = reader.ReadInt32();
+    assert(envOffset != 0);
+
+    Drum drum = { name, addr, releaseRate, pan, envOffset, sound };
+
+    return drum;
+}
+
+Instrument AudioManager::parse_inst(std::vector<uint8_t>& data, uint32_t addr) {
+    std::string name = gen_name("inst");
+    uint8_t normalRangeLo = data[1];
+    uint8_t normalRangeHi = data[2];
+    uint8_t releaseRate = data[3];
+
+    uint32_t envAddr;
+    memcpy(&envAddr, (char*) data.data() + 4, 4);
+    envAddr = BSWAP32(envAddr);
+
+    assert(envAddr != 0);
+
+    auto soundLo  = parse_sound(PyUtils::slice(data, 8, 16));
+    auto soundMed = parse_sound(PyUtils::slice(data, 16, 24));
+    auto soundHi  = parse_sound(PyUtils::slice(data, 24));
+
+    if (soundLo == std::nullopt) {
+        assert(normalRangeLo == 0);
+    }
+    if (soundHi == std::nullopt) {
+        assert(normalRangeHi == 127);
+    }
+
+    Instrument inst = { true, name, addr, releaseRate, normalRangeLo, normalRangeHi, envAddr, soundLo, soundMed, soundHi };
+    return inst;
+}
+
+AdpcmLoop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData){
+    LUS::BinaryReader reader((char*) bankData.data(), bankData.size());
+    reader.SetEndianness(LUS::Endianness::Big);
+    reader.Seek(addr, LUS::SeekOffsetType::Start);
+
+    std::optional<std::vector<int16_t>> state = std::nullopt;
+    uint32_t start = reader.ReadUInt32();
+    uint32_t end = reader.ReadUInt32();
+    int32_t count = reader.ReadInt32();
+    uint32_t pad = reader.ReadUInt32();
+
+    std::cout << "Loop End: " << end << '\n';
+    if(count != 0){
+        state = std::vector<int16_t>();
+        for (size_t i = 0; i < 16; ++i) {
+            state.value().push_back(reader.ReadInt16());
+        }
+    }
+    AdpcmLoop loop = { start, end, count, pad, state };
+    return loop;
+}
+
+AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData){
+    LUS::BinaryReader reader((char*) bankData.data(), bankData.size());
+    reader.SetEndianness(LUS::Endianness::Big);
+    reader.Seek(addr, LUS::SeekOffsetType::Start);
+
+    int32_t order = reader.ReadInt32();
+    int32_t npredictors = reader.ReadInt32();
+
+    assert(order == 2);
+    assert(npredictors == 2);
+
+    std::vector<int16_t> table;
+    std::vector<uint8_t> tableData = PyUtils::slice(bankData, addr + 8, addr + 8 + 16 * order * npredictors);
+    for (size_t i = 0; i < ( 16 * order * npredictors ); i += 2) {
+        int16_t dtable;
+        memcpy(&dtable, tableData.data() + i, 2);
+        table.push_back(BSWAP16(dtable));
+    }
+
+    AdpcmBook book = { order, npredictors, table };
+    return book;
+}
+
+AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank){
+    LUS::BinaryReader reader((char*) data.data(), data.size());
+    reader.SetEndianness(LUS::Endianness::Big);
+
+    uint32_t zero = reader.ReadUInt32();
+    uint32_t addr = reader.ReadUInt32();
+    uint32_t loop = reader.ReadUInt32();
+    uint32_t book = reader.ReadUInt32();
+    uint32_t sampleSize = reader.ReadUInt32();
+    assert(zero == 0);
+    assert(loop != 0);
+    assert(book != 0);
+
+    AdpcmLoop loopData = parse_loop(loop, bankData);
+    AdpcmBook bookData = parse_book(book, bankData);
+
+    reader.Close();
+    return sampleBank->AddSample(addr, sampleSize, bookData, loopData);
+}
+
+
+std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank){
+    std::vector<AdsrEnvelope> entries;
+    LUS::BinaryReader reader((char*) dataBank.data(), dataBank.size());
+    reader.SetEndianness(LUS::Endianness::Big);
+
+    while(true){
+        reader.Seek(addr, LUS::SeekOffsetType::Start);
+        int16_t delay = reader.ReadInt16();
+        int16_t arg = reader.ReadInt16();
+        AdsrEnvelope entry = { delay, arg };
+        entries.push_back(entry);
+        addr += 4;
+        if (1 <= (-delay) % (1 << 16) && (-delay) % (1 << 16) <= 3){
+            break;
+        }
+    }
+
+    reader.Close();
+    return entries;
 }
 
 TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& entries) {
@@ -441,14 +459,22 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer) {
         auto headerRaw = PyUtils::slice(entry, 0, 16);
         auto header = parse_ctl_header(headerRaw);
         auto bank = parse_ctl(header, PyUtils::slice(entry, 16), sample_bank, index);
-        banks.push_back(bank);
+        banks[index] = bank;
     }
 
+    int32_t idx = -1;
+    for(auto &sample_bank : this->loaded_tbl.banks){
+        auto offsets = PyUtils::keys(sample_bank->entries);
+        std::sort(offsets.begin(), offsets.end());
 
+        for(auto &offset : offsets){
+            this->sampleMap[sample_bank->entries[offset]] = ++idx;
+        }
+    }
 }
 
 void serialize_f80(double num, LUS::BinaryWriter &writer) {
-    // Convert the input double to a uint64_t
+    // Convert the input double to an uint64_t
     std::uint64_t f64;
     std::memcpy(&f64, &num, sizeof(double));
 
@@ -505,7 +531,7 @@ void serialize_f80(double num, LUS::BinaryWriter &writer) {
     }                            \
     }                            \
 
-void AudioManager::write_aifc(AifcEntry* entry, LUS::BinaryWriter &out) {
+void AudioManager::write_aifc(AudioBankSample* entry, LUS::BinaryWriter &out) {
     int16_t num_channels = 1;
     auto data = entry->data;
     size_t len = 0;
@@ -549,7 +575,7 @@ void AudioManager::write_aifc(AifcEntry* entry, LUS::BinaryWriter &out) {
     tmp.Write((uint16_t) sample_size);
     serialize_f80(sample_rate, tmp);
     tmp.Write(AIFC::MagicValues::VAPC);
-    tmp.Write("\u000BVADPCM ~4-1", false);
+    tmp.Write("\x0bVADPCM ~4-1", false);
 
     END_SECTION();
 
@@ -557,7 +583,7 @@ void AudioManager::write_aifc(AifcEntry* entry, LUS::BinaryWriter &out) {
     tmp.Write(std::string(20, '\0'), false);
     END_SECTION();
 
-    START_CUSTOM_SECTION("\u000BVADPCMCODES")
+    START_CUSTOM_SECTION("\x0bVADPCMCODES")
     tmp.Write((uint16_t) 1);
     tmp.Write((uint16_t) entry->book.order);
     tmp.Write((uint16_t) entry->book.npredictors);
@@ -575,7 +601,7 @@ void AudioManager::write_aifc(AifcEntry* entry, LUS::BinaryWriter &out) {
     END_SECTION();
 
     if(entry->loop.count != 0){
-        START_CUSTOM_SECTION("\u000BVADPCMLOOPS")
+        START_CUSTOM_SECTION("\x0bVADPCMLOOPS")
         uint16_t one = BSWAP16(1);
         tmp.Write((char*) &one, 2);
         tmp.Write((char*) &one, 2);
@@ -608,4 +634,31 @@ void AudioManager::create_aifc(int32_t index, LUS::BinaryWriter &out) {
             }
         }
     }
+}
+
+AudioBankSample AudioManager::get_aifc(int32_t index) {
+    int32_t idx = -1;
+    for(auto &sample_bank : this->loaded_tbl.banks){
+        auto offsets = PyUtils::keys(sample_bank->entries);
+        std::sort(offsets.begin(), offsets.end());
+
+        for(auto &offset : offsets){
+            if(++idx == index){
+                return *sample_bank->entries[offset];
+            }
+        }
+    }
+
+    throw std::runtime_error("Invalid index");
+}
+
+uint32_t AudioManager::get_index(AudioBankSample* entry) {
+    if(!this->sampleMap.contains(entry)){
+        return -1;
+    }
+    return this->sampleMap[entry];
+}
+
+std::map<uint32_t, Bank> AudioManager::get_banks() {
+    return this->banks;
 }
