@@ -8,3 +8,4 @@ debug/
 *.z64
 *.n64
 assets/
+build/
