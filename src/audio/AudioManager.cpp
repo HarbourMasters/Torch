@@ -335,7 +335,6 @@ AdpcmLoop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData
     int32_t count = reader.ReadInt32();
     uint32_t pad = reader.ReadUInt32();
 
-    std::cout << "Loop End: " << end << '\n';
     if(count != 0){
         state = std::vector<int16_t>();
         for (size_t i = 0; i < 16; ++i) {
@@ -433,6 +432,7 @@ TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& 
 void AudioManager::initialize(std::vector<uint8_t>& buffer) {
     auto assets = nlohmann::json::parse(std::ifstream( "assets.json" ));
     auto sound_data = assets["@sound_data"]["us"];
+
     auto sound_tbl = sound_data["sound_tbl"];
     auto sound_ctl = sound_data["sound_ctl"];
 

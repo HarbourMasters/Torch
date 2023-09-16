@@ -33,10 +33,6 @@ bool AudioFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std:
 
         WRITE_HEADER(LUS::ResourceType::Bank, 0);
 
-        if(path.find("sound/banks/us/20_bank") != std::string::npos){
-            int bp = 0;
-        }
-
         WRITE_U32(bank.insts.size());
         for(auto &instrument : bank.insts){
             WRITE_U8(instrument.valid);
@@ -119,7 +115,29 @@ bool AudioFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std:
         return true;
     }
 
-    if(metadata.size() < 2 || !metadata[1].contains("us")){
+    if(path.find("sound/sequences") != std::string::npos){
+
+        if(!metadata[1].contains("us")){
+            return false;
+        }
+
+        WRITE_HEADER(LUS::ResourceType::Sequence, 0);
+
+        size_t size = metadata[0];
+        auto offsets = metadata[1]["us"];
+
+        std::vector<uint8_t> bank = metadata[1]["banks"];
+
+        WRITE_U32(bank.size());
+        WRITE_ARRAY(bank.data(), bank.size());
+
+        WRITE_U32(size);
+        WRITE_ARRAY(buffer.data() + (size_t)offsets[0], size);
+
+        return true;
+    }
+
+    if(path.find("sound/samples") == std::string::npos || metadata.size() < 2 || !metadata[1].contains("us")){
         return false;
     }
 
@@ -132,13 +150,9 @@ bool AudioFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std:
      write_aiff(aifcData, *writer);
     */
 
-    WRITE_HEADER(LUS::ResourceType::Audio, 0);
+    WRITE_HEADER(LUS::ResourceType::Sample, 0);
 
     AudioBankSample entry = AudioManager::Instance->get_aifc(metadata[1]["us"][1]);
-
-    if(path.find("00_mario_waaaooow") != std::string::npos){
-        int bp = 0;
-    }
 
     // Write AdpcmLoop
     WRITE_U32(entry.loop.start);
