@@ -57,6 +57,11 @@ void Companion::Process() {
 
     auto wrapper = SWrapper(otr);
 
+    auto vWriter = LUS::BinaryWriter();
+    vWriter.SetEndianness(LUS::Endianness::Big);
+    vWriter.Write((uint8_t) LUS::Endianness::Big);
+    vWriter.Write(cartridge.GetCRC());
+
     for (const auto & entry : fs::directory_iterator(path)){
         std::cout << "Processing " << entry.path() << '\n';
         YAML::Node root = YAML::LoadFile(entry.path());
@@ -73,11 +78,10 @@ void Companion::Process() {
 
             auto buffer = write.ToVector();
             auto output = entry.path().stem() / asset->first.as<std::string>();
-            std::cout << "Writing " << output << '\n';
             wrapper.CreateFile(output, buffer);
 
             if(type != "TEXTURE") {
-                std::string dpath = "debug/" + path;
+                std::string dpath = "debug/" + output.string();
                 if(!fs::exists(fs::path(dpath).parent_path())){
                     fs::create_directories(fs::path(dpath).parent_path());
                 }
@@ -86,11 +90,14 @@ void Companion::Process() {
                 stream.close();
             }
 
-            std::cout << "Processed " << path << std::endl;
+            std::cout << "Processed " << output << std::endl;
 
             write.Close();
         }
     }
+
+    wrapper.CreateFile("version", vWriter.ToVector());
+    vWriter.Close();
 
     MIO0Decoder::ClearCache();
     wrapper.Close();

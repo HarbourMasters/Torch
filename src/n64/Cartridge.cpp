@@ -6,6 +6,8 @@
 void N64::Cartridge::Initialize() {
     LUS::BinaryReader reader((char*) this->gRomData.data(), this->gRomData.size());
     reader.SetEndianness(LUS::Endianness::Big);
+    reader.Seek(0x10, LUS::SeekOffsetType::Start);
+    this->gRomCRC = BSWAP32(reader.ReadUInt32());
     reader.Seek(0x20, LUS::SeekOffsetType::Start);
     this->gGameTitle = std::string(reader.ReadCString());
     reader.Seek(0x3E, LUS::SeekOffsetType::Start);
@@ -56,4 +58,8 @@ std::string N64::Cartridge::GetCountryCode() {
         default:
             return "unk";
     }
+}
+
+uint32_t N64::Cartridge::GetCRC() {
+    return this->gRomCRC;
 }

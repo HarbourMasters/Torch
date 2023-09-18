@@ -20,11 +20,13 @@ public:
     CountryCode GetCountry();
     uint8_t GetVersion() const;
     std::string GetHash();
+    uint32_t GetCRC();
 private:
     std::vector<uint8_t> gRomData;
     CountryCode gCountryCode;
     uint8_t gVersion;
     std::string gGameTitle;
     std::string gHash;
+    uint32_t gRomCRC;
 };
 }

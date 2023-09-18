@@ -22,5 +22,5 @@ class RawFactory {
 public:
     RawFactory() = default;
     virtual bool process(LUS::BinaryWriter* write, YAML::Node& data, std::vector<uint8_t>& buffer) = 0;
-    void WriteHeader(LUS::BinaryWriter* write, LUS::ResourceType resType, int32_t version, bool bigEndian = false);
+    void WriteHeader(LUS::BinaryWriter* write, LUS::ResourceType resType, int32_t version);
 };

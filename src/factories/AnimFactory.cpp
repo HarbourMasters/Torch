@@ -71,8 +71,8 @@ bool AnimFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vect
     auto index = data["indices"];
 
 	WriteAnimationHeader(writer, header, buffer);
-	WriteAnimationIndex(writer, values, buffer);
-	WriteAnimationValues(writer, index, buffer);
+	WriteAnimationIndex(writer, index, buffer);
+	WriteAnimationValues(writer, values, buffer);
 
 	return true;
 }
