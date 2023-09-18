@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <binarytools/BinaryWriter.h>
-#include <nlohmann/json.hpp>
+#include <yaml-cpp/yaml.h>
 
 #define WRITE_HEADER(type, version) this->WriteHeader(writer, type, version)
 #define WRITE_BHEADER(type, version) this->WriteHeader(writer, type, version, true)
@@ -21,6 +21,6 @@
 class RawFactory {
 public:
     RawFactory() = default;
-    virtual bool process(LUS::BinaryWriter* write, nlohmann::json& data, std::vector<uint8_t>& buffer) = 0;
+    virtual bool process(LUS::BinaryWriter* write, YAML::Node& data, std::vector<uint8_t>& buffer) = 0;
     void WriteHeader(LUS::BinaryWriter* write, LUS::ResourceType resType, int32_t version, bool bigEndian = false);
 };

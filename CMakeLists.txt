@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 project(CubeOS)
+include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -30,6 +31,18 @@ target_link_libraries(${PROJECT_NAME} PRIVATE BinaryTools)
 set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
 add_subdirectory(${STORMLIB_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE storm)
+
+# Link YamlCpp
+
+FetchContent_Declare(
+    yaml-cpp
+    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+    GIT_TAG f7320141120f720aecc4c32be25586e7da9eb978
+)
+
+set(YAML_CPP_BUILD_TESTS OFF)
+FetchContent_MakeAvailable(yaml-cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)
 
 if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
     include(../cmake/HandleCompilerRT.cmake)

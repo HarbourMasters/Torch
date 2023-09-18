@@ -1,29 +1,22 @@
 #include "BlobFactory.h"
-
-#include <iostream>
-#include <filesystem>
-#include "Companion.h"
 #include "utils/MIODecoder.h"
 
 namespace fs = std::filesystem;
 
-bool BlobFactory::process(LUS::BinaryWriter* writer, nlohmann::json& data, std::vector<uint8_t>& buffer) {
-    auto metadata = data["offsets"];
-	if(!metadata[1].contains("us")){
-		return false;
-	}
+bool BlobFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
 
-	WRITE_HEADER(this->type, 0);
+	WRITE_HEADER(LUS::ResourceType::Blob, 0);
 
-	size_t size = metadata[0];
-	auto offsets = metadata[1]["us"];
+	auto size = data["size"].as<size_t>();
+	auto offset = data["offset"].as<size_t>();
 
 	auto* blob = new uint8_t[size];
-	if(this->isMIOChunk){
-		auto mio0 = MIO0Decoder::Decode(buffer, offsets[0]);
-        memcpy(blob, mio0.data() + (size_t)offsets[1], size);
+	if(data["mio0"]){
+		auto decoded = MIO0Decoder::Decode(buffer, offset);
+        auto cursor = data["mio0"].as<size_t>();
+        memcpy(blob, decoded.data() + cursor, size);
 	} else {
-    	memcpy(blob, buffer.data() + (size_t)offsets[0], size);
+    	memcpy(blob, buffer.data() + offset, size);
 	}
 
 	WRITE_U32(size); // Blob Data Size

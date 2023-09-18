@@ -2,8 +2,8 @@
 
 #include "RawFactory.h"
 
-class BlobFactory : public RawFactory {
+class AudioHeaderFactory : public RawFactory {
 public:
-    BlobFactory() = default;
+    AudioHeaderFactory() = default;
     bool process(LUS::BinaryWriter* write, YAML::Node& data, std::vector<uint8_t>& buffer) override;
 };

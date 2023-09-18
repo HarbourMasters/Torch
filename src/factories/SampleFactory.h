@@ -2,8 +2,8 @@
 
 #include "RawFactory.h"
 
-class BlobFactory : public RawFactory {
+class SampleFactory : public RawFactory {
 public:
-    BlobFactory() = default;
+    SampleFactory() = default;
     bool process(LUS::BinaryWriter* write, YAML::Node& data, std::vector<uint8_t>& buffer) override;
 };

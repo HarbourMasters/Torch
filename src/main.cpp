@@ -17,6 +17,6 @@ int main(int argc, char *argv[]) {
     }
 
     Companion::Instance = new Companion(filename);
-    Companion::Instance->Start();
+    Companion::Instance->Init();
     return 0;
 }

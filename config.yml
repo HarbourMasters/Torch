@@ -1,0 +1,23 @@
+# Supported game versions
+# SM64 [JP, US, EU]
+# MK64 [US]
+
+8a20a5c83d6ceb0f0506cfc9fa20d8f438cafe51:
+  name: Super Mario 64 [JP]
+  path: assets/sm64/jp
+  output: smcube.otr
+
+9bef1128717f958171a4afac3ed78ee2bb4e86ce:
+  name: Super Mario 64 [US]
+  path: assets/sm64/us
+  output: smcube.otr
+
+4ac5721683d0e0b6bbb561b58a71740845dceea9:
+  name: Super Mario 64 [EU]
+  path: assets/sm64/eu
+  output: smcube.otr
+
+579c48e211ae952530ffc8738709f078d5dd215e:
+  name: Mario Kart 64 [US]
+  path: assets/mk64/us
+  output: mkcube.otr

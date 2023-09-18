@@ -7,4 +7,3 @@ cmake-build-*/
 debug/
 *.z64
 *.n64
-assets/

@@ -1,0 +1,4687 @@
+cave/hmc_textures.00000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3432432
+  mio0: 0
+  format: RGBA16
+cave/hmc_textures.01000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3432432
+  mio0: 4096
+  format: RGBA16
+cave/hmc_textures.01800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3432432
+  mio0: 6144
+  format: RGBA16
+cave/hmc_textures.02800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3432432
+  mio0: 10240
+  format: RGBA16
+cave/hmc_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3432432
+  mio0: 12288
+  format: RGBA16
+cave/hmc_textures.03800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3432432
+  mio0: 14336
+  format: RGBA16
+cave/hmc_textures.04800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3432432
+  mio0: 18432
+  format: RGBA16
+cave/hmc_textures.05800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3432432
+  mio0: 22528
+  format: RGBA16
+cave/hmc_textures.06800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3432432
+  mio0: 26624
+  format: RGBA16
+cave/hmc_textures.07000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3432432
+  mio0: 28672
+  format: RGBA16
+cave/hmc_textures.07800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3432432
+  mio0: 30720
+  format: RGBA16
+cave/hmc_textures.08800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3432432
+  mio0: 34816
+  format: RGBA16
+cave/hmc_textures.09800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3432432
+  mio0: 38912
+  format: RGBA16
+cave/hmc_textures.0A000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3432432
+  mio0: 40960
+  format: RGBA16
+cave/hmc_textures.0A800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3432432
+  mio0: 43008
+  format: RGBA16
+cave/hmc_textures.0B800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3432432
+  mio0: 47104
+  format: IA16
+cave/hmc_textures.0C000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 43008
+  format: IA16
+effect/bubble.06048:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 24648
+  format: RGBA16
+effect/flower.00008:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 8
+  format: RGBA16
+effect/flower.00808:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 2056
+  format: RGBA16
+effect/flower.01008:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 4104
+  format: RGBA16
+effect/flower.01808:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 6152
+  format: RGBA16
+effect/lava_bubble.02020:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 8224
+  format: RGBA16
+effect/lava_bubble.02820:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 10272
+  format: RGBA16
+effect/lava_bubble.03020:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 12320
+  format: RGBA16
+effect/lava_bubble.03820:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 14368
+  format: RGBA16
+effect/lava_bubble.04020:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 16416
+  format: RGBA16
+effect/lava_bubble.04820:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 18464
+  format: RGBA16
+effect/lava_bubble.05020:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 20512
+  format: RGBA16
+effect/lava_bubble.05820:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3594960
+  mio0: 22560
+  format: RGBA16
+effect/tiny_bubble.0684C:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 3594960
+  mio0: 26700
+  format: RGBA16
+effect/tiny_bubble.06AD8:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 3594960
+  mio0: 27352
+  format: RGBA16
+fire/lll_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 0
+  format: RGBA16
+fire/lll_textures.00800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 2048
+  format: RGBA16
+fire/lll_textures.01000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 4096
+  format: RGBA16
+fire/lll_textures.01800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 6144
+  format: RGBA16
+fire/lll_textures.02000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 8192
+  format: RGBA16
+fire/lll_textures.02800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 10240
+  format: RGBA16
+fire/lll_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 12288
+  format: RGBA16
+fire/lll_textures.03800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 14336
+  format: RGBA16
+fire/lll_textures.04000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 16384
+  format: RGBA16
+fire/lll_textures.04800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 18432
+  format: RGBA16
+fire/lll_textures.05000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 20480
+  format: RGBA16
+fire/lll_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 22528
+  format: RGBA16
+fire/lll_textures.06000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 24576
+  format: RGBA16
+fire/lll_textures.06800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 26624
+  format: RGBA16
+fire/lll_textures.07000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 28672
+  format: RGBA16
+fire/lll_textures.07800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 30720
+  format: RGBA16
+fire/lll_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 32768
+  format: RGBA16
+fire/lll_textures.08800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 34816
+  format: RGBA16
+fire/lll_textures.09000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 1078992
+  mio0: 80984
+  format: RGBA16
+fire/lll_textures.09800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 38912
+  format: RGBA16
+fire/lll_textures.0A000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 40960
+  format: RGBA16
+fire/lll_textures.0A800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 43008
+  format: RGBA16
+fire/lll_textures.0B000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 45056
+  format: RGBA16
+fire/lll_textures.0B800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3262320
+  mio0: 47104
+  format: RGBA16
+generic/bob_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 0
+  format: RGBA16
+generic/bob_textures.00800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 1327760
+  mio0: 36160
+  format: RGBA16
+generic/bob_textures.01000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 4096
+  format: RGBA16
+generic/bob_textures.01800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 6144
+  format: RGBA16
+generic/bob_textures.02000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 8192
+  format: RGBA16
+generic/bob_textures.02800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 10240
+  format: RGBA16
+generic/bob_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 12288
+  format: RGBA16
+generic/bob_textures.03800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 14336
+  format: RGBA16
+generic/bob_textures.04000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 16384
+  format: RGBA16
+generic/bob_textures.04800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 18432
+  format: RGBA16
+generic/bob_textures.05000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 20480
+  format: RGBA16
+generic/bob_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 22528
+  format: RGBA16
+generic/bob_textures.06000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3323408
+  mio0: 24576
+  format: RGBA16
+generic/bob_textures.07000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 28672
+  format: RGBA16
+generic/bob_textures.07800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 30720
+  format: RGBA16
+generic/bob_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 32768
+  format: RGBA16
+generic/bob_textures.08800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 34816
+  format: RGBA16
+generic/bob_textures.09000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 36864
+  format: RGBA16
+generic/bob_textures.09800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 38912
+  format: RGBA16
+generic/bob_textures.0A000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 40960
+  format: RGBA16
+generic/bob_textures.0A800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 43008
+  format: RGBA16
+generic/bob_textures.0B000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 45056
+  format: IA16
+grass/wf_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 0
+  format: RGBA16
+grass/wf_textures.00800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 2048
+  format: RGBA16
+grass/wf_textures.01000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 4096
+  format: RGBA16
+grass/wf_textures.01800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 6144
+  format: RGBA16
+grass/wf_textures.02000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 8192
+  format: RGBA16
+grass/wf_textures.02800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 10240
+  format: RGBA16
+grass/wf_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 12288
+  format: RGBA16
+grass/wf_textures.03800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 14336
+  format: RGBA16
+grass/wf_textures.04000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 16384
+  format: RGBA16
+grass/wf_textures.04800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 18432
+  format: RGBA16
+grass/wf_textures.05000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 20480
+  format: RGBA16
+grass/wf_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 22528
+  format: RGBA16
+grass/wf_textures.06000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 20480
+  format: RGBA16
+grass/wf_textures.06800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 26624
+  format: RGBA16
+grass/wf_textures.07000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 28672
+  format: RGBA16
+grass/wf_textures.07800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 30720
+  format: RGBA16
+grass/wf_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 32768
+  format: RGBA16
+grass/wf_textures.08800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 34816
+  format: RGBA16
+grass/wf_textures.09000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 36864
+  format: RGBA16
+grass/wf_textures.09800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 38912
+  format: RGBA16
+grass/wf_textures.0A000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 40960
+  format: RGBA16
+grass/wf_textures.0A800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 43008
+  format: RGBA16
+grass/wf_textures.0B000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 45056
+  format: IA16
+grass/wf_textures.0B800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3496176
+  mio0: 47104
+  format: IA16
+inside/inside_castle_textures.00000:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3555104
+  mio0: 0
+  format: RGBA16
+inside/inside_castle_textures.01000:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3555104
+  mio0: 4096
+  format: RGBA16
+inside/inside_castle_textures.02000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3555104
+  mio0: 8192
+  format: RGBA16
+inside/inside_castle_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3555104
+  mio0: 12288
+  format: RGBA16
+inside/inside_castle_textures.03800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3555104
+  mio0: 14336
+  format: RGBA16
+inside/inside_castle_textures.04000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3555104
+  mio0: 16384
+  format: RGBA16
+inside/inside_castle_textures.04800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 2048
+  format: RGBA16
+inside/inside_castle_textures.05000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3555104
+  mio0: 20480
+  format: RGBA16
+inside/inside_castle_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3555104
+  mio0: 22528
+  format: RGBA16
+inside/inside_castle_textures.06000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3555104
+  mio0: 24576
+  format: RGBA16
+inside/inside_castle_textures.07000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3555104
+  mio0: 28672
+  format: RGBA16
+inside/inside_castle_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3555104
+  mio0: 32768
+  format: RGBA16
+inside/inside_castle_textures.08800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3555104
+  mio0: 34816
+  format: RGBA16
+inside/inside_castle_textures.09000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3555104
+  mio0: 36864
+  format: RGBA16
+inside/inside_castle_textures.0A000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3555104
+  mio0: 40960
+  format: RGBA16
+inside/inside_castle_textures.0B000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3555104
+  mio0: 45056
+  format: RGBA16
+inside/inside_castle_textures.0B800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3555104
+  mio0: 47104
+  format: RGBA16
+intro_raw/hand_closed:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2455304
+  format: RGBA16
+intro_raw/hand_open:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2453248
+  format: RGBA16
+intro_raw/mario_face_shine:
+  type: TEXTURE
+  size: 1024
+  width: 32
+  height: 32
+  offset: 2503888
+  format: IA8
+intro_raw/red_star_0:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2457352
+  format: RGBA16
+intro_raw/red_star_1:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2459400
+  format: RGBA16
+intro_raw/red_star_2:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2461448
+  format: RGBA16
+intro_raw/red_star_3:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2463496
+  format: RGBA16
+intro_raw/red_star_4:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2465544
+  format: RGBA16
+intro_raw/red_star_5:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2467592
+  format: RGBA16
+intro_raw/red_star_6:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2469640
+  format: RGBA16
+intro_raw/red_star_7:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2471688
+  format: RGBA16
+intro_raw/sparkle_0:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2490888
+  format: RGBA16
+intro_raw/sparkle_1:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2492936
+  format: RGBA16
+intro_raw/sparkle_2:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2494984
+  format: RGBA16
+intro_raw/sparkle_3:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2497032
+  format: RGBA16
+intro_raw/sparkle_4:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2499080
+  format: RGBA16
+intro_raw/sparkle_5:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2501128
+  format: RGBA16
+intro_raw/white_star_0:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2473736
+  format: RGBA16
+intro_raw/white_star_1:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2475784
+  format: RGBA16
+intro_raw/white_star_2:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2477832
+  format: RGBA16
+intro_raw/white_star_3:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2479880
+  format: RGBA16
+intro_raw/white_star_4:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2481928
+  format: RGBA16
+intro_raw/white_star_5:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2483976
+  format: RGBA16
+intro_raw/white_star_6:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2486024
+  format: RGBA16
+intro_raw/white_star_7:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 2488072
+  format: RGBA16
+ipl3_raw/ipl3_font_00:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 2928
+  format: IA1
+ipl3_raw/ipl3_font_01:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 2951
+  format: IA1
+ipl3_raw/ipl3_font_02:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 2974
+  format: IA1
+ipl3_raw/ipl3_font_03:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 2997
+  format: IA1
+ipl3_raw/ipl3_font_04:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3020
+  format: IA1
+ipl3_raw/ipl3_font_05:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3043
+  format: IA1
+ipl3_raw/ipl3_font_06:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3066
+  format: IA1
+ipl3_raw/ipl3_font_07:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3089
+  format: IA1
+ipl3_raw/ipl3_font_08:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3112
+  format: IA1
+ipl3_raw/ipl3_font_09:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3135
+  format: IA1
+ipl3_raw/ipl3_font_10:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3158
+  format: IA1
+ipl3_raw/ipl3_font_11:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3181
+  format: IA1
+ipl3_raw/ipl3_font_12:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3204
+  format: IA1
+ipl3_raw/ipl3_font_13:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3227
+  format: IA1
+ipl3_raw/ipl3_font_14:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3250
+  format: IA1
+ipl3_raw/ipl3_font_15:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3273
+  format: IA1
+ipl3_raw/ipl3_font_16:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3296
+  format: IA1
+ipl3_raw/ipl3_font_17:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3319
+  format: IA1
+ipl3_raw/ipl3_font_18:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3342
+  format: IA1
+ipl3_raw/ipl3_font_19:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3365
+  format: IA1
+ipl3_raw/ipl3_font_20:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3388
+  format: IA1
+ipl3_raw/ipl3_font_21:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3411
+  format: IA1
+ipl3_raw/ipl3_font_22:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3434
+  format: IA1
+ipl3_raw/ipl3_font_23:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3457
+  format: IA1
+ipl3_raw/ipl3_font_24:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3480
+  format: IA1
+ipl3_raw/ipl3_font_25:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3503
+  format: IA1
+ipl3_raw/ipl3_font_26:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3526
+  format: IA1
+ipl3_raw/ipl3_font_27:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3549
+  format: IA1
+ipl3_raw/ipl3_font_28:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3572
+  format: IA1
+ipl3_raw/ipl3_font_29:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3595
+  format: IA1
+ipl3_raw/ipl3_font_30:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3618
+  format: IA1
+ipl3_raw/ipl3_font_31:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3641
+  format: IA1
+ipl3_raw/ipl3_font_32:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3664
+  format: IA1
+ipl3_raw/ipl3_font_33:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3687
+  format: IA1
+ipl3_raw/ipl3_font_34:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3710
+  format: IA1
+ipl3_raw/ipl3_font_35:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3733
+  format: IA1
+ipl3_raw/ipl3_font_36:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3756
+  format: IA1
+ipl3_raw/ipl3_font_37:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3779
+  format: IA1
+ipl3_raw/ipl3_font_38:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3802
+  format: IA1
+ipl3_raw/ipl3_font_39:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3825
+  format: IA1
+ipl3_raw/ipl3_font_40:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3848
+  format: IA1
+ipl3_raw/ipl3_font_41:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3871
+  format: IA1
+ipl3_raw/ipl3_font_42:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3894
+  format: IA1
+ipl3_raw/ipl3_font_43:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3917
+  format: IA1
+ipl3_raw/ipl3_font_44:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3940
+  format: IA1
+ipl3_raw/ipl3_font_45:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3963
+  format: IA1
+ipl3_raw/ipl3_font_46:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 3986
+  format: IA1
+ipl3_raw/ipl3_font_47:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 4009
+  format: IA1
+ipl3_raw/ipl3_font_48:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 4032
+  format: IA1
+ipl3_raw/ipl3_font_49:
+  type: TEXTURE
+  size: 23
+  width: 13
+  height: 14
+  offset: 4055
+  format: IA1
+machine/ttc_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 0
+  format: RGBA16
+machine/ttc_textures.00800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 2048
+  format: RGBA16
+machine/ttc_textures.01000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 4096
+  format: RGBA16
+machine/ttc_textures.01800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 6144
+  format: RGBA16
+machine/ttc_textures.02000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 8192
+  format: RGBA16
+machine/ttc_textures.02800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 10240
+  format: RGBA16
+machine/ttc_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 12288
+  format: RGBA16
+machine/ttc_textures.03800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 14336
+  format: RGBA16
+machine/ttc_textures.04000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3460352
+  mio0: 16384
+  format: RGBA16
+machine/ttc_textures.05000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 20480
+  format: RGBA16
+machine/ttc_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 22528
+  format: RGBA16
+machine/ttc_textures.06000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 24576
+  format: RGBA16
+machine/ttc_textures.06800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 26624
+  format: RGBA16
+machine/ttc_textures.07000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 28672
+  format: RGBA16
+machine/ttc_textures.07800:
+  type: TEXTURE
+  size: 2048
+  width: 16
+  height: 64
+  offset: 3460352
+  mio0: 30720
+  format: RGBA16
+machine/ttc_textures.08000:
+  type: TEXTURE
+  size: 1024
+  width: 64
+  height: 8
+  offset: 3460352
+  mio0: 32768
+  format: RGBA16
+machine/ttc_textures.08400:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3460352
+  mio0: 33792
+  format: RGBA16
+mountain/ttm_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 0
+  format: RGBA16
+mountain/ttm_textures.00800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3473152
+  mio0: 2048
+  format: RGBA16
+mountain/ttm_textures.01800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3473152
+  mio0: 6144
+  format: RGBA16
+mountain/ttm_textures.02800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 10240
+  format: RGBA16
+mountain/ttm_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 12288
+  format: RGBA16
+mountain/ttm_textures.03800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 14336
+  format: RGBA16
+mountain/ttm_textures.04000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 16384
+  format: RGBA16
+mountain/ttm_textures.04800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 18432
+  format: RGBA16
+mountain/ttm_textures.05000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 20480
+  format: RGBA16
+mountain/ttm_textures.05800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3473152
+  mio0: 22528
+  format: RGBA16
+mountain/ttm_textures.06800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 26624
+  format: RGBA16
+mountain/ttm_textures.07000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 28672
+  format: RGBA16
+mountain/ttm_textures.07800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 30720
+  format: RGBA16
+mountain/ttm_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 32768
+  format: RGBA16
+mountain/ttm_textures.08800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3473152
+  mio0: 34816
+  format: RGBA16
+mountain/ttm_textures.09800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 38912
+  format: RGBA16
+mountain/ttm_textures.0A000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 24576
+  format: RGBA16
+mountain/ttm_textures.0A800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 43008
+  format: RGBA16
+mountain/ttm_textures.0B000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 45056
+  format: RGBA16
+mountain/ttm_textures.0B800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 47104
+  format: RGBA16
+mountain/ttm_textures.0C000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3473152
+  mio0: 49152
+  format: RGBA16
+outside/castle_grounds_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 0
+  format: RGBA16
+outside/castle_grounds_textures.00800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 2048
+  format: RGBA16
+outside/castle_grounds_textures.01000:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3527344
+  mio0: 4096
+  format: RGBA16
+outside/castle_grounds_textures.02000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3527344
+  mio0: 8192
+  format: RGBA16
+outside/castle_grounds_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 12288
+  format: RGBA16
+outside/castle_grounds_textures.03800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 14336
+  format: RGBA16
+outside/castle_grounds_textures.04000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 16384
+  format: RGBA16
+outside/castle_grounds_textures.04800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3527344
+  mio0: 18432
+  format: RGBA16
+outside/castle_grounds_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 22528
+  format: RGBA16
+outside/castle_grounds_textures.06000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 24576
+  format: RGBA16
+outside/castle_grounds_textures.06800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3527344
+  mio0: 26624
+  format: RGBA16
+outside/castle_grounds_textures.07800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 30720
+  format: RGBA16
+outside/castle_grounds_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 32768
+  format: RGBA16
+outside/castle_grounds_textures.08800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 34816
+  format: RGBA16
+outside/castle_grounds_textures.09000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 36864
+  format: RGBA16
+outside/castle_grounds_textures.09800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 38912
+  format: RGBA16
+outside/castle_grounds_textures.0A000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 40960
+  format: RGBA16
+outside/castle_grounds_textures.0A800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 43008
+  format: RGBA16
+outside/castle_grounds_textures.0B000:
+  type: TEXTURE
+  size: 1024
+  width: 16
+  height: 32
+  offset: 3527344
+  mio0: 45056
+  format: RGBA16
+outside/castle_grounds_textures.0B400:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3527344
+  mio0: 46080
+  format: RGBA16
+outside/castle_grounds_textures.0BC00:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3323408
+  mio0: 45056
+  format: IA16
+segment2/font_graphics.06410:
+  type: TEXTURE
+  size: 16
+  width: 16
+  height: 8
+  offset: 1599504
+  mio0: 83574
+  format: IA1
+segment2/font_graphics.06420:
+  type: TEXTURE
+  size: 16
+  width: 16
+  height: 8
+  offset: 1844608
+  mio0: 133979
+  format: IA1
+segment2/segment2.00000:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 0
+  format: RGBA16
+segment2/segment2.00200:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 512
+  format: RGBA16
+segment2/segment2.00400:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 1024
+  format: RGBA16
+segment2/segment2.00600:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 1536
+  format: RGBA16
+segment2/segment2.00800:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 2048
+  format: RGBA16
+segment2/segment2.00A00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 2560
+  format: RGBA16
+segment2/segment2.00C00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 3072
+  format: RGBA16
+segment2/segment2.00E00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 3584
+  format: RGBA16
+segment2/segment2.01000:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 4096
+  format: RGBA16
+segment2/segment2.01200:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 4608
+  format: RGBA16
+segment2/segment2.01400:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 5120
+  format: RGBA16
+segment2/segment2.01600:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 5632
+  format: RGBA16
+segment2/segment2.01800:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 6144
+  format: RGBA16
+segment2/segment2.01A00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 6656
+  format: RGBA16
+segment2/segment2.01C00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 7168
+  format: RGBA16
+segment2/segment2.01E00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 7680
+  format: RGBA16
+segment2/segment2.02000:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 8192
+  format: RGBA16
+segment2/segment2.02200:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 8704
+  format: RGBA16
+segment2/segment2.02400:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 9216
+  format: RGBA16
+segment2/segment2.02600:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 9728
+  format: RGBA16
+segment2/segment2.02800:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 10240
+  format: RGBA16
+segment2/segment2.02A00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 10752
+  format: RGBA16
+segment2/segment2.02C00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 11264
+  format: RGBA16
+segment2/segment2.02E00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 11776
+  format: RGBA16
+segment2/segment2.03000:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 12288
+  format: RGBA16
+segment2/segment2.03200:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 12800
+  format: RGBA16
+segment2/segment2.03400:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 13312
+  format: RGBA16
+segment2/segment2.03600:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 13824
+  format: RGBA16
+segment2/segment2.03800:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 14336
+  format: RGBA16
+segment2/segment2.03A00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 14848
+  format: RGBA16
+segment2/segment2.03C00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 15360
+  format: RGBA16
+segment2/segment2.03E00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 15872
+  format: RGBA16
+segment2/segment2.04000:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 16384
+  format: RGBA16
+segment2/segment2.04200:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 16896
+  format: RGBA16
+segment2/segment2.04400:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 17408
+  format: RGBA16
+segment2/segment2.04600:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 17920
+  format: RGBA16
+segment2/segment2.04800:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 18432
+  format: RGBA16
+segment2/segment2.04A00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 18944
+  format: RGBA16
+segment2/segment2.04C00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 19456
+  format: RGBA16
+segment2/segment2.04E00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 19968
+  format: RGBA16
+segment2/segment2.05000:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 20480
+  format: RGBA16
+segment2/segment2.05200:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 20992
+  format: RGBA16
+segment2/segment2.05400:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 21504
+  format: RGBA16
+segment2/segment2.05600:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 22016
+  format: RGBA16
+segment2/segment2.05800:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 22528
+  format: RGBA16
+segment2/segment2.05A00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 23040
+  format: RGBA16
+segment2/segment2.05C00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 23552
+  format: RGBA16
+segment2/segment2.05E00:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 24064
+  format: RGBA16
+segment2/segment2.06000:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 24576
+  format: RGBA16
+segment2/segment2.06200:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 25088
+  format: RGBA16
+segment2/segment2.06280:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 25216
+  format: RGBA16
+segment2/segment2.06300:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 25344
+  format: RGBA16
+segment2/segment2.06380:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 25472
+  format: RGBA16
+segment2/segment2.06400:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 25600
+  format: RGBA16
+segment2/segment2.06480:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 25728
+  format: RGBA16
+segment2/segment2.06500:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 25856
+  format: RGBA16
+segment2/segment2.06580:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 25984
+  format: RGBA16
+segment2/segment2.06600:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 26112
+  format: RGBA16
+segment2/segment2.06680:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 26240
+  format: RGBA16
+segment2/segment2.06700:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 26368
+  format: RGBA16
+segment2/segment2.06780:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 26496
+  format: RGBA16
+segment2/segment2.06800:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 26624
+  format: RGBA16
+segment2/segment2.06880:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 26752
+  format: RGBA16
+segment2/segment2.06900:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 26880
+  format: RGBA16
+segment2/segment2.06980:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 27008
+  format: RGBA16
+segment2/segment2.06A00:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 27136
+  format: RGBA16
+segment2/segment2.06A80:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 27264
+  format: RGBA16
+segment2/segment2.06B00:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 27392
+  format: RGBA16
+segment2/segment2.06B80:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 27520
+  format: RGBA16
+segment2/segment2.06C00:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 27648
+  format: RGBA16
+segment2/segment2.06C80:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 27776
+  format: RGBA16
+segment2/segment2.06D00:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 27904
+  format: RGBA16
+segment2/segment2.06D80:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 28032
+  format: RGBA16
+segment2/segment2.06E00:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 28160
+  format: RGBA16
+segment2/segment2.06E80:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 28288
+  format: RGBA16
+segment2/segment2.06F00:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 28416
+  format: RGBA16
+segment2/segment2.06F80:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 28544
+  format: RGBA16
+segment2/segment2.07000:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 28672
+  format: RGBA16
+segment2/segment2.07080:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 28800
+  format: RGBA16
+segment2/segment2.07100:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 28928
+  format: IA1
+segment2/segment2.07110:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 28944
+  format: IA1
+segment2/segment2.07120:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 28960
+  format: IA1
+segment2/segment2.07130:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 28976
+  format: IA1
+segment2/segment2.07140:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 28992
+  format: IA1
+segment2/segment2.07150:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29008
+  format: IA1
+segment2/segment2.07160:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29024
+  format: IA1
+segment2/segment2.07170:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29040
+  format: IA1
+segment2/segment2.07180:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29056
+  format: IA1
+segment2/segment2.07190:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29072
+  format: IA1
+segment2/segment2.071A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29088
+  format: IA1
+segment2/segment2.071B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29104
+  format: IA1
+segment2/segment2.071C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29120
+  format: IA1
+segment2/segment2.071D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29136
+  format: IA1
+segment2/segment2.071E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29152
+  format: IA1
+segment2/segment2.071F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29168
+  format: IA1
+segment2/segment2.07200:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29184
+  format: IA1
+segment2/segment2.07210:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29200
+  format: IA1
+segment2/segment2.07220:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29216
+  format: IA1
+segment2/segment2.07230:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29232
+  format: IA1
+segment2/segment2.07240:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29248
+  format: IA1
+segment2/segment2.07250:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29264
+  format: IA1
+segment2/segment2.07260:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29280
+  format: IA1
+segment2/segment2.07270:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29296
+  format: IA1
+segment2/segment2.07280:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29312
+  format: IA1
+segment2/segment2.07290:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29328
+  format: IA1
+segment2/segment2.072A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29344
+  format: IA1
+segment2/segment2.072B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29360
+  format: IA1
+segment2/segment2.072C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29376
+  format: IA1
+segment2/segment2.072D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29392
+  format: IA1
+segment2/segment2.072E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29408
+  format: IA1
+segment2/segment2.072F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29424
+  format: IA1
+segment2/segment2.07300:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29440
+  format: IA1
+segment2/segment2.07310:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29456
+  format: IA1
+segment2/segment2.07320:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29472
+  format: IA1
+segment2/segment2.07330:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29488
+  format: IA1
+segment2/segment2.07340:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29504
+  format: IA1
+segment2/segment2.07350:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29520
+  format: IA1
+segment2/segment2.07360:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29536
+  format: IA1
+segment2/segment2.07370:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29552
+  format: IA1
+segment2/segment2.07380:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29568
+  format: IA1
+segment2/segment2.07390:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29584
+  format: IA1
+segment2/segment2.073A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29600
+  format: IA1
+segment2/segment2.073B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29616
+  format: IA1
+segment2/segment2.073C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29632
+  format: IA1
+segment2/segment2.073D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29648
+  format: IA1
+segment2/segment2.073E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29664
+  format: IA1
+segment2/segment2.073F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29680
+  format: IA1
+segment2/segment2.07400:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29696
+  format: IA1
+segment2/segment2.07410:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29712
+  format: IA1
+segment2/segment2.07420:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29728
+  format: IA1
+segment2/segment2.07430:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29744
+  format: IA1
+segment2/segment2.07440:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29760
+  format: IA1
+segment2/segment2.07450:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29776
+  format: IA1
+segment2/segment2.07460:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29792
+  format: IA1
+segment2/segment2.07470:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29808
+  format: IA1
+segment2/segment2.07480:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29824
+  format: IA1
+segment2/segment2.07490:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29840
+  format: IA1
+segment2/segment2.074A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29856
+  format: IA1
+segment2/segment2.074B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29872
+  format: IA1
+segment2/segment2.074C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29888
+  format: IA1
+segment2/segment2.074D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29904
+  format: IA1
+segment2/segment2.074E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29920
+  format: IA1
+segment2/segment2.074F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29936
+  format: IA1
+segment2/segment2.07500:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29952
+  format: IA1
+segment2/segment2.07510:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29968
+  format: IA1
+segment2/segment2.07520:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 29984
+  format: IA1
+segment2/segment2.07530:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30000
+  format: IA1
+segment2/segment2.07540:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30016
+  format: IA1
+segment2/segment2.07550:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30032
+  format: IA1
+segment2/segment2.07560:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30048
+  format: IA1
+segment2/segment2.07570:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30064
+  format: IA1
+segment2/segment2.07580:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30080
+  format: IA1
+segment2/segment2.07590:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30096
+  format: IA1
+segment2/segment2.075A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30112
+  format: IA1
+segment2/segment2.075B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30128
+  format: IA1
+segment2/segment2.075C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30144
+  format: IA1
+segment2/segment2.075D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30160
+  format: IA1
+segment2/segment2.075E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30176
+  format: IA1
+segment2/segment2.075F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30192
+  format: IA1
+segment2/segment2.07600:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30208
+  format: IA1
+segment2/segment2.07610:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30224
+  format: IA1
+segment2/segment2.07620:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30240
+  format: IA1
+segment2/segment2.07630:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30256
+  format: IA1
+segment2/segment2.07640:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30272
+  format: IA1
+segment2/segment2.07650:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30288
+  format: IA1
+segment2/segment2.07660:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30304
+  format: IA1
+segment2/segment2.07670:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30320
+  format: IA1
+segment2/segment2.07680:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30336
+  format: IA1
+segment2/segment2.07690:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30352
+  format: IA1
+segment2/segment2.076A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30368
+  format: IA1
+segment2/segment2.076B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30384
+  format: IA1
+segment2/segment2.076C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30400
+  format: IA1
+segment2/segment2.076D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30416
+  format: IA1
+segment2/segment2.076E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30432
+  format: IA1
+segment2/segment2.076F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30448
+  format: IA1
+segment2/segment2.07700:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30464
+  format: IA1
+segment2/segment2.07710:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30480
+  format: IA1
+segment2/segment2.07720:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30496
+  format: IA1
+segment2/segment2.07730:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30512
+  format: IA1
+segment2/segment2.07740:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30528
+  format: IA1
+segment2/segment2.07750:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30544
+  format: IA1
+segment2/segment2.07760:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30560
+  format: IA1
+segment2/segment2.07770:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30576
+  format: IA1
+segment2/segment2.07780:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30592
+  format: IA1
+segment2/segment2.07790:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30608
+  format: IA1
+segment2/segment2.077A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30624
+  format: IA1
+segment2/segment2.077B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30640
+  format: IA1
+segment2/segment2.077C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30656
+  format: IA1
+segment2/segment2.077D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30672
+  format: IA1
+segment2/segment2.077E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30688
+  format: IA1
+segment2/segment2.077F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30704
+  format: IA1
+segment2/segment2.07800:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30720
+  format: IA1
+segment2/segment2.07810:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30736
+  format: IA1
+segment2/segment2.07820:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30752
+  format: IA1
+segment2/segment2.07830:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30768
+  format: IA1
+segment2/segment2.07840:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30784
+  format: IA1
+segment2/segment2.07850:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30800
+  format: IA1
+segment2/segment2.07860:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30816
+  format: IA1
+segment2/segment2.07870:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30832
+  format: IA1
+segment2/segment2.07880:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30848
+  format: IA1
+segment2/segment2.07890:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30864
+  format: IA1
+segment2/segment2.078A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30880
+  format: IA1
+segment2/segment2.078B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30896
+  format: IA1
+segment2/segment2.078C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30912
+  format: IA1
+segment2/segment2.078D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30928
+  format: IA1
+segment2/segment2.078E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30944
+  format: IA1
+segment2/segment2.078F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30960
+  format: IA1
+segment2/segment2.07900:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30976
+  format: IA1
+segment2/segment2.07910:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 30992
+  format: IA1
+segment2/segment2.07920:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31008
+  format: IA1
+segment2/segment2.07930:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31024
+  format: IA1
+segment2/segment2.07940:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31040
+  format: IA1
+segment2/segment2.07950:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31056
+  format: IA1
+segment2/segment2.07960:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31072
+  format: IA1
+segment2/segment2.07970:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31088
+  format: IA1
+segment2/segment2.07980:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31104
+  format: IA1
+segment2/segment2.07990:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31120
+  format: IA1
+segment2/segment2.079A0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31136
+  format: IA1
+segment2/segment2.079B0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31152
+  format: IA1
+segment2/segment2.079C0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31168
+  format: IA1
+segment2/segment2.079D0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31184
+  format: IA1
+segment2/segment2.079E0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31200
+  format: IA1
+segment2/segment2.079F0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31216
+  format: IA1
+segment2/segment2.07A00:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31232
+  format: IA1
+segment2/segment2.07A10:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31248
+  format: IA1
+segment2/segment2.07A20:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31264
+  format: IA1
+segment2/segment2.07A30:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31280
+  format: IA1
+segment2/segment2.07A40:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31296
+  format: IA1
+segment2/segment2.07A50:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31312
+  format: IA1
+segment2/segment2.07A60:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31328
+  format: IA1
+segment2/segment2.07A70:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31344
+  format: IA1
+segment2/segment2.07A80:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31360
+  format: IA1
+segment2/segment2.07A90:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31376
+  format: IA1
+segment2/segment2.07AA0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31392
+  format: IA1
+segment2/segment2.07AB0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31408
+  format: IA1
+segment2/segment2.07AC0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31424
+  format: IA1
+segment2/segment2.07AD0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31440
+  format: IA1
+segment2/segment2.07AE0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31456
+  format: IA1
+segment2/segment2.07AF0:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31472
+  format: IA1
+segment2/segment2.07B00:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31488
+  format: IA1
+segment2/segment2.07B10:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31504
+  format: IA1
+segment2/segment2.07B20:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31520
+  format: IA1
+segment2/segment2.07B30:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31536
+  format: IA1
+segment2/segment2.07B40:
+  type: TEXTURE
+  size: 16
+  width: 8
+  height: 16
+  offset: 1078992
+  mio0: 31552
+  format: IA1
+segment2/segment2.07B50:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 31568
+  format: RGBA16
+segment2/segment2.07D50:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 32080
+  format: RGBA16
+segment2/segment2.07F50:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 32592
+  format: RGBA16
+segment2/segment2.08150:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 33104
+  format: RGBA16
+segment2/segment2.081D0:
+  type: TEXTURE
+  size: 128
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 33232
+  format: RGBA16
+segment2/segment2.0F458:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 64
+  offset: 1078992
+  mio0: 62552
+  format: IA8
+segment2/segment2.0FC58:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 64
+  offset: 1078992
+  mio0: 64600
+  format: IA8
+segment2/segment2.10458:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 64
+  offset: 1078992
+  mio0: 66648
+  format: IA8
+segment2/segment2.11458:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 64
+  offset: 1078992
+  mio0: 70744
+  format: IA8
+segment2/segment2.11C58:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 1078992
+  mio0: 72792
+  format: RGBA16
+segment2/segment2.12458:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 1078992
+  mio0: 74840
+  format: RGBA16
+segment2/segment2.12C58:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 1078992
+  mio0: 76888
+  format: RGBA16
+segment2/segment2.13458:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 1078992
+  mio0: 78936
+  format: IA16
+segment2/segment2.13C58:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 1078992
+  mio0: 80984
+  format: RGBA16
+segment2/segment2.14838:
+  type: TEXTURE
+  size: 64
+  width: 8
+  height: 8
+  offset: 1078992
+  mio0: 84024
+  format: IA8
+segment2/shadow_quarter_circle:
+  type: TEXTURE
+  size: 256
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 62040
+  format: IA8
+segment2/shadow_quarter_square:
+  type: TEXTURE
+  size: 256
+  width: 16
+  height: 16
+  offset: 1078992
+  mio0: 62296
+  format: IA8
+sky/metal_hole:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 26624
+  format: RGBA16
+sky/rr_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 0
+  format: RGBA16
+sky/rr_textures.00800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 2048
+  format: RGBA16
+sky/rr_textures.01000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 4096
+  format: RGBA16
+sky/rr_textures.01800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 6144
+  format: RGBA16
+sky/rr_textures.02000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3390640
+  mio0: 8192
+  format: RGBA16
+sky/rr_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 12288
+  format: RGBA16
+sky/rr_textures.03800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3390640
+  mio0: 14336
+  format: RGBA16
+sky/rr_textures.04800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 18432
+  format: RGBA16
+sky/rr_textures.05000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 20480
+  format: RGBA16
+sky/rr_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 22528
+  format: RGBA16
+sky/rr_textures.06000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 24576
+  format: RGBA16
+sky/rr_textures.07000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 28672
+  format: RGBA16
+sky/rr_textures.07800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 30720
+  format: RGBA16
+sky/rr_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3390640
+  mio0: 32768
+  format: RGBA16
+skyboxes/bbh:
+  type: BLOB
+  size: 84288
+  offset: 3118928
+  mio0: 0
+skyboxes/bidw:
+  type: BLOB
+  size: 131392
+  offset: 3146352
+  mio0: 0
+skyboxes/bitfs:
+  type: BLOB
+  size: 102720
+  offset: 2942432
+  mio0: 0
+skyboxes/bits:
+  type: BLOB
+  size: 131392
+  offset: 3191904
+  mio0: 0
+skyboxes/ccm:
+  type: BLOB
+  size: 131392
+  offset: 2847920
+  mio0: 0
+skyboxes/cloud_floor:
+  type: BLOB
+  size: 131392
+  offset: 3038752
+  mio0: 0
+skyboxes/clouds:
+  type: BLOB
+  size: 84288
+  offset: 2906480
+  mio0: 0
+skyboxes/ssl:
+  type: BLOB
+  size: 131392
+  offset: 3078784
+  mio0: 0
+skyboxes/water:
+  type: BLOB
+  size: 131392
+  offset: 2796624
+  mio0: 0
+skyboxes/wdw:
+  type: BLOB
+  size: 131392
+  offset: 2968208
+  mio0: 0
+snow/ccm_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 0
+  format: RGBA16
+snow/ccm_textures.00800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 2048
+  format: RGBA16
+snow/ccm_textures.01000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3405536
+  mio0: 4096
+  format: RGBA16
+snow/ccm_textures.02000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 8192
+  format: RGBA16
+snow/ccm_textures.02800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 10240
+  format: RGBA16
+snow/ccm_textures.03000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 12288
+  format: RGBA16
+snow/ccm_textures.03800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 14336
+  format: RGBA16
+snow/ccm_textures.04000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 16384
+  format: RGBA16
+snow/ccm_textures.04800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 18432
+  format: RGBA16
+snow/ccm_textures.05000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 20480
+  format: RGBA16
+snow/ccm_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 22528
+  format: RGBA16
+snow/ccm_textures.06000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 24576
+  format: RGBA16
+snow/ccm_textures.06800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 26624
+  format: RGBA16
+snow/ccm_textures.07000:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3405536
+  mio0: 28672
+  format: RGBA16
+snow/ccm_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 32768
+  format: RGBA16
+snow/ccm_textures.08800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 34816
+  format: RGBA16
+snow/ccm_textures.09000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 36864
+  format: IA16
+snow/ccm_textures.09800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3405536
+  mio0: 38912
+  format: IA16
+spooky/bbh_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 0
+  format: RGBA16
+spooky/bbh_textures.00800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3298272
+  mio0: 2048
+  format: RGBA16
+spooky/bbh_textures.01800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3298272
+  mio0: 6144
+  format: RGBA16
+spooky/bbh_textures.02800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3298272
+  mio0: 10240
+  format: RGBA16
+spooky/bbh_textures.03800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3298272
+  mio0: 14336
+  format: RGBA16
+spooky/bbh_textures.04800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 18432
+  format: RGBA16
+spooky/bbh_textures.05000:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3298272
+  mio0: 20480
+  format: RGBA16
+spooky/bbh_textures.06000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 24576
+  format: RGBA16
+spooky/bbh_textures.06800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 26624
+  format: RGBA16
+spooky/bbh_textures.07000:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3298272
+  mio0: 28672
+  format: RGBA16
+spooky/bbh_textures.08000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 32768
+  format: RGBA16
+spooky/bbh_textures.08800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 34816
+  format: RGBA16
+spooky/bbh_textures.09000:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3298272
+  mio0: 36864
+  format: RGBA16
+spooky/bbh_textures.0A000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 1462368
+  mio0: 49800
+  format: RGBA16
+spooky/bbh_textures.0A800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 43008
+  format: IA16
+spooky/bbh_textures.0B000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3298272
+  mio0: 45056
+  format: IA16
+spooky/bbh_textures.0B800:
+  type: TEXTURE
+  size: 4096
+  width: 32
+  height: 64
+  offset: 3298272
+  mio0: 47104
+  format: IA16
+title_screen_bg/title_screen_bg.001C0:
+  type: TEXTURE
+  size: 3200
+  width: 80
+  height: 20
+  offset: 2550336
+  mio0: 448
+  format: RGBA16
+title_screen_bg/title_screen_bg.00E40:
+  type: TEXTURE
+  size: 3200
+  width: 80
+  height: 20
+  offset: 2550336
+  mio0: 3648
+  format: RGBA16
+title_screen_bg/title_screen_bg.01AC0:
+  type: TEXTURE
+  size: 3200
+  width: 80
+  height: 20
+  offset: 2550336
+  mio0: 6848
+  format: RGBA16
+title_screen_bg/title_screen_bg.02740:
+  type: TEXTURE
+  size: 3200
+  width: 80
+  height: 20
+  offset: 2550336
+  mio0: 10048
+  format: RGBA16
+title_screen_bg/title_screen_bg.033C0:
+  type: TEXTURE
+  size: 3200
+  width: 80
+  height: 20
+  offset: 2550336
+  mio0: 13248
+  format: RGBA16
+title_screen_bg/title_screen_bg.04040:
+  type: TEXTURE
+  size: 3200
+  width: 80
+  height: 20
+  offset: 2550336
+  mio0: 16448
+  format: RGBA16
+title_screen_bg/title_screen_bg.04CC0:
+  type: TEXTURE
+  size: 3200
+  width: 80
+  height: 20
+  offset: 2550336
+  mio0: 19648
+  format: RGBA16
+title_screen_bg/title_screen_bg.05940:
+  type: TEXTURE
+  size: 3200
+  width: 80
+  height: 20
+  offset: 2550336
+  mio0: 22848
+  format: RGBA16
+water/jrb_textures.00000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3354832
+  mio0: 0
+  format: RGBA16
+water/jrb_textures.00800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 2048
+  format: RGBA16
+water/jrb_textures.01800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 6144
+  format: RGBA16
+water/jrb_textures.02800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 10240
+  format: RGBA16
+water/jrb_textures.03800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 14336
+  format: RGBA16
+water/jrb_textures.04800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 18432
+  format: RGBA16
+water/jrb_textures.05800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3354832
+  mio0: 22528
+  format: RGBA16
+water/jrb_textures.06000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3354832
+  mio0: 24576
+  format: RGBA16
+water/jrb_textures.06800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 26624
+  format: RGBA16
+water/jrb_textures.07800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 30720
+  format: RGBA16
+water/jrb_textures.08800:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3354832
+  mio0: 34816
+  format: RGBA16
+water/jrb_textures.09000:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 36864
+  format: RGBA16
+water/jrb_textures.0A000:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 3354832
+  mio0: 40960
+  format: RGBA16
+water/jrb_textures.0A800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 43008
+  format: RGBA16
+water/jrb_textures.0B800:
+  type: TEXTURE
+  size: 4096
+  width: 64
+  height: 32
+  offset: 3354832
+  mio0: 47104
+  format: RGBA16

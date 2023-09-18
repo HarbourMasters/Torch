@@ -8,7 +8,6 @@
 #include "hj/pyutils.h"
 #include "binarytools/BinaryReader.h"
 #include "hj/zip.h"
-#include <nlohmann/json.hpp>
 
 std::unordered_map<std::string, uint32_t> name_table;
 AudioManager* AudioManager::Instance;
@@ -429,21 +428,22 @@ TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& 
     return tbl;
 }
 
-void AudioManager::initialize(std::vector<uint8_t>& buffer) {
-    auto assets = nlohmann::json::parse(std::ifstream( "assets.json" ));
-    auto sound_data = assets["@sound_data"]["us"];
+void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
 
-    auto sound_tbl = sound_data["sound_tbl"];
-    auto sound_ctl = sound_data["sound_ctl"];
+    auto ctlOffset = data["ctl"]["offset"].as<size_t>();
+    auto ctlSize = data["ctl"]["size"].as<size_t>();
 
-    std::vector<Entry> tbl = parse_seq_file(buffer, sound_tbl[0], false);
-    std::vector<Entry> ctl = parse_seq_file(buffer, sound_ctl[0], true);
+    auto tblOffset = data["tbl"]["offset"].as<size_t>();
+    auto tblSize = data["tbl"]["size"].as<size_t>();
+
+    std::vector<Entry> tbl = parse_seq_file(buffer, tblOffset, false);
+    std::vector<Entry> ctl = parse_seq_file(buffer, ctlOffset, true);
 
     std::cout << "Table entries: "   << tbl.size() << std::endl;
     std::cout << "Control entries: " << ctl.size() << std::endl;
 
-    std::vector<uint8_t> tbl_data = PyUtils::slice(buffer, sound_tbl[0], (size_t) sound_tbl[0] + (size_t) sound_tbl[1]);
-    std::vector<uint8_t> ctl_data = PyUtils::slice(buffer, sound_ctl[0], (size_t) sound_ctl[0] + (size_t) sound_ctl[1]);
+    std::vector<uint8_t> tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
+    std::vector<uint8_t> ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
     this->loaded_tbl = parse_tbl(tbl_data, tbl);
 
     std::cout << "TBLs: " << this->loaded_tbl.tbls.size() << std::endl;

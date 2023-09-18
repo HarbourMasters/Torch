@@ -1,0 +1,30 @@
+#pragma once
+
+#include <vector>
+#include <string>
+
+namespace N64 {
+enum class CountryCode {
+    Japan,
+    NorthAmerica,
+    Europe,
+    Unknown
+};
+
+class Cartridge {
+public:
+    explicit Cartridge(const std::vector<uint8_t>& romData) : gRomData(romData), gCountryCode(CountryCode::Unknown), gVersion(0), gGameTitle("Unknown") {}
+    void Initialize();
+    const std::string& GetGameTitle();
+    std::string GetCountryCode();
+    CountryCode GetCountry();
+    uint8_t GetVersion() const;
+    std::string GetHash();
+private:
+    std::vector<uint8_t> gRomData;
+    CountryCode gCountryCode;
+    uint8_t gVersion;
+    std::string gGameTitle;
+    std::string gHash;
+};
+}

@@ -1,12 +1,13 @@
 const YAML = require('./yaml/dist/index')
 const fs = require('fs');
 const path = require('path');
-const assets = require('../assets.json');
-const version = 'jp';
+const assets = require('./assets.json');
+const version = 'eu';
 
 const map = {
     png: texture,
     anime: anim,
+    audio: audio,
     aiff: audio,
     bnk: audio,
     bset: audio,
@@ -33,6 +34,7 @@ function texture(file, data){
         width: data[0],
         height: data[1],
         offset: data[3][version][0],
+        mio0: data[3][version][1],
         format: format.ext.toUpperCase().slice(1),
     };
 }
@@ -57,6 +59,21 @@ function anim(file, data){
 }
 
 function audio(file, data, ext){
+    if(ext === 'audio'){
+        if(!data[version]) return;
+        return {
+            file: 'header',
+            type: 'AUDIO:HEADER',
+            ctl: {
+                offset: data[version]['sound_ctl'][0],
+                size: data[version]['sound_ctl'][1],
+            },
+            tbl: {
+                offset: data[version]['sound_tbl'][0],
+                size: data[version]['sound_tbl'][1],
+            },
+        }
+    }
     if(ext === 'aiff'){
         if(!data[1][version]) return;
         return {
@@ -86,20 +103,24 @@ function audio(file, data, ext){
 
 function blob(file, data){
     if(!data[1][version]) return;
-    return {
+    let mio0 = data[1][version].length > 1;
+    let output = {
         file: file,
         type: 'BLOB',
         size: data[0],
         offset: data[1][version][0],
-        mio0: data[1][version][1] == 0,
     };
+    if(mio0){
+        output['mio0'] = data[1][version][1];
+    }
+    return output;
 }
 
 async function main(){
     let keys = Object.keys(assets).filter(f => f.includes('/'));
-    let output = path.join('output', version);
+    let output = path.join('assets/sm64', version);
     fs.rmdirSync(output, { recursive: true });
-    fs.mkdirSync(output);
+    fs.mkdirSync(output, { recursive: true });
     for(let key of keys.sort()){
         let parent = key.split('/')[0];
         let ext = key.split('.').pop();
