@@ -6,717 +6,1366 @@
 #define ALIGN_ASSET(x) __attribute__((aligned (x)))
 #endif
 
-#define dgSample00 "__OTR__sound/samples/sfx_1/00_twirl"
-static const ALIGN_ASSET(2) char gSample00[] = dgSample00;
+#define dgUSSample00 "__OTR__sound/samples/sfx_1/00_twirl"
+static const ALIGN_ASSET(2) char gUSSample00[] = dgUSSample00;
 
-#define dgSample01 "__OTR__sound/samples/sfx_1/01_brushing"
-static const ALIGN_ASSET(2) char gSample01[] = dgSample01;
+#define dgUSSample01 "__OTR__sound/samples/sfx_1/01_brushing"
+static const ALIGN_ASSET(2) char gUSSample01[] = dgUSSample01;
 
-#define dgSample02 "__OTR__sound/samples/sfx_1/02_hand_touch"
-static const ALIGN_ASSET(2) char gSample02[] = dgSample02;
+#define dgUSSample02 "__OTR__sound/samples/sfx_1/02_hand_touch"
+static const ALIGN_ASSET(2) char gUSSample02[] = dgUSSample02;
 
-#define dgSample03 "__OTR__sound/samples/sfx_1/03_yoshi"
-static const ALIGN_ASSET(2) char gSample03[] = dgSample03;
+#define dgUSSample03 "__OTR__sound/samples/sfx_1/03_yoshi"
+static const ALIGN_ASSET(2) char gUSSample03[] = dgUSSample03;
 
-#define dgSample04 "__OTR__sound/samples/sfx_1/04_plop"
-static const ALIGN_ASSET(2) char gSample04[] = dgSample04;
+#define dgUSSample04 "__OTR__sound/samples/sfx_1/04_plop"
+static const ALIGN_ASSET(2) char gUSSample04[] = dgUSSample04;
 
-#define dgSample05 "__OTR__sound/samples/sfx_1/05_heavy_landing"
-static const ALIGN_ASSET(2) char gSample05[] = dgSample05;
+#define dgUSSample05 "__OTR__sound/samples/sfx_1/05_heavy_landing"
+static const ALIGN_ASSET(2) char gUSSample05[] = dgUSSample05;
 
-#define dgSample06 "__OTR__sound/samples/sfx_terrain/00_step_default"
-static const ALIGN_ASSET(2) char gSample06[] = dgSample06;
+#define dgUSSample06 "__OTR__sound/samples/sfx_terrain/00_step_default"
+static const ALIGN_ASSET(2) char gUSSample06[] = dgUSSample06;
 
-#define dgSample07 "__OTR__sound/samples/sfx_terrain/01_step_grass"
-static const ALIGN_ASSET(2) char gSample07[] = dgSample07;
+#define dgUSSample07 "__OTR__sound/samples/sfx_terrain/01_step_grass"
+static const ALIGN_ASSET(2) char gUSSample07[] = dgUSSample07;
 
-#define dgSample08 "__OTR__sound/samples/sfx_terrain/02_step_stone"
-static const ALIGN_ASSET(2) char gSample08[] = dgSample08;
+#define dgUSSample08 "__OTR__sound/samples/sfx_terrain/02_step_stone"
+static const ALIGN_ASSET(2) char gUSSample08[] = dgUSSample08;
 
-#define dgSample09 "__OTR__sound/samples/sfx_terrain/03_step_spooky"
-static const ALIGN_ASSET(2) char gSample09[] = dgSample09;
+#define dgUSSample09 "__OTR__sound/samples/sfx_terrain/03_step_spooky"
+static const ALIGN_ASSET(2) char gUSSample09[] = dgUSSample09;
 
-#define dgSample0A "__OTR__sound/samples/sfx_terrain/04_step_snow"
-static const ALIGN_ASSET(2) char gSample0A[] = dgSample0A;
+#define dgUSSample0A "__OTR__sound/samples/sfx_terrain/04_step_snow"
+static const ALIGN_ASSET(2) char gUSSample0A[] = dgUSSample0A;
 
-#define dgSample0B "__OTR__sound/samples/sfx_terrain/05_step_ice"
-static const ALIGN_ASSET(2) char gSample0B[] = dgSample0B;
+#define dgUSSample0B "__OTR__sound/samples/sfx_terrain/05_step_ice"
+static const ALIGN_ASSET(2) char gUSSample0B[] = dgUSSample0B;
 
-#define dgSample0C "__OTR__sound/samples/sfx_terrain/06_step_metal"
-static const ALIGN_ASSET(2) char gSample0C[] = dgSample0C;
+#define dgUSSample0C "__OTR__sound/samples/sfx_terrain/06_step_metal"
+static const ALIGN_ASSET(2) char gUSSample0C[] = dgUSSample0C;
 
-#define dgSample0D "__OTR__sound/samples/sfx_terrain/07_step_sand"
-static const ALIGN_ASSET(2) char gSample0D[] = dgSample0D;
+#define dgUSSample0D "__OTR__sound/samples/sfx_terrain/07_step_sand"
+static const ALIGN_ASSET(2) char gUSSample0D[] = dgUSSample0D;
 
-#define dgSample0E "__OTR__sound/samples/sfx_water/00_plunge"
-static const ALIGN_ASSET(2) char gSample0E[] = dgSample0E;
+#define dgUSSample0E "__OTR__sound/samples/sfx_water/00_plunge"
+static const ALIGN_ASSET(2) char gUSSample0E[] = dgUSSample0E;
 
-#define dgSample0F "__OTR__sound/samples/sfx_water/01_splash"
-static const ALIGN_ASSET(2) char gSample0F[] = dgSample0F;
+#define dgUSSample0F "__OTR__sound/samples/sfx_water/01_splash"
+static const ALIGN_ASSET(2) char gUSSample0F[] = dgUSSample0F;
 
-#define dgSample10 "__OTR__sound/samples/sfx_water/02_swim"
-static const ALIGN_ASSET(2) char gSample10[] = dgSample10;
+#define dgUSSample10 "__OTR__sound/samples/sfx_water/02_swim"
+static const ALIGN_ASSET(2) char gUSSample10[] = dgUSSample10;
 
-#define dgSample11 "__OTR__sound/samples/sfx_4/00"
-static const ALIGN_ASSET(2) char gSample11[] = dgSample11;
+#define dgUSSample11 "__OTR__sound/samples/sfx_4/00"
+static const ALIGN_ASSET(2) char gUSSample11[] = dgUSSample11;
 
-#define dgSample12 "__OTR__sound/samples/sfx_4/01"
-static const ALIGN_ASSET(2) char gSample12[] = dgSample12;
+#define dgUSSample12 "__OTR__sound/samples/sfx_4/01"
+static const ALIGN_ASSET(2) char gUSSample12[] = dgUSSample12;
 
-#define dgSample13 "__OTR__sound/samples/sfx_4/02"
-static const ALIGN_ASSET(2) char gSample13[] = dgSample13;
+#define dgUSSample13 "__OTR__sound/samples/sfx_4/02"
+static const ALIGN_ASSET(2) char gUSSample13[] = dgUSSample13;
 
-#define dgSample14 "__OTR__sound/samples/sfx_4/03"
-static const ALIGN_ASSET(2) char gSample14[] = dgSample14;
+#define dgUSSample14 "__OTR__sound/samples/sfx_4/03"
+static const ALIGN_ASSET(2) char gUSSample14[] = dgUSSample14;
 
-#define dgSample15 "__OTR__sound/samples/sfx_4/04"
-static const ALIGN_ASSET(2) char gSample15[] = dgSample15;
+#define dgUSSample15 "__OTR__sound/samples/sfx_4/04"
+static const ALIGN_ASSET(2) char gUSSample15[] = dgUSSample15;
 
-#define dgSample16 "__OTR__sound/samples/sfx_4/05"
-static const ALIGN_ASSET(2) char gSample16[] = dgSample16;
+#define dgUSSample16 "__OTR__sound/samples/sfx_4/05"
+static const ALIGN_ASSET(2) char gUSSample16[] = dgUSSample16;
 
-#define dgSample17 "__OTR__sound/samples/sfx_4/06"
-static const ALIGN_ASSET(2) char gSample17[] = dgSample17;
+#define dgUSSample17 "__OTR__sound/samples/sfx_4/06"
+static const ALIGN_ASSET(2) char gUSSample17[] = dgUSSample17;
 
-#define dgSample18 "__OTR__sound/samples/sfx_4/07"
-static const ALIGN_ASSET(2) char gSample18[] = dgSample18;
+#define dgUSSample18 "__OTR__sound/samples/sfx_4/07"
+static const ALIGN_ASSET(2) char gUSSample18[] = dgUSSample18;
 
-#define dgSample19 "__OTR__sound/samples/sfx_4/08"
-static const ALIGN_ASSET(2) char gSample19[] = dgSample19;
+#define dgUSSample19 "__OTR__sound/samples/sfx_4/08"
+static const ALIGN_ASSET(2) char gUSSample19[] = dgUSSample19;
 
-#define dgSample1A "__OTR__sound/samples/sfx_4/09"
-static const ALIGN_ASSET(2) char gSample1A[] = dgSample1A;
+#define dgUSSample1A "__OTR__sound/samples/sfx_4/09"
+static const ALIGN_ASSET(2) char gUSSample1A[] = dgUSSample1A;
 
-#define dgSample1B "__OTR__sound/samples/sfx_5/00"
-static const ALIGN_ASSET(2) char gSample1B[] = dgSample1B;
+#define dgUSSample1B "__OTR__sound/samples/sfx_5/00"
+static const ALIGN_ASSET(2) char gUSSample1B[] = dgUSSample1B;
 
-#define dgSample1C "__OTR__sound/samples/sfx_5/01"
-static const ALIGN_ASSET(2) char gSample1C[] = dgSample1C;
+#define dgUSSample1C "__OTR__sound/samples/sfx_5/01"
+static const ALIGN_ASSET(2) char gUSSample1C[] = dgUSSample1C;
 
-#define dgSample1D "__OTR__sound/samples/sfx_5/02"
-static const ALIGN_ASSET(2) char gSample1D[] = dgSample1D;
+#define dgUSSample1D "__OTR__sound/samples/sfx_5/02"
+static const ALIGN_ASSET(2) char gUSSample1D[] = dgUSSample1D;
 
-#define dgSample1E "__OTR__sound/samples/sfx_5/03"
-static const ALIGN_ASSET(2) char gSample1E[] = dgSample1E;
+#define dgUSSample1E "__OTR__sound/samples/sfx_5/03"
+static const ALIGN_ASSET(2) char gUSSample1E[] = dgUSSample1E;
 
-#define dgSample1F "__OTR__sound/samples/sfx_5/04"
-static const ALIGN_ASSET(2) char gSample1F[] = dgSample1F;
+#define dgUSSample1F "__OTR__sound/samples/sfx_5/04"
+static const ALIGN_ASSET(2) char gUSSample1F[] = dgUSSample1F;
 
-#define dgSample20 "__OTR__sound/samples/sfx_5/05"
-static const ALIGN_ASSET(2) char gSample20[] = dgSample20;
+#define dgUSSample20 "__OTR__sound/samples/sfx_5/05"
+static const ALIGN_ASSET(2) char gUSSample20[] = dgUSSample20;
 
-#define dgSample21 "__OTR__sound/samples/sfx_5/06"
-static const ALIGN_ASSET(2) char gSample21[] = dgSample21;
+#define dgUSSample21 "__OTR__sound/samples/sfx_5/06"
+static const ALIGN_ASSET(2) char gUSSample21[] = dgUSSample21;
 
-#define dgSample22 "__OTR__sound/samples/sfx_5/07"
-static const ALIGN_ASSET(2) char gSample22[] = dgSample22;
+#define dgUSSample22 "__OTR__sound/samples/sfx_5/07"
+static const ALIGN_ASSET(2) char gUSSample22[] = dgUSSample22;
 
-#define dgSample23 "__OTR__sound/samples/sfx_5/08"
-static const ALIGN_ASSET(2) char gSample23[] = dgSample23;
+#define dgUSSample23 "__OTR__sound/samples/sfx_5/08"
+static const ALIGN_ASSET(2) char gUSSample23[] = dgUSSample23;
 
-#define dgSample24 "__OTR__sound/samples/sfx_5/09"
-static const ALIGN_ASSET(2) char gSample24[] = dgSample24;
+#define dgUSSample24 "__OTR__sound/samples/sfx_5/09"
+static const ALIGN_ASSET(2) char gUSSample24[] = dgUSSample24;
 
-#define dgSample25 "__OTR__sound/samples/sfx_5/0A"
-static const ALIGN_ASSET(2) char gSample25[] = dgSample25;
+#define dgUSSample25 "__OTR__sound/samples/sfx_5/0A"
+static const ALIGN_ASSET(2) char gUSSample25[] = dgUSSample25;
 
-#define dgSample26 "__OTR__sound/samples/sfx_5/0B"
-static const ALIGN_ASSET(2) char gSample26[] = dgSample26;
+#define dgUSSample26 "__OTR__sound/samples/sfx_5/0B"
+static const ALIGN_ASSET(2) char gUSSample26[] = dgUSSample26;
 
-#define dgSample27 "__OTR__sound/samples/sfx_5/0C"
-static const ALIGN_ASSET(2) char gSample27[] = dgSample27;
+#define dgUSSample27 "__OTR__sound/samples/sfx_5/0C"
+static const ALIGN_ASSET(2) char gUSSample27[] = dgUSSample27;
 
-#define dgSample28 "__OTR__sound/samples/sfx_5/0D"
-static const ALIGN_ASSET(2) char gSample28[] = dgSample28;
+#define dgUSSample28 "__OTR__sound/samples/sfx_5/0D"
+static const ALIGN_ASSET(2) char gUSSample28[] = dgUSSample28;
 
-#define dgSample29 "__OTR__sound/samples/sfx_5/0E"
-static const ALIGN_ASSET(2) char gSample29[] = dgSample29;
+#define dgUSSample29 "__OTR__sound/samples/sfx_5/0E"
+static const ALIGN_ASSET(2) char gUSSample29[] = dgUSSample29;
 
-#define dgSample2A "__OTR__sound/samples/sfx_5/0F"
-static const ALIGN_ASSET(2) char gSample2A[] = dgSample2A;
+#define dgUSSample2A "__OTR__sound/samples/sfx_5/0F"
+static const ALIGN_ASSET(2) char gUSSample2A[] = dgUSSample2A;
 
-#define dgSample2B "__OTR__sound/samples/sfx_5/10"
-static const ALIGN_ASSET(2) char gSample2B[] = dgSample2B;
+#define dgUSSample2B "__OTR__sound/samples/sfx_5/10"
+static const ALIGN_ASSET(2) char gUSSample2B[] = dgUSSample2B;
 
-#define dgSample2C "__OTR__sound/samples/sfx_5/11"
-static const ALIGN_ASSET(2) char gSample2C[] = dgSample2C;
+#define dgUSSample2C "__OTR__sound/samples/sfx_5/11"
+static const ALIGN_ASSET(2) char gUSSample2C[] = dgUSSample2C;
 
-#define dgSample2D "__OTR__sound/samples/sfx_5/12"
-static const ALIGN_ASSET(2) char gSample2D[] = dgSample2D;
+#define dgUSSample2D "__OTR__sound/samples/sfx_5/12"
+static const ALIGN_ASSET(2) char gUSSample2D[] = dgUSSample2D;
 
-#define dgSample2E "__OTR__sound/samples/sfx_5/13"
-static const ALIGN_ASSET(2) char gSample2E[] = dgSample2E;
+#define dgUSSample2E "__OTR__sound/samples/sfx_5/13"
+static const ALIGN_ASSET(2) char gUSSample2E[] = dgUSSample2E;
 
-#define dgSample2F "__OTR__sound/samples/sfx_5/14"
-static const ALIGN_ASSET(2) char gSample2F[] = dgSample2F;
+#define dgUSSample2F "__OTR__sound/samples/sfx_5/14"
+static const ALIGN_ASSET(2) char gUSSample2F[] = dgUSSample2F;
 
-#define dgSample30 "__OTR__sound/samples/sfx_5/15"
-static const ALIGN_ASSET(2) char gSample30[] = dgSample30;
+#define dgUSSample30 "__OTR__sound/samples/sfx_5/15"
+static const ALIGN_ASSET(2) char gUSSample30[] = dgUSSample30;
 
-#define dgSample31 "__OTR__sound/samples/sfx_5/16"
-static const ALIGN_ASSET(2) char gSample31[] = dgSample31;
+#define dgUSSample31 "__OTR__sound/samples/sfx_5/16"
+static const ALIGN_ASSET(2) char gUSSample31[] = dgUSSample31;
 
-#define dgSample32 "__OTR__sound/samples/sfx_5/17"
-static const ALIGN_ASSET(2) char gSample32[] = dgSample32;
+#define dgUSSample32 "__OTR__sound/samples/sfx_5/17"
+static const ALIGN_ASSET(2) char gUSSample32[] = dgUSSample32;
 
-#define dgSample33 "__OTR__sound/samples/sfx_5/18"
-static const ALIGN_ASSET(2) char gSample33[] = dgSample33;
+#define dgUSSample33 "__OTR__sound/samples/sfx_5/18"
+static const ALIGN_ASSET(2) char gUSSample33[] = dgUSSample33;
 
-#define dgSample34 "__OTR__sound/samples/sfx_5/19"
-static const ALIGN_ASSET(2) char gSample34[] = dgSample34;
+#define dgUSSample34 "__OTR__sound/samples/sfx_5/19"
+static const ALIGN_ASSET(2) char gUSSample34[] = dgUSSample34;
 
-#define dgSample35 "__OTR__sound/samples/sfx_5/1A"
-static const ALIGN_ASSET(2) char gSample35[] = dgSample35;
+#define dgUSSample35 "__OTR__sound/samples/sfx_5/1A"
+static const ALIGN_ASSET(2) char gUSSample35[] = dgUSSample35;
 
-#define dgSample36 "__OTR__sound/samples/sfx_5/1B"
-static const ALIGN_ASSET(2) char gSample36[] = dgSample36;
+#define dgUSSample36 "__OTR__sound/samples/sfx_5/1B"
+static const ALIGN_ASSET(2) char gUSSample36[] = dgUSSample36;
 
-#define dgSample37 "__OTR__sound/samples/sfx_5/1C"
-static const ALIGN_ASSET(2) char gSample37[] = dgSample37;
+#define dgUSSample37 "__OTR__sound/samples/sfx_5/1C"
+static const ALIGN_ASSET(2) char gUSSample37[] = dgUSSample37;
 
-#define dgSample38 "__OTR__sound/samples/sfx_6/00"
-static const ALIGN_ASSET(2) char gSample38[] = dgSample38;
+#define dgUSSample38 "__OTR__sound/samples/sfx_6/00"
+static const ALIGN_ASSET(2) char gUSSample38[] = dgUSSample38;
 
-#define dgSample39 "__OTR__sound/samples/sfx_6/01"
-static const ALIGN_ASSET(2) char gSample39[] = dgSample39;
+#define dgUSSample39 "__OTR__sound/samples/sfx_6/01"
+static const ALIGN_ASSET(2) char gUSSample39[] = dgUSSample39;
 
-#define dgSample3A "__OTR__sound/samples/sfx_6/02"
-static const ALIGN_ASSET(2) char gSample3A[] = dgSample3A;
+#define dgUSSample3A "__OTR__sound/samples/sfx_6/02"
+static const ALIGN_ASSET(2) char gUSSample3A[] = dgUSSample3A;
 
-#define dgSample3B "__OTR__sound/samples/sfx_6/03"
-static const ALIGN_ASSET(2) char gSample3B[] = dgSample3B;
+#define dgUSSample3B "__OTR__sound/samples/sfx_6/03"
+static const ALIGN_ASSET(2) char gUSSample3B[] = dgUSSample3B;
 
-#define dgSample3C "__OTR__sound/samples/sfx_6/04"
-static const ALIGN_ASSET(2) char gSample3C[] = dgSample3C;
+#define dgUSSample3C "__OTR__sound/samples/sfx_6/04"
+static const ALIGN_ASSET(2) char gUSSample3C[] = dgUSSample3C;
 
-#define dgSample3D "__OTR__sound/samples/sfx_6/05"
-static const ALIGN_ASSET(2) char gSample3D[] = dgSample3D;
+#define dgUSSample3D "__OTR__sound/samples/sfx_6/05"
+static const ALIGN_ASSET(2) char gUSSample3D[] = dgUSSample3D;
 
-#define dgSample3E "__OTR__sound/samples/sfx_6/06"
-static const ALIGN_ASSET(2) char gSample3E[] = dgSample3E;
+#define dgUSSample3E "__OTR__sound/samples/sfx_6/06"
+static const ALIGN_ASSET(2) char gUSSample3E[] = dgUSSample3E;
 
-#define dgSample3F "__OTR__sound/samples/sfx_6/07"
-static const ALIGN_ASSET(2) char gSample3F[] = dgSample3F;
+#define dgUSSample3F "__OTR__sound/samples/sfx_6/07"
+static const ALIGN_ASSET(2) char gUSSample3F[] = dgUSSample3F;
 
-#define dgSample40 "__OTR__sound/samples/sfx_6/08"
-static const ALIGN_ASSET(2) char gSample40[] = dgSample40;
+#define dgUSSample40 "__OTR__sound/samples/sfx_6/08"
+static const ALIGN_ASSET(2) char gUSSample40[] = dgUSSample40;
 
-#define dgSample41 "__OTR__sound/samples/sfx_6/09"
-static const ALIGN_ASSET(2) char gSample41[] = dgSample41;
+#define dgUSSample41 "__OTR__sound/samples/sfx_6/09"
+static const ALIGN_ASSET(2) char gUSSample41[] = dgUSSample41;
 
-#define dgSample42 "__OTR__sound/samples/sfx_6/0A"
-static const ALIGN_ASSET(2) char gSample42[] = dgSample42;
+#define dgUSSample42 "__OTR__sound/samples/sfx_6/0A"
+static const ALIGN_ASSET(2) char gUSSample42[] = dgUSSample42;
 
-#define dgSample43 "__OTR__sound/samples/sfx_6/0B"
-static const ALIGN_ASSET(2) char gSample43[] = dgSample43;
+#define dgUSSample43 "__OTR__sound/samples/sfx_6/0B"
+static const ALIGN_ASSET(2) char gUSSample43[] = dgUSSample43;
 
-#define dgSample44 "__OTR__sound/samples/sfx_6/0C"
-static const ALIGN_ASSET(2) char gSample44[] = dgSample44;
+#define dgUSSample44 "__OTR__sound/samples/sfx_6/0C"
+static const ALIGN_ASSET(2) char gUSSample44[] = dgUSSample44;
 
-#define dgSample45 "__OTR__sound/samples/sfx_6/0D"
-static const ALIGN_ASSET(2) char gSample45[] = dgSample45;
+#define dgUSSample45 "__OTR__sound/samples/sfx_6/0D"
+static const ALIGN_ASSET(2) char gUSSample45[] = dgUSSample45;
 
-#define dgSample46 "__OTR__sound/samples/sfx_7/00"
-static const ALIGN_ASSET(2) char gSample46[] = dgSample46;
+#define dgUSSample46 "__OTR__sound/samples/sfx_7/00"
+static const ALIGN_ASSET(2) char gUSSample46[] = dgUSSample46;
 
-#define dgSample47 "__OTR__sound/samples/sfx_7/01"
-static const ALIGN_ASSET(2) char gSample47[] = dgSample47;
+#define dgUSSample47 "__OTR__sound/samples/sfx_7/01"
+static const ALIGN_ASSET(2) char gUSSample47[] = dgUSSample47;
 
-#define dgSample48 "__OTR__sound/samples/sfx_7/02"
-static const ALIGN_ASSET(2) char gSample48[] = dgSample48;
+#define dgUSSample48 "__OTR__sound/samples/sfx_7/02"
+static const ALIGN_ASSET(2) char gUSSample48[] = dgUSSample48;
 
-#define dgSample49 "__OTR__sound/samples/sfx_7/03"
-static const ALIGN_ASSET(2) char gSample49[] = dgSample49;
+#define dgUSSample49 "__OTR__sound/samples/sfx_7/03"
+static const ALIGN_ASSET(2) char gUSSample49[] = dgUSSample49;
 
-#define dgSample4A "__OTR__sound/samples/sfx_7/04"
-static const ALIGN_ASSET(2) char gSample4A[] = dgSample4A;
+#define dgUSSample4A "__OTR__sound/samples/sfx_7/04"
+static const ALIGN_ASSET(2) char gUSSample4A[] = dgUSSample4A;
 
-#define dgSample4B "__OTR__sound/samples/sfx_7/05"
-static const ALIGN_ASSET(2) char gSample4B[] = dgSample4B;
+#define dgUSSample4B "__OTR__sound/samples/sfx_7/05"
+static const ALIGN_ASSET(2) char gUSSample4B[] = dgUSSample4B;
 
-#define dgSample4C "__OTR__sound/samples/sfx_7/06"
-static const ALIGN_ASSET(2) char gSample4C[] = dgSample4C;
+#define dgUSSample4C "__OTR__sound/samples/sfx_7/06"
+static const ALIGN_ASSET(2) char gUSSample4C[] = dgUSSample4C;
 
-#define dgSample4D "__OTR__sound/samples/sfx_7/07"
-static const ALIGN_ASSET(2) char gSample4D[] = dgSample4D;
+#define dgUSSample4D "__OTR__sound/samples/sfx_7/07"
+static const ALIGN_ASSET(2) char gUSSample4D[] = dgUSSample4D;
 
-#define dgSample4E "__OTR__sound/samples/sfx_7/08"
-static const ALIGN_ASSET(2) char gSample4E[] = dgSample4E;
+#define dgUSSample4E "__OTR__sound/samples/sfx_7/08"
+static const ALIGN_ASSET(2) char gUSSample4E[] = dgUSSample4E;
 
-#define dgSample4F "__OTR__sound/samples/sfx_7/09"
-static const ALIGN_ASSET(2) char gSample4F[] = dgSample4F;
+#define dgUSSample4F "__OTR__sound/samples/sfx_7/09"
+static const ALIGN_ASSET(2) char gUSSample4F[] = dgUSSample4F;
 
-#define dgSample50 "__OTR__sound/samples/sfx_7/0A"
-static const ALIGN_ASSET(2) char gSample50[] = dgSample50;
+#define dgUSSample50 "__OTR__sound/samples/sfx_7/0A"
+static const ALIGN_ASSET(2) char gUSSample50[] = dgUSSample50;
 
-#define dgSample51 "__OTR__sound/samples/sfx_7/0B"
-static const ALIGN_ASSET(2) char gSample51[] = dgSample51;
+#define dgUSSample51 "__OTR__sound/samples/sfx_7/0B"
+static const ALIGN_ASSET(2) char gUSSample51[] = dgUSSample51;
 
-#define dgSample52 "__OTR__sound/samples/sfx_7/0C"
-static const ALIGN_ASSET(2) char gSample52[] = dgSample52;
+#define dgUSSample52 "__OTR__sound/samples/sfx_7/0C"
+static const ALIGN_ASSET(2) char gUSSample52[] = dgUSSample52;
 
-#define dgSample53 "__OTR__sound/samples/sfx_7/0D_chain_chomp_bark"
-static const ALIGN_ASSET(2) char gSample53[] = dgSample53;
+#define dgUSSample53 "__OTR__sound/samples/sfx_7/0D_chain_chomp_bark"
+static const ALIGN_ASSET(2) char gUSSample53[] = dgUSSample53;
 
-#define dgSample54 "__OTR__sound/samples/sfx_mario/00_mario_jump_hoo"
-static const ALIGN_ASSET(2) char gSample54[] = dgSample54;
+#define dgUSSample54 "__OTR__sound/samples/sfx_mario/00_mario_jump_hoo"
+static const ALIGN_ASSET(2) char gUSSample54[] = dgUSSample54;
 
-#define dgSample55 "__OTR__sound/samples/sfx_mario/01_mario_jump_wah"
-static const ALIGN_ASSET(2) char gSample55[] = dgSample55;
+#define dgUSSample55 "__OTR__sound/samples/sfx_mario/01_mario_jump_wah"
+static const ALIGN_ASSET(2) char gUSSample55[] = dgUSSample55;
 
-#define dgSample56 "__OTR__sound/samples/sfx_mario/02_mario_yah"
-static const ALIGN_ASSET(2) char gSample56[] = dgSample56;
+#define dgUSSample56 "__OTR__sound/samples/sfx_mario/02_mario_yah"
+static const ALIGN_ASSET(2) char gUSSample56[] = dgUSSample56;
 
-#define dgSample57 "__OTR__sound/samples/sfx_mario/03_mario_haha"
-static const ALIGN_ASSET(2) char gSample57[] = dgSample57;
+#define dgUSSample57 "__OTR__sound/samples/sfx_mario/03_mario_haha"
+static const ALIGN_ASSET(2) char gUSSample57[] = dgUSSample57;
 
-#define dgSample58 "__OTR__sound/samples/sfx_mario/04_mario_yahoo"
-static const ALIGN_ASSET(2) char gSample58[] = dgSample58;
+#define dgUSSample58 "__OTR__sound/samples/sfx_mario/04_mario_yahoo"
+static const ALIGN_ASSET(2) char gUSSample58[] = dgUSSample58;
 
-#define dgSample59 "__OTR__sound/samples/sfx_mario/05_mario_uh"
-static const ALIGN_ASSET(2) char gSample59[] = dgSample59;
+#define dgUSSample59 "__OTR__sound/samples/sfx_mario/05_mario_uh"
+static const ALIGN_ASSET(2) char gUSSample59[] = dgUSSample59;
 
-#define dgSample5A "__OTR__sound/samples/sfx_mario/06_mario_hrmm"
-static const ALIGN_ASSET(2) char gSample5A[] = dgSample5A;
+#define dgUSSample5A "__OTR__sound/samples/sfx_mario/06_mario_hrmm"
+static const ALIGN_ASSET(2) char gUSSample5A[] = dgUSSample5A;
 
-#define dgSample5B "__OTR__sound/samples/sfx_mario/07_mario_wah2"
-static const ALIGN_ASSET(2) char gSample5B[] = dgSample5B;
+#define dgUSSample5B "__OTR__sound/samples/sfx_mario/07_mario_wah2"
+static const ALIGN_ASSET(2) char gUSSample5B[] = dgUSSample5B;
 
-#define dgSample5C "__OTR__sound/samples/sfx_mario/08_mario_whoa"
-static const ALIGN_ASSET(2) char gSample5C[] = dgSample5C;
+#define dgUSSample5C "__OTR__sound/samples/sfx_mario/08_mario_whoa"
+static const ALIGN_ASSET(2) char gUSSample5C[] = dgUSSample5C;
 
-#define dgSample5D "__OTR__sound/samples/sfx_mario/09_mario_eeuh"
-static const ALIGN_ASSET(2) char gSample5D[] = dgSample5D;
+#define dgUSSample5D "__OTR__sound/samples/sfx_mario/09_mario_eeuh"
+static const ALIGN_ASSET(2) char gUSSample5D[] = dgUSSample5D;
 
-#define dgSample5E "__OTR__sound/samples/sfx_mario/0A_mario_attacked"
-static const ALIGN_ASSET(2) char gSample5E[] = dgSample5E;
+#define dgUSSample5E "__OTR__sound/samples/sfx_mario/0A_mario_attacked"
+static const ALIGN_ASSET(2) char gUSSample5E[] = dgUSSample5E;
 
-#define dgSample5F "__OTR__sound/samples/sfx_mario/0B_mario_ooof"
-static const ALIGN_ASSET(2) char gSample5F[] = dgSample5F;
+#define dgUSSample5F "__OTR__sound/samples/sfx_mario/0B_mario_ooof"
+static const ALIGN_ASSET(2) char gUSSample5F[] = dgUSSample5F;
 
-#define dgSample60 "__OTR__sound/samples/sfx_mario/0C_mario_here_we_go"
-static const ALIGN_ASSET(2) char gSample60[] = dgSample60;
+#define dgUSSample60 "__OTR__sound/samples/sfx_mario/0C_mario_here_we_go"
+static const ALIGN_ASSET(2) char gUSSample60[] = dgUSSample60;
 
-#define dgSample61 "__OTR__sound/samples/sfx_mario/0D_mario_yawning"
-static const ALIGN_ASSET(2) char gSample61[] = dgSample61;
+#define dgUSSample61 "__OTR__sound/samples/sfx_mario/0D_mario_yawning"
+static const ALIGN_ASSET(2) char gUSSample61[] = dgUSSample61;
 
-#define dgSample62 "__OTR__sound/samples/sfx_mario/0E_mario_snoring1"
-static const ALIGN_ASSET(2) char gSample62[] = dgSample62;
+#define dgUSSample62 "__OTR__sound/samples/sfx_mario/0E_mario_snoring1"
+static const ALIGN_ASSET(2) char gUSSample62[] = dgUSSample62;
 
-#define dgSample63 "__OTR__sound/samples/sfx_mario/0F_mario_snoring2"
-static const ALIGN_ASSET(2) char gSample63[] = dgSample63;
+#define dgUSSample63 "__OTR__sound/samples/sfx_mario/0F_mario_snoring2"
+static const ALIGN_ASSET(2) char gUSSample63[] = dgUSSample63;
 
-#define dgSample64 "__OTR__sound/samples/sfx_mario/10_mario_doh"
-static const ALIGN_ASSET(2) char gSample64[] = dgSample64;
+#define dgUSSample64 "__OTR__sound/samples/sfx_mario/10_mario_doh"
+static const ALIGN_ASSET(2) char gUSSample64[] = dgUSSample64;
 
-#define dgSample65 "__OTR__sound/samples/sfx_mario/11_mario_game_over"
-static const ALIGN_ASSET(2) char gSample65[] = dgSample65;
+#define dgUSSample65 "__OTR__sound/samples/sfx_mario/11_mario_game_over"
+static const ALIGN_ASSET(2) char gUSSample65[] = dgUSSample65;
 
-#define dgSample66 "__OTR__sound/samples/sfx_mario/12_mario_hello"
-static const ALIGN_ASSET(2) char gSample66[] = dgSample66;
+#define dgUSSample66 "__OTR__sound/samples/sfx_mario/12_mario_hello"
+static const ALIGN_ASSET(2) char gUSSample66[] = dgUSSample66;
 
-#define dgSample67 "__OTR__sound/samples/sfx_mario/13_mario_press_start_to_play"
-static const ALIGN_ASSET(2) char gSample67[] = dgSample67;
+#define dgUSSample67 "__OTR__sound/samples/sfx_mario/13_mario_press_start_to_play"
+static const ALIGN_ASSET(2) char gUSSample67[] = dgUSSample67;
 
-#define dgSample68 "__OTR__sound/samples/sfx_mario/14_mario_twirl_bounce"
-static const ALIGN_ASSET(2) char gSample68[] = dgSample68;
+#define dgUSSample68 "__OTR__sound/samples/sfx_mario/14_mario_twirl_bounce"
+static const ALIGN_ASSET(2) char gUSSample68[] = dgUSSample68;
 
-#define dgSample69 "__OTR__sound/samples/sfx_mario/15_mario_snoring3"
-static const ALIGN_ASSET(2) char gSample69[] = dgSample69;
+#define dgUSSample69 "__OTR__sound/samples/sfx_mario/15_mario_snoring3"
+static const ALIGN_ASSET(2) char gUSSample69[] = dgUSSample69;
 
-#define dgSample6A "__OTR__sound/samples/sfx_mario/16_mario_so_longa_bowser"
-static const ALIGN_ASSET(2) char gSample6A[] = dgSample6A;
+#define dgUSSample6A "__OTR__sound/samples/sfx_mario/16_mario_so_longa_bowser"
+static const ALIGN_ASSET(2) char gUSSample6A[] = dgUSSample6A;
 
-#define dgSample6B "__OTR__sound/samples/sfx_mario/17_mario_ima_tired"
-static const ALIGN_ASSET(2) char gSample6B[] = dgSample6B;
+#define dgUSSample6B "__OTR__sound/samples/sfx_mario/17_mario_ima_tired"
+static const ALIGN_ASSET(2) char gUSSample6B[] = dgUSSample6B;
 
-#define dgSample6C "__OTR__sound/samples/sfx_mario/18_mario_waha"
-static const ALIGN_ASSET(2) char gSample6C[] = dgSample6C;
+#define dgUSSample6C "__OTR__sound/samples/sfx_mario/18_mario_waha"
+static const ALIGN_ASSET(2) char gUSSample6C[] = dgUSSample6C;
 
-#define dgSample6D "__OTR__sound/samples/sfx_mario/19_mario_yippee"
-static const ALIGN_ASSET(2) char gSample6D[] = dgSample6D;
+#define dgUSSample6D "__OTR__sound/samples/sfx_mario/19_mario_yippee"
+static const ALIGN_ASSET(2) char gUSSample6D[] = dgUSSample6D;
 
-#define dgSample6E "__OTR__sound/samples/sfx_mario/1A_mario_lets_a_go"
-static const ALIGN_ASSET(2) char gSample6E[] = dgSample6E;
+#define dgUSSample6E "__OTR__sound/samples/sfx_mario/1A_mario_lets_a_go"
+static const ALIGN_ASSET(2) char gUSSample6E[] = dgUSSample6E;
 
-#define dgSample6F "__OTR__sound/samples/sfx_9/00"
-static const ALIGN_ASSET(2) char gSample6F[] = dgSample6F;
+#define dgUSSample6F "__OTR__sound/samples/sfx_9/00"
+static const ALIGN_ASSET(2) char gUSSample6F[] = dgUSSample6F;
 
-#define dgSample70 "__OTR__sound/samples/sfx_9/01"
-static const ALIGN_ASSET(2) char gSample70[] = dgSample70;
+#define dgUSSample70 "__OTR__sound/samples/sfx_9/01"
+static const ALIGN_ASSET(2) char gUSSample70[] = dgUSSample70;
 
-#define dgSample71 "__OTR__sound/samples/sfx_9/02"
-static const ALIGN_ASSET(2) char gSample71[] = dgSample71;
+#define dgUSSample71 "__OTR__sound/samples/sfx_9/02"
+static const ALIGN_ASSET(2) char gUSSample71[] = dgUSSample71;
 
-#define dgSample72 "__OTR__sound/samples/sfx_9/03"
-static const ALIGN_ASSET(2) char gSample72[] = dgSample72;
+#define dgUSSample72 "__OTR__sound/samples/sfx_9/03"
+static const ALIGN_ASSET(2) char gUSSample72[] = dgUSSample72;
 
-#define dgSample73 "__OTR__sound/samples/sfx_9/04_camera_buzz"
-static const ALIGN_ASSET(2) char gSample73[] = dgSample73;
+#define dgUSSample73 "__OTR__sound/samples/sfx_9/04_camera_buzz"
+static const ALIGN_ASSET(2) char gUSSample73[] = dgUSSample73;
 
-#define dgSample74 "__OTR__sound/samples/sfx_9/05_camera_shutter"
-static const ALIGN_ASSET(2) char gSample74[] = dgSample74;
+#define dgUSSample74 "__OTR__sound/samples/sfx_9/05_camera_shutter"
+static const ALIGN_ASSET(2) char gUSSample74[] = dgUSSample74;
 
-#define dgSample75 "__OTR__sound/samples/sfx_9/06"
-static const ALIGN_ASSET(2) char gSample75[] = dgSample75;
+#define dgUSSample75 "__OTR__sound/samples/sfx_9/06"
+static const ALIGN_ASSET(2) char gUSSample75[] = dgUSSample75;
 
-#define dgSample76 "__OTR__sound/samples/sfx_mario_peach/00_mario_waaaooow"
-static const ALIGN_ASSET(2) char gSample76[] = dgSample76;
+#define dgUSSample76 "__OTR__sound/samples/sfx_mario_peach/00_mario_waaaooow"
+static const ALIGN_ASSET(2) char gUSSample76[] = dgUSSample76;
 
-#define dgSample77 "__OTR__sound/samples/sfx_mario_peach/01_mario_hoohoo"
-static const ALIGN_ASSET(2) char gSample77[] = dgSample77;
+#define dgUSSample77 "__OTR__sound/samples/sfx_mario_peach/01_mario_hoohoo"
+static const ALIGN_ASSET(2) char gUSSample77[] = dgUSSample77;
 
-#define dgSample78 "__OTR__sound/samples/sfx_mario_peach/02_mario_panting"
-static const ALIGN_ASSET(2) char gSample78[] = dgSample78;
+#define dgUSSample78 "__OTR__sound/samples/sfx_mario_peach/02_mario_panting"
+static const ALIGN_ASSET(2) char gUSSample78[] = dgUSSample78;
 
-#define dgSample79 "__OTR__sound/samples/sfx_mario_peach/03_mario_dying"
-static const ALIGN_ASSET(2) char gSample79[] = dgSample79;
+#define dgUSSample79 "__OTR__sound/samples/sfx_mario_peach/03_mario_dying"
+static const ALIGN_ASSET(2) char gUSSample79[] = dgUSSample79;
 
-#define dgSample7A "__OTR__sound/samples/sfx_mario_peach/04_mario_on_fire"
-static const ALIGN_ASSET(2) char gSample7A[] = dgSample7A;
+#define dgUSSample7A "__OTR__sound/samples/sfx_mario_peach/04_mario_on_fire"
+static const ALIGN_ASSET(2) char gUSSample7A[] = dgUSSample7A;
 
-#define dgSample7B "__OTR__sound/samples/sfx_mario_peach/05_mario_uh2"
-static const ALIGN_ASSET(2) char gSample7B[] = dgSample7B;
+#define dgUSSample7B "__OTR__sound/samples/sfx_mario_peach/05_mario_uh2"
+static const ALIGN_ASSET(2) char gUSSample7B[] = dgUSSample7B;
 
-#define dgSample7C "__OTR__sound/samples/sfx_mario_peach/06_mario_coughing"
-static const ALIGN_ASSET(2) char gSample7C[] = dgSample7C;
+#define dgUSSample7C "__OTR__sound/samples/sfx_mario_peach/06_mario_coughing"
+static const ALIGN_ASSET(2) char gUSSample7C[] = dgUSSample7C;
 
-#define dgSample7D "__OTR__sound/samples/sfx_mario_peach/07_mario_its_a_me_mario"
-static const ALIGN_ASSET(2) char gSample7D[] = dgSample7D;
+#define dgUSSample7D "__OTR__sound/samples/sfx_mario_peach/07_mario_its_a_me_mario"
+static const ALIGN_ASSET(2) char gUSSample7D[] = dgUSSample7D;
 
-#define dgSample7E "__OTR__sound/samples/sfx_mario_peach/08_mario_punch_yah"
-static const ALIGN_ASSET(2) char gSample7E[] = dgSample7E;
+#define dgUSSample7E "__OTR__sound/samples/sfx_mario_peach/08_mario_punch_yah"
+static const ALIGN_ASSET(2) char gUSSample7E[] = dgUSSample7E;
 
-#define dgSample7F "__OTR__sound/samples/sfx_mario_peach/09_mario_punch_hoo"
-static const ALIGN_ASSET(2) char gSample7F[] = dgSample7F;
+#define dgUSSample7F "__OTR__sound/samples/sfx_mario_peach/09_mario_punch_hoo"
+static const ALIGN_ASSET(2) char gUSSample7F[] = dgUSSample7F;
 
-#define dgSample80 "__OTR__sound/samples/sfx_mario_peach/0A_mario_mama_mia"
-static const ALIGN_ASSET(2) char gSample80[] = dgSample80;
+#define dgUSSample80 "__OTR__sound/samples/sfx_mario_peach/0A_mario_mama_mia"
+static const ALIGN_ASSET(2) char gUSSample80[] = dgUSSample80;
 
-#define dgSample81 "__OTR__sound/samples/sfx_mario_peach/0B_mario_okey_dokey"
-static const ALIGN_ASSET(2) char gSample81[] = dgSample81;
+#define dgUSSample81 "__OTR__sound/samples/sfx_mario_peach/0B_mario_okey_dokey"
+static const ALIGN_ASSET(2) char gUSSample81[] = dgUSSample81;
 
-#define dgSample82 "__OTR__sound/samples/sfx_mario_peach/0C_mario_drowning"
-static const ALIGN_ASSET(2) char gSample82[] = dgSample82;
+#define dgUSSample82 "__OTR__sound/samples/sfx_mario_peach/0C_mario_drowning"
+static const ALIGN_ASSET(2) char gUSSample82[] = dgUSSample82;
 
-#define dgSample83 "__OTR__sound/samples/sfx_mario_peach/0D_mario_thank_you_playing_my_game"
-static const ALIGN_ASSET(2) char gSample83[] = dgSample83;
+#define dgUSSample83 "__OTR__sound/samples/sfx_mario_peach/0D_mario_thank_you_playing_my_game"
+static const ALIGN_ASSET(2) char gUSSample83[] = dgUSSample83;
 
-#define dgSample84 "__OTR__sound/samples/sfx_mario_peach/0E_peach_dear_mario"
-static const ALIGN_ASSET(2) char gSample84[] = dgSample84;
+#define dgUSSample84 "__OTR__sound/samples/sfx_mario_peach/0E_peach_dear_mario"
+static const ALIGN_ASSET(2) char gUSSample84[] = dgUSSample84;
 
-#define dgSample85 "__OTR__sound/samples/sfx_mario_peach/0F_peach_mario"
-static const ALIGN_ASSET(2) char gSample85[] = dgSample85;
+#define dgUSSample85 "__OTR__sound/samples/sfx_mario_peach/0F_peach_mario"
+static const ALIGN_ASSET(2) char gUSSample85[] = dgUSSample85;
 
-#define dgSample86 "__OTR__sound/samples/sfx_mario_peach/10_peach_power_of_the_stars"
-static const ALIGN_ASSET(2) char gSample86[] = dgSample86;
+#define dgUSSample86 "__OTR__sound/samples/sfx_mario_peach/10_peach_power_of_the_stars"
+static const ALIGN_ASSET(2) char gUSSample86[] = dgUSSample86;
 
-#define dgSample87 "__OTR__sound/samples/sfx_mario_peach/11_peach_thanks_to_you"
-static const ALIGN_ASSET(2) char gSample87[] = dgSample87;
+#define dgUSSample87 "__OTR__sound/samples/sfx_mario_peach/11_peach_thanks_to_you"
+static const ALIGN_ASSET(2) char gUSSample87[] = dgUSSample87;
 
-#define dgSample88 "__OTR__sound/samples/sfx_mario_peach/12_peach_thank_you_mario"
-static const ALIGN_ASSET(2) char gSample88[] = dgSample88;
+#define dgUSSample88 "__OTR__sound/samples/sfx_mario_peach/12_peach_thank_you_mario"
+static const ALIGN_ASSET(2) char gUSSample88[] = dgUSSample88;
 
-#define dgSample89 "__OTR__sound/samples/sfx_mario_peach/13_peach_something_special"
-static const ALIGN_ASSET(2) char gSample89[] = dgSample89;
+#define dgUSSample89 "__OTR__sound/samples/sfx_mario_peach/13_peach_something_special"
+static const ALIGN_ASSET(2) char gUSSample89[] = dgUSSample89;
 
-#define dgSample8A "__OTR__sound/samples/sfx_mario_peach/14_peach_bake_a_cake"
-static const ALIGN_ASSET(2) char gSample8A[] = dgSample8A;
+#define dgUSSample8A "__OTR__sound/samples/sfx_mario_peach/14_peach_bake_a_cake"
+static const ALIGN_ASSET(2) char gUSSample8A[] = dgUSSample8A;
 
-#define dgSample8B "__OTR__sound/samples/sfx_mario_peach/15_peach_for_mario"
-static const ALIGN_ASSET(2) char gSample8B[] = dgSample8B;
+#define dgUSSample8B "__OTR__sound/samples/sfx_mario_peach/15_peach_for_mario"
+static const ALIGN_ASSET(2) char gUSSample8B[] = dgUSSample8B;
 
-#define dgSample8C "__OTR__sound/samples/sfx_mario_peach/16_peach_mario2"
-static const ALIGN_ASSET(2) char gSample8C[] = dgSample8C;
+#define dgUSSample8C "__OTR__sound/samples/sfx_mario_peach/16_peach_mario2"
+static const ALIGN_ASSET(2) char gUSSample8C[] = dgUSSample8C;
 
-#define dgSample8D "__OTR__sound/samples/instruments/00"
-static const ALIGN_ASSET(2) char gSample8D[] = dgSample8D;
+#define dgUSSample8D "__OTR__sound/samples/instruments/00"
+static const ALIGN_ASSET(2) char gUSSample8D[] = dgUSSample8D;
 
-#define dgSample8E "__OTR__sound/samples/instruments/01_banjo_1"
-static const ALIGN_ASSET(2) char gSample8E[] = dgSample8E;
+#define dgUSSample8E "__OTR__sound/samples/instruments/01_banjo_1"
+static const ALIGN_ASSET(2) char gUSSample8E[] = dgUSSample8E;
 
-#define dgSample8F "__OTR__sound/samples/instruments/02"
-static const ALIGN_ASSET(2) char gSample8F[] = dgSample8F;
+#define dgUSSample8F "__OTR__sound/samples/instruments/02"
+static const ALIGN_ASSET(2) char gUSSample8F[] = dgUSSample8F;
 
-#define dgSample90 "__OTR__sound/samples/instruments/03_human_whistle"
-static const ALIGN_ASSET(2) char gSample90[] = dgSample90;
+#define dgUSSample90 "__OTR__sound/samples/instruments/03_human_whistle"
+static const ALIGN_ASSET(2) char gUSSample90[] = dgUSSample90;
 
-#define dgSample91 "__OTR__sound/samples/instruments/04_bright_piano"
-static const ALIGN_ASSET(2) char gSample91[] = dgSample91;
+#define dgUSSample91 "__OTR__sound/samples/instruments/04_bright_piano"
+static const ALIGN_ASSET(2) char gUSSample91[] = dgUSSample91;
 
-#define dgSample92 "__OTR__sound/samples/instruments/05_acoustic_bass"
-static const ALIGN_ASSET(2) char gSample92[] = dgSample92;
+#define dgUSSample92 "__OTR__sound/samples/instruments/05_acoustic_bass"
+static const ALIGN_ASSET(2) char gUSSample92[] = dgUSSample92;
 
-#define dgSample93 "__OTR__sound/samples/instruments/06_kick_drum_1"
-static const ALIGN_ASSET(2) char gSample93[] = dgSample93;
+#define dgUSSample93 "__OTR__sound/samples/instruments/06_kick_drum_1"
+static const ALIGN_ASSET(2) char gUSSample93[] = dgUSSample93;
 
-#define dgSample94 "__OTR__sound/samples/instruments/07_rimshot"
-static const ALIGN_ASSET(2) char gSample94[] = dgSample94;
+#define dgUSSample94 "__OTR__sound/samples/instruments/07_rimshot"
+static const ALIGN_ASSET(2) char gUSSample94[] = dgUSSample94;
 
-#define dgSample95 "__OTR__sound/samples/instruments/08"
-static const ALIGN_ASSET(2) char gSample95[] = dgSample95;
+#define dgUSSample95 "__OTR__sound/samples/instruments/08"
+static const ALIGN_ASSET(2) char gUSSample95[] = dgUSSample95;
 
-#define dgSample96 "__OTR__sound/samples/instruments/09"
-static const ALIGN_ASSET(2) char gSample96[] = dgSample96;
+#define dgUSSample96 "__OTR__sound/samples/instruments/09"
+static const ALIGN_ASSET(2) char gUSSample96[] = dgUSSample96;
 
-#define dgSample97 "__OTR__sound/samples/instruments/0A_tambourine"
-static const ALIGN_ASSET(2) char gSample97[] = dgSample97;
+#define dgUSSample97 "__OTR__sound/samples/instruments/0A_tambourine"
+static const ALIGN_ASSET(2) char gUSSample97[] = dgUSSample97;
 
-#define dgSample98 "__OTR__sound/samples/instruments/0B"
-static const ALIGN_ASSET(2) char gSample98[] = dgSample98;
+#define dgUSSample98 "__OTR__sound/samples/instruments/0B"
+static const ALIGN_ASSET(2) char gUSSample98[] = dgUSSample98;
 
-#define dgSample99 "__OTR__sound/samples/instruments/0C_conga_stick"
-static const ALIGN_ASSET(2) char gSample99[] = dgSample99;
+#define dgUSSample99 "__OTR__sound/samples/instruments/0C_conga_stick"
+static const ALIGN_ASSET(2) char gUSSample99[] = dgUSSample99;
 
-#define dgSample9A "__OTR__sound/samples/instruments/0D_clave"
-static const ALIGN_ASSET(2) char gSample9A[] = dgSample9A;
+#define dgUSSample9A "__OTR__sound/samples/instruments/0D_clave"
+static const ALIGN_ASSET(2) char gUSSample9A[] = dgUSSample9A;
 
-#define dgSample9B "__OTR__sound/samples/instruments/0E_hihat_closed"
-static const ALIGN_ASSET(2) char gSample9B[] = dgSample9B;
+#define dgUSSample9B "__OTR__sound/samples/instruments/0E_hihat_closed"
+static const ALIGN_ASSET(2) char gUSSample9B[] = dgUSSample9B;
 
-#define dgSample9C "__OTR__sound/samples/instruments/0F_hihat_open"
-static const ALIGN_ASSET(2) char gSample9C[] = dgSample9C;
+#define dgUSSample9C "__OTR__sound/samples/instruments/0F_hihat_open"
+static const ALIGN_ASSET(2) char gUSSample9C[] = dgUSSample9C;
 
-#define dgSample9D "__OTR__sound/samples/instruments/10_cymbal_bell"
-static const ALIGN_ASSET(2) char gSample9D[] = dgSample9D;
+#define dgUSSample9D "__OTR__sound/samples/instruments/10_cymbal_bell"
+static const ALIGN_ASSET(2) char gUSSample9D[] = dgUSSample9D;
 
-#define dgSample9E "__OTR__sound/samples/instruments/11_splash_cymbal"
-static const ALIGN_ASSET(2) char gSample9E[] = dgSample9E;
+#define dgUSSample9E "__OTR__sound/samples/instruments/11_splash_cymbal"
+static const ALIGN_ASSET(2) char gUSSample9E[] = dgUSSample9E;
 
-#define dgSample9F "__OTR__sound/samples/instruments/12_snare_drum_1"
-static const ALIGN_ASSET(2) char gSample9F[] = dgSample9F;
+#define dgUSSample9F "__OTR__sound/samples/instruments/12_snare_drum_1"
+static const ALIGN_ASSET(2) char gUSSample9F[] = dgUSSample9F;
 
-#define dgSampleA0 "__OTR__sound/samples/instruments/13_snare_drum_2"
-static const ALIGN_ASSET(2) char gSampleA0[] = dgSampleA0;
+#define dgUSSampleA0 "__OTR__sound/samples/instruments/13_snare_drum_2"
+static const ALIGN_ASSET(2) char gUSSampleA0[] = dgUSSampleA0;
 
-#define dgSampleA1 "__OTR__sound/samples/instruments/14_strings_5"
-static const ALIGN_ASSET(2) char gSampleA1[] = dgSampleA1;
+#define dgUSSampleA1 "__OTR__sound/samples/instruments/14_strings_5"
+static const ALIGN_ASSET(2) char gUSSampleA1[] = dgUSSampleA1;
 
-#define dgSampleA2 "__OTR__sound/samples/instruments/15_strings_4"
-static const ALIGN_ASSET(2) char gSampleA2[] = dgSampleA2;
+#define dgUSSampleA2 "__OTR__sound/samples/instruments/15_strings_4"
+static const ALIGN_ASSET(2) char gUSSampleA2[] = dgUSSampleA2;
 
-#define dgSampleA3 "__OTR__sound/samples/instruments/16_french_horns"
-static const ALIGN_ASSET(2) char gSampleA3[] = dgSampleA3;
+#define dgUSSampleA3 "__OTR__sound/samples/instruments/16_french_horns"
+static const ALIGN_ASSET(2) char gUSSampleA3[] = dgUSSampleA3;
 
-#define dgSampleA4 "__OTR__sound/samples/instruments/17_trumpet"
-static const ALIGN_ASSET(2) char gSampleA4[] = dgSampleA4;
+#define dgUSSampleA4 "__OTR__sound/samples/instruments/17_trumpet"
+static const ALIGN_ASSET(2) char gUSSampleA4[] = dgUSSampleA4;
 
-#define dgSampleA5 "__OTR__sound/samples/instruments/18_timpani"
-static const ALIGN_ASSET(2) char gSampleA5[] = dgSampleA5;
+#define dgUSSampleA5 "__OTR__sound/samples/instruments/18_timpani"
+static const ALIGN_ASSET(2) char gUSSampleA5[] = dgUSSampleA5;
 
-#define dgSampleA6 "__OTR__sound/samples/instruments/19_brass"
-static const ALIGN_ASSET(2) char gSampleA6[] = dgSampleA6;
+#define dgUSSampleA6 "__OTR__sound/samples/instruments/19_brass"
+static const ALIGN_ASSET(2) char gUSSampleA6[] = dgUSSampleA6;
 
-#define dgSampleA7 "__OTR__sound/samples/instruments/1A_slap_bass"
-static const ALIGN_ASSET(2) char gSampleA7[] = dgSampleA7;
+#define dgUSSampleA7 "__OTR__sound/samples/instruments/1A_slap_bass"
+static const ALIGN_ASSET(2) char gUSSampleA7[] = dgUSSampleA7;
 
-#define dgSampleA8 "__OTR__sound/samples/instruments/1B_organ_2"
-static const ALIGN_ASSET(2) char gSampleA8[] = dgSampleA8;
+#define dgUSSampleA8 "__OTR__sound/samples/instruments/1B_organ_2"
+static const ALIGN_ASSET(2) char gUSSampleA8[] = dgUSSampleA8;
 
-#define dgSampleA9 "__OTR__sound/samples/instruments/1C"
-static const ALIGN_ASSET(2) char gSampleA9[] = dgSampleA9;
+#define dgUSSampleA9 "__OTR__sound/samples/instruments/1C"
+static const ALIGN_ASSET(2) char gUSSampleA9[] = dgUSSampleA9;
 
-#define dgSampleAA "__OTR__sound/samples/instruments/1D"
-static const ALIGN_ASSET(2) char gSampleAA[] = dgSampleAA;
+#define dgUSSampleAA "__OTR__sound/samples/instruments/1D"
+static const ALIGN_ASSET(2) char gUSSampleAA[] = dgUSSampleAA;
 
-#define dgSampleAB "__OTR__sound/samples/instruments/1E_closed_triangle"
-static const ALIGN_ASSET(2) char gSampleAB[] = dgSampleAB;
+#define dgUSSampleAB "__OTR__sound/samples/instruments/1E_closed_triangle"
+static const ALIGN_ASSET(2) char gUSSampleAB[] = dgUSSampleAB;
 
-#define dgSampleAC "__OTR__sound/samples/instruments/1F_open_triangle"
-static const ALIGN_ASSET(2) char gSampleAC[] = dgSampleAC;
+#define dgUSSampleAC "__OTR__sound/samples/instruments/1F_open_triangle"
+static const ALIGN_ASSET(2) char gUSSampleAC[] = dgUSSampleAC;
 
-#define dgSampleAD "__OTR__sound/samples/instruments/20_cabasa"
-static const ALIGN_ASSET(2) char gSampleAD[] = dgSampleAD;
+#define dgUSSampleAD "__OTR__sound/samples/instruments/20_cabasa"
+static const ALIGN_ASSET(2) char gUSSampleAD[] = dgUSSampleAD;
 
-#define dgSampleAE "__OTR__sound/samples/instruments/21_sine_bass"
-static const ALIGN_ASSET(2) char gSampleAE[] = dgSampleAE;
+#define dgUSSampleAE "__OTR__sound/samples/instruments/21_sine_bass"
+static const ALIGN_ASSET(2) char gUSSampleAE[] = dgUSSampleAE;
 
-#define dgSampleAF "__OTR__sound/samples/instruments/22_boys_choir"
-static const ALIGN_ASSET(2) char gSampleAF[] = dgSampleAF;
+#define dgUSSampleAF "__OTR__sound/samples/instruments/22_boys_choir"
+static const ALIGN_ASSET(2) char gUSSampleAF[] = dgUSSampleAF;
 
-#define dgSampleB0 "__OTR__sound/samples/instruments/23_strings_1"
-static const ALIGN_ASSET(2) char gSampleB0[] = dgSampleB0;
+#define dgUSSampleB0 "__OTR__sound/samples/instruments/23_strings_1"
+static const ALIGN_ASSET(2) char gUSSampleB0[] = dgUSSampleB0;
 
-#define dgSampleB1 "__OTR__sound/samples/instruments/24_strings_2"
-static const ALIGN_ASSET(2) char gSampleB1[] = dgSampleB1;
+#define dgUSSampleB1 "__OTR__sound/samples/instruments/24_strings_2"
+static const ALIGN_ASSET(2) char gUSSampleB1[] = dgUSSampleB1;
 
-#define dgSampleB2 "__OTR__sound/samples/instruments/25_strings_3"
-static const ALIGN_ASSET(2) char gSampleB2[] = dgSampleB2;
+#define dgUSSampleB2 "__OTR__sound/samples/instruments/25_strings_3"
+static const ALIGN_ASSET(2) char gUSSampleB2[] = dgUSSampleB2;
 
-#define dgSampleB3 "__OTR__sound/samples/instruments/26_crystal_rhodes"
-static const ALIGN_ASSET(2) char gSampleB3[] = dgSampleB3;
+#define dgUSSampleB3 "__OTR__sound/samples/instruments/26_crystal_rhodes"
+static const ALIGN_ASSET(2) char gUSSampleB3[] = dgUSSampleB3;
 
-#define dgSampleB4 "__OTR__sound/samples/instruments/27_harpsichord"
-static const ALIGN_ASSET(2) char gSampleB4[] = dgSampleB4;
+#define dgUSSampleB4 "__OTR__sound/samples/instruments/27_harpsichord"
+static const ALIGN_ASSET(2) char gUSSampleB4[] = dgUSSampleB4;
 
-#define dgSampleB5 "__OTR__sound/samples/instruments/28_sitar_1"
-static const ALIGN_ASSET(2) char gSampleB5[] = dgSampleB5;
+#define dgUSSampleB5 "__OTR__sound/samples/instruments/28_sitar_1"
+static const ALIGN_ASSET(2) char gUSSampleB5[] = dgUSSampleB5;
 
-#define dgSampleB6 "__OTR__sound/samples/instruments/29_orchestra_hit"
-static const ALIGN_ASSET(2) char gSampleB6[] = dgSampleB6;
+#define dgUSSampleB6 "__OTR__sound/samples/instruments/29_orchestra_hit"
+static const ALIGN_ASSET(2) char gUSSampleB6[] = dgUSSampleB6;
 
-#define dgSampleB7 "__OTR__sound/samples/instruments/2A"
-static const ALIGN_ASSET(2) char gSampleB7[] = dgSampleB7;
+#define dgUSSampleB7 "__OTR__sound/samples/instruments/2A"
+static const ALIGN_ASSET(2) char gUSSampleB7[] = dgUSSampleB7;
 
-#define dgSampleB8 "__OTR__sound/samples/instruments/2B"
-static const ALIGN_ASSET(2) char gSampleB8[] = dgSampleB8;
+#define dgUSSampleB8 "__OTR__sound/samples/instruments/2B"
+static const ALIGN_ASSET(2) char gUSSampleB8[] = dgUSSampleB8;
 
-#define dgSampleB9 "__OTR__sound/samples/instruments/2C"
-static const ALIGN_ASSET(2) char gSampleB9[] = dgSampleB9;
+#define dgUSSampleB9 "__OTR__sound/samples/instruments/2C"
+static const ALIGN_ASSET(2) char gUSSampleB9[] = dgUSSampleB9;
 
-#define dgSampleBA "__OTR__sound/samples/instruments/2D_trombone"
-static const ALIGN_ASSET(2) char gSampleBA[] = dgSampleBA;
+#define dgUSSampleBA "__OTR__sound/samples/instruments/2D_trombone"
+static const ALIGN_ASSET(2) char gUSSampleBA[] = dgUSSampleBA;
 
-#define dgSampleBB "__OTR__sound/samples/instruments/2E_accordion"
-static const ALIGN_ASSET(2) char gSampleBB[] = dgSampleBB;
+#define dgUSSampleBB "__OTR__sound/samples/instruments/2E_accordion"
+static const ALIGN_ASSET(2) char gUSSampleBB[] = dgUSSampleBB;
 
-#define dgSampleBC "__OTR__sound/samples/instruments/2F_sleigh_bells"
-static const ALIGN_ASSET(2) char gSampleBC[] = dgSampleBC;
+#define dgUSSampleBC "__OTR__sound/samples/instruments/2F_sleigh_bells"
+static const ALIGN_ASSET(2) char gUSSampleBC[] = dgUSSampleBC;
 
-#define dgSampleBD "__OTR__sound/samples/instruments/30_rarefaction-lahna"
-static const ALIGN_ASSET(2) char gSampleBD[] = dgSampleBD;
+#define dgUSSampleBD "__OTR__sound/samples/instruments/30_rarefaction-lahna"
+static const ALIGN_ASSET(2) char gUSSampleBD[] = dgUSSampleBD;
 
-#define dgSampleBE "__OTR__sound/samples/instruments/31_rarefaction-convolution"
-static const ALIGN_ASSET(2) char gSampleBE[] = dgSampleBE;
+#define dgUSSampleBE "__OTR__sound/samples/instruments/31_rarefaction-convolution"
+static const ALIGN_ASSET(2) char gUSSampleBE[] = dgUSSampleBE;
 
-#define dgSampleBF "__OTR__sound/samples/instruments/32_metal_rimshot"
-static const ALIGN_ASSET(2) char gSampleBF[] = dgSampleBF;
+#define dgUSSampleBF "__OTR__sound/samples/instruments/32_metal_rimshot"
+static const ALIGN_ASSET(2) char gUSSampleBF[] = dgUSSampleBF;
 
-#define dgSampleC0 "__OTR__sound/samples/instruments/33_kick_drum_2"
-static const ALIGN_ASSET(2) char gSampleC0[] = dgSampleC0;
+#define dgUSSampleC0 "__OTR__sound/samples/instruments/33_kick_drum_2"
+static const ALIGN_ASSET(2) char gUSSampleC0[] = dgUSSampleC0;
 
-#define dgSampleC1 "__OTR__sound/samples/instruments/34_alto_flute"
-static const ALIGN_ASSET(2) char gSampleC1[] = dgSampleC1;
+#define dgUSSampleC1 "__OTR__sound/samples/instruments/34_alto_flute"
+static const ALIGN_ASSET(2) char gUSSampleC1[] = dgUSSampleC1;
 
-#define dgSampleC2 "__OTR__sound/samples/instruments/35_gospel_organ"
-static const ALIGN_ASSET(2) char gSampleC2[] = dgSampleC2;
+#define dgUSSampleC2 "__OTR__sound/samples/instruments/35_gospel_organ"
+static const ALIGN_ASSET(2) char gUSSampleC2[] = dgUSSampleC2;
 
-#define dgSampleC3 "__OTR__sound/samples/instruments/36_sawtooth_synth"
-static const ALIGN_ASSET(2) char gSampleC3[] = dgSampleC3;
+#define dgUSSampleC3 "__OTR__sound/samples/instruments/36_sawtooth_synth"
+static const ALIGN_ASSET(2) char gUSSampleC3[] = dgUSSampleC3;
 
-#define dgSampleC4 "__OTR__sound/samples/instruments/37_square_synth"
-static const ALIGN_ASSET(2) char gSampleC4[] = dgSampleC4;
+#define dgUSSampleC4 "__OTR__sound/samples/instruments/37_square_synth"
+static const ALIGN_ASSET(2) char gUSSampleC4[] = dgUSSampleC4;
 
-#define dgSampleC5 "__OTR__sound/samples/instruments/38_electric_kick_drum"
-static const ALIGN_ASSET(2) char gSampleC5[] = dgSampleC5;
+#define dgUSSampleC5 "__OTR__sound/samples/instruments/38_electric_kick_drum"
+static const ALIGN_ASSET(2) char gUSSampleC5[] = dgUSSampleC5;
 
-#define dgSampleC6 "__OTR__sound/samples/instruments/39_sitar_2"
-static const ALIGN_ASSET(2) char gSampleC6[] = dgSampleC6;
+#define dgUSSampleC6 "__OTR__sound/samples/instruments/39_sitar_2"
+static const ALIGN_ASSET(2) char gUSSampleC6[] = dgUSSampleC6;
 
-#define dgSampleC7 "__OTR__sound/samples/instruments/3A_music_box"
-static const ALIGN_ASSET(2) char gSampleC7[] = dgSampleC7;
+#define dgUSSampleC7 "__OTR__sound/samples/instruments/3A_music_box"
+static const ALIGN_ASSET(2) char gUSSampleC7[] = dgUSSampleC7;
 
-#define dgSampleC8 "__OTR__sound/samples/instruments/3B_banjo_2"
-static const ALIGN_ASSET(2) char gSampleC8[] = dgSampleC8;
+#define dgUSSampleC8 "__OTR__sound/samples/instruments/3B_banjo_2"
+static const ALIGN_ASSET(2) char gUSSampleC8[] = dgUSSampleC8;
 
-#define dgSampleC9 "__OTR__sound/samples/instruments/3C_acoustic_guitar"
-static const ALIGN_ASSET(2) char gSampleC9[] = dgSampleC9;
+#define dgUSSampleC9 "__OTR__sound/samples/instruments/3C_acoustic_guitar"
+static const ALIGN_ASSET(2) char gUSSampleC9[] = dgUSSampleC9;
 
-#define dgSampleCA "__OTR__sound/samples/instruments/3D"
-static const ALIGN_ASSET(2) char gSampleCA[] = dgSampleCA;
+#define dgUSSampleCA "__OTR__sound/samples/instruments/3D"
+static const ALIGN_ASSET(2) char gUSSampleCA[] = dgUSSampleCA;
 
-#define dgSampleCB "__OTR__sound/samples/instruments/3E_monk_choir"
-static const ALIGN_ASSET(2) char gSampleCB[] = dgSampleCB;
+#define dgUSSampleCB "__OTR__sound/samples/instruments/3E_monk_choir"
+static const ALIGN_ASSET(2) char gUSSampleCB[] = dgUSSampleCB;
 
-#define dgSampleCC "__OTR__sound/samples/instruments/3F"
-static const ALIGN_ASSET(2) char gSampleCC[] = dgSampleCC;
+#define dgUSSampleCC "__OTR__sound/samples/instruments/3F"
+static const ALIGN_ASSET(2) char gUSSampleCC[] = dgUSSampleCC;
 
-#define dgSampleCD "__OTR__sound/samples/instruments/40_bell"
-static const ALIGN_ASSET(2) char gSampleCD[] = dgSampleCD;
+#define dgUSSampleCD "__OTR__sound/samples/instruments/40_bell"
+static const ALIGN_ASSET(2) char gUSSampleCD[] = dgUSSampleCD;
 
-#define dgSampleCE "__OTR__sound/samples/instruments/41_pan_flute"
-static const ALIGN_ASSET(2) char gSampleCE[] = dgSampleCE;
+#define dgUSSampleCE "__OTR__sound/samples/instruments/41_pan_flute"
+static const ALIGN_ASSET(2) char gUSSampleCE[] = dgUSSampleCE;
 
-#define dgSampleCF "__OTR__sound/samples/instruments/42_vibraphone"
-static const ALIGN_ASSET(2) char gSampleCF[] = dgSampleCF;
+#define dgUSSampleCF "__OTR__sound/samples/instruments/42_vibraphone"
+static const ALIGN_ASSET(2) char gUSSampleCF[] = dgUSSampleCF;
 
-#define dgSampleD0 "__OTR__sound/samples/instruments/43_harmonica"
-static const ALIGN_ASSET(2) char gSampleD0[] = dgSampleD0;
+#define dgUSSampleD0 "__OTR__sound/samples/instruments/43_harmonica"
+static const ALIGN_ASSET(2) char gUSSampleD0[] = dgUSSampleD0;
 
-#define dgSampleD1 "__OTR__sound/samples/instruments/44_grand_piano"
-static const ALIGN_ASSET(2) char gSampleD1[] = dgSampleD1;
+#define dgUSSampleD1 "__OTR__sound/samples/instruments/44_grand_piano"
+static const ALIGN_ASSET(2) char gUSSampleD1[] = dgUSSampleD1;
 
-#define dgSampleD2 "__OTR__sound/samples/instruments/45_french_horns_lq"
-static const ALIGN_ASSET(2) char gSampleD2[] = dgSampleD2;
+#define dgUSSampleD2 "__OTR__sound/samples/instruments/45_french_horns_lq"
+static const ALIGN_ASSET(2) char gUSSampleD2[] = dgUSSampleD2;
 
-#define dgSampleD3 "__OTR__sound/samples/instruments/46_pizzicato_strings_1"
-static const ALIGN_ASSET(2) char gSampleD3[] = dgSampleD3;
+#define dgUSSampleD3 "__OTR__sound/samples/instruments/46_pizzicato_strings_1"
+static const ALIGN_ASSET(2) char gUSSampleD3[] = dgUSSampleD3;
 
-#define dgSampleD4 "__OTR__sound/samples/instruments/47_pizzicato_strings_2"
-static const ALIGN_ASSET(2) char gSampleD4[] = dgSampleD4;
+#define dgUSSampleD4 "__OTR__sound/samples/instruments/47_pizzicato_strings_2"
+static const ALIGN_ASSET(2) char gUSSampleD4[] = dgUSSampleD4;
 
-#define dgSampleD5 "__OTR__sound/samples/instruments/48_steel_drum"
-static const ALIGN_ASSET(2) char gSampleD5[] = dgSampleD5;
+#define dgUSSampleD5 "__OTR__sound/samples/instruments/48_steel_drum"
+static const ALIGN_ASSET(2) char gUSSampleD5[] = dgUSSampleD5;
 
-#define dgSampleD6 "__OTR__sound/samples/piranha_music_box/00_music_box"
-static const ALIGN_ASSET(2) char gSampleD6[] = dgSampleD6;
+#define dgUSSampleD6 "__OTR__sound/samples/piranha_music_box/00_music_box"
+static const ALIGN_ASSET(2) char gUSSampleD6[] = dgUSSampleD6;
 
-#define dgSampleD7 "__OTR__sound/samples/course_start/00_la"
-static const ALIGN_ASSET(2) char gSampleD7[] = dgSampleD7;
+#define dgUSSampleD7 "__OTR__sound/samples/course_start/00_la"
+static const ALIGN_ASSET(2) char gUSSampleD7[] = dgUSSampleD7;
 
-#define dgSampleD8 "__OTR__sound/samples/bowser_organ/00_organ_1"
-static const ALIGN_ASSET(2) char gSampleD8[] = dgSampleD8;
+#define dgUSSampleD8 "__OTR__sound/samples/bowser_organ/00_organ_1"
+static const ALIGN_ASSET(2) char gUSSampleD8[] = dgUSSampleD8;
 
-#define dgSampleD9 "__OTR__sound/samples/bowser_organ/01_organ_1_lq"
-static const ALIGN_ASSET(2) char gSampleD9[] = dgSampleD9;
+#define dgUSSampleD9 "__OTR__sound/samples/bowser_organ/01_organ_1_lq"
+static const ALIGN_ASSET(2) char gUSSampleD9[] = dgUSSampleD9;
 
-#define dgSampleDA "__OTR__sound/samples/bowser_organ/02_boys_choir"
-static const ALIGN_ASSET(2) char gSampleDA[] = dgSampleDA;
+#define dgUSSampleDA "__OTR__sound/samples/bowser_organ/02_boys_choir"
+static const ALIGN_ASSET(2) char gUSSampleDA[] = dgUSSampleDA;
 
-static const char* gSampleTable[] = {
-    gSample00, gSample01, gSample02, gSample03,
-    gSample04, gSample05, gSample06, gSample07,
-    gSample08, gSample09, gSample0A, gSample0B,
-    gSample0C, gSample0D, gSample0E, gSample0F,
-    gSample10, gSample11, gSample12, gSample13,
-    gSample14, gSample15, gSample16, gSample17,
-    gSample18, gSample19, gSample1A, gSample1B,
-    gSample1C, gSample1D, gSample1E, gSample1F,
-    gSample20, gSample21, gSample22, gSample23,
-    gSample24, gSample25, gSample26, gSample27,
-    gSample28, gSample29, gSample2A, gSample2B,
-    gSample2C, gSample2D, gSample2E, gSample2F,
-    gSample30, gSample31, gSample32, gSample33,
-    gSample34, gSample35, gSample36, gSample37,
-    gSample38, gSample39, gSample3A, gSample3B,
-    gSample3C, gSample3D, gSample3E, gSample3F,
-    gSample40, gSample41, gSample42, gSample43,
-    gSample44, gSample45, gSample46, gSample47,
-    gSample48, gSample49, gSample4A, gSample4B,
-    gSample4C, gSample4D, gSample4E, gSample4F,
-    gSample50, gSample51, gSample52, gSample53,
-    gSample54, gSample55, gSample56, gSample57,
-    gSample58, gSample59, gSample5A, gSample5B,
-    gSample5C, gSample5D, gSample5E, gSample5F,
-    gSample60, gSample61, gSample62, gSample63,
-    gSample64, gSample65, gSample66, gSample67,
-    gSample68, gSample69, gSample6A, gSample6B,
-    gSample6C, gSample6D, gSample6E, gSample6F,
-    gSample70, gSample71, gSample72, gSample73,
-    gSample74, gSample75, gSample76, gSample77,
-    gSample78, gSample79, gSample7A, gSample7B,
-    gSample7C, gSample7D, gSample7E, gSample7F,
-    gSample80, gSample81, gSample82, gSample83,
-    gSample84, gSample85, gSample86, gSample87,
-    gSample88, gSample89, gSample8A, gSample8B,
-    gSample8C, gSample8D, gSample8E, gSample8F,
-    gSample90, gSample91, gSample92, gSample93,
-    gSample94, gSample95, gSample96, gSample97,
-    gSample98, gSample99, gSample9A, gSample9B,
-    gSample9C, gSample9D, gSample9E, gSample9F,
-    gSampleA0, gSampleA1, gSampleA2, gSampleA3,
-    gSampleA4, gSampleA5, gSampleA6, gSampleA7,
-    gSampleA8, gSampleA9, gSampleAA, gSampleAB,
-    gSampleAC, gSampleAD, gSampleAE, gSampleAF,
-    gSampleB0, gSampleB1, gSampleB2, gSampleB3,
-    gSampleB4, gSampleB5, gSampleB6, gSampleB7,
-    gSampleB8, gSampleB9, gSampleBA, gSampleBB,
-    gSampleBC, gSampleBD, gSampleBE, gSampleBF,
-    gSampleC0, gSampleC1, gSampleC2, gSampleC3,
-    gSampleC4, gSampleC5, gSampleC6, gSampleC7,
-    gSampleC8, gSampleC9, gSampleCA, gSampleCB,
-    gSampleCC, gSampleCD, gSampleCE, gSampleCF,
-    gSampleD0, gSampleD1, gSampleD2, gSampleD3,
-    gSampleD4, gSampleD5, gSampleD6, gSampleD7,
-    gSampleD8, gSampleD9, gSampleDA,
+static const char* gUSSampleTable[] = {
+    gUSSample00, gUSSample01, gUSSample02, gUSSample03,
+    gUSSample04, gUSSample05, gUSSample06, gUSSample07,
+    gUSSample08, gUSSample09, gUSSample0A, gUSSample0B,
+    gUSSample0C, gUSSample0D, gUSSample0E, gUSSample0F,
+    gUSSample10, gUSSample11, gUSSample12, gUSSample13,
+    gUSSample14, gUSSample15, gUSSample16, gUSSample17,
+    gUSSample18, gUSSample19, gUSSample1A, gUSSample1B,
+    gUSSample1C, gUSSample1D, gUSSample1E, gUSSample1F,
+    gUSSample20, gUSSample21, gUSSample22, gUSSample23,
+    gUSSample24, gUSSample25, gUSSample26, gUSSample27,
+    gUSSample28, gUSSample29, gUSSample2A, gUSSample2B,
+    gUSSample2C, gUSSample2D, gUSSample2E, gUSSample2F,
+    gUSSample30, gUSSample31, gUSSample32, gUSSample33,
+    gUSSample34, gUSSample35, gUSSample36, gUSSample37,
+    gUSSample38, gUSSample39, gUSSample3A, gUSSample3B,
+    gUSSample3C, gUSSample3D, gUSSample3E, gUSSample3F,
+    gUSSample40, gUSSample41, gUSSample42, gUSSample43,
+    gUSSample44, gUSSample45, gUSSample46, gUSSample47,
+    gUSSample48, gUSSample49, gUSSample4A, gUSSample4B,
+    gUSSample4C, gUSSample4D, gUSSample4E, gUSSample4F,
+    gUSSample50, gUSSample51, gUSSample52, gUSSample53,
+    gUSSample54, gUSSample55, gUSSample56, gUSSample57,
+    gUSSample58, gUSSample59, gUSSample5A, gUSSample5B,
+    gUSSample5C, gUSSample5D, gUSSample5E, gUSSample5F,
+    gUSSample60, gUSSample61, gUSSample62, gUSSample63,
+    gUSSample64, gUSSample65, gUSSample66, gUSSample67,
+    gUSSample68, gUSSample69, gUSSample6A, gUSSample6B,
+    gUSSample6C, gUSSample6D, gUSSample6E, gUSSample6F,
+    gUSSample70, gUSSample71, gUSSample72, gUSSample73,
+    gUSSample74, gUSSample75, gUSSample76, gUSSample77,
+    gUSSample78, gUSSample79, gUSSample7A, gUSSample7B,
+    gUSSample7C, gUSSample7D, gUSSample7E, gUSSample7F,
+    gUSSample80, gUSSample81, gUSSample82, gUSSample83,
+    gUSSample84, gUSSample85, gUSSample86, gUSSample87,
+    gUSSample88, gUSSample89, gUSSample8A, gUSSample8B,
+    gUSSample8C, gUSSample8D, gUSSample8E, gUSSample8F,
+    gUSSample90, gUSSample91, gUSSample92, gUSSample93,
+    gUSSample94, gUSSample95, gUSSample96, gUSSample97,
+    gUSSample98, gUSSample99, gUSSample9A, gUSSample9B,
+    gUSSample9C, gUSSample9D, gUSSample9E, gUSSample9F,
+    gUSSampleA0, gUSSampleA1, gUSSampleA2, gUSSampleA3,
+    gUSSampleA4, gUSSampleA5, gUSSampleA6, gUSSampleA7,
+    gUSSampleA8, gUSSampleA9, gUSSampleAA, gUSSampleAB,
+    gUSSampleAC, gUSSampleAD, gUSSampleAE, gUSSampleAF,
+    gUSSampleB0, gUSSampleB1, gUSSampleB2, gUSSampleB3,
+    gUSSampleB4, gUSSampleB5, gUSSampleB6, gUSSampleB7,
+    gUSSampleB8, gUSSampleB9, gUSSampleBA, gUSSampleBB,
+    gUSSampleBC, gUSSampleBD, gUSSampleBE, gUSSampleBF,
+    gUSSampleC0, gUSSampleC1, gUSSampleC2, gUSSampleC3,
+    gUSSampleC4, gUSSampleC5, gUSSampleC6, gUSSampleC7,
+    gUSSampleC8, gUSSampleC9, gUSSampleCA, gUSSampleCB,
+    gUSSampleCC, gUSSampleCD, gUSSampleCE, gUSSampleCF,
+    gUSSampleD0, gUSSampleD1, gUSSampleD2, gUSSampleD3,
+    gUSSampleD4, gUSSampleD5, gUSSampleD6, gUSSampleD7,
+    gUSSampleD8, gUSSampleD9, gUSSampleDA,
+};
+
+// Start JP
+
+#define dgJPSample00 "__OTR__sound/samples/sfx_1/00_twirl"
+static const ALIGN_ASSET(2) char gJPSample00[] = dgJPSample00;
+
+#define dgJPSample01 "__OTR__sound/samples/sfx_1/01_brushing"
+static const ALIGN_ASSET(2) char gJPSample01[] = dgJPSample01;
+
+#define dgJPSample02 "__OTR__sound/samples/sfx_1/02_hand_touch"
+static const ALIGN_ASSET(2) char gJPSample02[] = dgJPSample02;
+
+#define dgJPSample03 "__OTR__sound/samples/sfx_1/03_yoshi"
+static const ALIGN_ASSET(2) char gJPSample03[] = dgJPSample03;
+
+#define dgJPSample04 "__OTR__sound/samples/sfx_1/04_plop"
+static const ALIGN_ASSET(2) char gJPSample04[] = dgJPSample04;
+
+#define dgJPSample05 "__OTR__sound/samples/sfx_1/05_heavy_landing"
+static const ALIGN_ASSET(2) char gJPSample05[] = dgJPSample05;
+
+#define dgJPSample06 "__OTR__sound/samples/sfx_terrain/00_step_default"
+static const ALIGN_ASSET(2) char gJPSample06[] = dgJPSample06;
+
+#define dgJPSample07 "__OTR__sound/samples/sfx_terrain/01_step_grass"
+static const ALIGN_ASSET(2) char gJPSample07[] = dgJPSample07;
+
+#define dgJPSample08 "__OTR__sound/samples/sfx_terrain/02_step_stone"
+static const ALIGN_ASSET(2) char gJPSample08[] = dgJPSample08;
+
+#define dgJPSample09 "__OTR__sound/samples/sfx_terrain/03_step_spooky"
+static const ALIGN_ASSET(2) char gJPSample09[] = dgJPSample09;
+
+#define dgJPSample0A "__OTR__sound/samples/sfx_terrain/04_step_snow"
+static const ALIGN_ASSET(2) char gJPSample0A[] = dgJPSample0A;
+
+#define dgJPSample0B "__OTR__sound/samples/sfx_terrain/05_step_ice"
+static const ALIGN_ASSET(2) char gJPSample0B[] = dgJPSample0B;
+
+#define dgJPSample0C "__OTR__sound/samples/sfx_terrain/06_step_metal"
+static const ALIGN_ASSET(2) char gJPSample0C[] = dgJPSample0C;
+
+#define dgJPSample0D "__OTR__sound/samples/sfx_terrain/07_step_sand"
+static const ALIGN_ASSET(2) char gJPSample0D[] = dgJPSample0D;
+
+#define dgJPSample0E "__OTR__sound/samples/sfx_water/00_plunge"
+static const ALIGN_ASSET(2) char gJPSample0E[] = dgJPSample0E;
+
+#define dgJPSample0F "__OTR__sound/samples/sfx_water/01_splash"
+static const ALIGN_ASSET(2) char gJPSample0F[] = dgJPSample0F;
+
+#define dgJPSample10 "__OTR__sound/samples/sfx_water/02_swim"
+static const ALIGN_ASSET(2) char gJPSample10[] = dgJPSample10;
+
+#define dgJPSample11 "__OTR__sound/samples/sfx_4/00"
+static const ALIGN_ASSET(2) char gJPSample11[] = dgJPSample11;
+
+#define dgJPSample12 "__OTR__sound/samples/sfx_4/01"
+static const ALIGN_ASSET(2) char gJPSample12[] = dgJPSample12;
+
+#define dgJPSample13 "__OTR__sound/samples/sfx_4/02"
+static const ALIGN_ASSET(2) char gJPSample13[] = dgJPSample13;
+
+#define dgJPSample14 "__OTR__sound/samples/sfx_4/03"
+static const ALIGN_ASSET(2) char gJPSample14[] = dgJPSample14;
+
+#define dgJPSample15 "__OTR__sound/samples/sfx_4/04"
+static const ALIGN_ASSET(2) char gJPSample15[] = dgJPSample15;
+
+#define dgJPSample16 "__OTR__sound/samples/sfx_4/05"
+static const ALIGN_ASSET(2) char gJPSample16[] = dgJPSample16;
+
+#define dgJPSample17 "__OTR__sound/samples/sfx_4/06"
+static const ALIGN_ASSET(2) char gJPSample17[] = dgJPSample17;
+
+#define dgJPSample18 "__OTR__sound/samples/sfx_4/07"
+static const ALIGN_ASSET(2) char gJPSample18[] = dgJPSample18;
+
+#define dgJPSample19 "__OTR__sound/samples/sfx_4/08"
+static const ALIGN_ASSET(2) char gJPSample19[] = dgJPSample19;
+
+#define dgJPSample1A "__OTR__sound/samples/sfx_4/09"
+static const ALIGN_ASSET(2) char gJPSample1A[] = dgJPSample1A;
+
+#define dgJPSample1B "__OTR__sound/samples/sfx_5/00"
+static const ALIGN_ASSET(2) char gJPSample1B[] = dgJPSample1B;
+
+#define dgJPSample1C "__OTR__sound/samples/sfx_5/01"
+static const ALIGN_ASSET(2) char gJPSample1C[] = dgJPSample1C;
+
+#define dgJPSample1D "__OTR__sound/samples/sfx_5/02"
+static const ALIGN_ASSET(2) char gJPSample1D[] = dgJPSample1D;
+
+#define dgJPSample1E "__OTR__sound/samples/sfx_5/03"
+static const ALIGN_ASSET(2) char gJPSample1E[] = dgJPSample1E;
+
+#define dgJPSample1F "__OTR__sound/samples/sfx_5/04"
+static const ALIGN_ASSET(2) char gJPSample1F[] = dgJPSample1F;
+
+#define dgJPSample20 "__OTR__sound/samples/sfx_5/05"
+static const ALIGN_ASSET(2) char gJPSample20[] = dgJPSample20;
+
+#define dgJPSample21 "__OTR__sound/samples/sfx_5/06"
+static const ALIGN_ASSET(2) char gJPSample21[] = dgJPSample21;
+
+#define dgJPSample22 "__OTR__sound/samples/sfx_5/07"
+static const ALIGN_ASSET(2) char gJPSample22[] = dgJPSample22;
+
+#define dgJPSample23 "__OTR__sound/samples/sfx_5/08"
+static const ALIGN_ASSET(2) char gJPSample23[] = dgJPSample23;
+
+#define dgJPSample24 "__OTR__sound/samples/sfx_5/09"
+static const ALIGN_ASSET(2) char gJPSample24[] = dgJPSample24;
+
+#define dgJPSample25 "__OTR__sound/samples/sfx_5/0A"
+static const ALIGN_ASSET(2) char gJPSample25[] = dgJPSample25;
+
+#define dgJPSample26 "__OTR__sound/samples/sfx_5/0B"
+static const ALIGN_ASSET(2) char gJPSample26[] = dgJPSample26;
+
+#define dgJPSample27 "__OTR__sound/samples/sfx_5/0C"
+static const ALIGN_ASSET(2) char gJPSample27[] = dgJPSample27;
+
+#define dgJPSample28 "__OTR__sound/samples/sfx_5/0D"
+static const ALIGN_ASSET(2) char gJPSample28[] = dgJPSample28;
+
+#define dgJPSample29 "__OTR__sound/samples/sfx_5/0E"
+static const ALIGN_ASSET(2) char gJPSample29[] = dgJPSample29;
+
+#define dgJPSample2A "__OTR__sound/samples/sfx_5/0F"
+static const ALIGN_ASSET(2) char gJPSample2A[] = dgJPSample2A;
+
+#define dgJPSample2B "__OTR__sound/samples/sfx_5/10"
+static const ALIGN_ASSET(2) char gJPSample2B[] = dgJPSample2B;
+
+#define dgJPSample2C "__OTR__sound/samples/sfx_5/11"
+static const ALIGN_ASSET(2) char gJPSample2C[] = dgJPSample2C;
+
+#define dgJPSample2D "__OTR__sound/samples/sfx_5/12"
+static const ALIGN_ASSET(2) char gJPSample2D[] = dgJPSample2D;
+
+#define dgJPSample2E "__OTR__sound/samples/sfx_5/13"
+static const ALIGN_ASSET(2) char gJPSample2E[] = dgJPSample2E;
+
+#define dgJPSample2F "__OTR__sound/samples/sfx_5/14"
+static const ALIGN_ASSET(2) char gJPSample2F[] = dgJPSample2F;
+
+#define dgJPSample30 "__OTR__sound/samples/sfx_5/15"
+static const ALIGN_ASSET(2) char gJPSample30[] = dgJPSample30;
+
+#define dgJPSample31 "__OTR__sound/samples/sfx_5/16"
+static const ALIGN_ASSET(2) char gJPSample31[] = dgJPSample31;
+
+#define dgJPSample32 "__OTR__sound/samples/sfx_5/17"
+static const ALIGN_ASSET(2) char gJPSample32[] = dgJPSample32;
+
+#define dgJPSample33 "__OTR__sound/samples/sfx_5/18"
+static const ALIGN_ASSET(2) char gJPSample33[] = dgJPSample33;
+
+#define dgJPSample34 "__OTR__sound/samples/sfx_5/19"
+static const ALIGN_ASSET(2) char gJPSample34[] = dgJPSample34;
+
+#define dgJPSample35 "__OTR__sound/samples/sfx_5/1A"
+static const ALIGN_ASSET(2) char gJPSample35[] = dgJPSample35;
+
+#define dgJPSample36 "__OTR__sound/samples/sfx_5/1B"
+static const ALIGN_ASSET(2) char gJPSample36[] = dgJPSample36;
+
+#define dgJPSample37 "__OTR__sound/samples/sfx_5/1C"
+static const ALIGN_ASSET(2) char gJPSample37[] = dgJPSample37;
+
+#define dgJPSample38 "__OTR__sound/samples/sfx_6/00"
+static const ALIGN_ASSET(2) char gJPSample38[] = dgJPSample38;
+
+#define dgJPSample39 "__OTR__sound/samples/sfx_6/01"
+static const ALIGN_ASSET(2) char gJPSample39[] = dgJPSample39;
+
+#define dgJPSample3A "__OTR__sound/samples/sfx_6/02"
+static const ALIGN_ASSET(2) char gJPSample3A[] = dgJPSample3A;
+
+#define dgJPSample3B "__OTR__sound/samples/sfx_6/03"
+static const ALIGN_ASSET(2) char gJPSample3B[] = dgJPSample3B;
+
+#define dgJPSample3C "__OTR__sound/samples/sfx_6/04"
+static const ALIGN_ASSET(2) char gJPSample3C[] = dgJPSample3C;
+
+#define dgJPSample3D "__OTR__sound/samples/sfx_6/05"
+static const ALIGN_ASSET(2) char gJPSample3D[] = dgJPSample3D;
+
+#define dgJPSample3E "__OTR__sound/samples/sfx_6/06"
+static const ALIGN_ASSET(2) char gJPSample3E[] = dgJPSample3E;
+
+#define dgJPSample3F "__OTR__sound/samples/sfx_6/07"
+static const ALIGN_ASSET(2) char gJPSample3F[] = dgJPSample3F;
+
+#define dgJPSample40 "__OTR__sound/samples/sfx_6/08"
+static const ALIGN_ASSET(2) char gJPSample40[] = dgJPSample40;
+
+#define dgJPSample41 "__OTR__sound/samples/sfx_6/09"
+static const ALIGN_ASSET(2) char gJPSample41[] = dgJPSample41;
+
+#define dgJPSample42 "__OTR__sound/samples/sfx_6/0A"
+static const ALIGN_ASSET(2) char gJPSample42[] = dgJPSample42;
+
+#define dgJPSample43 "__OTR__sound/samples/sfx_6/0B"
+static const ALIGN_ASSET(2) char gJPSample43[] = dgJPSample43;
+
+#define dgJPSample44 "__OTR__sound/samples/sfx_6/0C"
+static const ALIGN_ASSET(2) char gJPSample44[] = dgJPSample44;
+
+#define dgJPSample45 "__OTR__sound/samples/sfx_6/0D"
+static const ALIGN_ASSET(2) char gJPSample45[] = dgJPSample45;
+
+#define dgJPSample46 "__OTR__sound/samples/sfx_7/00"
+static const ALIGN_ASSET(2) char gJPSample46[] = dgJPSample46;
+
+#define dgJPSample47 "__OTR__sound/samples/sfx_7/01"
+static const ALIGN_ASSET(2) char gJPSample47[] = dgJPSample47;
+
+#define dgJPSample48 "__OTR__sound/samples/sfx_7/02"
+static const ALIGN_ASSET(2) char gJPSample48[] = dgJPSample48;
+
+#define dgJPSample49 "__OTR__sound/samples/sfx_7/03"
+static const ALIGN_ASSET(2) char gJPSample49[] = dgJPSample49;
+
+#define dgJPSample4A "__OTR__sound/samples/sfx_7/04"
+static const ALIGN_ASSET(2) char gJPSample4A[] = dgJPSample4A;
+
+#define dgJPSample4B "__OTR__sound/samples/sfx_7/05"
+static const ALIGN_ASSET(2) char gJPSample4B[] = dgJPSample4B;
+
+#define dgJPSample4C "__OTR__sound/samples/sfx_7/06"
+static const ALIGN_ASSET(2) char gJPSample4C[] = dgJPSample4C;
+
+#define dgJPSample4D "__OTR__sound/samples/sfx_7/07"
+static const ALIGN_ASSET(2) char gJPSample4D[] = dgJPSample4D;
+
+#define dgJPSample4E "__OTR__sound/samples/sfx_7/08"
+static const ALIGN_ASSET(2) char gJPSample4E[] = dgJPSample4E;
+
+#define dgJPSample4F "__OTR__sound/samples/sfx_7/09"
+static const ALIGN_ASSET(2) char gJPSample4F[] = dgJPSample4F;
+
+#define dgJPSample50 "__OTR__sound/samples/sfx_7/0A"
+static const ALIGN_ASSET(2) char gJPSample50[] = dgJPSample50;
+
+#define dgJPSample51 "__OTR__sound/samples/sfx_7/0B"
+static const ALIGN_ASSET(2) char gJPSample51[] = dgJPSample51;
+
+#define dgJPSample52 "__OTR__sound/samples/sfx_7/0C"
+static const ALIGN_ASSET(2) char gJPSample52[] = dgJPSample52;
+
+#define dgJPSample53 "__OTR__sound/samples/sfx_mario/00_mario_jump_hoo"
+static const ALIGN_ASSET(2) char gJPSample53[] = dgJPSample53;
+
+#define dgJPSample54 "__OTR__sound/samples/sfx_mario/01_mario_jump_wah"
+static const ALIGN_ASSET(2) char gJPSample54[] = dgJPSample54;
+
+#define dgJPSample55 "__OTR__sound/samples/sfx_mario/02_mario_yah"
+static const ALIGN_ASSET(2) char gJPSample55[] = dgJPSample55;
+
+#define dgJPSample56 "__OTR__sound/samples/sfx_mario/03_mario_haha"
+static const ALIGN_ASSET(2) char gJPSample56[] = dgJPSample56;
+
+#define dgJPSample57 "__OTR__sound/samples/sfx_mario/04_mario_yahoo"
+static const ALIGN_ASSET(2) char gJPSample57[] = dgJPSample57;
+
+#define dgJPSample58 "__OTR__sound/samples/sfx_mario/05_mario_uh"
+static const ALIGN_ASSET(2) char gJPSample58[] = dgJPSample58;
+
+#define dgJPSample59 "__OTR__sound/samples/sfx_mario/06_mario_hrmm"
+static const ALIGN_ASSET(2) char gJPSample59[] = dgJPSample59;
+
+#define dgJPSample5A "__OTR__sound/samples/sfx_mario/07_mario_wah2"
+static const ALIGN_ASSET(2) char gJPSample5A[] = dgJPSample5A;
+
+#define dgJPSample5B "__OTR__sound/samples/sfx_mario/08_mario_whoa"
+static const ALIGN_ASSET(2) char gJPSample5B[] = dgJPSample5B;
+
+#define dgJPSample5C "__OTR__sound/samples/sfx_mario/09_mario_eeuh"
+static const ALIGN_ASSET(2) char gJPSample5C[] = dgJPSample5C;
+
+#define dgJPSample5D "__OTR__sound/samples/sfx_mario/0A_mario_attacked"
+static const ALIGN_ASSET(2) char gJPSample5D[] = dgJPSample5D;
+
+#define dgJPSample5E "__OTR__sound/samples/sfx_mario/0B_mario_ooof"
+static const ALIGN_ASSET(2) char gJPSample5E[] = dgJPSample5E;
+
+#define dgJPSample5F "__OTR__sound/samples/sfx_mario/0C_mario_here_we_go"
+static const ALIGN_ASSET(2) char gJPSample5F[] = dgJPSample5F;
+
+#define dgJPSample60 "__OTR__sound/samples/sfx_mario/0D_mario_yawning"
+static const ALIGN_ASSET(2) char gJPSample60[] = dgJPSample60;
+
+#define dgJPSample61 "__OTR__sound/samples/sfx_mario/0E_mario_snoring1"
+static const ALIGN_ASSET(2) char gJPSample61[] = dgJPSample61;
+
+#define dgJPSample62 "__OTR__sound/samples/sfx_mario/0F_mario_snoring2"
+static const ALIGN_ASSET(2) char gJPSample62[] = dgJPSample62;
+
+#define dgJPSample63 "__OTR__sound/samples/sfx_9/00"
+static const ALIGN_ASSET(2) char gJPSample63[] = dgJPSample63;
+
+#define dgJPSample64 "__OTR__sound/samples/sfx_9/01"
+static const ALIGN_ASSET(2) char gJPSample64[] = dgJPSample64;
+
+#define dgJPSample65 "__OTR__sound/samples/sfx_9/02"
+static const ALIGN_ASSET(2) char gJPSample65[] = dgJPSample65;
+
+#define dgJPSample66 "__OTR__sound/samples/sfx_9/03"
+static const ALIGN_ASSET(2) char gJPSample66[] = dgJPSample66;
+
+#define dgJPSample67 "__OTR__sound/samples/sfx_9/04_camera_buzz"
+static const ALIGN_ASSET(2) char gJPSample67[] = dgJPSample67;
+
+#define dgJPSample68 "__OTR__sound/samples/sfx_9/05_camera_shutter"
+static const ALIGN_ASSET(2) char gJPSample68[] = dgJPSample68;
+
+#define dgJPSample69 "__OTR__sound/samples/sfx_9/06"
+static const ALIGN_ASSET(2) char gJPSample69[] = dgJPSample69;
+
+#define dgJPSample6A "__OTR__sound/samples/sfx_mario_peach/00_mario_waaaooow"
+static const ALIGN_ASSET(2) char gJPSample6A[] = dgJPSample6A;
+
+#define dgJPSample6B "__OTR__sound/samples/sfx_mario_peach/01_mario_hoohoo"
+static const ALIGN_ASSET(2) char gJPSample6B[] = dgJPSample6B;
+
+#define dgJPSample6C "__OTR__sound/samples/sfx_mario_peach/02_mario_panting"
+static const ALIGN_ASSET(2) char gJPSample6C[] = dgJPSample6C;
+
+#define dgJPSample6D "__OTR__sound/samples/sfx_mario_peach/03_mario_dying"
+static const ALIGN_ASSET(2) char gJPSample6D[] = dgJPSample6D;
+
+#define dgJPSample6E "__OTR__sound/samples/sfx_mario_peach/04_mario_on_fire"
+static const ALIGN_ASSET(2) char gJPSample6E[] = dgJPSample6E;
+
+#define dgJPSample6F "__OTR__sound/samples/sfx_mario_peach/05_mario_uh2"
+static const ALIGN_ASSET(2) char gJPSample6F[] = dgJPSample6F;
+
+#define dgJPSample70 "__OTR__sound/samples/sfx_mario_peach/06_mario_coughing"
+static const ALIGN_ASSET(2) char gJPSample70[] = dgJPSample70;
+
+#define dgJPSample71 "__OTR__sound/samples/sfx_mario_peach/07_mario_its_a_me_mario"
+static const ALIGN_ASSET(2) char gJPSample71[] = dgJPSample71;
+
+#define dgJPSample72 "__OTR__sound/samples/sfx_mario_peach/08_mario_punch_yah"
+static const ALIGN_ASSET(2) char gJPSample72[] = dgJPSample72;
+
+#define dgJPSample73 "__OTR__sound/samples/sfx_mario_peach/09_mario_punch_hoo"
+static const ALIGN_ASSET(2) char gJPSample73[] = dgJPSample73;
+
+#define dgJPSample74 "__OTR__sound/samples/sfx_mario_peach/0A_mario_mama_mia"
+static const ALIGN_ASSET(2) char gJPSample74[] = dgJPSample74;
+
+#define dgJPSample75 "__OTR__sound/samples/sfx_mario_peach/0B_mario_okey_dokey"
+static const ALIGN_ASSET(2) char gJPSample75[] = dgJPSample75;
+
+#define dgJPSample76 "__OTR__sound/samples/sfx_mario_peach/0C_mario_drowning"
+static const ALIGN_ASSET(2) char gJPSample76[] = dgJPSample76;
+
+#define dgJPSample77 "__OTR__sound/samples/sfx_mario_peach/0D_mario_thank_you_playing_my_game"
+static const ALIGN_ASSET(2) char gJPSample77[] = dgJPSample77;
+
+#define dgJPSample78 "__OTR__sound/samples/instruments/00"
+static const ALIGN_ASSET(2) char gJPSample78[] = dgJPSample78;
+
+#define dgJPSample79 "__OTR__sound/samples/instruments/01_banjo_1"
+static const ALIGN_ASSET(2) char gJPSample79[] = dgJPSample79;
+
+#define dgJPSample7A "__OTR__sound/samples/instruments/02"
+static const ALIGN_ASSET(2) char gJPSample7A[] = dgJPSample7A;
+
+#define dgJPSample7B "__OTR__sound/samples/instruments/03_human_whistle"
+static const ALIGN_ASSET(2) char gJPSample7B[] = dgJPSample7B;
+
+#define dgJPSample7C "__OTR__sound/samples/instruments/04_bright_piano"
+static const ALIGN_ASSET(2) char gJPSample7C[] = dgJPSample7C;
+
+#define dgJPSample7D "__OTR__sound/samples/instruments/05_acoustic_bass"
+static const ALIGN_ASSET(2) char gJPSample7D[] = dgJPSample7D;
+
+#define dgJPSample7E "__OTR__sound/samples/instruments/06_kick_drum_1"
+static const ALIGN_ASSET(2) char gJPSample7E[] = dgJPSample7E;
+
+#define dgJPSample7F "__OTR__sound/samples/instruments/07_rimshot"
+static const ALIGN_ASSET(2) char gJPSample7F[] = dgJPSample7F;
+
+#define dgJPSample80 "__OTR__sound/samples/instruments/08"
+static const ALIGN_ASSET(2) char gJPSample80[] = dgJPSample80;
+
+#define dgJPSample81 "__OTR__sound/samples/instruments/09"
+static const ALIGN_ASSET(2) char gJPSample81[] = dgJPSample81;
+
+#define dgJPSample82 "__OTR__sound/samples/instruments/0A_tambourine"
+static const ALIGN_ASSET(2) char gJPSample82[] = dgJPSample82;
+
+#define dgJPSample83 "__OTR__sound/samples/instruments/0B"
+static const ALIGN_ASSET(2) char gJPSample83[] = dgJPSample83;
+
+#define dgJPSample84 "__OTR__sound/samples/instruments/0C_conga_stick"
+static const ALIGN_ASSET(2) char gJPSample84[] = dgJPSample84;
+
+#define dgJPSample85 "__OTR__sound/samples/instruments/0D_clave"
+static const ALIGN_ASSET(2) char gJPSample85[] = dgJPSample85;
+
+#define dgJPSample86 "__OTR__sound/samples/instruments/0E_hihat_closed"
+static const ALIGN_ASSET(2) char gJPSample86[] = dgJPSample86;
+
+#define dgJPSample87 "__OTR__sound/samples/instruments/0F_hihat_open"
+static const ALIGN_ASSET(2) char gJPSample87[] = dgJPSample87;
+
+#define dgJPSample88 "__OTR__sound/samples/instruments/10_cymbal_bell"
+static const ALIGN_ASSET(2) char gJPSample88[] = dgJPSample88;
+
+#define dgJPSample89 "__OTR__sound/samples/instruments/11_splash_cymbal"
+static const ALIGN_ASSET(2) char gJPSample89[] = dgJPSample89;
+
+#define dgJPSample8A "__OTR__sound/samples/instruments/12_snare_drum_1"
+static const ALIGN_ASSET(2) char gJPSample8A[] = dgJPSample8A;
+
+#define dgJPSample8B "__OTR__sound/samples/instruments/13_snare_drum_2"
+static const ALIGN_ASSET(2) char gJPSample8B[] = dgJPSample8B;
+
+#define dgJPSample8C "__OTR__sound/samples/instruments/14_strings_5"
+static const ALIGN_ASSET(2) char gJPSample8C[] = dgJPSample8C;
+
+#define dgJPSample8D "__OTR__sound/samples/instruments/15_strings_4"
+static const ALIGN_ASSET(2) char gJPSample8D[] = dgJPSample8D;
+
+#define dgJPSample8E "__OTR__sound/samples/instruments/16_french_horns"
+static const ALIGN_ASSET(2) char gJPSample8E[] = dgJPSample8E;
+
+#define dgJPSample8F "__OTR__sound/samples/instruments/17_trumpet"
+static const ALIGN_ASSET(2) char gJPSample8F[] = dgJPSample8F;
+
+#define dgJPSample90 "__OTR__sound/samples/instruments/18_timpani"
+static const ALIGN_ASSET(2) char gJPSample90[] = dgJPSample90;
+
+#define dgJPSample91 "__OTR__sound/samples/instruments/19_brass"
+static const ALIGN_ASSET(2) char gJPSample91[] = dgJPSample91;
+
+#define dgJPSample92 "__OTR__sound/samples/instruments/1A_slap_bass"
+static const ALIGN_ASSET(2) char gJPSample92[] = dgJPSample92;
+
+#define dgJPSample93 "__OTR__sound/samples/instruments/1B_organ_2"
+static const ALIGN_ASSET(2) char gJPSample93[] = dgJPSample93;
+
+#define dgJPSample94 "__OTR__sound/samples/instruments/1C"
+static const ALIGN_ASSET(2) char gJPSample94[] = dgJPSample94;
+
+#define dgJPSample95 "__OTR__sound/samples/instruments/1D"
+static const ALIGN_ASSET(2) char gJPSample95[] = dgJPSample95;
+
+#define dgJPSample96 "__OTR__sound/samples/instruments/1E_closed_triangle"
+static const ALIGN_ASSET(2) char gJPSample96[] = dgJPSample96;
+
+#define dgJPSample97 "__OTR__sound/samples/instruments/1F_open_triangle"
+static const ALIGN_ASSET(2) char gJPSample97[] = dgJPSample97;
+
+#define dgJPSample98 "__OTR__sound/samples/instruments/20_cabasa"
+static const ALIGN_ASSET(2) char gJPSample98[] = dgJPSample98;
+
+#define dgJPSample99 "__OTR__sound/samples/instruments/21_sine_bass"
+static const ALIGN_ASSET(2) char gJPSample99[] = dgJPSample99;
+
+#define dgJPSample9A "__OTR__sound/samples/instruments/22_boys_choir"
+static const ALIGN_ASSET(2) char gJPSample9A[] = dgJPSample9A;
+
+#define dgJPSample9B "__OTR__sound/samples/instruments/23_strings_1"
+static const ALIGN_ASSET(2) char gJPSample9B[] = dgJPSample9B;
+
+#define dgJPSample9C "__OTR__sound/samples/instruments/24_strings_2"
+static const ALIGN_ASSET(2) char gJPSample9C[] = dgJPSample9C;
+
+#define dgJPSample9D "__OTR__sound/samples/instruments/25_strings_3"
+static const ALIGN_ASSET(2) char gJPSample9D[] = dgJPSample9D;
+
+#define dgJPSample9E "__OTR__sound/samples/instruments/26_crystal_rhodes"
+static const ALIGN_ASSET(2) char gJPSample9E[] = dgJPSample9E;
+
+#define dgJPSample9F "__OTR__sound/samples/instruments/27_harpsichord"
+static const ALIGN_ASSET(2) char gJPSample9F[] = dgJPSample9F;
+
+#define dgJPSampleA0 "__OTR__sound/samples/instruments/28_sitar_1"
+static const ALIGN_ASSET(2) char gJPSampleA0[] = dgJPSampleA0;
+
+#define dgJPSampleA1 "__OTR__sound/samples/instruments/29_orchestra_hit"
+static const ALIGN_ASSET(2) char gJPSampleA1[] = dgJPSampleA1;
+
+#define dgJPSampleA2 "__OTR__sound/samples/instruments/2A"
+static const ALIGN_ASSET(2) char gJPSampleA2[] = dgJPSampleA2;
+
+#define dgJPSampleA3 "__OTR__sound/samples/instruments/2B"
+static const ALIGN_ASSET(2) char gJPSampleA3[] = dgJPSampleA3;
+
+#define dgJPSampleA4 "__OTR__sound/samples/instruments/2C"
+static const ALIGN_ASSET(2) char gJPSampleA4[] = dgJPSampleA4;
+
+#define dgJPSampleA5 "__OTR__sound/samples/instruments/2D_trombone"
+static const ALIGN_ASSET(2) char gJPSampleA5[] = dgJPSampleA5;
+
+#define dgJPSampleA6 "__OTR__sound/samples/instruments/2E_accordion"
+static const ALIGN_ASSET(2) char gJPSampleA6[] = dgJPSampleA6;
+
+#define dgJPSampleA7 "__OTR__sound/samples/instruments/2F_sleigh_bells"
+static const ALIGN_ASSET(2) char gJPSampleA7[] = dgJPSampleA7;
+
+#define dgJPSampleA8 "__OTR__sound/samples/instruments/30_rarefaction-lahna"
+static const ALIGN_ASSET(2) char gJPSampleA8[] = dgJPSampleA8;
+
+#define dgJPSampleA9 "__OTR__sound/samples/instruments/31_rarefaction-convolution"
+static const ALIGN_ASSET(2) char gJPSampleA9[] = dgJPSampleA9;
+
+#define dgJPSampleAA "__OTR__sound/samples/instruments/32_metal_rimshot"
+static const ALIGN_ASSET(2) char gJPSampleAA[] = dgJPSampleAA;
+
+#define dgJPSampleAB "__OTR__sound/samples/instruments/33_kick_drum_2"
+static const ALIGN_ASSET(2) char gJPSampleAB[] = dgJPSampleAB;
+
+#define dgJPSampleAC "__OTR__sound/samples/instruments/34_alto_flute"
+static const ALIGN_ASSET(2) char gJPSampleAC[] = dgJPSampleAC;
+
+#define dgJPSampleAD "__OTR__sound/samples/instruments/35_gospel_organ"
+static const ALIGN_ASSET(2) char gJPSampleAD[] = dgJPSampleAD;
+
+#define dgJPSampleAE "__OTR__sound/samples/instruments/36_sawtooth_synth"
+static const ALIGN_ASSET(2) char gJPSampleAE[] = dgJPSampleAE;
+
+#define dgJPSampleAF "__OTR__sound/samples/instruments/37_square_synth"
+static const ALIGN_ASSET(2) char gJPSampleAF[] = dgJPSampleAF;
+
+#define dgJPSampleB0 "__OTR__sound/samples/instruments/38_electric_kick_drum"
+static const ALIGN_ASSET(2) char gJPSampleB0[] = dgJPSampleB0;
+
+#define dgJPSampleB1 "__OTR__sound/samples/instruments/39_sitar_2"
+static const ALIGN_ASSET(2) char gJPSampleB1[] = dgJPSampleB1;
+
+#define dgJPSampleB2 "__OTR__sound/samples/instruments/3A_music_box"
+static const ALIGN_ASSET(2) char gJPSampleB2[] = dgJPSampleB2;
+
+#define dgJPSampleB3 "__OTR__sound/samples/instruments/3B_banjo_2"
+static const ALIGN_ASSET(2) char gJPSampleB3[] = dgJPSampleB3;
+
+#define dgJPSampleB4 "__OTR__sound/samples/instruments/3C_acoustic_guitar"
+static const ALIGN_ASSET(2) char gJPSampleB4[] = dgJPSampleB4;
+
+#define dgJPSampleB5 "__OTR__sound/samples/instruments/3D"
+static const ALIGN_ASSET(2) char gJPSampleB5[] = dgJPSampleB5;
+
+#define dgJPSampleB6 "__OTR__sound/samples/instruments/3E_monk_choir"
+static const ALIGN_ASSET(2) char gJPSampleB6[] = dgJPSampleB6;
+
+#define dgJPSampleB7 "__OTR__sound/samples/instruments/3F"
+static const ALIGN_ASSET(2) char gJPSampleB7[] = dgJPSampleB7;
+
+#define dgJPSampleB8 "__OTR__sound/samples/instruments/40_bell"
+static const ALIGN_ASSET(2) char gJPSampleB8[] = dgJPSampleB8;
+
+#define dgJPSampleB9 "__OTR__sound/samples/instruments/41_pan_flute"
+static const ALIGN_ASSET(2) char gJPSampleB9[] = dgJPSampleB9;
+
+#define dgJPSampleBA "__OTR__sound/samples/instruments/42_vibraphone"
+static const ALIGN_ASSET(2) char gJPSampleBA[] = dgJPSampleBA;
+
+#define dgJPSampleBB "__OTR__sound/samples/instruments/43_harmonica"
+static const ALIGN_ASSET(2) char gJPSampleBB[] = dgJPSampleBB;
+
+#define dgJPSampleBC "__OTR__sound/samples/instruments/44_grand_piano"
+static const ALIGN_ASSET(2) char gJPSampleBC[] = dgJPSampleBC;
+
+#define dgJPSampleBD "__OTR__sound/samples/instruments/45_french_horns_lq"
+static const ALIGN_ASSET(2) char gJPSampleBD[] = dgJPSampleBD;
+
+#define dgJPSampleBE "__OTR__sound/samples/instruments/46_pizzicato_strings_1"
+static const ALIGN_ASSET(2) char gJPSampleBE[] = dgJPSampleBE;
+
+#define dgJPSampleBF "__OTR__sound/samples/instruments/47_pizzicato_strings_2"
+static const ALIGN_ASSET(2) char gJPSampleBF[] = dgJPSampleBF;
+
+#define dgJPSampleC0 "__OTR__sound/samples/instruments/48_steel_drum"
+static const ALIGN_ASSET(2) char gJPSampleC0[] = dgJPSampleC0;
+
+#define dgJPSampleC1 "__OTR__sound/samples/piranha_music_box/00_music_box"
+static const ALIGN_ASSET(2) char gJPSampleC1[] = dgJPSampleC1;
+
+#define dgJPSampleC2 "__OTR__sound/samples/course_start/00_la"
+static const ALIGN_ASSET(2) char gJPSampleC2[] = dgJPSampleC2;
+
+#define dgJPSampleC3 "__OTR__sound/samples/bowser_organ/00_organ_1"
+static const ALIGN_ASSET(2) char gJPSampleC3[] = dgJPSampleC3;
+
+#define dgJPSampleC4 "__OTR__sound/samples/bowser_organ/01_organ_1_lq"
+static const ALIGN_ASSET(2) char gJPSampleC4[] = dgJPSampleC4;
+
+#define dgJPSampleC5 "__OTR__sound/samples/bowser_organ/02_boys_choir"
+static const ALIGN_ASSET(2) char gJPSampleC5[] = dgJPSampleC5;
+
+static const char* gJPSampleTable[] = {
+    gJPSample00, gJPSample01, gJPSample02, gJPSample03,
+    gJPSample04, gJPSample05, gJPSample06, gJPSample07,
+    gJPSample08, gJPSample09, gJPSample0A, gJPSample0B,
+    gJPSample0C, gJPSample0D, gJPSample0E, gJPSample0F,
+    gJPSample10, gJPSample11, gJPSample12, gJPSample13,
+    gJPSample14, gJPSample15, gJPSample16, gJPSample17,
+    gJPSample18, gJPSample19, gJPSample1A, gJPSample1B,
+    gJPSample1C, gJPSample1D, gJPSample1E, gJPSample1F,
+    gJPSample20, gJPSample21, gJPSample22, gJPSample23,
+    gJPSample24, gJPSample25, gJPSample26, gJPSample27,
+    gJPSample28, gJPSample29, gJPSample2A, gJPSample2B,
+    gJPSample2C, gJPSample2D, gJPSample2E, gJPSample2F,
+    gJPSample30, gJPSample31, gJPSample32, gJPSample33,
+    gJPSample34, gJPSample35, gJPSample36, gJPSample37,
+    gJPSample38, gJPSample39, gJPSample3A, gJPSample3B,
+    gJPSample3C, gJPSample3D, gJPSample3E, gJPSample3F,
+    gJPSample40, gJPSample41, gJPSample42, gJPSample43,
+    gJPSample44, gJPSample45, gJPSample46, gJPSample47,
+    gJPSample48, gJPSample49, gJPSample4A, gJPSample4B,
+    gJPSample4C, gJPSample4D, gJPSample4E, gJPSample4F,
+    gJPSample50, gJPSample51, gJPSample52, gJPSample53,
+    gJPSample54, gJPSample55, gJPSample56, gJPSample57,
+    gJPSample58, gJPSample59, gJPSample5A, gJPSample5B,
+    gJPSample5C, gJPSample5D, gJPSample5E, gJPSample5F,
+    gJPSample60, gJPSample61, gJPSample62, gJPSample63,
+    gJPSample64, gJPSample65, gJPSample66, gJPSample67,
+    gJPSample68, gJPSample69, gJPSample6A, gJPSample6B,
+    gJPSample6C, gJPSample6D, gJPSample6E, gJPSample6F,
+    gJPSample70, gJPSample71, gJPSample72, gJPSample73,
+    gJPSample74, gJPSample75, gJPSample76, gJPSample77,
+    gJPSample78, gJPSample79, gJPSample7A, gJPSample7B,
+    gJPSample7C, gJPSample7D, gJPSample7E, gJPSample7F,
+    gJPSample80, gJPSample81, gJPSample82, gJPSample83,
+    gJPSample84, gJPSample85, gJPSample86, gJPSample87,
+    gJPSample88, gJPSample89, gJPSample8A, gJPSample8B,
+    gJPSample8C, gJPSample8D, gJPSample8E, gJPSample8F,
+    gJPSample90, gJPSample91, gJPSample92, gJPSample93,
+    gJPSample94, gJPSample95, gJPSample96, gJPSample97,
+    gJPSample98, gJPSample99, gJPSample9A, gJPSample9B,
+    gJPSample9C, gJPSample9D, gJPSample9E, gJPSample9F,
+    gJPSampleA0, gJPSampleA1, gJPSampleA2, gJPSampleA3,
+    gJPSampleA4, gJPSampleA5, gJPSampleA6, gJPSampleA7,
+    gJPSampleA8, gJPSampleA9, gJPSampleAA, gJPSampleAB,
+    gJPSampleAC, gJPSampleAD, gJPSampleAE, gJPSampleAF,
+    gJPSampleB0, gJPSampleB1, gJPSampleB2, gJPSampleB3,
+    gJPSampleB4, gJPSampleB5, gJPSampleB6, gJPSampleB7,
+    gJPSampleB8, gJPSampleB9, gJPSampleBA, gJPSampleBB,
+    gJPSampleBC, gJPSampleBD, gJPSampleBE, gJPSampleBF,
+    gJPSampleC0, gJPSampleC1, gJPSampleC2, gJPSampleC3,
+    gJPSampleC4, gJPSampleC5
 };

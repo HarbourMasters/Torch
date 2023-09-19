@@ -2,7 +2,6 @@
 
 #include "storm/SWrapper.h"
 #include "utils/MIODecoder.h"
-#include "audio/AudioManager.h"
 #include "factories/RawFactory.h"
 #include "factories/BlobFactory.h"
 #include "factories/AudioHeaderFactory.h"
@@ -11,7 +10,6 @@
 #include "factories/BankFactory.h"
 #include "factories/TextureFactory.h"
 #include "factories/AnimFactory.h"
-#include "n64/Cartridge.h"
 
 #include <fstream>
 #include <iostream>
@@ -41,17 +39,17 @@ void Companion::Process() {
     this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator<char>( input ), {} );
     input.close();
 
-    N64::Cartridge cartridge = N64::Cartridge(this->gRomData);
-    cartridge.Initialize();
+    this->cartridge = new N64::Cartridge(this->gRomData);
+    cartridge->Initialize();
 
     YAML::Node config = YAML::LoadFile("config.yml");
 
-    if(!config[cartridge.GetHash()]){
-        std::cout << "No config found for " << cartridge.GetHash() << '\n';
+    if(!config[cartridge->GetHash()]){
+        std::cout << "No config found for " << cartridge->GetHash() << '\n';
         return;
     }
 
-    auto cfg = config[cartridge.GetHash()];
+    auto cfg = config[cartridge->GetHash()];
     auto path = cfg["path"].as<std::string>();
     auto otr = cfg["output"].as<std::string>();
 
@@ -60,7 +58,7 @@ void Companion::Process() {
     auto vWriter = LUS::BinaryWriter();
     vWriter.SetEndianness(LUS::Endianness::Big);
     vWriter.Write((uint8_t) LUS::Endianness::Big);
-    vWriter.Write(cartridge.GetCRC());
+    vWriter.Write(cartridge->GetCRC());
 
     for (const auto & entry : fs::directory_iterator(path)){
         std::cout << "Processing " << entry.path() << '\n';
@@ -101,6 +99,8 @@ void Companion::Process() {
 
     MIO0Decoder::ClearCache();
     wrapper.Close();
+    this->cartridge = nullptr;
+    Companion::Instance = nullptr;
 }
 
 void Companion::RegisterFactory(const std::string &extension, RawFactory *factory) {

@@ -4,11 +4,14 @@
 #include "audio/AudioManager.h"
 #include "audio/samples_table.h"
 #include "binarytools/BinaryReader.h"
+#include "Companion.h"
 
 bool BankFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
     auto banks = AudioManager::Instance->get_banks();
     auto bankId = data["id"].as<uint32_t>();
     auto bank = banks[bankId];
+
+    auto gSampleTable = Companion::Instance->GetCartridge()->GetCountry() == N64::CountryCode::Japan ? gJPSampleTable : gUSSampleTable;
 
     WRITE_HEADER(LUS::ResourceType::Bank, 0);
 

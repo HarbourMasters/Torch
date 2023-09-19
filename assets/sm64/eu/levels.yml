@@ -398,7 +398,7 @@ castle_inside/22:
   offset: 3634560
   mio0: 63488
   format: RGBA16
-castle_inside/23_us:
+castle_inside/23:
   type: TEXTURE
   size: 4096
   width: 64
@@ -406,7 +406,7 @@ castle_inside/23_us:
   offset: 3634560
   mio0: 67584
   format: RGBA16
-castle_inside/24_us:
+castle_inside/24:
   type: TEXTURE
   size: 4096
   width: 64
