@@ -6,6 +6,8 @@
 #include <iostream>
 #include <yaml-cpp/yaml.h>
 #include "binarytools/BinaryWriter.h"
+#include <variant>
+#include <optional>
 
 #define NONE 0xFFFF
 #define ALIGN(val, al) (size_t) ((val + (al - 1)) & -al)

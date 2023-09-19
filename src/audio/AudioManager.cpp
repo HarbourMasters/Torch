@@ -508,7 +508,7 @@ void serialize_f80(double num, LUS::BinaryWriter &writer) {
 
 #define START_SECTION(section) \
     { \
-    out.Write(BSWAP32(section)); \
+    out.Write((uint32_t) BSWAP32(section)); \
     LUS::BinaryWriter tmp = LUS::BinaryWriter(); \
     tmp.SetEndianness(LUS::Endianness::Big);     \
 
@@ -516,7 +516,7 @@ void serialize_f80(double num, LUS::BinaryWriter &writer) {
     {                                 \
     LUS::BinaryWriter tmp = LUS::BinaryWriter(); \
     tmp.SetEndianness(LUS::Endianness::Big);     \
-    out.Write(BSWAP32(AIFC::MagicValues::AAPL)); \
+    out.Write((uint32_t) BSWAP32(AIFC::MagicValues::AAPL)); \
     tmp.Write(AIFC::MagicValues::stoc); \
     tmp.Write(section, false);                 \
 
@@ -524,7 +524,7 @@ void serialize_f80(double num, LUS::BinaryWriter &writer) {
     auto odata = tmp.ToVector(); \
     size_t size = odata.size();  \
     len += ALIGN(size, 2) + 8;   \
-    out.Write(BSWAP32((uint32_t) size)); \
+    out.Write((uint32_t) BSWAP32((uint32_t) size)); \
     out.Write(odata.data(), odata.size()); \
     if(size % 2){                \
         out.WriteByte(0);        \
@@ -562,10 +562,10 @@ void AudioManager::write_aifc(AudioBankSample* entry, LUS::BinaryWriter &out) {
         }
     }
 
-    out.Write(BSWAP32(AIFC::MagicValues::FORM));
+    out.Write((uint32_t) BSWAP32(AIFC::MagicValues::FORM));
     // This should be where the size is, but we need to write it later
     out.Write((uint32_t) 0);
-    out.Write(BSWAP32(AIFC::MagicValues::AIFC));
+    out.Write((uint32_t) BSWAP32(AIFC::MagicValues::AIFC));
 
     START_SECTION(AIFC::MagicValues::COMM);
 

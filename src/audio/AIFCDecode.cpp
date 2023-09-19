@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
+#include <stdexcept>
 #include "binarytools/BinaryWriter.h"
 #include "BinaryReader.h"
 
@@ -24,10 +25,17 @@ typedef float f32;
 #undef BSWAP32
 #undef BSWAP64
 
+#ifdef _MSC_VER
+#define bswap16(x) _byteswap_ushort(x)
+#define bswap32(x) _byteswap_ulong(x)
+#define BSWAP16(x) x = bswap16(x)
+#define BSWAP32(x) x = bswap32(x)
+#else
 #define bswap16(x) __builtin_bswap16(x)
 #define bswap32(x) __builtin_bswap32(x)
 #define BSWAP16(x) x = bswap16(x)
 #define BSWAP32(x) x = bswap32(x)
+#endif
 
 #define BSWAP16_MANY(x, n) for (s32 _i = 0; _i < n; _i++) BSWAP16((x)[_i])
 
