@@ -1,7 +1,7 @@
 #include "RawFactory.h"
 
-void RawFactory::WriteHeader(LUS::BinaryWriter* writer, LUS::ResourceType resType, int32_t version, bool bigEndian) {
-    writer->Write((uint8_t)(bigEndian ? LUS::Endianness::Big : LUS::Endianness::Little)); // 0x00
+void RawFactory::WriteHeader(LUS::BinaryWriter* writer, LUS::ResourceType resType, int32_t version) {
+    writer->Write((uint8_t)(LUS::Endianness::Native)); // 0x00
 	writer->Write((uint8_t)0); // 0x01
 	writer->Write((uint8_t)0); // 0x02
 	writer->Write((uint8_t)0); // 0x03

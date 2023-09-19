@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <yaml-cpp/yaml.h>
 #include "binarytools/BinaryWriter.h"
 #include <variant>
 #include <optional>
@@ -136,7 +137,7 @@ struct Bank {
 class AudioManager {
 public:
     static AudioManager* Instance;
-    void initialize(std::vector<uint8_t>& buffer);
+    void initialize(std::vector<uint8_t>& buffer, YAML::Node& data);
     void create_aifc(int32_t index, LUS::BinaryWriter& writer);
     AudioBankSample get_aifc(int32_t index);
     std::map<uint32_t, Bank> get_banks();

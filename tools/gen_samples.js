@@ -1,5 +1,5 @@
 const fs = require('fs');
-const data = require('../assets.json');
+const data = require('./assets.json');
 
 const header = [
     '#pragma once',
@@ -9,10 +9,10 @@ const header = [
 const samples = []
 
 async function main(){
-    const files = Object.keys(data).filter(f => f.endsWith(".aiff") && data[f][1]['us'] != undefined).map(m => {
+    const files = Object.keys(data).filter(f => f.endsWith(".aiff") && data[f][1]['jp'] != undefined).map(m => {
         return {
             file: m,
-            offset: data[m][1]['us'][1]
+            offset: data[m][1]['jp'][1]
         }
     })
 

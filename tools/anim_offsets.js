@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const { off } = require('process');
 
 let _parent = 'assets/reordered';
-let bytes = Buffer.alloc(0);
+let bytes = {};
 
 function toHex(value) {
     let hex = value.toString(16);
@@ -19,26 +20,36 @@ function toBEU16(num){
 }
 
 async function parseAnim(file){
-    let fimport = `./${file.replace('.js', '')}`
+    let fimport = `../${file.replace('.js', '')}`
     let data = require(fimport)
     for(let id of fimport.split('_').slice(1)){
         let anim = data['anim_'+id];
-        let hOffset = bytes.indexOf(Buffer.concat(anim.slice(0, 6).map(toBEU16)));
+        let offsets = {};
 
-        let bswValues = Buffer.concat(anim[6].map(toBEU16));
-        let vsOffset = bytes.indexOf(bswValues);
-        let bswIndices = Buffer.concat(anim[7].map(toBEU16));
-        let idxOffset = bytes.indexOf(bswIndices);
-        console.log(`"assets/anims/anim_${id}.anim": ${JSON.stringify({
-            header: [hOffset, 0x18],
-            values: [vsOffset, bswValues.length],
-            indices: [idxOffset, bswIndices.length],
-        })},`);
+        for(let key of Object.keys(bytes)){
+            let rom = bytes[key];
+            let hOffset = rom.indexOf(Buffer.concat(anim.slice(0, 6).map(toBEU16)));
+
+            let bswValues = Buffer.concat(anim[6].map(toBEU16));
+            let vsOffset = rom.indexOf(bswValues);
+            let bswIndices = Buffer.concat(anim[7].map(toBEU16));
+            let idxOffset = rom.indexOf(bswIndices);
+            offsets[key] = {
+                header: [hOffset, 0x18],
+                values: [vsOffset, bswValues.length],
+                indices: [idxOffset, bswIndices.length],
+            };
+        }
+
+        console.log(`"assets/anims/anim_${id}.anim": ${JSON.stringify(offsets)},`);
     }
 }
 
 async function main(){
-    bytes = fs.readFileSync('./baserom.us.z64');
+    let roms = fs.readdirSync('./').filter(f => f.endsWith('.z64'));
+    for(let rom of roms){
+        bytes[rom.split('.')[1]] = fs.readFileSync(rom);
+    }
     for(let file of fs.readdirSync(_parent)){
         let pdir = path.join(_parent, file);
         let lines = fs.readFileSync(pdir, 'utf8').split('\n').map((line) =>
