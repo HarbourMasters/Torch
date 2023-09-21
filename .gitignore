@@ -5,6 +5,8 @@ cmake-build-*/
 *.log
 .DS_Store
 debug/
+!src/factories/debug/
 *.z64
 *.n64
 build/
+.vscode/
