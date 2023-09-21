@@ -1515,7 +1515,7 @@ menu/main_menu_seg7.0E1A8:
   offset: 2778544
   mio0: 52448
   format: RGBA16
-menu/main_menu_seg7_us.0AC40:
+menu/main_menu_seg7.0AC40:
   type: TEXTURE
   size: 64
   width: 8
@@ -1523,7 +1523,7 @@ menu/main_menu_seg7_us.0AC40:
   offset: 2778544
   mio0: 44096
   format: IA8
-menu/main_menu_seg7_us.0AC80:
+menu/main_menu_seg7.0AC80:
   type: TEXTURE
   size: 64
   width: 8
@@ -1531,7 +1531,7 @@ menu/main_menu_seg7_us.0AC80:
   offset: 2778544
   mio0: 44160
   format: IA8
-menu/main_menu_seg7_us.0ACC0:
+menu/main_menu_seg7.0ACC0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1539,7 +1539,7 @@ menu/main_menu_seg7_us.0ACC0:
   offset: 2778544
   mio0: 44224
   format: IA8
-menu/main_menu_seg7_us.0AD00:
+menu/main_menu_seg7.0AD00:
   type: TEXTURE
   size: 64
   width: 8
@@ -1547,7 +1547,7 @@ menu/main_menu_seg7_us.0AD00:
   offset: 2778544
   mio0: 44288
   format: IA8
-menu/main_menu_seg7_us.0AD40:
+menu/main_menu_seg7.0AD40:
   type: TEXTURE
   size: 64
   width: 8
@@ -1555,7 +1555,7 @@ menu/main_menu_seg7_us.0AD40:
   offset: 2778544
   mio0: 44352
   format: IA8
-menu/main_menu_seg7_us.0AD80:
+menu/main_menu_seg7.0AD80:
   type: TEXTURE
   size: 64
   width: 8
@@ -1563,7 +1563,7 @@ menu/main_menu_seg7_us.0AD80:
   offset: 2778544
   mio0: 44416
   format: IA8
-menu/main_menu_seg7_us.0ADC0:
+menu/main_menu_seg7.0ADC0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1571,7 +1571,7 @@ menu/main_menu_seg7_us.0ADC0:
   offset: 2778544
   mio0: 44480
   format: IA8
-menu/main_menu_seg7_us.0AE00:
+menu/main_menu_seg7.0AE00:
   type: TEXTURE
   size: 64
   width: 8
@@ -1579,7 +1579,7 @@ menu/main_menu_seg7_us.0AE00:
   offset: 2778544
   mio0: 44544
   format: IA8
-menu/main_menu_seg7_us.0AE40:
+menu/main_menu_seg7.0AE40:
   type: TEXTURE
   size: 64
   width: 8
@@ -1587,7 +1587,7 @@ menu/main_menu_seg7_us.0AE40:
   offset: 2778544
   mio0: 44608
   format: IA8
-menu/main_menu_seg7_us.0AE80:
+menu/main_menu_seg7.0AE80:
   type: TEXTURE
   size: 64
   width: 8
@@ -1595,7 +1595,7 @@ menu/main_menu_seg7_us.0AE80:
   offset: 2778544
   mio0: 44672
   format: IA8
-menu/main_menu_seg7_us.0AEC0:
+menu/main_menu_seg7.0AEC0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1603,7 +1603,7 @@ menu/main_menu_seg7_us.0AEC0:
   offset: 2778544
   mio0: 44736
   format: IA8
-menu/main_menu_seg7_us.0AF00:
+menu/main_menu_seg7.0AF00:
   type: TEXTURE
   size: 64
   width: 8
@@ -1611,7 +1611,7 @@ menu/main_menu_seg7_us.0AF00:
   offset: 2778544
   mio0: 44800
   format: IA8
-menu/main_menu_seg7_us.0AF40:
+menu/main_menu_seg7.0AF40:
   type: TEXTURE
   size: 64
   width: 8
@@ -1619,7 +1619,7 @@ menu/main_menu_seg7_us.0AF40:
   offset: 2778544
   mio0: 44864
   format: IA8
-menu/main_menu_seg7_us.0AF80:
+menu/main_menu_seg7.0AF80:
   type: TEXTURE
   size: 64
   width: 8
@@ -1627,7 +1627,7 @@ menu/main_menu_seg7_us.0AF80:
   offset: 2778544
   mio0: 44928
   format: IA8
-menu/main_menu_seg7_us.0AFC0:
+menu/main_menu_seg7.0AFC0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1635,7 +1635,7 @@ menu/main_menu_seg7_us.0AFC0:
   offset: 2778544
   mio0: 44992
   format: IA8
-menu/main_menu_seg7_us.0B000:
+menu/main_menu_seg7.0B000:
   type: TEXTURE
   size: 64
   width: 8
@@ -1643,7 +1643,7 @@ menu/main_menu_seg7_us.0B000:
   offset: 2778544
   mio0: 45056
   format: IA8
-menu/main_menu_seg7_us.0B040:
+menu/main_menu_seg7.0B040:
   type: TEXTURE
   size: 64
   width: 8
@@ -1651,7 +1651,7 @@ menu/main_menu_seg7_us.0B040:
   offset: 2778544
   mio0: 45120
   format: IA8
-menu/main_menu_seg7_us.0B080:
+menu/main_menu_seg7.0B080:
   type: TEXTURE
   size: 64
   width: 8
@@ -1659,7 +1659,7 @@ menu/main_menu_seg7_us.0B080:
   offset: 2778544
   mio0: 45184
   format: IA8
-menu/main_menu_seg7_us.0B0C0:
+menu/main_menu_seg7.0B0C0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1667,7 +1667,7 @@ menu/main_menu_seg7_us.0B0C0:
   offset: 2778544
   mio0: 45248
   format: IA8
-menu/main_menu_seg7_us.0B100:
+menu/main_menu_seg7.0B100:
   type: TEXTURE
   size: 64
   width: 8
@@ -1675,7 +1675,7 @@ menu/main_menu_seg7_us.0B100:
   offset: 2778544
   mio0: 45312
   format: IA8
-menu/main_menu_seg7_us.0B140:
+menu/main_menu_seg7.0B140:
   type: TEXTURE
   size: 64
   width: 8
@@ -1683,7 +1683,7 @@ menu/main_menu_seg7_us.0B140:
   offset: 2778544
   mio0: 45376
   format: IA8
-menu/main_menu_seg7_us.0B180:
+menu/main_menu_seg7.0B180:
   type: TEXTURE
   size: 64
   width: 8
@@ -1691,7 +1691,7 @@ menu/main_menu_seg7_us.0B180:
   offset: 2778544
   mio0: 45440
   format: IA8
-menu/main_menu_seg7_us.0B1C0:
+menu/main_menu_seg7.0B1C0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1699,7 +1699,7 @@ menu/main_menu_seg7_us.0B1C0:
   offset: 2778544
   mio0: 45504
   format: IA8
-menu/main_menu_seg7_us.0B200:
+menu/main_menu_seg7.0B200:
   type: TEXTURE
   size: 64
   width: 8
@@ -1707,7 +1707,7 @@ menu/main_menu_seg7_us.0B200:
   offset: 2778544
   mio0: 45568
   format: IA8
-menu/main_menu_seg7_us.0B240:
+menu/main_menu_seg7.0B240:
   type: TEXTURE
   size: 64
   width: 8
@@ -1715,7 +1715,7 @@ menu/main_menu_seg7_us.0B240:
   offset: 2778544
   mio0: 45632
   format: IA8
-menu/main_menu_seg7_us.0B280:
+menu/main_menu_seg7.0B280:
   type: TEXTURE
   size: 64
   width: 8
@@ -1723,7 +1723,7 @@ menu/main_menu_seg7_us.0B280:
   offset: 2778544
   mio0: 45696
   format: IA8
-menu/main_menu_seg7_us.0B2C0:
+menu/main_menu_seg7.0B2C0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1731,7 +1731,7 @@ menu/main_menu_seg7_us.0B2C0:
   offset: 2778544
   mio0: 45760
   format: IA8
-menu/main_menu_seg7_us.0B300:
+menu/main_menu_seg7.0B300:
   type: TEXTURE
   size: 64
   width: 8
@@ -1739,7 +1739,7 @@ menu/main_menu_seg7_us.0B300:
   offset: 2778544
   mio0: 45824
   format: IA8
-menu/main_menu_seg7_us.0B340:
+menu/main_menu_seg7.0B340:
   type: TEXTURE
   size: 64
   width: 8
@@ -1747,7 +1747,7 @@ menu/main_menu_seg7_us.0B340:
   offset: 2778544
   mio0: 45888
   format: IA8
-menu/main_menu_seg7_us.0B380:
+menu/main_menu_seg7.0B380:
   type: TEXTURE
   size: 64
   width: 8
@@ -1755,7 +1755,7 @@ menu/main_menu_seg7_us.0B380:
   offset: 2778544
   mio0: 45952
   format: IA8
-menu/main_menu_seg7_us.0B3C0:
+menu/main_menu_seg7.0B3C0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1763,7 +1763,7 @@ menu/main_menu_seg7_us.0B3C0:
   offset: 2778544
   mio0: 46016
   format: IA8
-menu/main_menu_seg7_us.0B400:
+menu/main_menu_seg7.0B400:
   type: TEXTURE
   size: 64
   width: 8
@@ -1771,7 +1771,7 @@ menu/main_menu_seg7_us.0B400:
   offset: 2778544
   mio0: 46080
   format: IA8
-menu/main_menu_seg7_us.0B440:
+menu/main_menu_seg7.0B440:
   type: TEXTURE
   size: 64
   width: 8
@@ -1779,7 +1779,7 @@ menu/main_menu_seg7_us.0B440:
   offset: 2778544
   mio0: 46144
   format: IA8
-menu/main_menu_seg7_us.0B480:
+menu/main_menu_seg7.0B480:
   type: TEXTURE
   size: 64
   width: 8
@@ -1787,7 +1787,7 @@ menu/main_menu_seg7_us.0B480:
   offset: 2778544
   mio0: 46208
   format: IA8
-menu/main_menu_seg7_us.0B4C0:
+menu/main_menu_seg7.0B4C0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1795,7 +1795,7 @@ menu/main_menu_seg7_us.0B4C0:
   offset: 2778544
   mio0: 46272
   format: IA8
-menu/main_menu_seg7_us.0B500:
+menu/main_menu_seg7.0B500:
   type: TEXTURE
   size: 64
   width: 8
@@ -1803,7 +1803,7 @@ menu/main_menu_seg7_us.0B500:
   offset: 2778544
   mio0: 46336
   format: IA8
-menu/main_menu_seg7_us.0B540:
+menu/main_menu_seg7.0B540:
   type: TEXTURE
   size: 64
   width: 8
@@ -1811,7 +1811,7 @@ menu/main_menu_seg7_us.0B540:
   offset: 2778544
   mio0: 46400
   format: IA8
-menu/main_menu_seg7_us.0B580:
+menu/main_menu_seg7.0B580:
   type: TEXTURE
   size: 64
   width: 8
@@ -1819,7 +1819,7 @@ menu/main_menu_seg7_us.0B580:
   offset: 2778544
   mio0: 46464
   format: IA8
-menu/main_menu_seg7_us.0B5C0:
+menu/main_menu_seg7.0B5C0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1827,7 +1827,7 @@ menu/main_menu_seg7_us.0B5C0:
   offset: 2778544
   mio0: 46528
   format: IA8
-menu/main_menu_seg7_us.0B600:
+menu/main_menu_seg7.0B600:
   type: TEXTURE
   size: 64
   width: 8
@@ -1835,7 +1835,7 @@ menu/main_menu_seg7_us.0B600:
   offset: 2778544
   mio0: 46592
   format: IA8
-menu/main_menu_seg7_us.0B640:
+menu/main_menu_seg7.0B640:
   type: TEXTURE
   size: 64
   width: 8
@@ -1843,7 +1843,7 @@ menu/main_menu_seg7_us.0B640:
   offset: 2778544
   mio0: 46656
   format: IA8
-menu/main_menu_seg7_us.0B680:
+menu/main_menu_seg7.0B680:
   type: TEXTURE
   size: 64
   width: 8
@@ -1851,7 +1851,7 @@ menu/main_menu_seg7_us.0B680:
   offset: 2778544
   mio0: 46720
   format: IA8
-menu/main_menu_seg7_us.0B6C0:
+menu/main_menu_seg7.0B6C0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1859,7 +1859,7 @@ menu/main_menu_seg7_us.0B6C0:
   offset: 2778544
   mio0: 46784
   format: IA8
-menu/main_menu_seg7_us.0B700:
+menu/main_menu_seg7.0B700:
   type: TEXTURE
   size: 64
   width: 8
@@ -1867,7 +1867,7 @@ menu/main_menu_seg7_us.0B700:
   offset: 2778544
   mio0: 46848
   format: IA8
-menu/main_menu_seg7_us.0B740:
+menu/main_menu_seg7.0B740:
   type: TEXTURE
   size: 64
   width: 8
@@ -1875,7 +1875,7 @@ menu/main_menu_seg7_us.0B740:
   offset: 2778544
   mio0: 46912
   format: IA8
-menu/main_menu_seg7_us.0B780:
+menu/main_menu_seg7.0B780:
   type: TEXTURE
   size: 64
   width: 8
@@ -1883,7 +1883,7 @@ menu/main_menu_seg7_us.0B780:
   offset: 2778544
   mio0: 46976
   format: IA8
-menu/main_menu_seg7_us.0B7C0:
+menu/main_menu_seg7.0B7C0:
   type: TEXTURE
   size: 64
   width: 8
@@ -1891,7 +1891,7 @@ menu/main_menu_seg7_us.0B7C0:
   offset: 2778544
   mio0: 46648
   format: IA8
-menu/main_menu_seg7_us.0B800:
+menu/main_menu_seg7.0B800:
   type: TEXTURE
   size: 64
   width: 8

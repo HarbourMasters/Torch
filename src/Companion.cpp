@@ -4,6 +4,7 @@
 #include "utils/MIODecoder.h"
 #include "factories/RawFactory.h"
 #include "factories/BlobFactory.h"
+#include "factories/debug/MIO0Factory.h"
 #include "factories/AudioHeaderFactory.h"
 #include "factories/SequenceFactory.h"
 #include "factories/SampleFactory.h"
@@ -28,8 +29,11 @@ void Companion::Init() {
     this->RegisterFactory("BLOB", new BlobFactory());
 
     // SM64 Specific
-
     this->RegisterFactory("SM64:ANIM", new AnimFactory());
+
+    // Debug
+    this->RegisterFactory("MIO0", new MIO0Factory());
+
     this->Process();
 }
 
