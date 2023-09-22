@@ -1,6 +1,5 @@
 #include "TextureFactory.h"
 
-#include "Companion.h"
 #include "utils/MIODecoder.h"
 
 namespace fs = std::filesystem;

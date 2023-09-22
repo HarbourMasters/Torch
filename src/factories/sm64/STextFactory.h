@@ -1,9 +1,9 @@
 #pragma once
 
-#include "RawFactory.h"
+#include "../RawFactory.h"
 
-class AnimFactory : public RawFactory {
+class STextFactory : public RawFactory {
 public:
-    AnimFactory() = default;
+    STextFactory() = default;
     bool process(LUS::BinaryWriter* write, YAML::Node& data, std::vector<uint8_t>& buffer) override;
 };
