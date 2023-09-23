@@ -1,4 +1,5 @@
 #include "BlobFactory.h"
+#include <filesystem>
 #include "utils/MIODecoder.h"
 
 namespace fs = std::filesystem;
