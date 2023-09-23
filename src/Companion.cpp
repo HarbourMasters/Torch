@@ -18,8 +18,6 @@
 #include <iostream>
 #include <filesystem>
 
-using string_type = _STD wstring;
-
 namespace fs = std::filesystem;
 
 void Companion::Init() {
