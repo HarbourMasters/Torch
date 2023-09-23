@@ -3,6 +3,7 @@
 #include "ResourceType.h"
 #include <string>
 #include <vector>
+#include <filesystem>
 #include <binarytools/BinaryWriter.h>
 #include <yaml-cpp/yaml.h>
 

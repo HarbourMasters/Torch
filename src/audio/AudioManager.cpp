@@ -6,6 +6,7 @@
 #include <iostream>
 #include <filesystem>
 #include <cassert>
+#include <cstring>
 #include "hj/pyutils.h"
 #include "binarytools/BinaryReader.h"
 #include "hj/zip.h"
