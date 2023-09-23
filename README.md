@@ -2,9 +2,9 @@
 A generic asset processor for N64 games
 
 
-# Dependencies
+# Dependencies for WSL Ubuntu
 ```
-sudo apt-get install libbz2-dev
+sudo apt-get install cmake ninja-build libbz2-dev
 ```
 
 # Compile
