@@ -6,6 +6,9 @@
 #include <binarytools/BinaryWriter.h>
 #include <yaml-cpp/yaml.h>
 
+
+#define SEGMENT_OFFSET(a) ((uint32_t)(a)&0x00FFFFFF)
+
 #define WRITE_HEADER(type, version) this->WriteHeader(writer, type, version)
 #define WRITE_BHEADER(type, version) this->WriteHeader(writer, type, version, true)
 #define WRITE_U8(value) writer->Write((uint8_t) value)

@@ -10,7 +10,9 @@
 #include "factories/SampleFactory.h"
 #include "factories/BankFactory.h"
 #include "factories/TextureFactory.h"
-#include "factories/AnimFactory.h"
+#include "factories/sm64/SAnimFactory.h"
+#include "factories/sm64/STextFactory.h"
+#include "factories/sm64/SDialogFactory.h"
 
 #include <fstream>
 #include <iostream>
@@ -29,7 +31,9 @@ void Companion::Init() {
     this->RegisterFactory("BLOB", new BlobFactory());
 
     // SM64 Specific
-    this->RegisterFactory("SM64:ANIM", new AnimFactory());
+    this->RegisterFactory("SM64:DIALOG", new SDialogFactory());
+    this->RegisterFactory("SM64:ANIM", new SAnimFactory());
+    this->RegisterFactory("SM64:TEXT", new STextFactory());
 
     // Debug
     this->RegisterFactory("MIO0", new MIO0Factory());

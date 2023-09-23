@@ -14,13 +14,12 @@ enum class ResourceType {
     Array = 0x4F415252,       // OARR
     Blob = 0x4F424C42,        // OBLB
     Texture = 0x4F544558,     // OTEX
-
-    // CubeOS
-    Demo = 0x44454D4F,        // DEMO
-    Skybox = 0x534B5942,      // SKYB
-    Anim = 0x414E494D,        // ANIM
     Bank = 0x42414E4B,        // BANK
     Sample = 0x41554643,      // AIFC
     Sequence = 0x53455143,    // SEQC
+
+    // SM64
+    Anim = 0x414E494D,        // ANIM
+    SDialog = 0x53444C47,     // SDLG
 };
 } // namespace LUS

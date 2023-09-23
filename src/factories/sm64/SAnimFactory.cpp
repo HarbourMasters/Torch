@@ -1,4 +1,4 @@
-#include "AnimFactory.h"
+#include "SAnimFactory.h"
 
 #include <iostream>
 #include <filesystem>
@@ -63,7 +63,7 @@ void WriteAnimationValues(LUS::BinaryWriter* writer, YAML::Node& data, std::vect
 	reader.Close();
 }
 
-bool AnimFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
+bool SAnimFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
 	WRITE_HEADER(LUS::ResourceType::Anim, 0);
 
     auto header = data["header"];
