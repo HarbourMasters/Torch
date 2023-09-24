@@ -49,6 +49,9 @@ void Companion::Init() {
 
 void Companion::Process() {
 
+    const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
+    const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
+
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 
     std::ifstream input( this->gRomPath, std::ios::binary );
@@ -70,7 +73,7 @@ void Companion::Process() {
     auto otr = cfg["output"].as<std::string>();
 
     SPDLOG_INFO("------------------------------------------------");
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] > %v");
+    spdlog::set_pattern(line);
 
     SPDLOG_INFO("Starting CubeOS...");
     SPDLOG_INFO("Game: {}", cartridge->GetGameTitle());
@@ -95,9 +98,9 @@ void Companion::Process() {
             LUS::BinaryWriter write = LUS::BinaryWriter();
             RawFactory* factory = this->GetFactory(type);
 
-            spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+            spdlog::set_pattern(regular);
             SPDLOG_INFO("------------------------------------------------");
-            spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] > %v");
+            spdlog::set_pattern(line);
             SPDLOG_INFO("Processing {} [{}]", asset->first.as<std::string>(), type);
             SPDLOG_INFO("Root: {}", entry.path().string());
 
@@ -130,16 +133,16 @@ void Companion::Process() {
         }
     }
 
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+    spdlog::set_pattern(regular);
     SPDLOG_INFO("------------------------------------------------");
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] > %v");
+    spdlog::set_pattern(line);
     SPDLOG_INFO("Writing version file");
     wrapper.CreateFile("version", vWriter.ToVector());
     vWriter.Close();
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
     SPDLOG_INFO("Exported to {}", otr);
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+    spdlog::set_pattern(regular);
     SPDLOG_INFO("------------------------------------------------");
 
     MIO0Decoder::ClearCache();
