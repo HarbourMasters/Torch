@@ -1,4 +1,5 @@
 #include "MIO0Factory.h"
+#include <cstring>
 #include "utils/MIODecoder.h"
 
 namespace fs = std::filesystem;

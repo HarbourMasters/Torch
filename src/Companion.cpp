@@ -70,7 +70,7 @@ void Companion::Process() {
 
     for (const auto & entry : fs::directory_iterator(path)){
         std::cout << "Processing " << entry.path() << '\n';
-        YAML::Node root = YAML::LoadFile(entry.path());
+        YAML::Node root = YAML::LoadFile(entry.path().string());
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto type = asset->second["type"].as<std::string>();
 
@@ -84,7 +84,7 @@ void Companion::Process() {
 
             auto buffer = write.ToVector();
             auto output = entry.path().stem() / asset->first.as<std::string>();
-            wrapper.CreateFile(output, buffer);
+            wrapper.CreateFile(output.string(), buffer);
 
             if(type != "TEXTURE") {
                 std::string dpath = "debug/" + output.string();
