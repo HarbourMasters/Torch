@@ -83,11 +83,14 @@ void Companion::Process() {
             }
 
             auto buffer = write.ToVector();
-            auto output = entry.path().stem() / asset->first.as<std::string>();
-            wrapper.CreateFile(output.string(), buffer);
+            auto output = (entry.path().stem() / asset->first.as<std::string>()).string();
+
+            std::replace(output.begin(), output.end(), '\\', '/');
+
+            wrapper.CreateFile(output, buffer);
 
             if(type != "TEXTURE") {
-                std::string dpath = "debug/" + output.string();
+                std::string dpath = "debug/" + output;
                 if(!fs::exists(fs::path(dpath).parent_path())){
                     fs::create_directories(fs::path(dpath).parent_path());
                 }
