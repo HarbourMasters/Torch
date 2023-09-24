@@ -15,11 +15,13 @@
 #include "factories/sm64/SDialogFactory.h"
 #include "spdlog/spdlog.h"
 
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <filesystem>
 
 namespace fs = std::filesystem;
+using namespace std::chrono;
 
 void Companion::Init() {
 
@@ -47,6 +49,8 @@ void Companion::Init() {
 
 void Companion::Process() {
 
+    auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+
     std::ifstream input( this->gRomPath, std::ios::binary );
     this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator<char>( input ), {} );
     input.close();
@@ -65,6 +69,8 @@ void Companion::Process() {
     auto path = cfg["path"].as<std::string>();
     auto otr = cfg["output"].as<std::string>();
 
+    SPDLOG_INFO("------------------------------------------------");
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] > %v");
 
     SPDLOG_INFO("Starting CubeOS...");
     SPDLOG_INFO("Game: {}", cartridge->GetGameTitle());
@@ -89,8 +95,10 @@ void Companion::Process() {
             LUS::BinaryWriter write = LUS::BinaryWriter();
             RawFactory* factory = this->GetFactory(type);
 
+            spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
             SPDLOG_INFO("------------------------------------------------");
-            SPDLOG_INFO("Processing {} [{}] from {}", asset->first.as<std::string>(), type);
+            spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] > %v");
+            SPDLOG_INFO("Processing {} [{}]", asset->first.as<std::string>(), type);
             SPDLOG_INFO("Root: {}", entry.path().string());
 
             if(!factory->process(&write, asset->second, this->gRomData)){
@@ -122,10 +130,16 @@ void Companion::Process() {
         }
     }
 
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
     SPDLOG_INFO("------------------------------------------------");
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] > %v");
     SPDLOG_INFO("Writing version file");
     wrapper.CreateFile("version", vWriter.ToVector());
     vWriter.Close();
+    auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
+    SPDLOG_INFO("Exported to {}", otr);
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
     SPDLOG_INFO("------------------------------------------------");
 
     MIO0Decoder::ClearCache();
