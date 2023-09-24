@@ -2,14 +2,14 @@
 
 #include <vector>
 #include <sstream>
-#include <fstream>
 #include <iostream>
 #include <filesystem>
 #include <cassert>
 #include <cstring>
-#include "hj/pyutils.h"
-#include "binarytools/BinaryReader.h"
 #include "hj/zip.h"
+#include "hj/pyutils.h"
+#include "spdlog/spdlog.h"
+#include "binarytools/BinaryReader.h"
 
 std::unordered_map<std::string, uint32_t> name_table;
 AudioManager* AudioManager::Instance;
@@ -441,16 +441,15 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
     std::vector<Entry> tbl = parse_seq_file(buffer, tblOffset, false);
     std::vector<Entry> ctl = parse_seq_file(buffer, ctlOffset, true);
 
-    std::cout << "Table entries: "   << tbl.size() << std::endl;
-    std::cout << "Control entries: " << ctl.size() << std::endl;
+    SPDLOG_INFO("Raw TBL Entries: {}", tbl.size());
+    SPDLOG_INFO("Raw CTL Entries: {}", ctl.size());
 
     std::vector<uint8_t> tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
     std::vector<uint8_t> ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
     this->loaded_tbl = parse_tbl(tbl_data, tbl);
 
-    std::cout << "TBLs: " << this->loaded_tbl.tbls.size() << std::endl;
-    std::cout << "Banks: " << this->loaded_tbl.banks.size() << std::endl;
-    std::cout << "Map: " << this->loaded_tbl.map.size() << std::endl;
+    SPDLOG_INFO("Processed TBL Entries: {}", this->loaded_tbl.tbls.size());
+    SPDLOG_INFO("Processed TBL Banks: {}", this->loaded_tbl.banks.size());
 
     auto zipped = zip(PyUtils::range(0, ctl.size()), ctl, this->loaded_tbl.tbls);
 
@@ -462,6 +461,7 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
         auto header = parse_ctl_header(headerRaw);
         auto bank = parse_ctl(header, PyUtils::slice(entry, 16), sample_bank, index);
         banks[index] = bank;
+        SPDLOG_INFO("Processed Bank {}", index);
     }
 
     int32_t idx = -1;

@@ -1,6 +1,7 @@
 #include "TextureFactory.h"
 
 #include "utils/MIODecoder.h"
+#include "spdlog/spdlog.h"
 
 namespace fs = std::filesystem;
 
@@ -42,6 +43,10 @@ bool TextureFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::v
         WRITE_U32(size);
         WRITE_ARRAY(buffer.data() + offset, size);
     }
+
+    SPDLOG_INFO("Texture: {} {}x{} {}", format, width, height, size);
+    SPDLOG_INFO("Offset: {}", offset);
+    SPDLOG_INFO("Has MIO0: {}", data["mio0"] ? "true" : "false");
 
 	return true;
 }

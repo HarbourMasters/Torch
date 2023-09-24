@@ -69,7 +69,6 @@ bool BankFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vect
             writer->Write(std::string(gSampleTable[idx]));
             writer->Write(value.tuning);
         }
-
     }
 
     WRITE_U32(bank.drums.size());

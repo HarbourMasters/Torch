@@ -13,6 +13,7 @@
 #include "factories/sm64/SAnimFactory.h"
 #include "factories/sm64/STextFactory.h"
 #include "factories/sm64/SDialogFactory.h"
+#include "spdlog/spdlog.h"
 
 #include <fstream>
 #include <iostream>
@@ -21,6 +22,9 @@
 namespace fs = std::filesystem;
 
 void Companion::Init() {
+
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
     this->RegisterFactory("AUDIO:HEADER", new AudioHeaderFactory());
     this->RegisterFactory("SEQUENCE", new SequenceFactory());
@@ -53,13 +57,22 @@ void Companion::Process() {
     YAML::Node config = YAML::LoadFile("config.yml");
 
     if(!config[cartridge->GetHash()]){
-        std::cout << "No config found for " << cartridge->GetHash() << '\n';
+        SPDLOG_ERROR("No config found for {}", cartridge->GetHash());
         return;
     }
 
     auto cfg = config[cartridge->GetHash()];
     auto path = cfg["path"].as<std::string>();
     auto otr = cfg["output"].as<std::string>();
+
+
+    SPDLOG_INFO("Starting CubeOS...");
+    SPDLOG_INFO("Game: {}", cartridge->GetGameTitle());
+    SPDLOG_INFO("CRC: {}", cartridge->GetCRC());
+    SPDLOG_INFO("Version: {}", cartridge->GetVersion());
+    SPDLOG_INFO("Country: [{}]", cartridge->GetCountryCode());
+    SPDLOG_INFO("Hash: {}", cartridge->GetHash());
+    SPDLOG_INFO("Assets: {}", path);
 
     auto wrapper = SWrapper(otr);
 
@@ -69,7 +82,6 @@ void Companion::Process() {
     vWriter.Write(cartridge->GetCRC());
 
     for (const auto & entry : fs::directory_iterator(path)){
-        std::cout << "Processing " << entry.path() << '\n';
         YAML::Node root = YAML::LoadFile(entry.path().string());
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto type = asset->second["type"].as<std::string>();
@@ -77,8 +89,12 @@ void Companion::Process() {
             LUS::BinaryWriter write = LUS::BinaryWriter();
             RawFactory* factory = this->GetFactory(type);
 
+            SPDLOG_INFO("------------------------------------------------");
+            SPDLOG_INFO("Processing {} [{}] from {}", asset->first.as<std::string>(), type);
+            SPDLOG_INFO("Root: {}", entry.path().string());
+
             if(!factory->process(&write, asset->second, this->gRomData)){
-                std::cout << "Failed to process " << asset->first.as<std::string>() << '\n';
+                SPDLOG_ERROR("Failed to process {}", asset->first.as<std::string>());
                 continue;
             }
 
@@ -90,6 +106,7 @@ void Companion::Process() {
             wrapper.CreateFile(output, buffer);
 
             if(type != "TEXTURE") {
+                SPDLOG_DEBUG("Writing debug file");
                 std::string dpath = "debug/" + output;
                 if(!fs::exists(fs::path(dpath).parent_path())){
                     fs::create_directories(fs::path(dpath).parent_path());
@@ -99,14 +116,17 @@ void Companion::Process() {
                 stream.close();
             }
 
-            std::cout << "Processed " << output << std::endl;
+            SPDLOG_INFO("Processed {}", output);
 
             write.Close();
         }
     }
 
+    SPDLOG_INFO("------------------------------------------------");
+    SPDLOG_INFO("Writing version file");
     wrapper.CreateFile("version", vWriter.ToVector());
     vWriter.Close();
+    SPDLOG_INFO("------------------------------------------------");
 
     MIO0Decoder::ClearCache();
     wrapper.Close();
@@ -116,6 +136,7 @@ void Companion::Process() {
 
 void Companion::RegisterFactory(const std::string &extension, RawFactory *factory) {
     this->gFactories[extension] = factory;
+    SPDLOG_DEBUG("Registered factory for {}", extension);
 }
 
 RawFactory *Companion::GetFactory(const std::string &extension) {

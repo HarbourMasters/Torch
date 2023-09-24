@@ -1,6 +1,7 @@
 #include <iostream>
 #include "SDialogFactory.h"
 
+#include "spdlog/spdlog.h"
 #include "utils/MIODecoder.h"
 #include "binarytools/BinaryReader.h"
 
@@ -38,11 +39,11 @@ bool SDialogFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::v
     }
     text.push_back(0xFF);
 
-    std::cout << "unused: " << unused << std::endl;
-    std::cout << "linesPerBox: " << (int) linesPerBox << std::endl;
-    std::cout << "leftOffset: " << leftOffset << std::endl;
-    std::cout << "width: " << width << std::endl;
-    std::cout << "size: " << text.size() << std::endl;
+    SPDLOG_INFO("Unused: {}", unused);
+    SPDLOG_INFO("Lines per box: {}", linesPerBox);
+    SPDLOG_INFO("Left offset: {}", leftOffset);
+    SPDLOG_INFO("Width: {}", width);
+    SPDLOG_INFO("Size: {}", text.size());
 
     WRITE_U32(unused);
     WRITE_I8(linesPerBox);
@@ -59,7 +60,3 @@ bool SDialogFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::v
     id++;
 	return true;
 }
-
-// seg2_dialog_table
-// seg2_course_name_table
-// seg2_act_name_table

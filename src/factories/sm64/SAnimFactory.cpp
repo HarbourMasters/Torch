@@ -1,8 +1,6 @@
 #include "SAnimFactory.h"
 
-#include <iostream>
-#include <filesystem>
-#include "Companion.h"
+#include "spdlog/spdlog.h"
 #include "utils/MIODecoder.h"
 #include "binarytools/BinaryReader.h"
 
@@ -25,6 +23,14 @@ void WriteAnimationHeader(LUS::BinaryWriter* writer, YAML::Node& data, std::vect
 	reader.ReadUInt32();
 	auto length = reader.ReadUInt32();
 
+    SPDLOG_INFO("Flags: {}", flags);
+    SPDLOG_INFO("Anim-Y Trans Divisor: {}", animYTransDivisor);
+    SPDLOG_INFO("Start Frame: {}", startFrame);
+    SPDLOG_INFO("Loop Start: {}", loopStart);
+    SPDLOG_INFO("Loop End: {}", loopEnd);
+    SPDLOG_INFO("Unused Bone Count: {}", unusedBoneCount);
+    SPDLOG_INFO("Length: {}", length);
+
 	WRITE_I16(flags);
 	WRITE_I16(animYTransDivisor);
 	WRITE_I16(startFrame);
@@ -42,6 +48,7 @@ void WriteAnimationIndex(LUS::BinaryWriter* writer, YAML::Node& data, std::vecto
     LUS::BinaryReader reader((char*) buffer.data() + offset, size);
 	reader.SetEndianness(LUS::Endianness::Big);
 	size_t entries = size / sizeof(uint16_t);
+    SPDLOG_INFO("Found Indices: {}", entries);
 	WRITE_U32(entries);
 	for(size_t id = 0; id < entries; id++) {
 		WRITE_I16(reader.ReadInt16());
@@ -56,6 +63,7 @@ void WriteAnimationValues(LUS::BinaryWriter* writer, YAML::Node& data, std::vect
     LUS::BinaryReader reader((char*) buffer.data() + offset, size);
 	reader.SetEndianness(LUS::Endianness::Big);
 	size_t entries = size / sizeof(uint16_t);
+    SPDLOG_INFO("Found Values: {}", entries);
 	WRITE_U32(entries);
 	for(size_t id = 0; id < entries; id++) {
 		WRITE_U16(reader.ReadUInt16());

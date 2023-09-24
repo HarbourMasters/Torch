@@ -44,6 +44,15 @@ set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)
 
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG 7e635fca68d014934b4af8a1cf874f63989352b7
+)
+
+FetchContent_MakeAvailable(spdlog)
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+
 if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
     include(../cmake/HandleCompilerRT.cmake)
     find_compiler_rt_library(builtins CLANG_RT_BUILTINS_LIBRARY)
