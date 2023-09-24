@@ -2,6 +2,7 @@
 #include "CLI11.hpp"
 #include "Companion.h"
 
+#ifdef STANDALONE
 Companion* Companion::Instance;
 
 int main(int argc, char *argv[]) {
@@ -20,3 +21,4 @@ int main(int argc, char *argv[]) {
     Companion::Instance->Init();
     return 0;
 }
+#endif

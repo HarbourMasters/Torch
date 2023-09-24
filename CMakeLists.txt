@@ -13,12 +13,18 @@ file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR
 set(SRC_DIR ${CXX_FILES} ${C_FILES})
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+set(USE_STANDALONE ON)
 set(VPKTOOL_BUILD_GUI OFF)
 set(VPKTOOL_BUILD_TESTS OFF)
 set(VPKTOOL_BUILD_INSTALLER OFF)
 
 # Build
-add_executable(${PROJECT_NAME} ${SRC_DIR})
+if (USE_STANDALONE)
+    add_definitions(-DSTANDALONE)
+    add_executable(${PROJECT_NAME} ${SRC_DIR})
+else()
+    add_library(${PROJECT_NAME} SHARED ${SRC_DIR})
+endif()
 
 # Fetch Dependencies
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/binarytools)

@@ -97,6 +97,7 @@ void Companion::Process() {
 
             LUS::BinaryWriter write = LUS::BinaryWriter();
             RawFactory* factory = this->GetFactory(type);
+            factory->SetCartridge(cartridge);
 
             spdlog::set_pattern(regular);
             SPDLOG_INFO("------------------------------------------------");

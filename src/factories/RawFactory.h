@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ResourceType.h"
+#include "n64/Cartridge.h"
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -27,4 +28,12 @@ public:
     RawFactory() = default;
     virtual bool process(LUS::BinaryWriter* write, YAML::Node& data, std::vector<uint8_t>& buffer) = 0;
     void WriteHeader(LUS::BinaryWriter* write, LUS::ResourceType resType, int32_t version);
+    inline void SetCartridge(N64::Cartridge* cart) {
+        this->cartdrige = cart;
+    }
+    inline N64::Cartridge* GetCartridge() {
+        return this->cartdrige;
+    }
+private:
+    N64::Cartridge* cartdrige;
 };
