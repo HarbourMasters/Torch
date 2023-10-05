@@ -13,6 +13,7 @@
 #include "factories/sm64/SAnimFactory.h"
 #include "factories/sm64/STextFactory.h"
 #include "factories/sm64/SDialogFactory.h"
+#include "factories/sm64/SDictionaryFactory.h"
 #include "spdlog/spdlog.h"
 
 #include <chrono>
@@ -40,6 +41,7 @@ void Companion::Init() {
     this->RegisterFactory("SM64:DIALOG", new SDialogFactory());
     this->RegisterFactory("SM64:ANIM", new SAnimFactory());
     this->RegisterFactory("SM64:TEXT", new STextFactory());
+    this->RegisterFactory("SM64:DICTIONARY", new SDictionaryFactory());
 
     // Debug
     this->RegisterFactory("MIO0", new MIO0Factory());

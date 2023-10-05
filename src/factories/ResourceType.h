@@ -21,5 +21,6 @@ enum class ResourceType {
     // SM64
     Anim = 0x414E494D,        // ANIM
     SDialog = 0x53444C47,     // SDLG
+    Dictionary = 0x44494354,  // DICT
 };
 } // namespace LUS
