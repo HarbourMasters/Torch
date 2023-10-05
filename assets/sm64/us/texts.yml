@@ -1170,7 +1170,7 @@ acts/act_60:
   type: SM64:TEXT
   offset: 1083968
   mio0: 71976
-texts/global:
+strings/global:
   type: SM64:DICTIONARY
   keys:
     TEXT_ZERO: 8177343
