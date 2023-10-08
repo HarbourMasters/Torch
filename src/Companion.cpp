@@ -166,3 +166,44 @@ RawFactory *Companion::GetFactory(const std::string &extension) {
 
     return this->gFactories[extension];
 }
+
+void Companion::Pack(const std::string& folder, const std::string& output) {
+
+        spdlog::set_level(spdlog::level::debug);
+        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+
+        SPDLOG_INFO("------------------------------------------------");
+
+        SPDLOG_INFO("Starting CubeOS...");
+        SPDLOG_INFO("Scanning {}", folder);
+
+        auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        std::unordered_map<std::string, std::vector<char>> files;
+
+        for (const auto & entry : fs::recursive_directory_iterator(folder)){
+            if(entry.is_directory()) continue;
+            std::ifstream input( entry.path(), std::ios::binary );
+            auto data = std::vector<char>( std::istreambuf_iterator<char>( input ), {} );
+            input.close();
+            files[entry.path().string()] = data;
+        }
+
+        auto wrapper = SWrapper(output);
+
+        for(auto& [path, data] : files){
+            std::string normalized = path;
+            std::replace(normalized.begin(), normalized.end(), '\\', '/');
+            // Remove parent folder
+            normalized = normalized.substr(folder.length() + 1);
+            wrapper.CreateFile(normalized, data);
+            SPDLOG_INFO("> Added {}", normalized);
+        }
+
+        auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
+        SPDLOG_INFO("Exported to {}", output);
+        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+        SPDLOG_INFO("------------------------------------------------");
+
+        wrapper.Close();
+}

@@ -16,7 +16,7 @@ SWrapper::SWrapper(const std::string& path) {
     }
 }
 
-bool SWrapper::CreateFile(std::string path, std::vector<char> data) {
+bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
     HANDLE hFile;
 #ifdef _WIN32
     SYSTEMTIME sysTime;

@@ -9,8 +9,8 @@ public:
     SWrapper(const std::string& path);
 
     std::vector<char> ReadFile(std::string path);
-    bool CreateFile(std::string path, std::vector<char> data);
+    bool CreateFile(const std::string& path, std::vector<char> data);
     void Close();
 private:
-    HANDLE hMpq;
+    HANDLE hMpq{};
 };

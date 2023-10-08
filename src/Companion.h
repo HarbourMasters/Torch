@@ -15,6 +15,8 @@ public:
     void Init();
     void Process();
     N64::Cartridge* GetCartridge() { return this->cartridge; }
+
+    static void Pack(const std::string& folder, const std::string& output);
 private:
     std::filesystem::path gRomPath;
     std::vector<uint8_t> gRomData;
