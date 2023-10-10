@@ -6,118 +6,118 @@ header:
   tbl:
     offset: 5833216
     size: 1793408
-banks/00_bank:
+banks/00:
   type: BANK
   id: 0
-banks/01_bank:
+banks/01_terrain:
   type: BANK
   id: 1
-banks/02_bank:
+banks/02_water:
   type: BANK
   id: 2
-banks/03_bank:
+banks/03:
   type: BANK
   id: 3
-banks/04_bank:
+banks/04:
   type: BANK
   id: 4
-banks/05_bank:
+banks/05:
   type: BANK
   id: 5
-banks/06_bank:
+banks/06:
   type: BANK
   id: 6
-banks/07_bank:
+banks/07:
   type: BANK
   id: 7
-banks/08_bank:
+banks/08_mario:
   type: BANK
   id: 8
-banks/09_bank:
+banks/09:
   type: BANK
   id: 9
-banks/0A_bank:
+banks/0A_mario_peach:
   type: BANK
   id: 10
-banks/0B_bank:
+banks/0B:
   type: BANK
   id: 11
-banks/0C_bank:
+banks/0C:
   type: BANK
   id: 12
-banks/0D_bank:
+banks/0D:
   type: BANK
   id: 13
-banks/0E_bank:
+banks/0E:
   type: BANK
   id: 14
-banks/0F_bank:
+banks/0F:
   type: BANK
   id: 15
-banks/10_bank:
+banks/10:
   type: BANK
   id: 16
-banks/11_bank:
+banks/11:
   type: BANK
   id: 17
-banks/12_bank:
+banks/12:
   type: BANK
   id: 18
-banks/13_bank:
+banks/13:
   type: BANK
   id: 19
-banks/14_bank:
+banks/14_piranha_music_box:
   type: BANK
   id: 20
-banks/15_bank:
+banks/15:
   type: BANK
   id: 21
-banks/16_bank:
+banks/16_course_start:
   type: BANK
   id: 22
-banks/17_bank:
+banks/17:
   type: BANK
   id: 23
-banks/18_bank:
+banks/18:
   type: BANK
   id: 24
-banks/19_bank:
+banks/19:
   type: BANK
   id: 25
-banks/1A_bank:
+banks/1A:
   type: BANK
   id: 26
-banks/1B_bank:
+banks/1B:
   type: BANK
   id: 27
-banks/1C_bank:
+banks/1C_endless_stairs:
   type: BANK
   id: 28
-banks/1D_bank:
+banks/1D_bowser_organ:
   type: BANK
   id: 29
-banks/1E_bank:
+banks/1E:
   type: BANK
   id: 30
-banks/1F_bank:
+banks/1F:
   type: BANK
   id: 31
-banks/20_bank:
+banks/20:
   type: BANK
   id: 32
-banks/21_bank:
+banks/21:
   type: BANK
   id: 33
-banks/22_bank:
+banks/22:
   type: BANK
   id: 34
-banks/23_bank:
+banks/23:
   type: BANK
   id: 35
-banks/24_bank:
+banks/24:
   type: BANK
   id: 36
-banks/25_bank:
+banks/25:
   type: BANK
   id: 37
 samples/bowser_organ/00_organ_1:
@@ -714,218 +714,252 @@ samples/sfx_water/01_splash:
 samples/sfx_water/02_swim:
   type: SAMPLE
   id: 16
-sequences/00_sound_player:
+sequences/sound_player:
   type: SEQUENCE
-  offset: 7626912
+  id: 0x00
+  offset: 0x7460A0
   size: 12800
   banks:
-    - 0
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    - 6
-    - 7
-    - 8
-    - 9
-    - 10
-sequences/01_cutscene_collect_star:
+    - sound/banks/00
+    - sound/banks/01_terrain
+    - sound/banks/02_water
+    - sound/banks/03
+    - sound/banks/04
+    - sound/banks/05
+    - sound/banks/06
+    - sound/banks/07
+    - sound/banks/08_mario
+    - sound/banks/09
+    - sound/banks/0A_mario_peach
+sequences/cutscene_collect_star:
   type: SEQUENCE
-  offset: 7639712
+  id: 0x01
+  offset: 0x7492A0
   size: 633
   banks:
-    - 34
-sequences/02_menu_title_screen:
+    - sound/banks/22
+sequences/menu_title_screen:
   type: SEQUENCE
-  offset: 7640352
+  id: 0x02
+  offset: 0x749520
   size: 8276
   banks:
-    - 17
-sequences/03_level_grass:
+    - sound/banks/11
+sequences/level_grass:
   type: SEQUENCE
-  offset: 7648640
+  id: 0x03
+  offset: 0x74B580
   size: 5134
   banks:
-    - 34
-sequences/04_level_inside_castle:
+    - sound/banks/22
+sequences/level_inside_castle:
   type: SEQUENCE
-  offset: 7653776
+  id: 0x04
+  offset: 0x74C990
   size: 2504
   banks:
-    - 14
-sequences/05_level_water:
+    - sound/banks/0E
+sequences/level_water:
   type: SEQUENCE
-  offset: 7656288
+  id: 0x05
+  offset: 0x74D360
   size: 4816
   banks:
-    - 19
-sequences/06_level_hot:
+    - sound/banks/13
+sequences/level_hot:
   type: SEQUENCE
-  offset: 7661104
+  id: 0x06
+  offset: 0x74E630
   size: 2459
   banks:
-    - 15
-sequences/07_level_boss_koopa:
+    - sound/banks/0F
+sequences/level_boss_koopa:
   type: SEQUENCE
-  offset: 7663568
+  id: 0x07
+  offset: 0x74EFD0
   size: 3430
   banks:
-    - 18
-sequences/08_level_snow:
+    - sound/banks/12
+sequences/level_snow:
   type: SEQUENCE
-  offset: 7667008
+  id: 0x08
+  offset: 0x74FD40
   size: 8157
   banks:
-    - 11
-sequences/09_level_slide:
+    - sound/banks/0B
+sequences/level_slide:
   type: SEQUENCE
-  offset: 7675168
+  id: 0x09
+  offset: 0x751D20
   size: 7452
   banks:
-    - 13
-sequences/0A_level_spooky:
+    - sound/banks/0D
+sequences/level_spooky:
   type: SEQUENCE
-  offset: 7682624
+  id: 0x0A
+  offset: 0x753A40
   size: 5686
   banks:
-    - 33
-    - 16
-sequences/0B_event_piranha_plant:
+    - sound/banks/10
+    - sound/banks/21
+sequences/event_piranha_plant:
   type: SEQUENCE
-  offset: 7688320
+  id: 0x0B
+  offset: 0x755080
   size: 1405
   banks:
-    - 20
-sequences/0C_level_underground:
+    - sound/banks/14_piranha_music_box
+sequences/level_underground:
   type: SEQUENCE
-  offset: 7689728
+  id: 0x0C
+  offset: 0x755600
   size: 4905
   banks:
-    - 21
-sequences/0D_menu_star_select:
+    - sound/banks/15
+sequences/menu_star_select:
   type: SEQUENCE
-  offset: 7694640
+  id: 0x0D
+  offset: 0x756930
   size: 138
   banks:
-    - 22
-sequences/0E_event_powerup:
+    - sound/banks/16_course_start
+sequences/event_powerup:
   type: SEQUENCE
-  offset: 7694784
+  id: 0x0E
+  offset: 0x7569C0
   size: 3143
   banks:
-    - 23
-sequences/0F_event_metal_cap:
+    - sound/banks/17
+sequences/event_metal_cap:
   type: SEQUENCE
-  offset: 7697936
+  id: 0x0F
+  offset: 0x757610
   size: 2786
   banks:
-    - 24
-sequences/10_event_koopa_message:
+    - sound/banks/18
+sequences/event_koopa_message:
   type: SEQUENCE
-  offset: 7700736
+  id: 0x10
+  offset: 0x758100
   size: 564
   banks:
-    - 18
-sequences/11_level_koopa_road:
+    - sound/banks/12
+sequences/level_koopa_road:
   type: SEQUENCE
-  offset: 7701312
+  id: 0x11
+  offset: 0x758340
   size: 4763
   banks:
-    - 25
-sequences/12_event_high_score:
+    - sound/banks/19
+sequences/event_high_score:
   type: SEQUENCE
-  offset: 7706080
+  id: 0x12
+  offset: 0x7595E0
   size: 279
   banks:
-    - 31
-sequences/13_event_merry_go_round:
+    - sound/banks/1F
+sequences/event_merry_go_round:
   type: SEQUENCE
-  offset: 7706368
+  id: 0x13
+  offset: 0x759700
   size: 1663
   banks:
-    - 33
-sequences/14_event_race:
+    - sound/banks/21
+sequences/event_race:
   type: SEQUENCE
-  offset: 7708032
+  id: 0x14
+  offset: 0x759D80
   size: 203
   banks:
-    - 26
-sequences/15_cutscene_star_spawn:
+    - sound/banks/1A
+sequences/cutscene_star_spawn:
   type: SEQUENCE
-  offset: 7708240
+  id: 0x15
+  offset: 0x759E50
   size: 654
   banks:
-    - 14
-sequences/16_event_boss:
+    - sound/banks/0E
+sequences/event_boss:
   type: SEQUENCE
-  offset: 7708896
+  id: 0x16
+  offset: 0x75A0E0
   size: 3451
   banks:
-    - 27
-sequences/17_cutscene_collect_key:
+    - sound/banks/1B
+sequences/cutscene_collect_key:
   type: SEQUENCE
-  offset: 7712352
+  id: 0x17
+  offset: 0x75AE60
   size: 683
   banks:
-    - 26
-sequences/18_event_endless_stairs:
+    - sound/banks/1A
+sequences/event_endless_stairs:
   type: SEQUENCE
-  offset: 7713040
+  id: 0x18
+  offset: 0x75B110
   size: 1789
   banks:
-    - 28
-sequences/19_level_boss_koopa_final:
+    - sound/banks/1C_endless_stairs
+sequences/level_boss_koopa_final:
   type: SEQUENCE
-  offset: 7714832
+  id: 0x19
+  offset: 0x75B810
   size: 3527
   banks:
-    - 29
-sequences/1A_cutscene_credits:
+    - sound/banks/1D_bowser_organ
+sequences/cutscene_credits:
   type: SEQUENCE
-  offset: 7718368
+  id: 0x1A
+  offset: 0x75C5E0
   size: 14341
   banks:
-    - 37
-sequences/1B_event_solve_puzzle:
+    - sound/banks/25
+sequences/event_solve_puzzle:
   type: SEQUENCE
-  offset: 7732720
+  id: 0x1B
+  offset: 0x75FDF0
   size: 222
   banks:
-    - 20
-sequences/1C_event_toad_message:
+    - sound/banks/14_piranha_music_box
+sequences/event_toad_message:
   type: SEQUENCE
-  offset: 7732944
+  id: 0x1C
+  offset: 0x75FED0
   size: 214
   banks:
-    - 32
-sequences/1D_event_peach_message:
+    - sound/banks/20
+sequences/event_peach_message:
   type: SEQUENCE
-  offset: 7733168
+  id: 0x1D
+  offset: 0x75FFB0
   size: 440
   banks:
-    - 30
-sequences/1E_cutscene_intro:
+    - sound/banks/1E
+sequences/cutscene_intro:
   type: SEQUENCE
-  offset: 7733616
+  id: 0x1E
+  offset: 0x760170
   size: 1774
   banks:
-    - 27
-sequences/1F_cutscene_victory:
+    - sound/banks/1B
+sequences/cutscene_victory:
   type: SEQUENCE
-  offset: 7735392
+  id: 0x1F
+  offset: 0x760860
   size: 2074
   banks:
-    - 26
-sequences/20_cutscene_ending:
+    - sound/banks/1A
+sequences/cutscene_ending:
   type: SEQUENCE
-  offset: 7737472
+  id: 0x20
+  offset: 0x761080
   size: 1892
   banks:
-    - 35
-sequences/21_menu_file_select:
+    - sound/banks/23
+sequences/menu_file_select:
   type: SEQUENCE
-  offset: 7739376
+  id: 0x21
+  offset: 0x7617F0
   size: 789
   banks:
-    - 36
+    - sound/banks/24

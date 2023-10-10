@@ -14,6 +14,7 @@ bool BankFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vect
 
     WRITE_HEADER(LUS::ResourceType::Bank, 0);
 
+    WRITE_U32(bankId);
     WRITE_U32(bank.insts.size());
     for(auto &instrument : bank.insts){
         WRITE_U8(instrument.valid);
