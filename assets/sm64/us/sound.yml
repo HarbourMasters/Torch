@@ -863,8 +863,8 @@ sequences/level_spooky:
   offset: 0x7BE520
   size: 5674
   banks:
-    - sound/banks/10
     - sound/banks/21
+    - sound/banks/10
 sequences/event_piranha_plant:
   type: SEQUENCE
   id: 0x0B
