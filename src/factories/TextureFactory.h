@@ -10,6 +10,7 @@ enum class TextureType {
     Palette8bpp,
     Grayscale4bpp,
     Grayscale8bpp,
+    GrayscaleAlpha1bpp,
     GrayscaleAlpha4bpp,
     GrayscaleAlpha8bpp,
     GrayscaleAlpha16bpp,
