@@ -38,13 +38,13 @@ uint8_t* alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
     return out;
 }
 
-bool TextureFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
+bool TextureFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vector<uint8_t>& buffer) {
 
-    auto format = data["format"].as<std::string>();
-    auto width = data["width"].as<uint32_t>();
-    auto height = data["height"].as<uint32_t>();
-    auto size = data["size"].as<size_t>();
-    auto offset = data["offset"].as<size_t>();
+    auto format = node["format"].as<std::string>();
+    auto width = node["width"].as<uint32_t>();
+    auto height = node["height"].as<uint32_t>();
+    auto size = node["size"].as<size_t>();
+    auto offset = node["offset"].as<size_t>();
 
 	if(!gTextureTypes.contains(format)) {
 		return false;
@@ -58,10 +58,10 @@ bool TextureFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::v
     WRITE_U32(width);
     WRITE_U32(height);
 
-    if(data["mio0"]){
-        auto mio0 = data["mio0"].as<size_t>();
-        auto decoded = MIO0Decoder::Decode(buffer, offset);
-        auto data = decoded.data() + mio0;
+    if(node["mio0"]){
+        auto mio0 = node["mio0"].as<size_t>();
+        auto decoded = MIO0Decoder::Decode(buffer, mio0);
+        auto data = decoded.data() + offset;
         if(type == TextureType::GrayscaleAlpha1bpp){
             auto ia8 = alloc_ia8_text_from_i1((uint16_t*)data, 8, 16);
             WRITE_U32(8 * 16);
@@ -78,7 +78,7 @@ bool TextureFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::v
 
     SPDLOG_INFO("Texture: {} {}x{} {}", format, width, height, size);
     SPDLOG_INFO("Offset: {}", offset);
-    SPDLOG_INFO("Has MIO0: {}", data["mio0"] ? "true" : "false");
+    SPDLOG_INFO("Has MIO0: {}", node["mio0"] ? "true" : "false");
 
 	return true;
 }

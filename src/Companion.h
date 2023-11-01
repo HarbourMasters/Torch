@@ -15,6 +15,7 @@ public:
     void Init();
     void Process();
     N64::Cartridge* GetCartridge() { return this->cartridge; }
+    std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
 
     static void Pack(const std::string& folder, const std::string& output);
 private:
@@ -22,6 +23,8 @@ private:
     std::vector<uint8_t> gRomData;
     std::unordered_map<std::string, RawFactory*> gFactories;
     N64::Cartridge* cartridge;
+    std::string gCurrentFile;
+    std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
     void RegisterFactory(const std::string& type, RawFactory* factory);
     RawFactory* GetFactory(const std::string& type);

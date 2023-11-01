@@ -4,12 +4,12 @@
 
 8a20a5c83d6ceb0f0506cfc9fa20d8f438cafe51:
   name: Super Mario 64 [JP]
-  path: assets/sm64/jp
+  path: generated/jp
   output: smcube.otr
 
 9bef1128717f958171a4afac3ed78ee2bb4e86ce:
   name: Super Mario 64 [US]
-  path: assets/sm64/us
+  path: generated/us
   output: smcube.otr
 
 4ac5721683d0e0b6bbb561b58a71740845dceea9:

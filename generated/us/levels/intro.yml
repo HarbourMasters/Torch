@@ -1,0 +1,48 @@
+intro_0:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 0x7EA0
+  mio0: 0x26A3A0
+  format: RGBA16
+  symbol: intro_seg7_texture_07007EA0
+intro_1:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 0x86A0
+  mio0: 0x26A3A0
+  format: RGBA16
+  symbol: intro_seg7_texture_070086A0
+2_copyright:
+  type: TEXTURE
+  size: 4096
+  width: 128
+  height: 16
+  offset: 0xB4A0
+  mio0: 0x26A3A0
+  format: RGBA16
+  symbol: intro_seg7_texture_0700B4A0
+3_tm:
+  type: TEXTURE
+  size: 512
+  width: 16
+  height: 16
+  offset: 0xC4A0
+  mio0: 0x26A3A0
+  format: RGBA16
+  symbol: intro_seg7_texture_0700C4A0
+intro_geo_0002D0:
+  type: GEO_LAYOUT
+  offset: 0x26A170
+intro_geo_mario_head_regular:
+  type: GEO_LAYOUT
+  offset: 0x26A1FC
+intro_geo_mario_head_dizzy:
+  type: GEO_LAYOUT
+  offset: 0x26A258
+# intro_geo_000414:
+#   type: GEO_LAYOUT
+#   offset: 0x26A2B4

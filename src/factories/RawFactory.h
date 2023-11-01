@@ -7,9 +7,11 @@
 #include <filesystem>
 #include <binarytools/BinaryWriter.h>
 #include <yaml-cpp/yaml.h>
+#include <strhash64/StrHash64.h>
 
 
 #define SEGMENT_OFFSET(a) ((uint32_t)(a)&0x00FFFFFF)
+#define SEGMENT_NUMBER(x) ((x >> 24) & 0xFF)
 
 #define WRITE_HEADER(type, version) this->WriteHeader(writer, type, version)
 #define WRITE_BHEADER(type, version) this->WriteHeader(writer, type, version, true)

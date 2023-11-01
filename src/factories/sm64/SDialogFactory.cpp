@@ -9,19 +9,19 @@ namespace fs = std::filesystem;
 
 static size_t id = 0;
 
-bool SDialogFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
+bool SDialogFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vector<uint8_t>& buffer) {
 
     WRITE_HEADER(LUS::ResourceType::SDialog, 0);
 
-    auto offset = data["offset"].as<size_t>();
-    auto mio0 = data["mio0"].as<size_t>();
+    auto offset = node["offset"].as<size_t>();
+    auto mio0 = node["mio0"].as<size_t>();
 
     std::vector<uint8_t> text;
-    auto decoded = MIO0Decoder::Decode(buffer, offset);
+    auto decoded = MIO0Decoder::Decode(buffer, mio0);
     auto bytes = (uint8_t*) decoded.data();
     LUS::BinaryReader reader(decoded.data(), decoded.size());
     reader.SetEndianness(LUS::Endianness::Big);
-    reader.Seek(mio0, LUS::SeekOffsetType::Start);
+    reader.Seek(offset, LUS::SeekOffsetType::Start);
 
     auto unused = reader.ReadUInt32();
     auto linesPerBox = reader.ReadUByte();
@@ -52,10 +52,6 @@ bool SDialogFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::v
 
     WRITE_U32(text.size());
     WRITE_ARRAY(text.data(), text.size());
-
-    if(id == 85){
-        int bp = 0;
-    }
 
     id++;
 	return true;

@@ -14,9 +14,10 @@
 #include "factories/sm64/STextFactory.h"
 #include "factories/sm64/SDialogFactory.h"
 #include "factories/sm64/SDictionaryFactory.h"
+#include "factories/DisplayListFactory.h"
+#include "factories/sm64/SGeoFactory.h"
 #include "spdlog/spdlog.h"
 
-#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <filesystem>
@@ -34,6 +35,7 @@ void Companion::Init() {
     this->RegisterFactory("SAMPLE", new SampleFactory());
     this->RegisterFactory("BANK", new BankFactory());
 
+    this->RegisterFactory("DISPLAY_LIST", new DisplayListFactory());
     this->RegisterFactory("TEXTURE", new TextureFactory());
     this->RegisterFactory("BLOB", new BlobFactory());
 
@@ -42,6 +44,7 @@ void Companion::Init() {
     this->RegisterFactory("SM64:ANIM", new SAnimFactory());
     this->RegisterFactory("SM64:TEXT", new STextFactory());
     this->RegisterFactory("SM64:DICTIONARY", new SDictionaryFactory());
+    this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
 
     // Debug
     this->RegisterFactory("MIO0", new MIO0Factory());
@@ -92,10 +95,27 @@ void Companion::Process() {
     vWriter.Write((uint8_t) LUS::Endianness::Big);
     vWriter.Write(cartridge->GetCRC());
 
-    for (const auto & entry : fs::directory_iterator(path)){
+    for (const auto & entry : fs::recursive_directory_iterator(path)){
+        if(entry.is_directory()) continue;
         YAML::Node root = YAML::LoadFile(entry.path().string());
+        auto directory = relative(entry.path(), path).replace_extension("");
+        this->gCurrentFile = entry.path().string();
+
+        for(auto asset = root.begin(); asset != root.end(); ++asset){
+            auto node = asset->second;
+            if(!asset->second["offset"]) continue;
+
+            auto output = (directory / asset->first.as<std::string>()).string();
+            std::replace(output.begin(), output.end(), '\\', '/');
+
+            this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
+        }
+
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto type = asset->second["type"].as<std::string>();
+
+            auto output = (directory / asset->first.as<std::string>()).string();
+            std::replace(output.begin(), output.end(), '\\', '/');
 
             LUS::BinaryWriter write = LUS::BinaryWriter();
             RawFactory* factory = this->GetFactory(type);
@@ -113,18 +133,16 @@ void Companion::Process() {
             }
 
             auto buffer = write.ToVector();
-            auto output = (entry.path().stem() / asset->first.as<std::string>()).string();
-
-            std::replace(output.begin(), output.end(), '\\', '/');
-
             wrapper.CreateFile(output, buffer);
 
             if(type != "TEXTURE") {
                 SPDLOG_DEBUG("Writing debug file");
                 std::string dpath = "debug/" + output;
+
                 if(!fs::exists(fs::path(dpath).parent_path())){
                     fs::create_directories(fs::path(dpath).parent_path());
                 }
+
                 std::ofstream stream(dpath, std::ios::binary);
                 stream.write((char*)buffer.data(), buffer.size());
                 stream.close();
@@ -165,6 +183,18 @@ RawFactory *Companion::GetFactory(const std::string &extension) {
     }
 
     return this->gFactories[extension];
+}
+
+std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint32_t addr){
+    if(!this->gAddrMap.contains(this->gCurrentFile)){
+        return std::nullopt;
+    }
+
+    if(!this->gAddrMap[this->gCurrentFile].contains(addr)){
+        return std::nullopt;
+    }
+
+    return this->gAddrMap[this->gCurrentFile][addr];
 }
 
 void Companion::Pack(const std::string& folder, const std::string& output) {
