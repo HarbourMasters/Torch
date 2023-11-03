@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <optional>
 #include <utility>
 #include <vector>
 #include <unordered_map>
