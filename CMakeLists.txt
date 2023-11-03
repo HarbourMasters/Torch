@@ -29,6 +29,16 @@ endif()
 # Fetch Dependencies
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/binarytools)
 
+if(EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
+FetchContent_Declare(
+    GSL
+    GIT_REPOSITORY https://github.com/Microsoft/GSL.git
+    GIT_TAG a3534567187d2edc428efd3f13466ff75fe5805c
+)
+FetchContent_MakeAvailable(GSL)
+target_link_libraries(${PROJECT_NAME} PRIVATE GSL)
+endif()
+
 # Link BinaryTools
 add_dependencies(${PROJECT_NAME} BinaryTools)
 target_link_libraries(${PROJECT_NAME} PRIVATE BinaryTools)
