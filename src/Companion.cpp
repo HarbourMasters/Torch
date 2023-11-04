@@ -15,6 +15,7 @@
 #include "factories/sm64/SDialogFactory.h"
 #include "factories/sm64/SDictionaryFactory.h"
 #include "factories/DisplayListFactory.h"
+#include "factories/VerticeFactory.h"
 #include "factories/sm64/SGeoFactory.h"
 #include "spdlog/spdlog.h"
 
@@ -39,7 +40,9 @@ void Companion::Init() {
     this->RegisterFactory("TEXTURE", new TextureFactory());
     this->RegisterFactory("BLOB", new BlobFactory());
 
-    // SM64 Specific
+    this->RegisterFactory("VTX", new VerticeFactory());
+
+    // SM64 specific
     this->RegisterFactory("SM64:DIALOG", new SDialogFactory());
     this->RegisterFactory("SM64:ANIM", new SAnimFactory());
     this->RegisterFactory("SM64:TEXT", new STextFactory());
@@ -113,6 +116,7 @@ void Companion::Process() {
 
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto type = asset->second["type"].as<std::string>();
+            std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
             auto output = (directory / asset->first.as<std::string>()).string();
             std::replace(output.begin(), output.end(), '\\', '/');

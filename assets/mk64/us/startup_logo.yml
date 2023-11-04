@@ -1,0 +1,10 @@
+startup_logo/startup_logo:
+  name: startup_logo
+  type: vtx
+  size: 688
+  offset: 0
+  mio0: 0x825800
+# startup_logo/dl1: # not implemented yet
+#   type: display_list
+#   mio0: 0x825800
+#   offset: 0x35C0
