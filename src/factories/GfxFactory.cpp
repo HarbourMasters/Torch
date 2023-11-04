@@ -74,9 +74,17 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
 
-	//const char* buff = "0xB800000000000000";
 
-    gfxd_input_buffer(decoded.data()+offset, 19 * sizeof(char));
+
+	uint64_t buff[] = {0xB800000000000000};
+	gfxd_endian(gfxd_endian_big, sizeof(uint64_t));
+	gfxd_input_buffer(buff, sizeof(buff));
+	
+	
+	// gfxd_endian(gfxd_endian_host, sizeof(uint32_t));  gfxd_input_buffer(buff, sizeof(buff));
+
+
+    //gfxd_input_buffer(buff, 64);
     	/* Override the default macro handler to make the output prettier */
 	gfxd_macro_fn(macro_fn);
 
@@ -84,7 +92,7 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
 	gfxd_target(gfxd_f3dex);
 
 	/* Set the input endianness to big endian, and the word size to uint64_t */
-	gfxd_endian(gfxd_endian_big, sizeof(uint64_t));
+	//gfxd_endian(gfxd_endian_big, sizeof(uint32_t));
 
 	/* Print an opening brace */
 	gfxd_puts("{\n");
@@ -97,7 +105,7 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
 	gfxd_puts("}\n");
 
 
-    char out[512];
+    char out[512] = {0};
     gfxd_output_buffer(out, 512);
     
     printf("\n\n");
