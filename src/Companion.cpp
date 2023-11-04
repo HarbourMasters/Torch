@@ -17,6 +17,7 @@
 #include "factories/DisplayListFactory.h"
 #include "factories/VerticeFactory.h"
 #include "factories/sm64/SGeoFactory.h"
+#include "factories/GfxFactory.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
@@ -36,6 +37,7 @@ void Companion::Init() {
     this->RegisterFactory("SAMPLE", new SampleFactory());
     this->RegisterFactory("BANK", new BankFactory());
 
+    this->RegisterFactory("GFX", new GfxFactory());
     this->RegisterFactory("DISPLAY_LIST", new DisplayListFactory());
     this->RegisterFactory("TEXTURE", new TextureFactory());
     this->RegisterFactory("BLOB", new BlobFactory());

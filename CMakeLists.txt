@@ -57,6 +57,10 @@ FetchContent_Declare(
     GIT_TAG f7320141120f720aecc4c32be25586e7da9eb978
 )
 
+# Link gfxdis
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gfxdis/libgfxd.a)
+
 set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)
