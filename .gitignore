@@ -9,4 +9,5 @@ debug/
 *.z64
 *.n64
 build/
+code/
 .vscode/

@@ -13,6 +13,7 @@ namespace LUS {
 class BinaryReader {
   public:
     BinaryReader(char* nBuffer, size_t nBufferSize);
+    BinaryReader(uint8_t* nBuffer, size_t nBufferSize);
     BinaryReader(Stream* nStream);
     BinaryReader(std::shared_ptr<Stream> nStream);
 

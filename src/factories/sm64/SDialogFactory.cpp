@@ -19,7 +19,7 @@ bool SDialogFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::v
     std::vector<uint8_t> text;
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
     auto bytes = (uint8_t*) decoded.data();
-    LUS::BinaryReader reader(decoded.data(), decoded.size());
+    LUS::BinaryReader reader(bytes, decoded.size());
     reader.SetEndianness(LUS::Endianness::Big);
     reader.Seek(offset, LUS::SeekOffsetType::Start);
 

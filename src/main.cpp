@@ -11,7 +11,7 @@ void BindOTRMode(CLI::App& app){
     otr->add_option("rom", filename, "sm64 us rom")->required()->check(CLI::ExistingFile);
     otr->parse_complete_callback([&]() {
         auto instance = Companion::Instance = new Companion(filename);
-        instance->Init();
+        instance->Init(ExportType::Code);
     });
 }
 

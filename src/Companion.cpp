@@ -2,22 +2,25 @@
 
 #include "storm/SWrapper.h"
 #include "utils/MIODecoder.h"
-#include "factories/RawFactory.h"
-#include "factories/BlobFactory.h"
-#include "factories/debug/MIO0Factory.h"
-#include "factories/AudioHeaderFactory.h"
-#include "factories/SequenceFactory.h"
-#include "factories/SampleFactory.h"
-#include "factories/BankFactory.h"
-#include "factories/TextureFactory.h"
-#include "factories/sm64/SAnimFactory.h"
-#include "factories/sm64/STextFactory.h"
-#include "factories/sm64/SDialogFactory.h"
-#include "factories/sm64/SDictionaryFactory.h"
-#include "factories/DisplayListFactory.h"
-#include "factories/VerticeFactory.h"
-#include "factories/sm64/SGeoFactory.h"
-#include "factories/GfxFactory.h"
+#include "new_factories/BlobFactory.h"
+//#include "factories/RawFactory.h"
+//#include "factories/BlobFactory.h"
+//#include "factories/debug/MIO0Factory.h"
+//#include "factories/AudioHeaderFactory.h"
+//#include "factories/SequenceFactory.h"
+//#include "factories/SampleFactory.h"
+//#include "factories/BankFactory.h"
+//#include "factories/TextureFactory.h"
+//#include "factories/sm64/SAnimFactory.h"
+//#include "factories/sm64/STextFactory.h"
+//#include "factories/sm64/SDialogFactory.h"
+//#include "factories/sm64/SDictionaryFactory.h"
+//#include "factories/DisplayListFactory.h"
+//#include "factories/VerticeFactory.h"
+//#include "factories/sm64/SGeoFactory.h"
+//#include "factories/GfxFactory.h"
+#include "new_factories/TextureFactory.h"
+#include "new_factories/BlobFactory.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
@@ -27,32 +30,32 @@
 namespace fs = std::filesystem;
 using namespace std::chrono;
 
-void Companion::Init() {
+void Companion::Init(ExportType type) {
 
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
-    this->RegisterFactory("AUDIO:HEADER", new AudioHeaderFactory());
-    this->RegisterFactory("SEQUENCE", new SequenceFactory());
-    this->RegisterFactory("SAMPLE", new SampleFactory());
-    this->RegisterFactory("BANK", new BankFactory());
-
-    this->RegisterFactory("GFX", new GfxFactory());
-    this->RegisterFactory("DISPLAY_LIST", new DisplayListFactory());
-    this->RegisterFactory("TEXTURE", new TextureFactory());
-    this->RegisterFactory("BLOB", new BlobFactory());
-
-    this->RegisterFactory("VTX", new VerticeFactory());
-
-    // SM64 specific
-    this->RegisterFactory("SM64:DIALOG", new SDialogFactory());
-    this->RegisterFactory("SM64:ANIM", new SAnimFactory());
-    this->RegisterFactory("SM64:TEXT", new STextFactory());
-    this->RegisterFactory("SM64:DICTIONARY", new SDictionaryFactory());
-    this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
-
-    // Debug
-    this->RegisterFactory("MIO0", new MIO0Factory());
+    this->gExporterType = type;
+    this->RegisterFactory("BLOB", std::make_shared<BlobFactory>());
+    this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
+//    this->RegisterFactory("AUDIO:HEADER", new AudioHeaderFactory());
+//    this->RegisterFactory("SEQUENCE", new SequenceFactory());
+//    this->RegisterFactory("SAMPLE", new SampleFactory());
+//    this->RegisterFactory("BANK", new BankFactory());
+//
+//    this->RegisterFactory("GFX", new GfxFactory());
+//    this->RegisterFactory("DISPLAY_LIST", new DisplayListFactory());
+//    this->RegisterFactory("VTX", new VerticeFactory());
+//
+//    // SM64 specific
+//    this->RegisterFactory("SM64:DIALOG", new SDialogFactory());
+//    this->RegisterFactory("SM64:ANIM", new SAnimFactory());
+//    this->RegisterFactory("SM64:TEXT", new STextFactory());
+//    this->RegisterFactory("SM64:DICTIONARY", new SDictionaryFactory());
+//    this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
+//
+//    // Debug
+//    this->RegisterFactory("MIO0", new MIO0Factory());
 
     this->Process();
 }
@@ -120,12 +123,15 @@ void Companion::Process() {
             auto type = asset->second["type"].as<std::string>();
             std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
-            auto output = (directory / asset->first.as<std::string>()).string();
+            auto entryName = asset->first.as<std::string>();
+            auto output = (directory / entryName).string();
             std::replace(output.begin(), output.end(), '\\', '/');
 
-            LUS::BinaryWriter write = LUS::BinaryWriter();
-            RawFactory* factory = this->GetFactory(type);
-            factory->SetCartridge(cartridge);
+            auto factory = this->GetFactory(type);
+            if(!factory.has_value()){
+                SPDLOG_ERROR("No factory found for {}", asset->first.as<std::string>());
+                continue;
+            }
 
             spdlog::set_pattern(regular);
             SPDLOG_INFO("------------------------------------------------");
@@ -133,30 +139,40 @@ void Companion::Process() {
             SPDLOG_INFO("Processing {} [{}]", asset->first.as<std::string>(), type);
             SPDLOG_INFO("Root: {}", entry.path().string());
 
-            if(!factory->process(&write, asset->second, this->gRomData)){
+            auto result = factory->get()->parse(this->gRomData, asset->second);
+            if(!result.has_value()){
                 SPDLOG_ERROR("Failed to process {}", asset->first.as<std::string>());
                 continue;
             }
 
-            auto buffer = write.ToVector();
-            wrapper.CreateFile(output, buffer);
+            auto exporter = factory->get()->GetExporter(gExporterType);
+            if(!exporter.has_value()){
+                SPDLOG_ERROR("No exporter found for {}", asset->first.as<std::string>());
+                continue;
+            }
 
-            if(type != "TEXTURE") {
-                SPDLOG_DEBUG("Writing debug file");
-                std::string dpath = "debug/" + output;
+            switch (gExporterType) {
+                case ExportType::Code: {
+                    std::string dpath = "code/" + output;
 
-                if(!fs::exists(fs::path(dpath).parent_path())){
-                    fs::create_directories(fs::path(dpath).parent_path());
+                    if(!fs::exists(fs::path(dpath).parent_path())){
+                        fs::create_directories(fs::path(dpath).parent_path());
+                    }
+
+                    std::ofstream stream(dpath + ".inc.c", std::ios::binary);
+                    exporter->get()->Export(stream, result.value(), entryName, asset->second, nullptr);
+                    stream.close();
+                    break;
                 }
-
-                std::ofstream stream(dpath, std::ios::binary);
-                stream.write((char*)buffer.data(), buffer.size());
-                stream.close();
+                case ExportType::Binary: {
+                    std::ostringstream buf;
+                    exporter->get()->Export(buf, result.value(), entryName, asset->second, nullptr);
+                    wrapper.CreateFile(output, std::vector<char>(buf.str().begin(), buf.str().end()));
+                    break;
+                }
             }
 
             SPDLOG_INFO("Processed {}", output);
-
-            write.Close();
         }
     }
 
@@ -178,14 +194,14 @@ void Companion::Process() {
     Companion::Instance = nullptr;
 }
 
-void Companion::RegisterFactory(const std::string &extension, RawFactory *factory) {
-    this->gFactories[extension] = factory;
-    SPDLOG_DEBUG("Registered factory for {}", extension);
+void Companion::RegisterFactory(const std::string& type, std::shared_ptr<BaseFactory> factory) {
+    this->gFactories[type] = factory;
+    SPDLOG_DEBUG("Registered factory for {}", type);
 }
 
-RawFactory *Companion::GetFactory(const std::string &extension) {
+std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::string &extension) {
     if(!this->gFactories.contains(extension)){
-        throw std::runtime_error("No factory found for " + extension);
+        return std::nullopt;
     }
 
     return this->gFactories[extension];
