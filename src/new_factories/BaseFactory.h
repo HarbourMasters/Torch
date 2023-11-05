@@ -10,6 +10,7 @@
 #include <yaml-cpp/yaml.h>
 #include <strhash64/StrHash64.h>
 #include <binarytools/BinaryWriter.h>
+#include <binarytools/BinaryReader.h>
 
 #define REGISTER(type, c) { ExportType::type, std::make_shared<c>() },
 

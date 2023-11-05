@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 
 const version = 'us'
-const parent = 'assets/sm64/' + version
+const parent = 'assets/debug/' + version
 const symbols = {}
 const rgx = /^-?\d+(\.\d+)?:.*/;
 
@@ -82,15 +82,15 @@ function patchEntry(entry, key){
         }
     }
 
-    if(obj.type != 'BLOB'){
-        let mio0 = obj.mio0;
-        let offset = obj.offset;
+    // if(obj.type != 'BLOB'){
+    //     let mio0 = obj.mio0;
+    //     let offset = obj.offset;
 
-        if(mio0 != undefined && offset != undefined) {
-            obj.offset = mio0;
-            obj.mio0 = offset;
-        }
-    }
+    //     if(mio0 != undefined && offset != undefined) {
+    //         obj.offset = mio0;
+    //         obj.mio0 = offset;
+    //     }
+    // }
 
     if(typeof obj.offset == 'number'){
         obj.offset = `0x${obj.offset.toString(16).toUpperCase()}`;

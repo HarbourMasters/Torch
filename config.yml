@@ -9,7 +9,7 @@
 
 9bef1128717f958171a4afac3ed78ee2bb4e86ce:
   name: Super Mario 64 [US]
-  path: generated/us
+  path: assets/debug/us
   output: smcube.otr
 
 4ac5721683d0e0b6bbb561b58a71740845dceea9:

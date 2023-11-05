@@ -2,9 +2,6 @@
 
 #include "storm/SWrapper.h"
 #include "utils/MIODecoder.h"
-#include "new_factories/BlobFactory.h"
-//#include "factories/RawFactory.h"
-//#include "factories/BlobFactory.h"
 //#include "factories/debug/MIO0Factory.h"
 //#include "factories/AudioHeaderFactory.h"
 //#include "factories/SequenceFactory.h"
@@ -19,7 +16,9 @@
 //#include "factories/VerticeFactory.h"
 //#include "factories/sm64/SGeoFactory.h"
 //#include "factories/GfxFactory.h"
+#include "new_factories/VtxFactory.h"
 #include "new_factories/TextureFactory.h"
+#include "new_factories/DisplayListFactory.h"
 #include "new_factories/BlobFactory.h"
 #include "spdlog/spdlog.h"
 
@@ -38,6 +37,8 @@ void Companion::Init(ExportType type) {
     this->gExporterType = type;
     this->RegisterFactory("BLOB", std::make_shared<BlobFactory>());
     this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
+    this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
+    this->RegisterFactory("GFX", std::make_shared<DListFactory>());
 //    this->RegisterFactory("AUDIO:HEADER", new AudioHeaderFactory());
 //    this->RegisterFactory("SEQUENCE", new SequenceFactory());
 //    this->RegisterFactory("SAMPLE", new SampleFactory());
@@ -109,7 +110,7 @@ void Companion::Process() {
         auto directory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = entry.path().string();
 
-        for(auto asset = root.begin(); asset != root.end(); ++asset){
+        for(auto asset = root.begin(); asset != root.end(); asset++){
             auto node = asset->second;
             if(!asset->second["offset"]) continue;
 
@@ -119,7 +120,10 @@ void Companion::Process() {
             this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
         }
 
-        for(auto asset = root.begin(); asset != root.end(); ++asset){
+        // Stupid hack because the iteration broke the assets
+        root = YAML::LoadFile(entry.path().string());
+
+        for(auto asset = root.begin(); asset != root.end(); asset++){
             auto type = asset->second["type"].as<std::string>();
             std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
@@ -148,7 +152,6 @@ void Companion::Process() {
                 continue;
             }
 
-
             std::string output;
             std::ostringstream stream;
             exporter->get()->Export(stream, result.value(), entryName, asset->second, &entryName);
@@ -158,6 +161,7 @@ void Companion::Process() {
                     output = (directory / entryName).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
                     std::string dpath = "code/" + output;
+                    auto symbol = asset->second["symbol"].as<std::string>();
 
                     if(!fs::exists(fs::path(dpath).parent_path())){
                         fs::create_directories(fs::path(dpath).parent_path());

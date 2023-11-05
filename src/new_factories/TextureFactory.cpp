@@ -47,15 +47,13 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     std::transform(format.begin(), format.end(), format.begin(), ::tolower);
     (*replacement) += "." + format;
 
-    write << "u8 " << node["symbol"] << "[] = {\n" << tab;
     for (int i = 0; i < data.size(); i++) {
-        if ((i % 15 == 0) && i != 0) {
-            write << "\n" << tab;
+        if ((i % 16 == 0) && i != 0) {
+            write << "\n";
         }
 
         write << "0x" << std::hex << std::setw(2) << std::setfill('0') << (int) data[i] << ", ";
     }
-    write << "\n};\n";
 }
 
 void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
