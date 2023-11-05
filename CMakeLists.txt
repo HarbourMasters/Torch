@@ -4,13 +4,34 @@ include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 
+# Link libgfxd
+# Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
+
+FetchContent_Declare(
+    libgfxd
+    GIT_REPOSITORY https://github.com/glankk/libgfxd.git
+    GIT_TAG 96fd3b849f38b3a7c7b7f3ff03c5921d328e6cdf
+)
+
+FetchContent_GetProperties(libgfxd)
+
+if(NOT libgfxd_POPULATED)
+    FetchContent_Populate(libgfxd)
+    include_directories(${libgfxd_SOURCE_DIR})
+    set(LGFXD_SRC gfxd.c uc_f3d.c uc_f3db.c uc_f3dex.c uc_f3dexb.c uc_f3dex2.c)
+    foreach (LGFXD_FILE ${LGFXD_SRC})
+        list(APPEND LGFXD_FILES "${libgfxd_SOURCE_DIR}/${LGFXD_FILE}")
+    endforeach()
+endif()
+
+
 # Source files
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp)
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/**/*.c)
-set(SRC_DIR ${CXX_FILES} ${C_FILES})
+set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(USE_STANDALONE ON)
@@ -56,11 +77,6 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
     GIT_TAG f7320141120f720aecc4c32be25586e7da9eb978
 )
-
-# Link gfxdis
-
-target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gfxdis/libgfxd.a)
-
 set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)

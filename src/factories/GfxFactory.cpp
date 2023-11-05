@@ -7,7 +7,7 @@
 #include <fstream>  // for file stream
 #include <cstdio>
 #include "binarytools/BinaryReader.h"
-#include <gfxdis/gfxd.h>
+#include <gfxd.h>
 
 namespace fs = std::filesystem;
 
@@ -79,8 +79,8 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
 	uint64_t buff[] = {0xB800000000000000};
 	gfxd_endian(gfxd_endian_big, sizeof(uint64_t));
 	gfxd_input_buffer(buff, sizeof(buff));
-	
-	
+
+
 	// gfxd_endian(gfxd_endian_host, sizeof(uint32_t));  gfxd_input_buffer(buff, sizeof(buff));
 
 
@@ -107,7 +107,7 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
 
     char out[512] = {0};
     gfxd_output_buffer(out, 512);
-    
+
     printf("\n\n");
     std::cout << out;
     printf("\n\n");
