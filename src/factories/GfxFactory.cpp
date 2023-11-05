@@ -44,7 +44,7 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
 	uint32_t *gfx = (uint32_t *) (decoded.data() + offset);
 
 
-	// Calculate size, end on 0xB800000000000000
+	// Calculate size of displaylist, end on 0xB800000000000000
 	size_t i = 0;
 	while((gfx[i]) != 0x000000B8 && gfx[i + 1] != 0) {
 		printf("Byte %d: 0x%X\n", (int)i, gfx[i]);
