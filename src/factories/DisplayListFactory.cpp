@@ -14,7 +14,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     auto symbol = node["symbol"].as<std::string>();
     char out[5000] = {0};
 
-    gfxd_input_buffer((uint32_t *) cmds.data(), sizeof(uint32_t) * cmds.size());
+    gfxd_input_buffer((uint32_t *) cmds.data(), (int)(sizeof(uint32_t) * cmds.size()));
     gfxd_output_buffer(out, sizeof(out));
 
     gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
@@ -120,6 +120,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 }
                 break;
             }
+            default: break;
         }
         
         writer.Write(w0);

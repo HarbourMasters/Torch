@@ -34,15 +34,856 @@ intro_1:
   mio0: 0x26A3A0
   format: RGBA16
   symbol: intro_seg7_texture_0700C4A0
-intro_geo_0002D0:
-  type: GEO_LAYOUT
-  offset: 0x26A170
-intro_geo_mario_head_regular:
-  type: GEO_LAYOUT
-  offset: 0x26A1FC
-intro_geo_mario_head_dizzy:
-  type: GEO_LAYOUT
-  offset: 0x26A258
-# intro_geo_000414:
-#   type: GEO_LAYOUT
-#   offset: 0x26A2B4
+intro_seg7_vertex_07000000:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x0
+  size: 256
+  symbol: intro_seg7_vertex_07000000
+intro_seg7_vertex_07000100:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x100
+  size: 240
+  symbol: intro_seg7_vertex_07000100
+intro_seg7_vertex_070001F0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1f0
+  size: 256
+  symbol: intro_seg7_vertex_070001F0
+intro_seg7_vertex_070002F0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2f0
+  size: 240
+  symbol: intro_seg7_vertex_070002F0
+intro_seg7_vertex_070003E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3e0
+  size: 256
+  symbol: intro_seg7_vertex_070003E0
+intro_seg7_vertex_070004E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4e0
+  size: 240
+  symbol: intro_seg7_vertex_070004E0
+intro_seg7_vertex_070005D0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5d0
+  size: 256
+  symbol: intro_seg7_vertex_070005D0
+intro_seg7_vertex_070006D0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6d0
+  size: 224
+  symbol: intro_seg7_vertex_070006D0
+intro_seg7_vertex_070007B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7b0
+  size: 240
+  symbol: intro_seg7_vertex_070007B0
+intro_seg7_vertex_070008A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x8a0
+  size: 224
+  symbol: intro_seg7_vertex_070008A0
+intro_seg7_vertex_07000980:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x980
+  size: 240
+  symbol: intro_seg7_vertex_07000980
+intro_seg7_vertex_07000A70:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xa70
+  size: 240
+  symbol: intro_seg7_vertex_07000A70
+intro_seg7_vertex_07000B60:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xb60
+  size: 224
+  symbol: intro_seg7_vertex_07000B60
+intro_seg7_vertex_07000C40:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xc40
+  size: 224
+  symbol: intro_seg7_vertex_07000C40
+intro_seg7_vertex_07000D20:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xd20
+  size: 240
+  symbol: intro_seg7_vertex_07000D20
+intro_seg7_vertex_07000E10:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xe10
+  size: 240
+  symbol: intro_seg7_vertex_07000E10
+intro_seg7_vertex_07000F00:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xf00
+  size: 240
+  symbol: intro_seg7_vertex_07000F00
+intro_seg7_vertex_07000FF0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xff0
+  size: 240
+  symbol: intro_seg7_vertex_07000FF0
+intro_seg7_vertex_070010E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x10e0
+  size: 240
+  symbol: intro_seg7_vertex_070010E0
+intro_seg7_vertex_070011D0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x11d0
+  size: 240
+  symbol: intro_seg7_vertex_070011D0
+intro_seg7_vertex_070012C0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x12c0
+  size: 256
+  symbol: intro_seg7_vertex_070012C0
+intro_seg7_vertex_070013C0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x13c0
+  size: 224
+  symbol: intro_seg7_vertex_070013C0
+intro_seg7_vertex_070014A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x14a0
+  size: 240
+  symbol: intro_seg7_vertex_070014A0
+intro_seg7_vertex_07001590:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1590
+  size: 224
+  symbol: intro_seg7_vertex_07001590
+intro_seg7_vertex_07001670:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1670
+  size: 256
+  symbol: intro_seg7_vertex_07001670
+intro_seg7_vertex_07001770:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1770
+  size: 224
+  symbol: intro_seg7_vertex_07001770
+intro_seg7_vertex_07001850:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1850
+  size: 256
+  symbol: intro_seg7_vertex_07001850
+intro_seg7_vertex_07001950:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1950
+  size: 224
+  symbol: intro_seg7_vertex_07001950
+intro_seg7_vertex_07001A30:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1a30
+  size: 224
+  symbol: intro_seg7_vertex_07001A30
+intro_seg7_vertex_07001B10:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1b10
+  size: 240
+  symbol: intro_seg7_vertex_07001B10
+intro_seg7_vertex_07001C00:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1c00
+  size: 224
+  symbol: intro_seg7_vertex_07001C00
+intro_seg7_vertex_07001CE0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1ce0
+  size: 256
+  symbol: intro_seg7_vertex_07001CE0
+intro_seg7_vertex_07001DE0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1de0
+  size: 240
+  symbol: intro_seg7_vertex_07001DE0
+intro_seg7_vertex_07001ED0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1ed0
+  size: 256
+  symbol: intro_seg7_vertex_07001ED0
+intro_seg7_vertex_07001FD0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x1fd0
+  size: 224
+  symbol: intro_seg7_vertex_07001FD0
+intro_seg7_vertex_070020B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x20b0
+  size: 240
+  symbol: intro_seg7_vertex_070020B0
+intro_seg7_vertex_070021A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x21a0
+  size: 224
+  symbol: intro_seg7_vertex_070021A0
+intro_seg7_vertex_07002280:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2280
+  size: 240
+  symbol: intro_seg7_vertex_07002280
+intro_seg7_vertex_07002370:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2370
+  size: 240
+  symbol: intro_seg7_vertex_07002370
+intro_seg7_vertex_07002460:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2460
+  size: 256
+  symbol: intro_seg7_vertex_07002460
+intro_seg7_vertex_07002560:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2560
+  size: 256
+  symbol: intro_seg7_vertex_07002560
+intro_seg7_vertex_07002660:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2660
+  size: 256
+  symbol: intro_seg7_vertex_07002660
+intro_seg7_vertex_07002760:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2760
+  size: 224
+  symbol: intro_seg7_vertex_07002760
+intro_seg7_vertex_07002840:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2840
+  size: 256
+  symbol: intro_seg7_vertex_07002840
+intro_seg7_vertex_07002940:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2940
+  size: 256
+  symbol: intro_seg7_vertex_07002940
+intro_seg7_vertex_07002A40:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2a40
+  size: 256
+  symbol: intro_seg7_vertex_07002A40
+intro_seg7_vertex_07002B40:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2b40
+  size: 224
+  symbol: intro_seg7_vertex_07002B40
+intro_seg7_vertex_07002C20:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2c20
+  size: 256
+  symbol: intro_seg7_vertex_07002C20
+intro_seg7_vertex_07002D20:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2d20
+  size: 256
+  symbol: intro_seg7_vertex_07002D20
+intro_seg7_vertex_07002E20:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2e20
+  size: 240
+  symbol: intro_seg7_vertex_07002E20
+intro_seg7_vertex_07002F10:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x2f10
+  size: 240
+  symbol: intro_seg7_vertex_07002F10
+intro_seg7_vertex_07003000:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3000
+  size: 240
+  symbol: intro_seg7_vertex_07003000
+intro_seg7_vertex_070030F0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x30f0
+  size: 240
+  symbol: intro_seg7_vertex_070030F0
+intro_seg7_vertex_070031E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x31e0
+  size: 256
+  symbol: intro_seg7_vertex_070031E0
+intro_seg7_vertex_070032E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x32e0
+  size: 224
+  symbol: intro_seg7_vertex_070032E0
+intro_seg7_vertex_070033C0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x33c0
+  size: 224
+  symbol: intro_seg7_vertex_070033C0
+intro_seg7_vertex_070034A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x34a0
+  size: 96
+  symbol: intro_seg7_vertex_070034A0
+intro_seg7_vertex_07003500:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3500
+  size: 240
+  symbol: intro_seg7_vertex_07003500
+intro_seg7_vertex_070035F0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x35f0
+  size: 224
+  symbol: intro_seg7_vertex_070035F0
+intro_seg7_vertex_070036D0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x36d0
+  size: 256
+  symbol: intro_seg7_vertex_070036D0
+intro_seg7_vertex_070037D0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x37d0
+  size: 224
+  symbol: intro_seg7_vertex_070037D0
+intro_seg7_vertex_070038B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x38b0
+  size: 240
+  symbol: intro_seg7_vertex_070038B0
+intro_seg7_vertex_070039A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x39a0
+  size: 240
+  symbol: intro_seg7_vertex_070039A0
+intro_seg7_vertex_07003A90:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3a90
+  size: 256
+  symbol: intro_seg7_vertex_07003A90
+intro_seg7_vertex_07003B90:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3b90
+  size: 224
+  symbol: intro_seg7_vertex_07003B90
+intro_seg7_vertex_07003C70:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3c70
+  size: 240
+  symbol: intro_seg7_vertex_07003C70
+intro_seg7_vertex_07003D60:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3d60
+  size: 240
+  symbol: intro_seg7_vertex_07003D60
+intro_seg7_vertex_07003E50:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3e50
+  size: 240
+  symbol: intro_seg7_vertex_07003E50
+intro_seg7_vertex_07003F40:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x3f40
+  size: 224
+  symbol: intro_seg7_vertex_07003F40
+intro_seg7_vertex_07004020:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4020
+  size: 256
+  symbol: intro_seg7_vertex_07004020
+intro_seg7_vertex_07004120:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4120
+  size: 224
+  symbol: intro_seg7_vertex_07004120
+intro_seg7_vertex_07004200:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4200
+  size: 224
+  symbol: intro_seg7_vertex_07004200
+intro_seg7_vertex_070042E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x42e0
+  size: 256
+  symbol: intro_seg7_vertex_070042E0
+intro_seg7_vertex_070043E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x43e0
+  size: 224
+  symbol: intro_seg7_vertex_070043E0
+intro_seg7_vertex_070044C0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x44c0
+  size: 240
+  symbol: intro_seg7_vertex_070044C0
+intro_seg7_vertex_070045B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x45b0
+  size: 256
+  symbol: intro_seg7_vertex_070045B0
+intro_seg7_vertex_070046B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x46b0
+  size: 240
+  symbol: intro_seg7_vertex_070046B0
+intro_seg7_vertex_070047A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x47a0
+  size: 224
+  symbol: intro_seg7_vertex_070047A0
+intro_seg7_vertex_07004880:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4880
+  size: 240
+  symbol: intro_seg7_vertex_07004880
+intro_seg7_vertex_07004970:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4970
+  size: 240
+  symbol: intro_seg7_vertex_07004970
+intro_seg7_vertex_07004A60:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4a60
+  size: 240
+  symbol: intro_seg7_vertex_07004A60
+intro_seg7_vertex_07004B50:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4b50
+  size: 240
+  symbol: intro_seg7_vertex_07004B50
+intro_seg7_vertex_07004C40:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4c40
+  size: 240
+  symbol: intro_seg7_vertex_07004C40
+intro_seg7_vertex_07004D30:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4d30
+  size: 256
+  symbol: intro_seg7_vertex_07004D30
+intro_seg7_vertex_07004E30:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4e30
+  size: 240
+  symbol: intro_seg7_vertex_07004E30
+intro_seg7_vertex_07004F20:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x4f20
+  size: 240
+  symbol: intro_seg7_vertex_07004F20
+intro_seg7_vertex_07005010:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5010
+  size: 240
+  symbol: intro_seg7_vertex_07005010
+intro_seg7_vertex_07005100:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5100
+  size: 256
+  symbol: intro_seg7_vertex_07005100
+intro_seg7_vertex_07005200:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5200
+  size: 256
+  symbol: intro_seg7_vertex_07005200
+intro_seg7_vertex_07005300:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5300
+  size: 256
+  symbol: intro_seg7_vertex_07005300
+intro_seg7_vertex_07005400:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5400
+  size: 224
+  symbol: intro_seg7_vertex_07005400
+intro_seg7_vertex_070054E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x54e0
+  size: 224
+  symbol: intro_seg7_vertex_070054E0
+intro_seg7_vertex_070055C0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x55c0
+  size: 240
+  symbol: intro_seg7_vertex_070055C0
+intro_seg7_vertex_070056B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x56b0
+  size: 240
+  symbol: intro_seg7_vertex_070056B0
+intro_seg7_vertex_070057A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x57a0
+  size: 256
+  symbol: intro_seg7_vertex_070057A0
+intro_seg7_vertex_070058A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x58a0
+  size: 256
+  symbol: intro_seg7_vertex_070058A0
+intro_seg7_vertex_070059A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x59a0
+  size: 224
+  symbol: intro_seg7_vertex_070059A0
+intro_seg7_vertex_07005A80:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5a80
+  size: 256
+  symbol: intro_seg7_vertex_07005A80
+intro_seg7_vertex_07005B80:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5b80
+  size: 224
+  symbol: intro_seg7_vertex_07005B80
+intro_seg7_vertex_07005C60:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5c60
+  size: 240
+  symbol: intro_seg7_vertex_07005C60
+intro_seg7_vertex_07005D50:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5d50
+  size: 224
+  symbol: intro_seg7_vertex_07005D50
+intro_seg7_vertex_07005E30:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5e30
+  size: 240
+  symbol: intro_seg7_vertex_07005E30
+intro_seg7_vertex_07005F20:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x5f20
+  size: 240
+  symbol: intro_seg7_vertex_07005F20
+intro_seg7_vertex_07006010:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6010
+  size: 240
+  symbol: intro_seg7_vertex_07006010
+intro_seg7_vertex_07006100:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6100
+  size: 224
+  symbol: intro_seg7_vertex_07006100
+intro_seg7_vertex_070061E0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x61e0
+  size: 240
+  symbol: intro_seg7_vertex_070061E0
+intro_seg7_vertex_070062D0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x62d0
+  size: 240
+  symbol: intro_seg7_vertex_070062D0
+intro_seg7_vertex_070063C0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x63c0
+  size: 240
+  symbol: intro_seg7_vertex_070063C0
+intro_seg7_vertex_070064B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x64b0
+  size: 256
+  symbol: intro_seg7_vertex_070064B0
+intro_seg7_vertex_070065B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x65b0
+  size: 224
+  symbol: intro_seg7_vertex_070065B0
+intro_seg7_vertex_07006690:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6690
+  size: 224
+  symbol: intro_seg7_vertex_07006690
+intro_seg7_vertex_07006770:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6770
+  size: 224
+  symbol: intro_seg7_vertex_07006770
+intro_seg7_vertex_07006850:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6850
+  size: 240
+  symbol: intro_seg7_vertex_07006850
+intro_seg7_vertex_07006940:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6940
+  size: 240
+  symbol: intro_seg7_vertex_07006940
+intro_seg7_vertex_07006A30:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6a30
+  size: 144
+  symbol: intro_seg7_vertex_07006A30
+intro_seg7_vertex_07006AC0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6ac0
+  size: 256
+  symbol: intro_seg7_vertex_07006AC0
+intro_seg7_vertex_07006BC0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6bc0
+  size: 256
+  symbol: intro_seg7_vertex_07006BC0
+intro_seg7_vertex_07006CC0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6cc0
+  size: 256
+  symbol: intro_seg7_vertex_07006CC0
+intro_seg7_vertex_07006DC0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6dc0
+  size: 240
+  symbol: intro_seg7_vertex_07006DC0
+intro_seg7_vertex_07006EB0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6eb0
+  size: 256
+  symbol: intro_seg7_vertex_07006EB0
+intro_seg7_vertex_07006FB0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x6fb0
+  size: 256
+  symbol: intro_seg7_vertex_07006FB0
+intro_seg7_vertex_070070B0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x70b0
+  size: 240
+  symbol: intro_seg7_vertex_070070B0
+intro_seg7_vertex_070071A0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x71a0
+  size: 224
+  symbol: intro_seg7_vertex_070071A0
+intro_seg7_vertex_07007280:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7280
+  size: 240
+  symbol: intro_seg7_vertex_07007280
+intro_seg7_vertex_07007370:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7370
+  size: 256
+  symbol: intro_seg7_vertex_07007370
+intro_seg7_vertex_07007470:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7470
+  size: 240
+  symbol: intro_seg7_vertex_07007470
+intro_seg7_vertex_07007560:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7560
+  size: 240
+  symbol: intro_seg7_vertex_07007560
+intro_seg7_vertex_07007650:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7650
+  size: 240
+  symbol: intro_seg7_vertex_07007650
+intro_seg7_vertex_07007740:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7740
+  size: 240
+  symbol: intro_seg7_vertex_07007740
+intro_seg7_vertex_07007830:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7830
+  size: 240
+  symbol: intro_seg7_vertex_07007830
+intro_seg7_vertex_07007920:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7920
+  size: 256
+  symbol: intro_seg7_vertex_07007920
+intro_seg7_vertex_07007A20:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7a20
+  size: 256
+  symbol: intro_seg7_vertex_07007A20
+intro_seg7_vertex_07007B20:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7b20
+  size: 240
+  symbol: intro_seg7_vertex_07007B20
+intro_seg7_vertex_07007C10:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7c10
+  size: 224
+  symbol: intro_seg7_vertex_07007C10
+intro_seg7_vertex_07007CF0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7cf0
+  size: 256
+  symbol: intro_seg7_vertex_07007CF0
+intro_seg7_vertex_07007DF0:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0x7df0
+  size: 176
+  symbol: intro_seg7_vertex_07007DF0
+intro_seg7_dl_07008EA0:
+  type: GFX
+  mio0: 0x26A3A0
+  offset: 0x8ea0
+  symbol: intro_seg7_dl_07008EA0
+intro_seg7_dl_07009E38:
+  type: GFX
+  mio0: 0x26A3A0
+  offset: 0x9e38
+  symbol: intro_seg7_dl_07009E38
+intro_seg7_dl_0700ADC0:
+  type: GFX
+  mio0: 0x26A3A0
+  offset: 0xadc0
+  symbol: intro_seg7_dl_0700ADC0
+intro_seg7_dl_0700B3A0:
+  type: GFX
+  mio0: 0x26A3A0
+  offset: 0xb3a0
+  symbol: intro_seg7_dl_0700B3A0
+intro_seg7_vertex_0700B420:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xb420
+  size: 64
+  symbol: intro_seg7_vertex_0700B420
+intro_seg7_vertex_0700B460:
+  type: VTX
+  mio0: 0x26A3A0
+  offset: 0xb460
+  size: 64
+  symbol: intro_seg7_vertex_0700B460
+intro_seg7_dl_0700C6A0:
+  type: GFX
+  mio0: 0x26A3A0
+  offset: 0xc6a0
+  symbol: intro_seg7_dl_0700C6A0

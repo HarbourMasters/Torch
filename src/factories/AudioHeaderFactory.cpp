@@ -3,8 +3,8 @@
 #include <vector>
 #include "audio/AudioManager.h"
 
-bool AudioHeaderFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
+std::optional<std::shared_ptr<IParsedData>> AudioHeaderFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
     AudioManager::Instance = new AudioManager();
     AudioManager::Instance->initialize(buffer, data);
-    return false;
+    return std::nullopt;
 }

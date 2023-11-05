@@ -7,8 +7,11 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
     auto symbol = node["symbol"].as<std::string>();
 
     write << "Vtx " << symbol << "[] = {\n" << tab;
-    for(auto v : vtx->mVtxs) {
-        write << "{{{" << v.ob[0] << ", " << v.ob[1] << ", " << v.ob[2] << "}, " << v.flag << ", {" << v.tc[0] << ", " << v.tc[1] << "}, {" << v.cn[0] << ", " << v.cn[1] << ", " << v.cn[2] << ", " << v.cn[3] << "}}},\n" << tab;
+    for (int i = 0; i < vtx->mVtxs.size(); ++i) {
+        auto v = vtx->mVtxs[i];
+        write << "{{{" << v.ob[0] << ", " << v.ob[1] << ", " << v.ob[2] << "}, " << v.flag << ", {" << v.tc[0] << ", " << v.tc[1] << "}, {" << v.cn[0] << ", " << v.cn[1] << ", " << v.cn[2] << ", " << v.cn[3] << "}}},\n";
+        if(i <= vtx->mVtxs.size() - 2)
+            write << tab;
     }
     write << "};\n";
 }
@@ -31,6 +34,8 @@ void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
         writer.Write(v.cn[2]);
         writer.Write(v.cn[3]);
     }
+
+    writer.Finish(write);
 }
 
 std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

@@ -2,24 +2,18 @@
 
 #include "storm/SWrapper.h"
 #include "utils/MIODecoder.h"
-//#include "factories/debug/MIO0Factory.h"
-//#include "factories/AudioHeaderFactory.h"
-//#include "factories/SequenceFactory.h"
-//#include "factories/SampleFactory.h"
-//#include "factories/BankFactory.h"
-//#include "factories/TextureFactory.h"
-//#include "factories/sm64/SAnimFactory.h"
-//#include "factories/sm64/STextFactory.h"
-//#include "factories/sm64/SDialogFactory.h"
-//#include "factories/sm64/SDictionaryFactory.h"
-//#include "factories/DisplayListFactory.h"
-//#include "factories/VerticeFactory.h"
-//#include "factories/sm64/SGeoFactory.h"
-//#include "factories/GfxFactory.h"
-#include "new_factories/VtxFactory.h"
-#include "new_factories/TextureFactory.h"
-#include "new_factories/DisplayListFactory.h"
-#include "new_factories/BlobFactory.h"
+#include "factories/sm64/AnimationFactory.h"
+#include "factories/sm64/DialogFactory.h"
+#include "factories/sm64/DictionaryFactory.h"
+#include "factories/sm64/TextFactory.h"
+#include "factories/BankFactory.h"
+#include "factories/AudioHeaderFactory.h"
+#include "factories/SampleFactory.h"
+#include "factories/SequenceFactory.h"
+#include "factories/VtxFactory.h"
+#include "factories/TextureFactory.h"
+#include "factories/DisplayListFactory.h"
+#include "factories/BlobFactory.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
@@ -39,24 +33,17 @@ void Companion::Init(ExportType type) {
     this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
     this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
     this->RegisterFactory("GFX", std::make_shared<DListFactory>());
-//    this->RegisterFactory("AUDIO:HEADER", new AudioHeaderFactory());
-//    this->RegisterFactory("SEQUENCE", new SequenceFactory());
-//    this->RegisterFactory("SAMPLE", new SampleFactory());
-//    this->RegisterFactory("BANK", new BankFactory());
-//
-//    this->RegisterFactory("GFX", new GfxFactory());
-//    this->RegisterFactory("DISPLAY_LIST", new DisplayListFactory());
-//    this->RegisterFactory("VTX", new VerticeFactory());
-//
-//    // SM64 specific
-//    this->RegisterFactory("SM64:DIALOG", new SDialogFactory());
-//    this->RegisterFactory("SM64:ANIM", new SAnimFactory());
-//    this->RegisterFactory("SM64:TEXT", new STextFactory());
-//    this->RegisterFactory("SM64:DICTIONARY", new SDictionaryFactory());
-//    this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
-//
-//    // Debug
-//    this->RegisterFactory("MIO0", new MIO0Factory());
+    this->RegisterFactory("AUDIO:HEADER", std::make_shared<AudioHeaderFactory>());
+    this->RegisterFactory("SEQUENCE", std::make_shared<SequenceFactory>());
+    this->RegisterFactory("SAMPLE", std::make_shared<SampleFactory>());
+    this->RegisterFactory("BANK", std::make_shared<BankFactory>());
+
+    // SM64 specific
+    this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
+    this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
+    this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
+    this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
+    // this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
 
     this->Process();
 }
@@ -109,6 +96,7 @@ void Companion::Process() {
         YAML::Node root = YAML::LoadFile(entry.path().string());
         auto directory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = entry.path().string();
+        std::ostringstream headerStr;
 
         for(auto asset = root.begin(); asset != root.end(); asset++){
             auto node = asset->second;
@@ -154,18 +142,24 @@ void Companion::Process() {
 
             std::string output;
             std::ostringstream stream;
-            exporter->get()->Export(stream, result.value(), entryName, asset->second, &entryName);
 
             switch (gExporterType) {
+                case ExportType::Header: {
+                    output = (directory / entryName).string();
+                    exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
+                    headerStr << stream.str() << "\n";
+                    break;
+                }
                 case ExportType::Code: {
                     output = (directory / entryName).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
                     std::string dpath = "code/" + output;
-                    auto symbol = asset->second["symbol"].as<std::string>();
 
                     if(!fs::exists(fs::path(dpath).parent_path())){
                         fs::create_directories(fs::path(dpath).parent_path());
                     }
+
+                    exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
                     std::ofstream file(dpath + ".inc.c", std::ios::binary);
                     file << stream.str();
                     file.close();
@@ -174,12 +168,29 @@ void Companion::Process() {
                 case ExportType::Binary: {
                     output = (directory / entryName).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
-                    wrapper.CreateFile(output, std::vector<char>(stream.str().begin(), stream.str().end()));
+
+                    exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
+                    auto data = stream.str();
+                    wrapper.CreateFile(output, std::vector<char>(data.begin(), data.end()));
                     break;
                 }
             }
 
             SPDLOG_INFO("Processed {}", output);
+        }
+
+        if(gExporterType == ExportType::Header){
+            std::string output = relative(entry.path(), path).replace_extension(".h").string();
+            std::replace(output.begin(), output.end(), '\\', '/');
+            std::string dpath = "headers/" + output;
+
+            if(!fs::exists(fs::path(dpath).parent_path())){
+                fs::create_directories(fs::path(dpath).parent_path());
+            }
+
+            std::ofstream file(dpath, std::ios::binary);
+            file << headerStr.str();
+            file.close();
         }
     }
 

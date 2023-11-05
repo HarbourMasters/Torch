@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../new_factories/BaseFactory.h"
+#include "../factories/BaseFactory.h"
 
 class RawBuffer : public IParsedData {
 public:

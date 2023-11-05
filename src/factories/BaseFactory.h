@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../factories/ResourceType.h"
+#include "ResourceType.h"
 #include "n64/Cartridge.h"
 #include <cstdint>
 #include <iostream>
@@ -17,12 +17,12 @@
 #define SEGMENT_OFFSET(a) ((uint32_t)(a)&0x00FFFFFF)
 #define SEGMENT_NUMBER(x) ((x >> 24) & 0xFF)
 
-#define WRITE_HEADER(type, version) this->WriteHeader(writer, type, version)
 #define tab "\t"
 
 enum class ExportType {
+    Header,
     Code,
-    Binary
+    Binary,
 };
 
 class IParsedData {};
@@ -35,7 +35,6 @@ public:
 
 class BaseExporter {
 public:
-    bool otr = false;
     virtual void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) = 0;
     static void WriteHeader(LUS::BinaryWriter& write, LUS::ResourceType resType, int32_t version);
 };

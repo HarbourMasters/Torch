@@ -8,6 +8,7 @@ debug/
 !src/factories/debug/
 *.z64
 *.n64
+headers/
 build/
 code/
 .vscode/

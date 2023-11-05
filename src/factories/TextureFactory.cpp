@@ -1,6 +1,7 @@
 #include "TextureFactory.h"
 #include "utils/MIODecoder.h"
 #include "spdlog/spdlog.h"
+#include "Companion.h"
 #include <iomanip>
 
 static const std::unordered_map <std::string, TextureType> gTextureTypes = {
@@ -20,7 +21,7 @@ uint8_t* alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
     int32_t inPos;
     uint16_t bitMask;
     int16_t outPos = 0;
-    uint8_t* out = new uint8_t[width * height];
+    auto out = new uint8_t[width * height];
 
     for (inPos = 0; inPos < (width * height) / 16; inPos++) {
         bitMask = 0x8000;
@@ -38,6 +39,22 @@ uint8_t* alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
     }
 
     return out;
+}
+
+void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
+
+    auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+
+    if(Companion::Instance->IsOTRMode()){
+        write << "static const Texture " << symbol << " = \"__OTR__" << (*replacement) << "\";\n";
+        return;
+    }
+
+    write << "ALIGNED8 static const Texture " << symbol << " = {\n";
+    write << tab << "#include \"" << (*replacement) << ".inc.c\"\n";
+    write << "};\n";
+
 }
 
 void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
@@ -105,6 +122,11 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     SPDLOG_INFO("Texture: {} {}x{} {}", format, width, height, size);
     SPDLOG_INFO("Offset: {}", offset);
     SPDLOG_INFO("Has MIO0: {}", node["mio0"] ? "true" : "false");
+    SPDLOG_INFO("Size: {}", result.size());
+
+    if(result.size() == 0){
+        return std::nullopt;
+    }
 
     return std::make_shared<TextureData>(type, width, height, result);
 }

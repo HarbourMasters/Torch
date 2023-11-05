@@ -32,6 +32,11 @@ bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
     char* raw = (char*) data.data();
     size_t size = data.size();
 
+    if(size == 0){
+        std::cout << "File empty: " << path << std::endl;
+        return false;
+    }
+
     if(size >> 32){
         std::cout << "File too large: " << path << std::endl;
         return false;

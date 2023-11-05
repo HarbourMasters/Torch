@@ -6,12 +6,24 @@
 Companion* Companion::Instance;
 
 void BindOTRMode(CLI::App& app){
-    auto otr = app.add_subcommand("otr", "Extracts the rom to a folder");
+    auto otr = app.add_subcommand("generate", "Extracts the rom");
+    std::string mode;
     std::string filename;
-    otr->add_option("rom", filename, "sm64 us rom")->required()->check(CLI::ExistingFile);
+    bool otrMode = false;
+    otr->add_option("mode", mode, "extract mode")->required();
+    otr->add_option("rom", filename, "n64 rom")->required()->check(CLI::ExistingFile);
+    otr->add_flag("-o,--otr", otrMode, "OTR Mode");
     otr->parse_complete_callback([&]() {
-        auto instance = Companion::Instance = new Companion(filename);
-        instance->Init(ExportType::Code);
+        auto instance = Companion::Instance = new Companion(filename, otrMode);
+        if(mode == "header") {
+            instance->Init(ExportType::Header);
+        } else if(mode == "code") {
+            instance->Init(ExportType::Code);
+        } else if(mode == "binary") {
+            instance->Init(ExportType::Binary);
+        } else {
+            std::cout << "Invalid mode: " << mode << std::endl;
+        }
     });
 }
 
