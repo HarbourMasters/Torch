@@ -4,13 +4,9 @@
 #include "spdlog/spdlog.h"
 #include <iostream>
 #include <string>
-#include <fstream>  // for file stream
+#include <fstream>
 
 namespace fs = std::filesystem;
-
-typedef short s16;
-typedef unsigned short u16;
-typedef unsigned char u8;
 
 #define str(value) std::to_string(value)
 
@@ -41,27 +37,30 @@ bool VerticeFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::v
 
     std::string text = "";
 
+    // Beginning of displaylist
     text += "Vtx "+ name + "[] = {\n";
 
     for (size_t i = 0; i < numVerts; i++) {
-        s16 x = BSWAP16(vtx[i].v.ob[0]);
-        s16 y = BSWAP16(vtx[i].v.ob[1]);
-        s16 z = BSWAP16(vtx[i].v.ob[2]);
+        auto x = str(BSWAP16(vtx[i].v.ob[0]));
+        auto y = str(BSWAP16(vtx[i].v.ob[1]));
+        auto z = str(BSWAP16(vtx[i].v.ob[2]));
 
-        u16 flag = BSWAP16(vtx[i].v.flag);
-        s16 tc1   = BSWAP16(vtx[i].v.tc[0]);
-        s16 tc2   = BSWAP16(vtx[i].v.tc[1]);
+        auto flag = str(BSWAP16(vtx[i].v.flag));
+        auto tc1   = str(BSWAP16(vtx[i].v.tc[0]));
+        auto tc2   = str(BSWAP16(vtx[i].v.tc[1]));
 
-        u8 cn1    = vtx[i].v.cn[0];
-        u8 cn2    = vtx[i].v.cn[1];
-        u8 cn3    = vtx[i].v.cn[2];
-        u8 cn4    = vtx[i].v.cn[3];
+        auto cn1    = str(vtx[i].v.cn[0]);
+        auto cn2    = str(vtx[i].v.cn[1]);
+        auto cn3    = str(vtx[i].v.cn[2]);
+        auto cn4    = str(vtx[i].v.cn[3]);
 
-        text += "    {{ " + str(x) + ", " + str(y) + ", " + str(z) + "}, " + str(flag) + ", {" + str(tc1) + ", " + str(tc2) + "}, ";
+        text += "    ";
 
-        text += "{ 0x" + str(cn1) + ", " + "0x" + str(cn2) + ", 0x" + str(cn3) + ", 0x" + str(cn4) + " }}},\n";        
+        // {{{ x, y, z}, 0, { t1, t2 }, { c1, c2, c3, c4 }}},
+        text += "{{{ "+x+", "+y+", "+z+ "}, "+flag+", { "+tc1+", "+tc2+" }, { 0x"+cn1+ ", "+"0x"+cn2+", 0x"+cn3+", 0x"+cn4+" }}},\n";        
     }
 
+    // End of displaylist
     text += ("};\n");
 
 	WriteAllText("out.txt", text);
