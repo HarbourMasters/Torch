@@ -38,11 +38,11 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
     char out[5000] = {0};
     auto mio0 = node["mio0"].as<size_t>();
     auto offset = node["offset"].as<size_t>();
+	auto symbol = node["symbol"].as<std::string>();
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
 
 	uint32_t *gfx = (uint32_t *) (decoded.data() + offset);
-
 
 	// Calculate size of displaylist, end on 0xB800000000000000
 	size_t i = 0;
@@ -60,7 +60,7 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
 	gfxd_target(gfxd_f3dex);
 
 	// Opening brace
-	gfxd_puts("Gfx myPtr[] = {\n");
+	gfxd_puts(("Gfx "+symbol+"[] = {\n").c_str());
 	// Parse displaylists
 	gfxd_execute();
 	// Closing brace

@@ -5,6 +5,7 @@ startup_logo/startup_logo:
   offset: 0
   mio0: 0x825800
 startup_logo/dl1: # not implemented yet
+  symbol: startup_logo_dl
   type: gfx
   mio0: 0x825800
   offset: 0x2B00
