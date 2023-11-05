@@ -27,7 +27,7 @@ bool VerticeFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::v
     auto mio0 = node["mio0"].as<size_t>();
     auto offset = node["offset"].as<size_t>();
     auto numVerts = node["size"].as<size_t>();
-    auto name = node["name"].as<std::string>();
+    auto name = node["symbol"].as<std::string>();
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
 
