@@ -1,7 +1,7 @@
 startup_logo:
   symbol: startup_logo
   type: vtx
-  size: 688
+  count: 688
   offset: 0x0
   mio0: 0x825800
 dl1:
@@ -47,8 +47,8 @@ dl8:
 startup_logo2:
   symbol: startup_logo2
   type: vtx
-  size: 1093
-  offset: 0x0
+  count: 1093
+  offset: 0x3538
   mio0: 0x825800
 dl9:
   symbol: startup_logo_dl9

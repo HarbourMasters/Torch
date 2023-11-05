@@ -18,6 +18,7 @@
 #define SEGMENT_NUMBER(x) ((x >> 24) & 0xFF)
 
 #define tab "\t"
+#define fourSpaceTab "    "
 
 enum class ExportType {
     Header,

@@ -3,15 +3,33 @@
 #include <iomanip>
 
 void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    auto vtx = std::static_pointer_cast<VtxData>(raw);
+    auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
     auto symbol = node["symbol"].as<std::string>();
 
-    write << "Vtx " << symbol << "[] = {\n" << tab;
-    for (int i = 0; i < vtx->mVtxs.size(); ++i) {
-        auto v = vtx->mVtxs[i];
-        write << "{{{" << v.ob[0] << ", " << v.ob[1] << ", " << v.ob[2] << "}, " << v.flag << ", {" << v.tc[0] << ", " << v.tc[1] << "}, {" << v.cn[0] << ", " << v.cn[1] << ", " << v.cn[2] << ", " << v.cn[3] << "}}},\n";
-        if(i <= vtx->mVtxs.size() - 2)
-            write << tab;
+    write << "Vtx " << symbol << "[] = {\n";
+
+    for (int i = 0; i < vtx.size(); ++i) {
+        auto v = vtx[i];
+
+        auto x = v.ob[0];
+        auto y = v.ob[1];
+        auto z = v.ob[2];
+
+        auto flag = v.flag;
+
+        auto tc1 = v.tc[0];
+        auto tc2 = v.tc[1];
+
+        auto c1 = v.cn[0];
+        auto c2 = v.cn[1];
+        auto c3 = v.cn[2];
+        auto c4 = v.cn[3];
+
+        write << fourSpaceTab;
+
+        // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
+        write << "{{{" << x << ", " << y << ", " << z << "}, " << flag << ", {" << tc1 << ", " << tc2 << "}, {" << c1 << ", " << c2 << ", " << c3 << ", " << c4 << "}}},\n";
+
     }
     write << "};\n";
 }
@@ -40,16 +58,17 @@ void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
 std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto mio0 = node["mio0"].as<size_t>();
-    auto offset = node["offset"].as<size_t>();
-    auto size = node["size"].as<size_t>();
+    auto offset = node["offset"].as<uint32_t>();
+    auto count = node["count"].as<size_t>();
     auto symbol = node["symbol"].as<std::string>();
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
-    LUS::BinaryReader reader(decoded.data() + offset, size);
-    reader.SetEndianness(LUS::Endianness::Big);
-    std::vector<VtxRaw> vtxs;
+    LUS::BinaryReader reader(decoded.data() + offset, (count * sizeof(VtxRaw)) );
 
-    for(size_t i = 0; i < size; i += 0x10) {
+    reader.SetEndianness(LUS::Endianness::Big);
+    std::vector<VtxRaw> vertices;
+
+    for(size_t i = 0; i < count; i++) {
         auto x = reader.ReadInt16();
         auto y = reader.ReadInt16();
         auto z = reader.ReadInt16();
@@ -61,10 +80,10 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
         auto cn3 = reader.ReadUByte();
         auto cn4 = reader.ReadUByte();
 
-        vtxs.push_back(VtxRaw({
+        vertices.push_back(VtxRaw({
            {x, y, z}, flag, {tc1, tc2}, {cn1, cn2, cn3, cn4}
        }));
     }
 
-    return std::make_shared<VtxData>(vtxs);
+    return std::make_shared<VtxData>(vertices);
 }
