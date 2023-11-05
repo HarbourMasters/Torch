@@ -14,11 +14,6 @@ typedef unsigned char u8;
 
 #define str(value) std::to_string(value)
 
-// Byte swap a 16-bit unsigned integer
-std::uint16_t SwapBytes(std::uint16_t value) {
-    return ((value >> 8) & 0x00FF) | ((value << 8) & 0xFF00);
-}
-
 void WriteAllText(const std::string& filename, const std::string& text) {
     std::ofstream outputFile(filename);
 
@@ -49,13 +44,13 @@ bool VerticeFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::v
     text += "Vtx "+ name + "[] = {\n";
 
     for (size_t i = 0; i < numVerts; i++) {
-        s16 x = SwapBytes(vtx[i].v.ob[0]);
-        s16 y = SwapBytes(vtx[i].v.ob[1]);
-        s16 z = SwapBytes(vtx[i].v.ob[2]);
+        s16 x = BSWAP16(vtx[i].v.ob[0]);
+        s16 y = BSWAP16(vtx[i].v.ob[1]);
+        s16 z = BSWAP16(vtx[i].v.ob[2]);
 
-        u16 flag = SwapBytes(vtx[i].v.flag);
-        s16 tc1   = SwapBytes(vtx[i].v.tc[0]);
-        s16 tc2   = SwapBytes(vtx[i].v.tc[1]);
+        u16 flag = BSWAP16(vtx[i].v.flag);
+        s16 tc1   = BSWAP16(vtx[i].v.tc[0]);
+        s16 tc2   = BSWAP16(vtx[i].v.tc[1]);
 
         u8 cn1    = vtx[i].v.cn[0];
         u8 cn2    = vtx[i].v.cn[1];
