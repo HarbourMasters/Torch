@@ -43,6 +43,10 @@ uint8_t* alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
 void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
 
+    auto format = node["format"].as<std::string>();
+    std::transform(format.begin(), format.end(), format.begin(), ::tolower);
+    (*replacement) += "." + format;
+
     write << "u8 " << node["symbol"] << "[] = {\n" << tab;
     for (int i = 0; i < data.size(); i++) {
         if ((i % 15 == 0) && i != 0) {

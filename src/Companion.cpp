@@ -124,9 +124,6 @@ void Companion::Process() {
             std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
             auto entryName = asset->first.as<std::string>();
-            auto output = (directory / entryName).string();
-            std::replace(output.begin(), output.end(), '\\', '/');
-
             auto factory = this->GetFactory(type);
             if(!factory.has_value()){
                 SPDLOG_ERROR("No factory found for {}", asset->first.as<std::string>());
@@ -151,23 +148,29 @@ void Companion::Process() {
                 continue;
             }
 
+
+            std::string output;
+            std::ostringstream stream;
+            exporter->get()->Export(stream, result.value(), entryName, asset->second, &entryName);
+
             switch (gExporterType) {
                 case ExportType::Code: {
+                    output = (directory / entryName).string();
+                    std::replace(output.begin(), output.end(), '\\', '/');
                     std::string dpath = "code/" + output;
 
                     if(!fs::exists(fs::path(dpath).parent_path())){
                         fs::create_directories(fs::path(dpath).parent_path());
                     }
-
-                    std::ofstream stream(dpath + ".inc.c", std::ios::binary);
-                    exporter->get()->Export(stream, result.value(), entryName, asset->second, nullptr);
-                    stream.close();
+                    std::ofstream file(dpath + ".inc.c", std::ios::binary);
+                    file << stream.str();
+                    file.close();
                     break;
                 }
                 case ExportType::Binary: {
-                    std::ostringstream buf;
-                    exporter->get()->Export(buf, result.value(), entryName, asset->second, nullptr);
-                    wrapper.CreateFile(output, std::vector<char>(buf.str().begin(), buf.str().end()));
+                    output = (directory / entryName).string();
+                    std::replace(output.begin(), output.end(), '\\', '/');
+                    wrapper.CreateFile(output, std::vector<char>(stream.str().begin(), stream.str().end()));
                     break;
                 }
             }
