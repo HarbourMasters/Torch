@@ -14,6 +14,7 @@
 #include "factories/TextureFactory.h"
 #include "factories/DisplayListFactory.h"
 #include "factories/BlobFactory.h"
+#include "factories/LightsFactory.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
@@ -32,6 +33,7 @@ void Companion::Init(ExportType type) {
     this->RegisterFactory("BLOB", std::make_shared<BlobFactory>());
     this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
     this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
+    this->RegisterFactory("LIGHTS", std::make_shared<LightsFactory>());
     this->RegisterFactory("GFX", std::make_shared<DListFactory>());
     this->RegisterFactory("AUDIO:HEADER", std::make_shared<AudioHeaderFactory>());
     this->RegisterFactory("SEQUENCE", std::make_shared<SequenceFactory>());
