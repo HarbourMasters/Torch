@@ -46,11 +46,11 @@ bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vecto
 
 	// Calculate size of displaylist, end on 0xB800000000000000
 	size_t i = 0;
-	while((gfx[i]) != 0x000000B8 && gfx[i + 1] != 0) {
-		printf("Byte %d: 0x%X\n", (int)i, gfx[i]);
-		i += 1;
-	}
-	printf("count: %d\n\n", (int)i);
+	// while((gfx[i]) != 0x000000B8 && gfx[i + 1] != 0) {
+	// 	printf("Byte %d: 0x%X\n", (int)i, gfx[i]);
+	// 	i += 1;
+	// }
+	// printf("count: %d\n\n", (int)i);
 
 	gfxd_input_buffer(gfx, (i * sizeof(uint32_t)));
     gfxd_output_buffer(out, sizeof(out));
