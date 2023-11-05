@@ -56,7 +56,7 @@ bool VerticeFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::v
 
         text += "    ";
 
-        // {{{ x, y, z}, 0, { t1, t2 }, { c1, c2, c3, c4 }}},
+        // {{{ x, y, z}, f, { t1, t2 }, { c1, c2, c3, c4 }}},
         text += "{{{ "+x+", "+y+", "+z+ "}, "+flag+", { "+tc1+", "+tc2+" }, { 0x"+cn1+ ", "+"0x"+cn2+", 0x"+cn3+", 0x"+cn4+" }}},\n";        
     }
 
