@@ -36,31 +36,34 @@ static int macro_fn(void)
 
 bool GfxFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vector<uint8_t>& buffer) {
     char out[5000] = {0};
-    auto offset = node["offset"].as<size_t>();
     auto mio0 = node["mio0"].as<size_t>();
+    auto offset = node["offset"].as<size_t>();
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
-	uint32_t *data = (uint32_t *) (decoded.data() + offset);
 
-	uintptr_t i = 0;
-	// Calculate size
-	while((data[i]) != 0x000000B8) {
-		printf("Byte %d: 0x%X\n", i, data[i]);
+	uint32_t *gfx = (uint32_t *) (decoded.data() + offset);
+
+
+	// Calculate size, end on 0xB800000000000000
+	size_t i = 0;
+	while((gfx[i]) != 0x000000B8 && gfx[i + 1] != 0) {
+		printf("Byte %d: 0x%X\n", (int)i, gfx[i]);
 		i += 1;
 	}
-	printf("count: %d\n\n", i);
+	printf("count: %d\n\n", (int)i);
 
-	gfxd_input_buffer(data, (i * sizeof(uint32_t)));
+	gfxd_input_buffer(gfx, (i * sizeof(uint32_t)));
     gfxd_output_buffer(out, sizeof(out));
 
 	gfxd_endian(gfxd_endian_big, sizeof(uint32_t));
 	gfxd_macro_fn(macro_fn);
 	gfxd_target(gfxd_f3dex);
 
-	/* Opening brace */
+	// Opening brace
 	gfxd_puts("Gfx myPtr[] = {\n");
+	// Parse displaylists
 	gfxd_execute();
-	/* Closing brace */
+	// Closing brace
 	gfxd_puts("};\n");
     
     printf("\n\n");
