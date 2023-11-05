@@ -24,16 +24,14 @@ void WriteAllText(const std::string& filename, const std::string& text) {
 
 bool VerticeFactory::process(LUS::BinaryWriter* writer, YAML::Node& node, std::vector<uint8_t>& buffer) {
 
-    auto offset = node["offset"].as<size_t>();
     auto mio0 = node["mio0"].as<size_t>();
+    auto offset = node["offset"].as<size_t>();
     auto numVerts = node["size"].as<size_t>();
     auto name = node["name"].as<std::string>();
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
 
-    auto *data = decoded.data() + offset;
-
-    Vtx *vtx = reinterpret_cast<Vtx*>(data);
+    Vtx *vtx = reinterpret_cast<Vtx*>(decoded.data() + offset);
 
     std::string text = "";
 
