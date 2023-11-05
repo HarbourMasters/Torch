@@ -1,3 +1,0 @@
-[submodule "lib/gfxdis"]
-	path = lib/gfxdis
-	url = https://github.com/glankk/libgfxd
