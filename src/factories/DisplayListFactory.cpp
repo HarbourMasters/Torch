@@ -9,6 +9,20 @@
 #define C0(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
 #define C1(pos, width) ((w1 >> (pos)) & ((1U << width) - 1))
 
+void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+
+    if(Companion::Instance->IsOTRMode()){
+        write << "static const Gfx " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n";
+        return;
+    }
+
+    write << "ALIGNED8 static const Gfx " << symbol << "[] = {\n";
+    write << tab << "#include \"" << (*replacement) << ".inc.c\"\n";
+    write << "};\n";
+
+}
+
 void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     auto symbol = node["symbol"].as<std::string>();
@@ -42,6 +56,12 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     while (writer.GetBaseAddress() % 8 != 0)
         writer.Write((uint8_t)0xFF);
 
+    auto bhash = CRC64((*replacement).c_str());
+    writer.Write((uint32_t)(G_MARKER << 24));
+    writer.Write((uint32_t) 0xBEEFBEEF);
+    writer.Write((uint32_t)(bhash >> 32));
+    writer.Write((uint32_t)(bhash & 0xFFFFFFFF));
+
 #ifndef _WIN32
 #define case case (uint8_t)
 #endif
@@ -61,15 +81,19 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
                     // TODO: Find a better way to do this because its going to break on other games
                     Gfx value = { gsSPVertex(C0(10, 6), C0(16, 8) / 2, ptr) };
-                    w0 = value.words.w0 & 0x00FFFFFF;
-                    w0 += (G_SETTIMG_OTR_HASH << 24);
-                    w1 = 0;
+
+                    w0 = value.words.w0;
+                    w0 &= 0x00FFFFFF;
+                    w0 += (G_VTX_OTR_HASH << 24);
+                    w1 = value.words.w1;
 
                     writer.Write(w0);
                     writer.Write(w1);
 
                     w0 = hash >> 32;
                     w1 = hash & 0xFFFFFFFF;
+                } else {
+                    SPDLOG_INFO("Warning: Could not find vtx at 0x{:X}", ptr);
                 }
                 break;
             }
@@ -103,7 +127,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 Gfx value = { gsDPSetTextureImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr) };
                 w0 = value.words.w0 & 0x00FFFFFF;
                 w0 += (G_SETTIMG_OTR_HASH << 24);
-                w1 = value.words.w1;
+                w1 = 0;
 
                 writer.Write(w0);
                 writer.Write(w1);

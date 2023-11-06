@@ -98,7 +98,6 @@ void Companion::Process() {
         YAML::Node root = YAML::LoadFile(entry.path().string());
         auto directory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = entry.path().string();
-        std::ostringstream headerStr;
         std::ostringstream exportStr;
 
         for(auto asset = root.begin(); asset != root.end(); asset++){
@@ -150,15 +149,32 @@ void Companion::Process() {
                 case ExportType::Header: {
                     output = (directory / entryName).string();
                     exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
-                    headerStr << stream.str() << "\n";
+                    exportStr << stream.str() << "\n";
                     break;
                 }
                 case ExportType::Code: {
                     output = (directory / entryName).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
 
-                    exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
-                    exportStr << stream.str();
+                    // This specific format needs both header and code
+                    if(type == "TEXTURE"){
+                        std::string dpath = "code/" + output;
+                        if(!fs::exists(fs::path(dpath).parent_path())){
+                            fs::create_directories(fs::path(dpath).parent_path());
+                        }
+
+                        exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
+                        std::ofstream file(dpath + ".inc.c", std::ios::binary);
+                        file << stream.str();
+                        file.close();
+
+                        std::ostringstream hstream;
+                        factory->get()->GetExporter(ExportType::Header)->get()->Export(hstream, result.value(), entryName, asset->second, &output);
+                        exportStr << hstream.str() << std::endl;
+                    } else {
+                        exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
+                        exportStr << stream.str() << std::endl;
+                    }
                     break;
                 }
                 case ExportType::Binary: {
@@ -175,45 +191,18 @@ void Companion::Process() {
             SPDLOG_INFO("Processed {}", output);
         }
 
-        switch(gExporterType) {
-            case ExportType::Header: {
-                std::string output = (directory / "texture.inc.c").string();
-                std::replace(output.begin(), output.end(), '\\', '/');
-                std::string dpath = "/Volumes/Moon/dot/HM64/bkp/Ghostship/" + output;
+        if(gExporterType != ExportType::Binary){
+            std::string output = relative(entry.path(), path).replace_extension(".inc.c").string();
+            std::replace(output.begin(), output.end(), '\\', '/');
+            std::string dpath = "code/" + output;
 
-                if(!fs::exists(fs::path(dpath).parent_path())){
-                    fs::create_directories(fs::path(dpath).parent_path());
-                }
-
-                if(!fs::exists(dpath)){
-                    continue;
-                }
-
-                std::ofstream file(dpath, std::ios::binary);
-                file << headerStr.str();
-                file.close();
-                break;
-            }
-            case ExportType::Code: {
-                std::string output = (directory / "startup_logo.inc.c").string();
-                std::replace(output.begin(), output.end(), '\\', '/');
-                std::string dpath = "code/" + output;
-
-                if(!fs::exists(fs::path(dpath).parent_path())){
-                    fs::create_directories(fs::path(dpath).parent_path());
-                }
-
-                if(!fs::exists(dpath)){
-                    assert("Fail");
-                    continue;
-                }
-
-                std::ofstream file(dpath, std::ios::binary);
-                file << exportStr.str();
-                file.close();
-                break;
+            if(!fs::exists(fs::path(dpath).parent_path())){
+                fs::create_directories(fs::path(dpath).parent_path());
             }
 
+            std::ofstream file(dpath, std::ios::binary);
+            file << exportStr.str();
+            file.close();
         }
     }
 
