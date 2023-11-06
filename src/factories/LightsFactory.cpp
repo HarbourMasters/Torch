@@ -7,7 +7,7 @@ void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;
     auto symbol = node["symbol"].as<std::string>();
 
-    write << "Lights1 " << symbol << "[] = gdSPDefLights1(\n";
+    write << "Lights1 " << symbol << " = gdSPDefLights1 (\n";
 
     // Ambient
     auto r = (int16_t) light.a.l.col[0];
@@ -60,13 +60,14 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     auto r = reader.ReadInt8();
     auto g = reader.ReadInt8();
     auto b = reader.ReadInt8();
-
+    //auto nil = reader.ReadInt32();
     reader.Seek(5, LUS::SeekOffsetType::Current);
 
     // Diffuse copy
-    auto r2 = reader.ReadInt8();
-    auto g2 = reader.ReadInt8();
-    auto b2 = reader.ReadInt8();
+    auto r2 = reader.ReadUByte();
+    auto g2 = reader.ReadUByte();
+    auto b2 = reader.ReadUByte();
+
 
     reader.Seek(5, LUS::SeekOffsetType::Current);
 
@@ -74,7 +75,9 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     auto x = reader.ReadInt8();
     auto y = reader.ReadInt8();
     auto z = reader.ReadInt8();
-    lights = {r, g, b, r2, g2, b2, x, y, z};
+
+    // The struct has several copies/padding. The zeros skip those for gdSPDefLights1.
+    lights = {r, g, b, 0, 0, 0, 0, 0, r2, g2, b2, 0, 0, 0, 0, 0, x, y, z};
 
     return std::make_shared<LightsData>(lights);
 }
