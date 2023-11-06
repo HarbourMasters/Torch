@@ -182,12 +182,16 @@ void Companion::Process() {
         }
 
         if(gExporterType == ExportType::Header){
-            std::string output = relative(entry.path(), path).replace_extension(".h").string();
+            std::string output = (directory / "texture.inc.c").string();
             std::replace(output.begin(), output.end(), '\\', '/');
-            std::string dpath = "headers/" + output;
+            std::string dpath = "/Volumes/Moon/dot/HM64/bkp/Ghostship/" + output;
 
             if(!fs::exists(fs::path(dpath).parent_path())){
                 fs::create_directories(fs::path(dpath).parent_path());
+            }
+
+            if(!fs::exists(dpath)){
+                continue;
             }
 
             std::ofstream file(dpath, std::ios::binary);

@@ -1,5 +1,6 @@
 #include "LightsFactory.h"
 #include "utils/MIODecoder.h"
+#include "spdlog/spdlog.h"
 #include <iomanip>
 
 void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -9,21 +10,21 @@ void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     write << "Lights1 " << symbol << "[] = gdSPDefLights1(\n";
 
     // Ambient
-    auto r = light.a.l.col[0];
-    auto g = light.a.l.col[1];
-    auto b = light.a.l.col[2];
+    auto r = (int16_t) light.a.l.col[0];
+    auto g = (int16_t) light.a.l.col[1];
+    auto b = (int16_t) light.a.l.col[2];
 
     // Diffuse
-    auto r2 = light.l[0].l.col[0];
-    auto g2 = light.l[0].l.col[1];
-    auto b2 = light.l[0].l.col[2];
+    auto r2 = (int16_t) light.l[0].l.col[0];
+    auto g2 = (int16_t) light.l[0].l.col[1];
+    auto b2 = (int16_t) light.l[0].l.col[2];
 
     // Direction
-    auto x = light.l[0].l.dir[0];
-    auto y = light.l[0].l.dir[1];
-    auto z = light.l[0].l.dir[2];
+    auto x = (int16_t) light.l[0].l.dir[0];
+    auto y = (int16_t) light.l[0].l.dir[1];
+    auto z = (int16_t) light.l[0].l.dir[2];
 
-    printf("%X %X %X %X %X", r, g, b, r2, g2);
+    SPDLOG_INFO("Found light: {:X} {:X} {:X} {:X} {:X}", r, g, b, r2, g2);
 
     write << fourSpaceTab;
     write << r << ", " << g << ", " << b << ",\n";

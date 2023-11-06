@@ -47,11 +47,11 @@ void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
     auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const Texture " << symbol << " = \"__OTR__" << (*replacement) << "\";\n";
+        write << "static const Texture " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n";
         return;
     }
 
-    write << "ALIGNED8 static const Texture " << symbol << " = {\n";
+    write << "ALIGNED8 static const Texture " << symbol << "[] = {\n";
     write << tab << "#include \"" << (*replacement) << ".inc.c\"\n";
     write << "};\n";
 
