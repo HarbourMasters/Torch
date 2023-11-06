@@ -47,6 +47,11 @@ else()
     add_library(${PROJECT_NAME} SHARED ${SRC_DIR})
 endif()
 
+if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+endif()
+
 # Fetch Dependencies
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/binarytools)
 
