@@ -28,7 +28,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
-    gfxd_puts("};\n");
+    gfxd_puts("};\n\n");
 
     write << out;
 }

@@ -31,7 +31,7 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         write << "{{{" << x << ", " << y << ", " << z << "}, " << flag << ", {" << tc1 << ", " << tc2 << "}, {" << c1 << ", " << c2 << ", " << c3 << ", " << c4 << "}}},\n";
 
     }
-    write << "};\n";
+    write << "};\n\n";
 }
 
 void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

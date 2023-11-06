@@ -99,6 +99,7 @@ void Companion::Process() {
         auto directory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = entry.path().string();
         std::ostringstream headerStr;
+        std::ostringstream exportStr;
 
         for(auto asset = root.begin(); asset != root.end(); asset++){
             auto node = asset->second;
@@ -155,16 +156,9 @@ void Companion::Process() {
                 case ExportType::Code: {
                     output = (directory / entryName).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
-                    std::string dpath = "code/" + output;
-
-                    if(!fs::exists(fs::path(dpath).parent_path())){
-                        fs::create_directories(fs::path(dpath).parent_path());
-                    }
 
                     exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
-                    std::ofstream file(dpath + ".inc.c", std::ios::binary);
-                    file << stream.str();
-                    file.close();
+                    exportStr << stream.str();
                     break;
                 }
                 case ExportType::Binary: {
@@ -181,22 +175,45 @@ void Companion::Process() {
             SPDLOG_INFO("Processed {}", output);
         }
 
-        if(gExporterType == ExportType::Header){
-            std::string output = (directory / "texture.inc.c").string();
-            std::replace(output.begin(), output.end(), '\\', '/');
-            std::string dpath = "/Volumes/Moon/dot/HM64/bkp/Ghostship/" + output;
+        switch(gExporterType) {
+            case ExportType::Header: {
+                std::string output = (directory / "texture.inc.c").string();
+                std::replace(output.begin(), output.end(), '\\', '/');
+                std::string dpath = "/Volumes/Moon/dot/HM64/bkp/Ghostship/" + output;
 
-            if(!fs::exists(fs::path(dpath).parent_path())){
-                fs::create_directories(fs::path(dpath).parent_path());
+                if(!fs::exists(fs::path(dpath).parent_path())){
+                    fs::create_directories(fs::path(dpath).parent_path());
+                }
+
+                if(!fs::exists(dpath)){
+                    continue;
+                }
+
+                std::ofstream file(dpath, std::ios::binary);
+                file << headerStr.str();
+                file.close();
+                break;
+            }
+            case ExportType::Code: {
+                std::string output = (directory / "startup_logo.inc.c").string();
+                std::replace(output.begin(), output.end(), '\\', '/');
+                std::string dpath = "code/" + output;
+
+                if(!fs::exists(fs::path(dpath).parent_path())){
+                    fs::create_directories(fs::path(dpath).parent_path());
+                }
+
+                if(!fs::exists(dpath)){
+                    assert("Fail");
+                    continue;
+                }
+
+                std::ofstream file(dpath, std::ios::binary);
+                file << exportStr.str();
+                file.close();
+                break;
             }
 
-            if(!fs::exists(dpath)){
-                continue;
-            }
-
-            std::ofstream file(dpath, std::ios::binary);
-            file << headerStr.str();
-            file.close();
         }
     }
 
