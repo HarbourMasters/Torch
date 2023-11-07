@@ -157,7 +157,7 @@ void Companion::Process() {
                     std::replace(output.begin(), output.end(), '\\', '/');
 
                     // This specific format needs both header and code
-                    if(type == "TEXTURE"){
+                    if(type == "VTX"){
                         std::string dpath = "code/" + output;
                         if(!fs::exists(fs::path(dpath).parent_path())){
                             fs::create_directories(fs::path(dpath).parent_path());
@@ -168,9 +168,9 @@ void Companion::Process() {
                         file << stream.str();
                         file.close();
 
-                        std::ostringstream hstream;
-                        factory->get()->GetExporter(ExportType::Header)->get()->Export(hstream, result.value(), entryName, asset->second, &output);
-                        exportStr << hstream.str() << std::endl;
+//                        std::ostringstream hstream;
+//                        factory->get()->GetExporter(ExportType::Header)->get()->Export(hstream, result.value(), entryName, asset->second, &output);
+//                        exportStr << hstream.str() << std::endl;
                     } else {
                         exporter->get()->Export(stream, result.value(), entryName, asset->second, &output);
                         exportStr << stream.str() << std::endl;
@@ -198,6 +198,10 @@ void Companion::Process() {
 
             if(!fs::exists(fs::path(dpath).parent_path())){
                 fs::create_directories(fs::path(dpath).parent_path());
+            }
+
+            if(output.find("intro_seg7_vertex_07000E10") != std::string::npos){
+                SPDLOG_INFO("Found intro_seg7_vertex_07000E10");
             }
 
             std::ofstream file(dpath, std::ios::binary);

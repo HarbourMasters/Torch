@@ -7,17 +7,17 @@ void SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     auto anim = std::static_pointer_cast<AnimationData>(raw);
 
     WriteHeader(writer, LUS::ResourceType::Anim, 0);
-    writer.Write((uint16_t) anim->mFlags);
-    writer.Write((uint16_t) anim->mAnimYTransDivisor);
-    writer.Write((uint16_t) anim->mStartFrame);
-    writer.Write((uint16_t) anim->mLoopStart);
-    writer.Write((uint16_t) anim->mLoopEnd);
-    writer.Write((uint16_t) anim->mUnusedBoneCount);
-    writer.Write((uint32_t) anim->mLength);
+    writer.Write((int16_t) anim->mFlags);
+    writer.Write((int16_t) anim->mAnimYTransDivisor);
+    writer.Write((int16_t) anim->mStartFrame);
+    writer.Write((int16_t) anim->mLoopStart);
+    writer.Write((int16_t) anim->mLoopEnd);
+    writer.Write((int16_t) anim->mUnusedBoneCount);
+    writer.Write((uint64_t) anim->mLength);
 
     writer.Write((uint32_t) anim->mIndices.size());
     for (auto& index : anim->mIndices) {
-        writer.Write((uint16_t) index);
+        writer.Write((int16_t) index);
     }
 
     writer.Write((uint32_t) anim->mEntries.size());
@@ -42,9 +42,17 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
 	auto loopStart = header.ReadInt16();
 	auto loopEnd = header.ReadInt16();
 	auto unusedBoneCount = header.ReadInt16();
-    header.Read(sizeof(uint32_t) * 2);
+    header.ReadUInt32();
+    header.ReadUInt32();
 	auto length = header.ReadUInt32();
-    header.Close();
+
+    LUS::BinaryReader indices((char*) buffer.data() + indexNode["offset"].as<uint32_t>(), indexNode["size"].as<uint32_t>());
+    indices.SetEndianness(LUS::Endianness::Big);
+    size_t indexLength = indexNode["size"].as<uint32_t>() / sizeof(uint16_t);
+    std::vector<uint16_t> indicesData;
+    for (size_t i = 0; i < indexLength; i++) {
+        indicesData.push_back(indices.ReadInt16());
+    }
 
     LUS::BinaryReader values((char*) buffer.data() + valuesNode["offset"].as<uint32_t>(), valuesNode["size"].as<uint32_t>());
 	values.SetEndianness(LUS::Endianness::Big);
@@ -52,14 +60,6 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
     std::vector<uint16_t> valuesData;
     for (size_t i = 0; i < entries; i++) {
         valuesData.push_back(values.ReadUInt16());
-    }
-
-    LUS::BinaryReader indices((char*) buffer.data() + indexNode["offset"].as<uint32_t>(), indexNode["size"].as<uint32_t>());
-	values.SetEndianness(LUS::Endianness::Big);
-	size_t indexLength = indexNode["size"].as<uint32_t>() / sizeof(uint16_t);
-    std::vector<uint16_t> indicesData;
-    for (size_t i = 0; i < indexLength; i++) {
-        indicesData.push_back(values.ReadUInt16());
     }
 
     SPDLOG_INFO("Flags: {}", flags);

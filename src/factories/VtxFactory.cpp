@@ -20,10 +20,10 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         auto tc1 = v.tc[0];
         auto tc2 = v.tc[1];
 
-        auto c1 = v.cn[0];
-        auto c2 = v.cn[1];
-        auto c3 = v.cn[2];
-        auto c4 = v.cn[3];
+        auto c1 = (uint16_t) v.cn[0];
+        auto c2 = (uint16_t) v.cn[1];
+        auto c3 = (uint16_t) v.cn[2];
+        auto c4 = (uint16_t) v.cn[3];
 
         if(i <= vtx.size() - 2) {
             write << fourSpaceTab;
@@ -42,16 +42,16 @@ void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     WriteHeader(writer, LUS::ResourceType::Vertex, 0);
     writer.Write((uint32_t) vtx->mVtxs.size());
     for(auto v : vtx->mVtxs) {
-        writer.Write((int16_t) v.ob[0]);
-        writer.Write((int16_t) v.ob[1]);
-        writer.Write((int16_t) v.ob[2]);
-        writer.Write((int16_t) 0);
-        writer.Write((int16_t) v.tc[0]);
-        writer.Write((int16_t) v.tc[1]);
-        writer.Write((uint8_t) v.cn[0]);
-        writer.Write((uint8_t) v.cn[1]);
-        writer.Write((uint8_t) v.cn[2]);
-        writer.Write((uint8_t) v.cn[3]);
+        writer.Write(v.ob[0]);
+        writer.Write(v.ob[1]);
+        writer.Write(v.ob[2]);
+        writer.Write(v.flag);
+        writer.Write(v.tc[0]);
+        writer.Write(v.tc[1]);
+        writer.Write(v.cn[0]);
+        writer.Write(v.cn[1]);
+        writer.Write(v.cn[2]);
+        writer.Write(v.cn[3]);
     }
 
     writer.Finish(write);

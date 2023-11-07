@@ -49,7 +49,7 @@ async function main(){
                     type: 'VTX',
                     mio0: mio0,
                     offset: `0x${start.toString(16)}`,
-                    size: (end - start),
+                    count: (end - start) / 16,
                     symbol: name,
                 });
                 break;

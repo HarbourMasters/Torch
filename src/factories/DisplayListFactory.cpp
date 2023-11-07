@@ -1,13 +1,11 @@
 #include "DisplayListFactory.h"
 #include "utils/MIODecoder.h"
 #include "spdlog/spdlog.h"
-#include "n64/gbi.h"
 #include "Companion.h"
 #include <iomanip>
 #include <gfxd.h>
 
 #define C0(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
-#define C1(pos, width) ((w1 >> (pos)) & ((1U << width) - 1))
 
 void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
@@ -38,13 +36,29 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
         gfxd_puts(",\n");
         return 0;
     });
-    gfxd_target(gfxd_f3dex);
+    gfxd_target(gfxd_f3dex2);
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
     gfxd_puts("};\n\n");
 
     write << out;
+}
+
+void DebugDisplayList(uint32_t w0, uint32_t w1){
+    uint32_t dlist[] = {w0, w1};
+    gfxd_input_buffer(dlist, sizeof(dlist));
+    gfxd_output_fd(fileno(stdout));
+    gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
+    gfxd_macro_fn([](){
+        gfxd_puts("> ");
+        gfxd_macro_dflt();
+        gfxd_puts("\n");
+        return 0;
+    });
+    gfxd_target(gfxd_f3dex2);
+    gfxd_execute();
+    int bp = 0;
 }
 
 void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -76,15 +90,17 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 uint32_t ptr = SEGMENT_OFFSET(w1);
                 auto decl = Companion::Instance->GetNodeByAddr(ptr);
                 if(decl.has_value()){
+                    auto nvtx = (C0(0, 16)) / sizeof(Vtx);
+                    auto didx = C0(16, 4);
                     uint64_t hash = CRC64(std::get<0>(decl.value()).c_str());
                     SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(decl.value()));
 
                     // TODO: Find a better way to do this because its going to break on other games
-                    Gfx value = { gsSPVertex(C0(10, 6), C0(16, 8) / 2, ptr) };
+                    Gfx value = gsSPVertexOTR(nvtx, didx, ptr);
+
+                    SPDLOG_INFO("gsSPVertex({}, {}, 0x{:X})", nvtx, didx, ptr);
 
                     w0 = value.words.w0;
-                    w0 &= 0x00FFFFFF;
-                    w0 += (G_VTX_OTR_HASH << 24);
                     w1 = value.words.w1;
 
                     writer.Write(w0);
@@ -93,7 +109,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                     w0 = hash >> 32;
                     w1 = hash & 0xFFFFFFFF;
                 } else {
-                    SPDLOG_INFO("Warning: Could not find vtx at 0x{:X}", ptr);
+                    SPDLOG_WARN("Warning: Could not find vtx at 0x{:X}", ptr);
                 }
                 break;
             }
@@ -101,7 +117,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 auto ptr = SEGMENT_OFFSET(w1);
                 auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
-                Gfx value = { gsSPDisplayListOTRHash(ptr) };
+                Gfx value = gsSPDisplayListOTRHash(ptr);
                 w0 = value.words.w0;
                 w1 = value.words.w1;
 
@@ -114,9 +130,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                     w0 = hash >> 32;
                     w1 = hash & 0xFFFFFFFF;
                 } else {
-                    w0 = 0;
-                    w1 = 0;
-                    SPDLOG_INFO("Warning: Could not find display list at 0x{:X}", ptr);
+                    SPDLOG_WARN("Warning: Could not find display list at 0x{:X}", ptr);
                 }
                 break;
             }
@@ -124,10 +138,10 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 auto ptr = SEGMENT_OFFSET(w1);
                 auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
-                Gfx value = { gsDPSetTextureImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr) };
+                Gfx value = gsDPSetTextureImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
                 w0 = value.words.w0 & 0x00FFFFFF;
                 w0 += (G_SETTIMG_OTR_HASH << 24);
-                w1 = 0;
+                w1 = value.words.w1;
 
                 writer.Write(w0);
                 writer.Write(w1);
@@ -138,9 +152,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                     w0 = hash >> 32;
                     w1 = hash & 0xFFFFFFFF;
                 } else {
-                    w0 = 0;
-                    w1 = 0;
-                    SPDLOG_INFO("Warning: Could not find texture at 0x{:X}", ptr);
+                    SPDLOG_WARN("Warning: Could not find texture at 0x{:X}", ptr);
                 }
                 break;
             }
@@ -149,6 +161,8 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         
         writer.Write(w0);
         writer.Write(w1);
+        DebugDisplayList(w0, w1);
+
     }
 
     writer.Finish(write);

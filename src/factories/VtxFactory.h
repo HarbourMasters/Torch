@@ -6,7 +6,7 @@ struct VtxRaw {
     int16_t		ob[3];	/* x, y, z */
     uint16_t	flag;
     int16_t		tc[2];	/* texture coord */
-    uint16_t	cn[4];	/* color & alpha */
+    uint8_t	    cn[4];	/* color & alpha */
 };
 
 class VtxData : public IParsedData {
