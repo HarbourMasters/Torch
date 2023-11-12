@@ -55,7 +55,7 @@ void Companion::Init(const ExportType type) {
 
 void Companion::ExtractNode(std::ostringstream& stream, YAML::Node& node, std::string& name, SWrapper* binary) {
     auto type = node["type"].as<std::string>();
-    std::ranges::transform(type, type.begin(), toupper);
+    std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
     SPDLOG_INFO("Processing {} [{}]", name, type);
     auto factory = this->GetFactory(type);
@@ -79,7 +79,7 @@ void Companion::ExtractNode(std::ostringstream& stream, YAML::Node& node, std::s
     for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
         if(snd.second) continue;
         std::string doutput = (this->gCurrentDirectory / fst).string();
-        std::ranges::replace(doutput, '\\', '/');
+        std::replace(doutput.begin(), doutput.end(), '\\', '/');
         this->gAssetDependencies[this->gCurrentFile][fst].second = true;
         this->ExtractNode(stream, snd.first, doutput, binary);
     }
@@ -177,7 +177,7 @@ void Companion::Process() {
             if(!asset->second["offset"]) continue;
 
             auto output = (this->gCurrentDirectory / asset->first.as<std::string>()).string();
-            std::ranges::replace(output, '\\', '/');
+            std::replace(output.begin(), output.end(), '\\', '/');
 
             this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
         }
@@ -193,7 +193,7 @@ void Companion::Process() {
 
             auto entryName = asset->first.as<std::string>();
             std::string output = (this->gCurrentDirectory / entryName).string();
-            std::ranges::replace(output, '\\', '/');
+            std::replace(output.begin(), output.end(), '\\', '/');
 
             this->ExtractNode(stream, asset->second, output, wrapper);
         }
@@ -222,7 +222,7 @@ void Companion::Process() {
                 continue;
             }
 
-            std::ranges::replace(output, '\\', '/');
+            std::replace(output.begin(), output.end(), '\\', '/');
             if(!exists(fs::path(dpath).parent_path())){
                 create_directories(fs::path(dpath).parent_path());
             }
@@ -231,7 +231,7 @@ void Companion::Process() {
 
             if(gExporterType == ExportType::Header) {
                 std::string symbol = entry.path().stem();
-                std::ranges::transform(symbol, symbol.begin(), toupper);
+                std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
                 file << "#ifndef " << symbol << "_H" << std::endl;
                 file << "#define " << symbol << "_H" << std::endl << std::endl;
                 file << buffer;
@@ -289,7 +289,7 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
 
     for(auto& [path, data] : files){
         std::string normalized = path;
-        std::ranges::replace(normalized, '\\', '/');
+        std::replace(normalized.begin(), normalized.end(), '\\', '/');
         // Remove parent folder
         normalized = normalized.substr(folder.length() + 1);
         wrapper.CreateFile(normalized, data);
@@ -310,7 +310,7 @@ void Companion::RegisterAsset(const std::string& name, YAML::Node& node) {
     this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, false);
 
     auto output = (this->gCurrentDirectory / name).string();
-    std::ranges::replace(output, '\\', '/');
+    std::replace(output.begin(), output.end(), '\\', '/');
     this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
 }
 
