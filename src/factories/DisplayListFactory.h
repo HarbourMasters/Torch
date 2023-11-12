@@ -11,7 +11,7 @@ class DListData : public IParsedData {
 public:
     std::vector<uint32_t> mGfxs;
 
-    DListData(std::vector<uint32_t> gfxs) : mGfxs(gfxs) {}
+    explicit DListData(std::vector<uint32_t> gfxs) : mGfxs(gfxs) {}
 };
 
 class DListHeaderExporter : public BaseExporter {
@@ -29,7 +29,7 @@ class DListCodeExporter : public BaseExporter {
 class DListFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
-    inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
+    std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
             REGISTER(Header, DListHeaderExporter)
             REGISTER(Binary, DListBinaryExporter)

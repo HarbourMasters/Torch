@@ -42,18 +42,16 @@ uint8_t* alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
 }
 
 void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
-
     auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const Texture " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n";
+        write << "static const Texture " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return;
     }
 
     write << "ALIGNED8 static const Texture " << symbol << "[] = {\n";
     write << tab << "#include \"" << (*replacement) << ".inc.c\"\n";
-    write << "};\n";
+    write << "};\n\n";
 
 }
 

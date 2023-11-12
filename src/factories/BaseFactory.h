@@ -43,7 +43,7 @@ public:
 class BaseFactory {
 public:
     virtual std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) = 0;
-    inline std::optional<std::shared_ptr<BaseExporter>> GetExporter(ExportType type) {
+    std::optional<std::shared_ptr<BaseExporter>> GetExporter(ExportType type) {
         auto exporters = this->GetExporters();
         if (exporters.find(type) != exporters.end()) {
             return exporters[type];

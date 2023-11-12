@@ -11,6 +11,23 @@
   name: Super Mario 64 [US]
   path: assets/sm64/us
   output: smcube.otr
+  segments:
+    - 0x000000
+    - 0x000000
+    - 0x108a40
+    - 0x201410
+    - 0x2739a0
+    - 0x12a7e0
+    - 0x188440
+    - 0x26a3a0
+    - 0x1f2200
+    - 0x31e1d0
+    - 0x2708c0
+    - 0x36f530
+    - 0x132850
+    - 0x1b9070
+    - 0x3828c0
+    - 0x2008d0
 
 4ac5721683d0e0b6bbb561b58a71740845dceea9:
   name: Super Mario 64 [EU]

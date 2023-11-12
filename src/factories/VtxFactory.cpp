@@ -1,6 +1,5 @@
 #include "VtxFactory.h"
 #include "utils/MIODecoder.h"
-#include <iomanip>
 
 void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
@@ -25,7 +24,7 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         auto c3 = (uint16_t) v.cn[2];
         auto c4 = (uint16_t) v.cn[3];
 
-        if(i <= vtx.size() - 2) {
+        if(i <= vtx.size() - 1) {
             write << fourSpaceTab;
         }
 
@@ -61,7 +60,6 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
     auto mio0 = node["mio0"].as<size_t>();
     auto offset = node["offset"].as<uint32_t>();
     auto count = node["count"].as<size_t>();
-    auto symbol = node["symbol"].as<std::string>();
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
     LUS::BinaryReader reader(decoded.data() + offset, (count * sizeof(VtxRaw)) );
