@@ -48,7 +48,6 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     auto offset = node["offset"].as<uint32_t>();
     auto symbol = node["symbol"].as<std::string>();
 
-    printf("HERE");
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
     LUS::BinaryReader reader(decoded.data() + offset, sizeof(Lights1Raw));
 

@@ -23,14 +23,37 @@ void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
 }
 
+
+
+/*
+ * Generic Gfx Packet
+ */
+typedef struct {
+    uint32_t w0;
+    uint32_t w1;
+} GwordsCubed;
+
+/*
+ * This union is the fundamental type of the display list.
+ * It is, by law, exactly 64 bits in size.
+ */
+typedef union {
+    GwordsCubed words;
+    long long int force_structure_alignment;
+} GfxCubed;
+
+
+
 // gsSP1Quadrangle(0, 1, 2, 3, 0),
 void write_gsSP1Quadrangle(void) {
-    uint32_t args =     (uint32_t) *( ((uint32_t *) gfxd_macro_data()) + 1 );
+    auto *gfx = static_cast<const GfxCubed*>(gfxd_macro_data());
 
-    auto v1 = std::to_string( ((args >> 8) & 0xFF) / 2 );
-    auto v2 = std::to_string( ((args >> 16) & 0xFF) / 2 );
-    auto v3 = std::to_string( (args & 0xFF) / 2 );
-    auto v4 = std::to_string( ((args >> 24) & 0xFF) / 2 );
+    auto w1 = gfx->words.w1;
+
+    auto v1 = std::to_string( ((w1 >> 8) & 0xFF) / 2 );
+    auto v2 = std::to_string( ((w1 >> 16) & 0xFF) / 2 );
+    auto v3 = std::to_string( (w1 & 0xFF) / 2 );
+    auto v4 = std::to_string( ((w1 >> 24) & 0xFF) / 2 );
     auto flag = "0";
 
     auto str = v2 + ", " + v1 + ", " + v3 + ", " + v4 + ", " + flag;
@@ -38,6 +61,11 @@ void write_gsSP1Quadrangle(void) {
     gfxd_puts(str.c_str());
 }
 
+int symbol_callback(uint32_t data, uint32_t size) {
+    printf("test: ");
+    printf("%X\n", data);
+    return 1;
+}
 
 int32_t gfx_format(void) {
 
@@ -75,6 +103,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_output_buffer(out, sizeof(out));
 
     gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
+    gfxd_dram_callback(symbol_callback);
     gfxd_macro_fn(gfx_format);
     gfxd_target(gfxd_f3dex);
 
