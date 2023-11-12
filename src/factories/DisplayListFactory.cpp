@@ -25,14 +25,11 @@ std::string to_hex(T number, const bool append0x = true) {
 void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
 
-    if(Companion::Instance->IsOTRMode()){
-        write << "static const Gfx " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n";
+    if(!Companion::Instance->IsOTRMode()){
         return;
     }
 
-    write << "ALIGNED8 static const Gfx " << symbol << "[] = {\n";
-    write << tab << "#include \"" << *replacement << ".inc.c\"\n";
-    write << "};\n";
+    write << "static const Gfx " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
 }
 
 void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

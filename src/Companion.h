@@ -25,7 +25,7 @@ public:
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
 
     static void Pack(const std::string& folder, const std::string& output);
-    std::string NormalizeAsset(const std::string name) const;
+    std::string NormalizeAsset(const std::string& name) const;
     void RegisterAsset(const std::string& name, YAML::Node& node);
 private:
     ExportType gExporterType;
@@ -40,6 +40,6 @@ private:
     std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
-    void RegisterFactory(const std::string& type, std::shared_ptr<BaseFactory> factory);
+    void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(std::ostringstream& stream, YAML::Node& node, std::string& name, SWrapper* binary);
 };
