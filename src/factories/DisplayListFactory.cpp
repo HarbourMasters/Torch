@@ -23,6 +23,49 @@ void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
 }
 
+// gsSP1Quadrangle(0, 1, 2, 3, 0),
+void write_gsSP1Quadrangle(void) {
+    uint32_t args =     (uint32_t) *( ((uint32_t *) gfxd_macro_data()) + 1 );
+
+    auto v1 = std::to_string( ((args >> 8) & 0xFF) / 2 );
+    auto v2 = std::to_string( ((args >> 16) & 0xFF) / 2 );
+    auto v3 = std::to_string( (args & 0xFF) / 2 );
+    auto v4 = std::to_string( ((args >> 24) & 0xFF) / 2 );
+    auto flag = "0";
+
+    auto str = v2 + ", " + v1 + ", " + v3 + ", " + v4 + ", " + flag;
+
+    gfxd_puts(str.c_str());
+}
+
+
+int32_t gfx_format(void) {
+
+    char out[5000] = {0};
+    
+    gfxd_puts(fourSpaceTab);
+
+
+    auto macroId = gfxd_macro_id();
+
+    switch(macroId) {
+        case gfxd_SPLine3D:
+            // mk64
+            gfxd_puts("gsSP1Quadrangle(");
+            write_gsSP1Quadrangle();
+            gfxd_puts(")");
+            break;
+        default:
+            gfxd_macro_dflt();
+            break;
+    }
+    gfxd_puts(",\n");
+
+
+    return 0;
+
+}
+
 void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     auto symbol = node["symbol"].as<std::string>();
@@ -32,12 +75,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_output_buffer(out, sizeof(out));
 
     gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
-    gfxd_macro_fn([](){
-        gfxd_puts("    ");
-        gfxd_macro_dflt();
-        gfxd_puts(",\n");
-        return 0;
-    });
+    gfxd_macro_fn(gfx_format);
     gfxd_target(gfxd_f3dex);
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
@@ -170,9 +208,9 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         auto w1 = reader.ReadUInt32();
 
         uint8_t opcode = w0 >> 24;
-        SPDLOG_INFO("W0: 0x{:X}", w0);
-        SPDLOG_INFO("W1: 0x{:X}", w1);
-        SPDLOG_INFO("Opcode: 0x{:X}", opcode);
+        //SPDLOG_INFO("W0: 0x{:X}", w0);
+        //SPDLOG_INFO("W1: 0x{:X}", w1);
+        //SPDLOG_INFO("Opcode: 0x{:X}", opcode);
         gfxs.push_back(w0);
         gfxs.push_back(w1);
         if(opcode == (uint8_t) G_ENDDL) {

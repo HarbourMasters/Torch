@@ -10,8 +10,8 @@ void BindOTRMode(CLI::App& app){
     std::string mode;
     std::string filename;
     bool otrMode = false;
-    otr->add_option("mode", mode, "extract mode")->required();
-    otr->add_option("rom", filename, "n64 rom")->required()->check(CLI::ExistingFile);
+    otr->add_option("mode", mode, "<extract_mode> modes: code, otr")->required();
+    otr->add_option("rom", filename, "z64 rom")->required()->check(CLI::ExistingFile);
     otr->add_flag("-o,--otr", otrMode, "OTR Mode");
     otr->parse_complete_callback([&]() {
         auto instance = Companion::Instance = new Companion(filename, otrMode);
