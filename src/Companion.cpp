@@ -87,7 +87,8 @@ void Companion::ExtractNode(std::ostringstream& stream, YAML::Node& node, std::s
     switch (this->gExporterType) {
         case ExportType::Binary: {
             if(binary == nullptr) break;
-
+            stream.str("");
+            stream.clear();
             exporter->get()->Export(stream, result.value(), name, node, &name);
             auto data = stream.str();
             binary->CreateFile(name, std::vector(data.begin(), data.end()));
@@ -232,6 +233,47 @@ void Companion::Process() {
     Instance = nullptr;
 }
 
+void Companion::Pack(const std::string& folder, const std::string& output) {
+
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+
+    SPDLOG_INFO("------------------------------------------------");
+
+    SPDLOG_INFO("Starting CubeOS...");
+    SPDLOG_INFO("Scanning {}", folder);
+
+    auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    std::unordered_map<std::string, std::vector<char>> files;
+
+    for (const auto & entry : fs::recursive_directory_iterator(folder)){
+        if(entry.is_directory()) continue;
+        std::ifstream input( entry.path(), std::ios::binary );
+        auto data = std::vector( std::istreambuf_iterator( input ), {} );
+        input.close();
+        files[entry.path().string()] = data;
+    }
+
+    auto wrapper = SWrapper(output);
+
+    for(auto& [path, data] : files){
+        std::string normalized = path;
+        std::replace(normalized.begin(), normalized.end(), '\\', '/');
+        // Remove parent folder
+        normalized = normalized.substr(folder.length() + 1);
+        wrapper.CreateFile(normalized, data);
+        SPDLOG_INFO("> Added {}", normalized);
+    }
+
+    auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
+    SPDLOG_INFO("Exported to {}", output);
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+    SPDLOG_INFO("------------------------------------------------");
+
+    wrapper.Close();
+}
+
 void Companion::RegisterAsset(const std::string& name, YAML::Node& node) {
     if(!node["offset"]) return;
     this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, false);
@@ -274,43 +316,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
     return this->gAddrMap[this->gCurrentFile][addr];
 }
 
-void Companion::Pack(const std::string& folder, const std::string& output) {
-
-        spdlog::set_level(spdlog::level::debug);
-        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-
-        SPDLOG_INFO("------------------------------------------------");
-
-        SPDLOG_INFO("Starting CubeOS...");
-        SPDLOG_INFO("Scanning {}", folder);
-
-        auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        std::unordered_map<std::string, std::vector<char>> files;
-
-        for (const auto & entry : fs::recursive_directory_iterator(folder)){
-            if(entry.is_directory()) continue;
-            std::ifstream input( entry.path(), std::ios::binary );
-            auto data = std::vector( std::istreambuf_iterator( input ), {} );
-            input.close();
-            files[entry.path().string()] = data;
-        }
-
-        auto wrapper = SWrapper(output);
-
-        for(auto& [path, data] : files){
-            std::string normalized = path;
-            std::replace(normalized.begin(), normalized.end(), '\\', '/');
-            // Remove parent folder
-            normalized = normalized.substr(folder.length() + 1);
-            wrapper.CreateFile(normalized, data);
-            SPDLOG_INFO("> Added {}", normalized);
-        }
-
-        auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
-        SPDLOG_INFO("Exported to {}", output);
-        spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-        SPDLOG_INFO("------------------------------------------------");
-
-        wrapper.Close();
+std::string Companion::NormalizeAsset(const std::string name) const {
+    auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;
+    return path;
 }
