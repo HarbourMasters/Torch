@@ -138,19 +138,3 @@ _DW({                                                                           
         _SHIFTL(G_SETCOMBINE, 24, 8) | _SHIFTL(GCCc0w0(a0, c0, Aa0, Ac0) | GCCc1w0(a1, c1), 0, 24),         \
             (unsigned int)(GCCc0w1(b0, d0, Ab0, Ad0) | GCCc1w1(b1, Aa1, Ac1, d1, Ab1, Ad1))                 \
     }
-
-// This two are from other microcodes but we need them on LUS always
-#ifndef gSP2Triangles
-#define gSP2Triangles(pkt, v00, v01, v02, flag0, v10, v11, v12, flag1)                       \
-    _DW({                                                                                    \
-        Gfx* _g = (Gfx*)(pkt);                                                               \
-                                                                                             \
-        _g->words.w0 = (_SHIFTL(G_TRI2, 24, 8) | __gsSP1Triangle_w1f(v00, v01, v02, flag0)); \
-        _g->words.w1 = __gsSP1Triangle_w1f(v10, v11, v12, flag1);                            \
-    })
-#endif
-
-#ifndef gsSP2Triangles
-#define gsSP2Triangles(v00, v01, v02, flag0, v10, v11, v12, flag1) \
-    { (_SHIFTL(G_TRI2, 24, 8) | __gsSP1Triangle_w1f(v00, v01, v02, flag0)), __gsSP1Triangle_w1f(v10, v11, v12, flag1) }
-#endif
