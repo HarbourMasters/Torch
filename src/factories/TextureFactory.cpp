@@ -77,7 +77,12 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
     file.close();
 
-    write << "ALIGNED8 static const u8 " << symbol << "[] = {\n";
+    // todo: Make this condition more general.
+    if (Companion::Instance->GetCartridge()->GetGameTitle() == "Mario Kart 64 [US]") {
+        write << "u8 " << symbol << "[] = {\n";
+    } else {
+        write << "ALIGNED8 static const u8 " << symbol << "[] = {\n";
+    }
     write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << (*replacement) << ".inc.c\"\n";
     write << "};\n\n";
 }
