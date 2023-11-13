@@ -14,11 +14,11 @@ class SWrapper;
 namespace fs = std::filesystem;
 
 enum class GBIVersion {
-    F3D,
-    F3DEX,
-    F3DB,
-    F3DEX2,
-    F3DEXB,
+    f3d,
+    f3dex,
+    f3db,
+    f3dex2,
+    f3dexb,
 };
 
 class Companion {
@@ -41,7 +41,7 @@ public:
     void RegisterAsset(const std::string& name, YAML::Node& node);
 private:
     bool gOTRMode = false;
-    GBIVersion gGBIVersion = GBIVersion::F3D;
+    GBIVersion gGBIVersion = GBIVersion::f3d;
     std::string gOutputPath;
     std::string gCurrentFile;
     ExportType gExporterType;
