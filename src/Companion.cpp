@@ -53,7 +53,9 @@ void Companion::Init(const ExportType type) {
     this->Process();
 }
 
-void Companion::ExtractNode(std::ostringstream& stream, YAML::Node& node, std::string& name, SWrapper* binary) {
+void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary) {
+    std::ostringstream stream;
+
     auto type = node["type"].as<std::string>();
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
@@ -81,7 +83,7 @@ void Companion::ExtractNode(std::ostringstream& stream, YAML::Node& node, std::s
         std::string doutput = (this->gCurrentDirectory / fst).string();
         std::replace(doutput.begin(), doutput.end(), '\\', '/');
         this->gAssetDependencies[this->gCurrentFile][fst].second = true;
-        this->ExtractNode(stream, snd.first, doutput, binary);
+        this->ExtractNode(snd.first, doutput, binary);
     }
 
     switch (this->gExporterType) {
@@ -120,6 +122,7 @@ void Companion::ExtractNode(std::ostringstream& stream, YAML::Node& node, std::s
     }
 
     SPDLOG_INFO("Processed {}", name);
+    this->gWriteMap[this->gCurrentFile][type].push_back(stream.str());
 }
 
 void Companion::Process() {
@@ -147,6 +150,18 @@ void Companion::Process() {
         this->gSegments = cfg["segments"].as<std::vector<uint32_t>>();
     }
 
+    this->gWriteOrder = cfg["order"] ? cfg["order"].as<std::vector<std::string>>() : std::vector<std::string> {
+        "LIGHTS", "TEXTURE", "VTX", "GFX"
+    };
+
+    for (auto factory : this->gFactories) {
+        if(std::find(this->gWriteOrder.begin(), this->gWriteOrder.end(), factory.first) != this->gWriteOrder.end()) {
+            continue;
+        }
+
+        this->gWriteOrder.push_back(factory.first);
+    }
+
     SPDLOG_INFO("------------------------------------------------");
     spdlog::set_pattern(line);
 
@@ -170,7 +185,6 @@ void Companion::Process() {
         YAML::Node root = YAML::LoadFile(entry.path().string());
         this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = entry.path().string();
-        std::ostringstream stream;
 
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto node = asset->second;
@@ -195,7 +209,7 @@ void Companion::Process() {
             std::string output = (this->gCurrentDirectory / entryName).string();
             std::replace(output.begin(), output.end(), '\\', '/');
 
-            this->ExtractNode(stream, asset->second, output, wrapper);
+            this->ExtractNode(asset->second, output, wrapper);
         }
 
         if(gExporterType != ExportType::Binary){
@@ -214,6 +228,16 @@ void Companion::Process() {
                     break;
                 }
                 default: break;
+            }
+
+            std::ostringstream stream;
+
+            for (const auto& type : this->gWriteOrder) {
+                auto writeBuf = this->gWriteMap[this->gCurrentFile][type];
+                std::reverse(writeBuf.begin(), writeBuf.end());
+                for (auto& data : writeBuf) {
+                    stream << data;
+                }
             }
 
             std::string buffer = stream.str();
