@@ -12,6 +12,14 @@
 class SWrapper;
 namespace fs = std::filesystem;
 
+enum class GBIVersion {
+    F3D,
+    F3DEX,
+    F3DB,
+    F3DEX2,
+    F3DEXB,
+};
+
 class Companion {
 public:
     static Companion* Instance;
@@ -21,6 +29,8 @@ public:
     bool IsOTRMode() { return this->gOTRMode; }
     N64::Cartridge* GetCartridge() { return this->gCartridge; }
     std::vector<uint8_t> GetRomData() { return this->gRomData; }
+    std::string GetOutputPath() { return this->gOutputPath; }
+    GBIVersion GetGBIVersion() { return this->gGBIVersion; }
     std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
@@ -29,20 +39,22 @@ public:
     std::string NormalizeAsset(const std::string& name) const;
     void RegisterAsset(const std::string& name, YAML::Node& node);
 private:
-    ExportType gExporterType;
     bool gOTRMode = false;
-    std::filesystem::path gRomPath;
-    std::vector<uint8_t> gRomData;
-    std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
-    N64::Cartridge* gCartridge;
+    GBIVersion gGBIVersion = GBIVersion::F3D;
+    std::string gOutputPath;
     std::string gCurrentFile;
+    ExportType gExporterType;
     fs::path gCurrentDirectory;
+    N64::Cartridge* gCartridge;
+    std::vector<uint8_t> gRomData;
+    std::filesystem::path gRomPath;
     std::vector<uint32_t> gSegments;
-    std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
-    std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
-    std::map<std::string, std::map<std::string, std::vector<std::pair<std::string, std::string>>>> gWriteMap;
-    std::vector<std::string> gWriteOrder;
+    std::variant<std::vector<std::string>, std::string> gWriteOrder;
+    std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
+    std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
+    std::map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
+    std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);

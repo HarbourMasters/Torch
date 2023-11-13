@@ -43,32 +43,43 @@ uint8_t* alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
 
 void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+    auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return;
     }
 
-    write << "ALIGNED8 static const u8 " << symbol << "[] = {\n";
-    write << tab << "#include \"" << (*replacement) << ".inc.c\"\n";
-    write << "};\n\n";
-
+    write << "extern u8 " << symbol << "[" << data.size() << "];\n";
 }
 
 void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
-
+    auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
     auto format = node["format"].as<std::string>();
-    std::transform(format.begin(), format.end(), format.begin(), ::tolower);
+    std::transform(format.begin(), format.end(), format.begin(), tolower);
     (*replacement) += "." + format;
 
+    std::string dpath = Companion::Instance->GetOutputPath() + "/" + (*replacement);
+    if(!exists(fs::path(dpath).parent_path())){
+        create_directories(fs::path(dpath).parent_path());
+    }
+
+    std::ofstream file(dpath + ".inc.c", std::ios::binary);
+
     for (int i = 0; i < data.size(); i++) {
-        if ((i % 16 == 0) && i != 0) {
-            write << "\n";
+        if (i % 16 == 0 && i != 0) {
+            file << std::endl;
         }
 
-        write << "0x" << std::hex << std::setw(2) << std::setfill('0') << (int) data[i] << ", ";
+        file << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i]) << ", ";
     }
+
+    file.close();
+
+    write << "ALIGNED8 static const u8 " << symbol << "[] = {\n";
+    write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << (*replacement) << ".inc.c\"\n";
+    write << "};\n\n";
 }
 
 void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
@@ -108,13 +119,13 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         auto data = decoded.data() + offset;
         if(type == TextureType::GrayscaleAlpha1bpp){
             auto ia8 = alloc_ia8_text_from_i1((uint16_t*) data, 8, 16);
-            result = std::vector<uint8_t>(ia8, ia8 + 8 * 16);
+            result = std::vector(ia8, ia8 + 8 * 16);
             delete[] ia8;
         }
 
-        result = std::vector<uint8_t>(data, data + size);
+        result = std::vector(data, data + size);
 	} else {
-        result = std::vector<uint8_t>(buffer.data() + offset, buffer.data() + offset + size);
+        result = std::vector(buffer.data() + offset, buffer.data() + offset + size);
 	}
 
     SPDLOG_INFO("Texture: {} {}x{} {}", format, width, height, size);

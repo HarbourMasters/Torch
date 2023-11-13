@@ -22,14 +22,35 @@ std::string to_hex(T number, const bool append0x = true) {
     return format;
 }
 
+void GFXDSetGBIVersion(){
+    switch (Companion::Instance->GetGBIVersion()) {
+        case GBIVersion::F3D:
+            gfxd_target(gfxd_f3d);
+            break;
+        case GBIVersion::F3DEX:
+            gfxd_target(gfxd_f3dex);
+            break;
+        case GBIVersion::F3DB:
+            gfxd_target(gfxd_f3db);
+            break;
+        case GBIVersion::F3DEX2:
+            gfxd_target(gfxd_f3dex2);
+            break;
+        case GBIVersion::F3DEXB:
+            gfxd_target(gfxd_f3dexb);
+            break;
+    }
+}
+
 void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
 
-    if(!Companion::Instance->IsOTRMode()){
+    if(Companion::Instance->IsOTRMode()){
+        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return;
     }
 
-    write << "static const Gfx " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+    write << "extern Gfx " << symbol << "[];\n";
 }
 
 void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -60,7 +81,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
-    gfxd_target(gfxd_f3d);
+    GFXDSetGBIVersion();
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
@@ -83,7 +104,7 @@ void DebugDisplayList(uint32_t w0, uint32_t w1){
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
-    gfxd_target(gfxd_f3d);
+    GFXDSetGBIVersion();
     gfxd_execute();
     int bp = 0;
 }
@@ -196,14 +217,18 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 }
 
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    const auto gbi = Companion::Instance->GetGBIVersion();
+
     const auto mio0 = node["mio0"].as<uint32_t>();
     const auto offset = node["offset"].as<int32_t>();
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
-    auto processing = true;
+
     LUS::BinaryReader reader(decoded.data(), decoded.size());
     reader.SetEndianness(LUS::Endianness::Big);
     reader.Seek(offset, LUS::SeekOffsetType::Start);
+
     std::vector<uint32_t> gfxs;
+    auto processing = true;
 
     while (processing){
         auto w0 = reader.ReadUInt32();
@@ -249,14 +274,22 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 }
                 break;
             }
-            case static_cast<uint8_t>(G_VTX):
-#ifdef F3DEX_GBI_2
-                auto nvtx = C0(12, 8));
-#elif defined(F3DEX_GBI) || defined(F3DLP_GBI)
-                auto nvtx = C0(10, 6));
-#else
-                auto nvtx = (C0(0, 16)) / sizeof(Vtx);
-#endif
+            case static_cast<uint8_t>(G_VTX): {
+                uint32_t nvtx;
+
+                switch (gbi) {
+                    case GBIVersion::F3DEX2:
+                        nvtx = C0(12, 8);
+                        break;
+                    case GBIVersion::F3DEX:
+                    case GBIVersion::F3DEXB:
+                        nvtx = C0(10, 6);
+                        break;
+                    default:
+                        nvtx = (C0(0, 16)) / sizeof(Vtx);
+                        break;
+                }
+
                 uint32_t ptr = SEGMENT_OFFSET(w1);
 
                 if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
@@ -282,7 +315,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     }
                 }
                 break;
-
+            }
         }
     }
 

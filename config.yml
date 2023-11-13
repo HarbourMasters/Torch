@@ -1,22 +1,55 @@
 # Supported game versions
-# SM64 [JP, US, EU]
+# SM64 [JP, US]
 # MK64 [US]
 
 8a20a5c83d6ceb0f0506cfc9fa20d8f438cafe51:
   name: Super Mario 64 [JP]
   path: generated/jp
-  output: smcube.otr
+  config:
+    gbi: F3D
+    sort: OFFSET
+    output:
+      binary: smcube.otr
+  segments:
+    - 0x000000
+    - 0x000000
+    - 0x1076d0
+    - 0x1ff740
+    - 0x271b20
+    - 0x128be0
+    - 0x186810
+    - 0x268520
+    - 0x1f0530
+    - 0x31c770
+    - 0x26ea40
+    - 0x36dad0
+    - 0x130c50
+    - 0x1b7400
+    - 0x380e60
+    - 0x1fec00
+    - 0x1076a0
+    - 0x000000
+    - 0x000000
+    - 0x218130
+    - 0x268020
+    - 0x2aa240
+    - 0x2170d0
+    - 0x125db0
 
 9bef1128717f958171a4afac3ed78ee2bb4e86ce:
   name: Super Mario 64 [US]
   path: assets/sm64/us
-  output: smcube.otr
+  config:
+    gbi: F3D
+    sort: OFFSET
+    output:
+      binary: smcube.otr
   segments:
     - 0x000000
     - 0x000000
     - 0x108a40
     - 0x201410
-    - 0x2739a0
+    - 0x114750
     - 0x12a7e0
     - 0x188440
     - 0x26a3a0
@@ -28,13 +61,37 @@
     - 0x1b9070
     - 0x3828c0
     - 0x2008d0
-
-4ac5721683d0e0b6bbb561b58a71740845dceea9:
-  name: Super Mario 64 [EU]
-  path: assets/sm64/eu
-  output: smcube.otr
+    - 0x108a10
+    - 0x000000
+    - 0x000000
+    - 0x219e00
+    - 0x269ea0
+    - 0x2abca0
+    - 0x218da0
+    - 0x1279b0
 
 579c48e211ae952530ffc8738709f078d5dd215e:
   name: Mario Kart 64 [US]
   path: assets/mk64/us
-  output: mkcube.otr
+  config:
+    gbi: F3DEX
+    sort: OFFSET
+    output:
+      binary: mkcube.otr
+  segments:
+    - 0x000000
+    - 0x000000
+    - 0x12aae0
+    - 0x000000
+    - 0x000000
+    - 0x000000
+    - 0x825800
+    - 0x000000
+    - 0x000000
+    - 0x88cd70
+    - 0x729a30
+    - 0x7fa3c0
+    - 0x000000
+    - 0x132b50
+    - 0x000000
+    - 0x145470

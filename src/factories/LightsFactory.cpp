@@ -1,7 +1,19 @@
 #include "LightsFactory.h"
+
 #include "utils/MIODecoder.h"
 #include "spdlog/spdlog.h"
-#include <iomanip>
+#include "Companion.h"
+
+void LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+
+    if(Companion::Instance->IsOTRMode()){
+        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return;
+    }
+
+    write << "extern Lights " << symbol << ";\n";
+}
 
 void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;

@@ -1,5 +1,21 @@
 #include "VtxFactory.h"
+
+#include "Companion.h"
 #include "utils/MIODecoder.h"
+
+#define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
+#define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
+
+void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+
+    if(Companion::Instance->IsOTRMode()){
+        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return;
+    }
+
+    write << "extern Vtx " << symbol << "[];\n";
+}
 
 void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
@@ -29,7 +45,7 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         }
 
         // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
-        write << "{{{" << x << ", " << y << ", " << z << "}, " << flag << ", {" << tc1 << ", " << tc2 << "}, {" << c1 << ", " << c2 << ", " << c3 << ", " << c4 << "}}},\n";
+        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
     }
     write << "};\n\n";
 }

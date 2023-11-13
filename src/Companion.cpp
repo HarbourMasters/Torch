@@ -96,42 +96,27 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             binary->CreateFile(name, std::vector(data.begin(), data.end()));
             break;
         }
-        case ExportType::Code: {
-            if(type == "TEXTURE") {
-                factory->get()->GetExporter(ExportType::Header)->get()->Export(stream, result.value(), name, node, &name);
-
-                std::string dpath = "code/" + name;
-                if(!exists(fs::path(dpath).parent_path())){
-                    create_directories(fs::path(dpath).parent_path());
-                }
-
-                std::ostringstream cstream;
-                exporter->get()->Export(cstream, result.value(), name, node, &name);
-                std::ofstream file(dpath + ".inc.c", std::ios::binary);
-                file << cstream.str();
-                file.close();
-            } else {
-                exporter->get()->Export(stream, result.value(), name, node, &name);
-            }
-            break;
-        }
-        case ExportType::Header: {
+        default: {
             exporter->get()->Export(stream, result.value(), name, node, &name);
             break;
         }
     }
 
-    auto symbol = fs::path(name).stem().string();
     SPDLOG_INFO("Processed {}", name);
-    this->gWriteMap[this->gCurrentFile][type].emplace_back(symbol, stream.str());
+    this->gWriteMap[this->gCurrentFile][type].emplace_back(node["offset"].as<uint32_t>(), stream.str());
 }
 
 void Companion::Process() {
 
+    if(!fs::exists("config.yml")) {
+        SPDLOG_ERROR("No config file found");
+        return;
+    }
+
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 
     std::ifstream input( this->gRomPath, std::ios::binary );
-    this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator<char>( input ), {} );
+    this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator( input ), {} );
     input.close();
 
     this->gCartridge = new N64::Cartridge(this->gRomData);
@@ -144,23 +129,77 @@ void Companion::Process() {
         return;
     }
 
-    auto cfg = config[gCartridge->GetHash()];
-    auto path = cfg["path"].as<std::string>();
-    auto otr = cfg["output"].as<std::string>();
-    if(cfg["segments"]) {
-        this->gSegments = cfg["segments"].as<std::vector<uint32_t>>();
+    auto rom = config[gCartridge->GetHash()];
+    auto cfg = rom["config"];
+
+    if(!cfg) {
+        SPDLOG_ERROR("No config found for {}", gCartridge->GetHash());
+        return;
     }
 
-    this->gWriteOrder = cfg["order"] ? cfg["order"].as<std::vector<std::string>>() : std::vector<std::string> {
-        "LIGHTS", "TEXTURE", "VTX", "GFX"
-    };
+    if(rom["segments"]) {
+        this->gSegments = rom["segments"].as<std::vector<uint32_t>>();
+    }
+    auto path = rom["path"].as<std::string>();
+    auto opath = cfg["output"];
+    auto gbi = cfg["gbi"];
 
-    for (auto factory : this->gFactories) {
-        if(std::find(this->gWriteOrder.begin(), this->gWriteOrder.end(), factory.first) != this->gWriteOrder.end()) {
-            continue;
+    switch (gExporterType) {
+        case ExportType::Binary: {
+            this->gOutputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : "generic.otr";
+            break;
         }
+        case ExportType::Header: {
+            this->gOutputPath = opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
+            break;
+        }
+        case ExportType::Code: {
+            this->gOutputPath = opath && opath["code"] ? opath["code"].as<std::string>() : "code";
+            break;
+        }
+    }
 
-        this->gWriteOrder.push_back(factory.first);
+    if(gbi) {
+        auto key = gbi.as<std::string>();
+
+        if(key == "F3D") {
+            this->gGBIVersion = GBIVersion::F3D;
+        } else if(key == "F3DEX") {
+            this->gGBIVersion = GBIVersion::F3DEX;
+        } else if(key == "F3DB") {
+            this->gGBIVersion = GBIVersion::F3DB;
+        } else if(key == "F3DEX2") {
+            this->gGBIVersion = GBIVersion::F3DEX2;
+        } else if(key == "F3DEXB") {
+            this->gGBIVersion = GBIVersion::F3DEXB;
+        } else {
+            SPDLOG_ERROR("Invalid GBI version");
+            return;
+        }
+    }
+
+    if(auto sort = cfg["sort"]) {
+        if(sort.IsSequence()) {
+            this->gWriteOrder = sort.as<std::vector<std::string>>();
+        } else {
+            this->gWriteOrder = sort.as<std::string>();
+        }
+    } else {
+        this->gWriteOrder = std::vector<std::string> {
+            "LIGHTS", "TEXTURE", "VTX", "GFX"
+        };
+    }
+
+    if(std::holds_alternative<std::vector<std::string>>(this->gWriteOrder)) {
+        for (auto& [key, _] : this->gFactories) {
+            auto entries = std::get<std::vector<std::string>>(this->gWriteOrder);
+
+            if(std::find(entries.begin(), entries.end(), key) != entries.end()) {
+                continue;
+            }
+
+            entries.push_back(key);
+        }
     }
 
     SPDLOG_INFO("------------------------------------------------");
@@ -174,7 +213,7 @@ void Companion::Process() {
     SPDLOG_INFO("Hash: {}", gCartridge->GetHash());
     SPDLOG_INFO("Assets: {}", path);
 
-    auto wrapper = this->gExporterType == ExportType::Binary ? new SWrapper(otr) : nullptr;
+    auto wrapper = this->gExporterType == ExportType::Binary ? new SWrapper(this->gOutputPath) : nullptr;
 
     auto vWriter = LUS::BinaryWriter();
     vWriter.SetEndianness(LUS::Endianness::Big);
@@ -214,18 +253,15 @@ void Companion::Process() {
         }
 
         if(gExporterType != ExportType::Binary){
-            std::string output;
-            std::string dpath;
+            std::string output = (this->gOutputPath / this->gCurrentDirectory).string();
 
             switch (gExporterType) {
                 case ExportType::Header: {
-                    output = this->gCurrentDirectory.string() + "/definition.h";
-                    dpath = "headers/" + output;
+                    output += "/definition.h";
                     break;
                 }
                 case ExportType::Code: {
-                    output = this->gCurrentDirectory.string() + "/root.inc.c";
-                    dpath = "code/" + output;
+                    output += "/root.inc.c";
                     break;
                 }
                 default: break;
@@ -233,14 +269,41 @@ void Companion::Process() {
 
             std::ostringstream stream;
 
-            for (const auto& type : this->gWriteOrder) {
-                auto writeBuf = this->gWriteMap[this->gCurrentFile][type];
-                std::sort(writeBuf.begin(), writeBuf.end(), [](const auto& a, const auto& b) {
-                    return std::get<1>(a) > std::get<1>(b);
-                });
+            if(std::holds_alternative<std::string>(this->gWriteOrder)) {
+                auto sort = std::get<std::string>(this->gWriteOrder);
+                std::vector<std::pair<uint32_t, std::string>> outbuf;
+                for (const auto& [type, buffer] : this->gWriteMap[this->gCurrentFile]) {
+                    outbuf.insert(outbuf.end(), buffer.begin(), buffer.end());
+                }
+                this->gWriteMap.clear();
 
-                for (auto& [symbol, buffer] : writeBuf) {
+                if(sort == "OFFSET") {
+                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
+                        return std::get<uint32_t>(a) < std::get<uint32_t>(b);
+                    });
+                } else if(sort == "ROFFSET") {
+                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
+                        return std::get<uint32_t>(a) > std::get<uint32_t>(b);
+                    });
+                } else if(sort != "LINEAR") {
+                    throw std::runtime_error("Invalid write order");
+                }
+
+                for (auto& [symbol, buffer] : outbuf) {
                     stream << buffer;
+                }
+                outbuf.clear();
+            } else {
+                for (const auto& type : std::get<std::vector<std::string>>(this->gWriteOrder)) {
+                    std::vector<std::pair<uint32_t, std::string>> outbuf = this->gWriteMap[this->gCurrentFile][type];
+
+                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
+                        return std::get<uint32_t>(a) > std::get<uint32_t>(b);
+                    });
+
+                    for (auto& [symbol, buffer] : outbuf) {
+                        stream << buffer;
+                    }
                 }
             }
 
@@ -251,11 +314,11 @@ void Companion::Process() {
             }
 
             std::replace(output.begin(), output.end(), '\\', '/');
-            if(!exists(fs::path(dpath).parent_path())){
-                create_directories(fs::path(dpath).parent_path());
+            if(!exists(fs::path(output).parent_path())){
+                create_directories(fs::path(output).parent_path());
             }
 
-            std::ofstream file(dpath, std::ios::binary);
+            std::ofstream file(output, std::ios::binary);
 
             if(gExporterType == ExportType::Header) {
                 std::string symbol = entry.path().stem();
@@ -263,7 +326,7 @@ void Companion::Process() {
                 file << "#ifndef " << symbol << "_H" << std::endl;
                 file << "#define " << symbol << "_H" << std::endl << std::endl;
                 file << buffer;
-                file << "#endif" << std::endl;
+                file << std::endl << "#endif" << std::endl;
             } else {
                 file << buffer;
             }
@@ -283,7 +346,6 @@ void Companion::Process() {
     }
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
-    SPDLOG_INFO("Exported to {}", otr);
     spdlog::set_pattern(regular);
     SPDLOG_INFO("------------------------------------------------");
 

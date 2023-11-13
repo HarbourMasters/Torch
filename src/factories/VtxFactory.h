@@ -13,7 +13,11 @@ class VtxData : public IParsedData {
 public:
     std::vector<VtxRaw> mVtxs;
 
-    VtxData(std::vector<VtxRaw> vtxs) : mVtxs(vtxs) {}
+    explicit VtxData(std::vector<VtxRaw> vtxs) : mVtxs(vtxs) {}
+};
+
+class VtxHeaderExporter : public BaseExporter {
+    void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
 class VtxBinaryExporter : public BaseExporter {
@@ -29,8 +33,9 @@ public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Binary, VtxBinaryExporter)
             REGISTER(Code, VtxCodeExporter)
+            REGISTER(Header, VtxHeaderExporter)
+            REGISTER(Binary, VtxBinaryExporter)
         };
     }
 };
