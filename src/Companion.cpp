@@ -121,8 +121,9 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         }
     }
 
+    auto symbol = fs::path(name).stem().string();
     SPDLOG_INFO("Processed {}", name);
-    this->gWriteMap[this->gCurrentFile][type].push_back(stream.str());
+    this->gWriteMap[this->gCurrentFile][type].emplace_back(symbol, stream.str());
 }
 
 void Companion::Process() {
@@ -234,9 +235,12 @@ void Companion::Process() {
 
             for (const auto& type : this->gWriteOrder) {
                 auto writeBuf = this->gWriteMap[this->gCurrentFile][type];
-                std::reverse(writeBuf.begin(), writeBuf.end());
-                for (auto& data : writeBuf) {
-                    stream << data;
+                std::sort(writeBuf.begin(), writeBuf.end(), [](const auto& a, const auto& b) {
+                    return std::get<1>(a) > std::get<1>(b);
+                });
+
+                for (auto& [symbol, buffer] : writeBuf) {
+                    stream << buffer;
                 }
             }
 

@@ -41,7 +41,7 @@ private:
     std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
-    std::map<std::string, std::map<std::string, std::vector<std::string>>> gWriteMap;
+    std::map<std::string, std::map<std::string, std::vector<std::pair<std::string, std::string>>>> gWriteMap;
     std::vector<std::string> gWriteOrder;
 
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
