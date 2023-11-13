@@ -3,7 +3,7 @@
 #include "BaseFactory.h"
 #include "n64/CommandMacros.h"
 
-#define F3DEX
+#define F3D_OLD
 #define _LANGUAGE_C
 #include "n64/gbi.h"
 
