@@ -247,7 +247,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
                 if(!dec.has_value()){
-                    SPDLOG_INFO("Could not find declarated display list at 0x{:X}, trying to autogenerate it", w1);
+                    SPDLOG_INFO("Could not find declared display list at 0x{:X}, trying to autogenerate it", w1);
                     auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
                     if(!addr.has_value()) {
                         SPDLOG_WARN("Warning: Could not find segment {}", SEGMENT_NUMBER(w1));
@@ -293,7 +293,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 uint32_t ptr = SEGMENT_OFFSET(w1);
 
                 if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
-                    SPDLOG_INFO("Could not find declarated vtx at 0x{:X}, trying to autogenerate it", w1);
+                    SPDLOG_INFO("Could not find declared vtx at 0x{:X}, trying to autogenerate it", w1);
                     auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
                     if(!addr.has_value()) {
                         SPDLOG_WARN("Warning: Could not find segment {}", SEGMENT_NUMBER(w1));

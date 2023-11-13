@@ -5,7 +5,17 @@
 #ifdef STANDALONE
 Companion* Companion::Instance;
 
-void BindOTRMode(CLI::App& app){
+int main(int argc, char *argv[]) {
+    CLI::App app{"CubeOS - Rom extractor"};
+
+
+    /**
+     * Generate OTR or C Code
+     * 
+     * ./cubeos generate otr baserom.z64
+     * ./cubeos generate code baserom.z64
+     * 
+    **/
     auto otr = app.add_subcommand("generate", "Extracts the rom");
     std::string mode;
     std::string filename;
@@ -25,24 +35,21 @@ void BindOTRMode(CLI::App& app){
             std::cout << "Invalid mode: " << mode << std::endl;
         }
     });
-}
 
-void BindPackMode(CLI::App& app){
+    /**
+     * Generate OTR from a folder
+     * 
+     * ./cubeos pack <folder_dir> <otr output>
+     * 
+    **/
     auto pack = app.add_subcommand("pack", "Packs the rom from a folder");
     std::string folder;
-    pack->add_option("folder", folder, "Folder")->required()->check(CLI::ExistingDirectory);
     std::string output;
+    pack->add_option("folder", folder, "Folder")->required()->check(CLI::ExistingDirectory);
     pack->add_option("output", output, "MPQ Output")->required();
     pack->parse_complete_callback([&]() {
         Companion::Pack(folder, output);
     });
-}
-
-int main(int argc, char *argv[]) {
-    CLI::App app{"CubeOS - Rom extractor"};
-
-    BindOTRMode(app);
-    BindPackMode(app);
 
     try {
         app.parse(argc, argv);

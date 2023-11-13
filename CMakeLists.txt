@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(CubeOS)
+project(cubeos)
 include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -32,7 +32,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp)
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/**/*.c)
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
-add_compile_options(-Wno-narrowing)
 
 set(USE_STANDALONE ON)
 set(VPKTOOL_BUILD_GUI OFF)

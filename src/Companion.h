@@ -6,6 +6,7 @@
 #include <vector>
 #include <fstream>
 #include <unordered_map>
+#include <variant>
 #include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
 
