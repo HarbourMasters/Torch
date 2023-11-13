@@ -1,5 +1,6 @@
 #include "BinaryWriter.h"
 #include "MemoryStream.h"
+#include <iostream>
 
 LUS::BinaryWriter::BinaryWriter() {
     mStream = std::make_shared<MemoryStream>();
@@ -152,4 +153,9 @@ void LUS::BinaryWriter::WriteByte(char value) {
 
 std::vector<char> LUS::BinaryWriter::ToVector() {
     return mStream->ToVector();
+}
+
+void LUS::BinaryWriter::Finish(std::ostream& output) {
+    auto data = mStream->ToVector();
+    output.write(data.data(), data.size());
 }

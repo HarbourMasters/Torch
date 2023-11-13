@@ -1,39 +1,32 @@
 #include "BankFactory.h"
-
-#include <vector>
-#include "audio/AudioManager.h"
+#include "utils/MIODecoder.h"
+#include "Companion.h"
 #include "audio/samples_table.h"
-#include "binarytools/BinaryReader.h"
 
-bool BankFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
-    auto banks = AudioManager::Instance->get_banks();
-    auto bankId = data["id"].as<uint32_t>();
-    auto bank = banks[bankId];
+void BankBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto bank = std::static_pointer_cast<BankData>(raw);
 
-    auto gSampleTable = this->GetCartridge()->GetCountry() == N64::CountryCode::Japan ? gJPSampleTable : gUSSampleTable;
+    WriteHeader(writer, LUS::ResourceType::Bank, 0);
+    writer.Write(bank->mBankId);
+    writer.Write((uint32_t) bank->mBank.insts.size());
+    for (auto& instrument : bank->mBank.insts) {
+        writer.Write((uint8_t) instrument.valid);
+        if(!instrument.valid) continue;
 
-    WRITE_HEADER(LUS::ResourceType::Bank, 0);
+        writer.Write((uint8_t) instrument.releaseRate);
+        writer.Write((uint8_t) instrument.normalRangeLo);
+        writer.Write((uint8_t) instrument.normalRangeHi);
 
-    WRITE_U32(bankId);
-    WRITE_U32(bank.insts.size());
-    for(auto &instrument : bank.insts){
-        WRITE_U8(instrument.valid);
-        if(!instrument.valid){
-            continue;
-        }
-        WRITE_U8(instrument.releaseRate);
-        WRITE_U8(instrument.normalRangeLo);
-        WRITE_U8(instrument.normalRangeHi);
-
-        auto envelope = bank.envelopes[instrument.envelope];
+        auto envelope = bank->mBank.envelopes[instrument.envelope];
         if(!envelope.entries.empty()){
-            WRITE_U32(envelope.entries.size());
-            for(auto &entry : envelope.entries){
-                writer->Write(entry.delay);
-                writer->Write(entry.arg);
+            writer.Write((uint32_t) envelope.entries.size());
+            for (auto& entry : envelope.entries) {
+                writer.Write((uint16_t) entry.delay);
+                writer.Write((uint16_t) entry.arg);
             }
         } else {
-            WRITE_U32(0);
+            writer.Write((uint32_t) 0);
         }
 
         uint32_t soundFlags = 0;
@@ -50,47 +43,55 @@ bool BankFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vect
             soundFlags |= (1 << 2);
         }
 
-        WRITE_U32(soundFlags);
+        writer.Write((uint32_t) soundFlags);
         if(hasLo){
             auto value = instrument.soundLo.value();
-            uint32_t idx = AudioManager::Instance->get_index(bank.samples[value.offset]);
-            writer->Write(std::string(gSampleTable[idx]));
-            writer->Write(value.tuning);
+            uint32_t idx = AudioManager::Instance->get_index(bank->mBank.samples[value.offset]);
+            writer.Write(std::string(bank->mSampleTable[idx]));
+            writer.Write(value.tuning);
         }
         if(hasMed){
             auto value = instrument.soundMed.value();
-            uint32_t idx = AudioManager::Instance->get_index(bank.samples[value.offset]);
-            writer->Write(std::string(gSampleTable[idx]));
-            writer->Write(value.tuning);
+            uint32_t idx = AudioManager::Instance->get_index(bank->mBank.samples[value.offset]);
+            writer.Write(std::string(bank->mSampleTable[idx]));
+            writer.Write(value.tuning);
         }
         if(hasHi){
             auto value = instrument.soundHi.value();
-            uint32_t idx = AudioManager::Instance->get_index(bank.samples[value.offset]);
-            writer->Write(std::string(gSampleTable[idx]));
-            writer->Write(value.tuning);
+            uint32_t idx = AudioManager::Instance->get_index(bank->mBank.samples[value.offset]);
+            writer.Write(std::string(bank->mSampleTable[idx]));
+            writer.Write(value.tuning);
         }
     }
 
-    WRITE_U32(bank.drums.size());
-    for(auto &drum : bank.drums){
-        WRITE_U8(drum.releaseRate);
-        WRITE_U8(drum.pan);
-        auto envelope = bank.envelopes[drum.envelope];
+    writer.Write((uint32_t) bank->mBank.drums.size());
+    for(auto &drum : bank->mBank.drums){
+        writer.Write((uint8_t) drum.releaseRate);
+        writer.Write((uint8_t) drum.pan);
+        auto envelope = bank->mBank.envelopes[drum.envelope];
         if(!envelope.entries.empty()){
-            WRITE_U32(envelope.entries.size());
+            writer.Write((uint32_t) envelope.entries.size());
             for(auto &entry : envelope.entries){
-                writer->Write(entry.delay);
-                writer->Write(entry.arg);
+                writer.Write(entry.delay);
+                writer.Write(entry.arg);
             }
         } else {
-            WRITE_U32(0);
+            writer.Write((uint32_t) 0);
         }
 
-        uint32_t idx = AudioManager::Instance->get_index(bank.samples[drum.sound.offset]);
-        std::string out = std::string(gSampleTable[idx]);
-        writer->Write(out);
-        writer->Write(drum.sound.tuning);
+        uint32_t idx = AudioManager::Instance->get_index(bank->mBank.samples[drum.sound.offset]);
+        std::string out = std::string(bank->mSampleTable[idx]);
+        writer.Write(out);
+        writer.Write(drum.sound.tuning);
     }
 
-    return true;
+    writer.Finish(write);
+}
+
+std::optional<std::shared_ptr<IParsedData>> BankFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
+    auto banks = AudioManager::Instance->get_banks();
+    auto bankId = data["id"].as<uint32_t>();
+
+    auto gSampleTable = Companion::Instance->GetCartridge()->GetCountry() == N64::CountryCode::Japan ? gJPSampleTable : gUSSampleTable;
+    return std::make_shared<BankData>(banks[bankId], bankId, gSampleTable);
 }

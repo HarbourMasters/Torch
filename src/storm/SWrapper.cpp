@@ -1,8 +1,12 @@
 #include "SWrapper.h"
 #include <filesystem>
 #include <iostream>
+#include <fstream>
+
+#include "spdlog/spdlog.h"
 
 namespace fs = std::filesystem;
+bool debugMode = true;
 
 SWrapper::SWrapper(const std::string& path) {
     if(fs::exists(path)) {
@@ -17,6 +21,17 @@ SWrapper::SWrapper(const std::string& path) {
 }
 
 bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
+    if(debugMode){
+        SPDLOG_INFO("Creating debug file: debug/{}", path);
+        std::string dpath = "debug/" + path;
+        if(!fs::exists(fs::path(dpath).parent_path())){
+            fs::create_directories(fs::path(dpath).parent_path());
+        }
+        std::ofstream stream(dpath, std::ios::binary);
+        stream.write((char*)data.data(), data.size());
+        stream.close();
+    }
+
     HANDLE hFile;
 #ifdef _WIN32
     SYSTEMTIME sysTime;
@@ -31,6 +46,11 @@ bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
 
     char* raw = (char*) data.data();
     size_t size = data.size();
+
+    if(size == 0){
+        std::cout << "File empty: " << path << std::endl;
+        return false;
+    }
 
     if(size >> 32){
         std::cout << "File too large: " << path << std::endl;

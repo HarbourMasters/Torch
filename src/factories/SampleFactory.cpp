@@ -1,46 +1,36 @@
 #include "SampleFactory.h"
+#include "utils/MIODecoder.h"
 
-#include <vector>
-#include "audio/AudioManager.h"
+void SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto sample = std::static_pointer_cast<SampleData>(raw)->mSample;
 
-bool SampleFactory::process(LUS::BinaryWriter* writer, YAML::Node& data, std::vector<uint8_t>& buffer) {
-    WRITE_HEADER(LUS::ResourceType::Sample, 0);
+    WriteHeader(writer, LUS::ResourceType::Sample, 0);
+    writer.Write((uint32_t) sample.loop.start);
+    writer.Write((uint32_t) sample.loop.end);
+    writer.Write((uint32_t) sample.loop.count);
+    writer.Write((uint32_t) sample.loop.pad);
 
+    if(sample.loop.state.has_value()){
+        auto state = sample.loop.state.value();
+        writer.Write((uint32_t) state.size());
+        writer.Write((char*) state.data(), state.size() * sizeof(int16_t));
+    } else {
+        writer.Write((uint32_t) 0);
+    }
+
+    writer.Write((uint32_t) sample.book.order);
+    writer.Write((uint32_t) sample.book.npredictors);
+
+    writer.Write((uint32_t) sample.book.table.size());
+    writer.Write((char*) sample.book.table.data(), sample.book.table.size() * sizeof(int16_t));
+    writer.Write(sample.name);
+
+    writer.Finish(write);
+}
+
+std::optional<std::shared_ptr<IParsedData>> SampleFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
     auto id = data["id"].as<int32_t>();
     AudioBankSample entry = AudioManager::Instance->get_aifc(id);
-
-    // Write AdpcmLoop
-    WRITE_U32(entry.loop.start);
-    WRITE_U32(entry.loop.end);
-    WRITE_I32(entry.loop.count);
-    WRITE_U32(entry.loop.pad);
-
-    if(entry.loop.state.has_value()){
-        std::vector<int16_t> state = entry.loop.state.value();
-        WRITE_U32(state.size());
-        for(auto &value : state){
-            writer->Write(value);
-        }
-    } else {
-        WRITE_U32(0);
-    }
-
-    // Write AdpcmBook
-    WRITE_I32(entry.book.order);
-    WRITE_I32(entry.book.npredictors);
-
-    WRITE_U32(entry.book.table.size());
-    for(auto &value : entry.book.table){
-        writer->Write(value);
-    }
-
-    // Write sample
-    WRITE_I32(entry.data.size());
-    for(auto &value : entry.data){
-        WRITE_U8(value);
-    }
-
-    writer->Write(entry.name);
-
-    return true;
+    return std::make_shared<SampleData>(entry);
 }

@@ -8,6 +8,10 @@ LUS::BinaryReader::BinaryReader(char* nBuffer, size_t nBufferSize) {
     mStream = std::make_shared<MemoryStream>(nBuffer, nBufferSize);
 }
 
+LUS::BinaryReader::BinaryReader(uint8_t* nBuffer, size_t nBufferSize) {
+    mStream = std::make_shared<MemoryStream>((char*) nBuffer, nBufferSize);
+}
+
 LUS::BinaryReader::BinaryReader(Stream* nStream) {
     mStream.reset(nStream);
 }
