@@ -74,7 +74,7 @@
   name: Mario Kart 64 [US]
   path: assets/mk64/us
   config:
-    gbi: F3DEX
+    gbi: F3DEX_MK64
     sort: OFFSET
     output:
       binary: mkcube.otr

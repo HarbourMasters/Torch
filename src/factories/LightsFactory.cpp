@@ -43,7 +43,7 @@ void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     write << fourSpaceTab;
     write << r2 << ", " << g2 << ", " << b2 << ", " << x << ", " << y << ", " << z << "\n";
 
-    write << ");\n";
+    write << ");\n\n";
 }
 
 void LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

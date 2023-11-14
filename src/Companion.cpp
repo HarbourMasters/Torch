@@ -15,6 +15,7 @@
 #include "factories/DisplayListFactory.h"
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
+#include "factories/mk64/WaypointFactory.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
@@ -49,6 +50,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
     this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
     // this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
+
+    // MK64 specific
+    this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
 
     this->Process();
 }
@@ -172,6 +176,9 @@ void Companion::Process() {
             this->gGBIVersion = GBIVersion::F3DEX2;
         } else if(key == "F3DEXB") {
             this->gGBIVersion = GBIVersion::F3DEXB;
+        } else if (key == "F3DEX_MK64") {
+            this->gGBIVersion = GBIVersion::f3dex;
+            this->gGBIMinorVersion = GBIMinorVersion::Mk64;
         } else {
             SPDLOG_ERROR("Invalid GBI version");
             return;

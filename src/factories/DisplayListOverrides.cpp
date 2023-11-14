@@ -8,19 +8,37 @@
 #include <string>
 
 namespace GFXDOverride {
-    
-void Quadrangle() {
-    auto *gfx = static_cast<const Gfx*>(gfxd_macro_data());
 
+void Triangle2(const Gfx* gfx) {
+    auto w0 = gfx->words.w0;
     auto w1 = gfx->words.w1;
 
-    auto v1 = std::to_string( ((w1 >> 8) & 0xFF) / 2 );
-    auto v2 = std::to_string( ((w1 >> 16) & 0xFF) / 2 );
+    auto v1 = std::to_string( ((w0 >> 16) & 0xFF) / 2 );
+    auto v2 = std::to_string( ((w0 >> 8) & 0xFF) / 2 ); 
+    auto v3 = std::to_string( (w0 & 0xFF) / 2 );
+
+    auto v4 = std::to_string( ((w1 >> 16) & 0xFF) / 2 );
+    auto v5 = std::to_string( ((w1 >> 8) & 0xFF) / 2 );
+    auto v6 = std::to_string( (w1 & 0xFF) / 2 );
+    auto flag = "0";
+
+    const auto str = v1 + ", " + v2 + ", " + v3 + ", " + flag + ", " + v4 + ", " + v5 + ", " + v6 + ", " + flag;
+
+    gfxd_puts("gsSP2Triangles(");
+    gfxd_puts(str.c_str());
+    gfxd_puts(")");
+}
+
+void Quadrangle(const Gfx* gfx) {
+    auto w1 = gfx->words.w1;
+
+    auto v1 = std::to_string( ((w1 >> 16) & 0xFF) / 2 );
+    auto v2 = std::to_string( ((w1 >> 8) & 0xFF) / 2 );
     auto v3 = std::to_string( (w1 & 0xFF) / 2 );
     auto v4 = std::to_string( ((w1 >> 24) & 0xFF) / 2 );
     auto flag = "0";
 
-    const auto str = v2 + ", " + v1 + ", " + v3 + ", " + v4 + ", " + flag;
+    const auto str = v1 + ", " + v2 + ", " + v3 + ", " + v4 + ", " + flag;
 
     gfxd_puts("gsSP1Quadrangle(");
     gfxd_puts(str.c_str());
@@ -56,7 +74,7 @@ int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t heig
 }
 
 int Light(uint32_t lightsn, int32_t count) {
-    uint32_t ptr = SEGMENT_OFFSET(lightsn - 8);
+    uint32_t ptr = SEGMENT_OFFSET(lightsn);
     printf("FLIGHT: %X\n", ptr);
     printf("count: %d\n", count);
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){

@@ -139,24 +139,87 @@ texture_podium1:
   width: 32
   height: 32
   format: RGBA16
-silver_trophy_dl19:
+silver_trophy_dl22:
   symbol: silver_trophy_dl22
   type: gfx
   mio0: 0x821D10
   offset: 0x7510
-silver_trophy_dl20:
+silver_trophy_dl23:
   symbol: silver_trophy_dl23
   type: gfx
   mio0: 0x821D10
   offset: 0x75E0
-silver_trophy_dl21:
+silver_trophy_dl24:
   symbol: silver_trophy_dl24
   type: gfx
   mio0: 0x821D10
   offset: 0x75F0
-silver_trophy_dl22:
+silver_trophy_dl25:
   symbol: silver_trophy_dl25
   type: gfx
   mio0: 0x821D10
   offset: 0x7600
-  
+silver_trophy_dl26:
+  symbol: silver_trophy_dl26
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x7F60
+silver_trophy_dl27:
+  symbol: silver_trophy_dl27
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x8030
+silver_trophy_dl28:
+  symbol: silver_trophy_dl28
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x8040
+silver_trophy_dl29:
+  symbol: silver_trophy_dl29
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x8050
+silver_trophy_dl30:
+  symbol: silver_trophy_dl30
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x89B0
+silver_trophy_dl31:
+  symbol: silver_trophy_dl31
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x8A80
+silver_trophy_dl32:
+  symbol: silver_trophy_dl32
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x8A90
+silver_trophy_dl33:
+  symbol: silver_trophy_dl33
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x8AA0
+ending_sequence:
+  symbol: ending_sequence
+  mio0: 0x821D10
+  type: MK64:TrackWaypoints
+  offset: 0x8AA8
+  count: 24
+ending_sequence2:
+  symbol: ending_sequence2
+  mio0: 0x821D10
+  type: MK64:TrackWaypoints
+  offset: 0x8B68
+  count: 23
+ending_sequence3:
+  symbol: ending_sequence3
+  mio0: 0x821D10
+  type: MK64:TrackWaypoints
+  offset: 0x8C20
+  count: 24
+ending_sequence4:
+  symbol: ending_sequence4
+  mio0: 0x821D10
+  type: MK64:TrackWaypoints
+  offset: 0x8CE0
+  count: 21

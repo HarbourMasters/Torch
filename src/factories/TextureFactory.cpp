@@ -83,7 +83,11 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
     file.close();
 
-    write << "ALIGNED8 static const u8 " << symbol << "[] = {\n";
+    if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) {
+        write << "u8 " << symbol << "[] = {\n";
+    } else {
+        write << "ALIGNED8 static const u8 " << symbol << "[] = {\n";
+    }
     write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << (*replacement) << ".inc.c\"\n";
     write << "};\n\n";
 }

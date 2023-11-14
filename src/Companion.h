@@ -21,6 +21,11 @@ enum class GBIVersion {
     F3DEXB,
 };
 
+enum class GBIMinorVersion {
+    None,
+    Mk64,
+};
+
 class Companion {
 public:
     static Companion* Instance;
@@ -32,6 +37,7 @@ public:
     std::vector<uint8_t> GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gOutputPath; }
     GBIVersion GetGBIVersion() { return this->gGBIVersion; }
+    GBIMinorVersion GetGBIMinorVersion() { return this->gGBIMinorVersion; }
     std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
@@ -42,6 +48,7 @@ public:
 private:
     bool gOTRMode = false;
     GBIVersion gGBIVersion = GBIVersion::F3D;
+    GBIMinorVersion gGBIMinorVersion = GBIMinorVersion::None;
     std::string gOutputPath;
     std::string gCurrentFile;
     ExportType gExporterType;

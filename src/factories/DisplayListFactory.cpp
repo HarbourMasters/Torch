@@ -63,17 +63,33 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
     gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
     gfxd_macro_fn([] {
+        auto gfx = static_cast<const Gfx*>(gfxd_macro_data());
+        auto opcode = (gfx->words.w0 >> 24) & 0xFF;
+
         gfxd_puts(fourSpaceTab);
 
-        switch(gfxd_macro_id()) {
-            // Add this for mk64 only
-            case gfxd_SPLine3D:
-                GFXDOverride::Quadrangle();
+        #define QUAD 0xB5
+        #define TRI2 0xB1
+
+        switch(opcode) {
+
+            // For mk64 only
+            case QUAD:
+                if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) {
+                    GFXDOverride::Quadrangle(gfx);
+                } else {
+                    gfxd_macro_dflt();
+                }
+                break;
+            // Prevents mix and matching of quadrangle commands. Forces 2TRI only. 
+            case TRI2:
+                GFXDOverride::Triangle2(gfx);
                 break;
             default:
                 gfxd_macro_dflt();
                 break;
         }
+
         gfxd_puts(",\n");
         return 0;
     });
@@ -81,8 +97,6 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
-    //gfxd_light_callback(GFXDOverride::Light);
-
     gfxd_lightsn_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
 
@@ -283,7 +297,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 uint32_t ptr = SEGMENT_OFFSET(w1);
 
                 // Make sure it's a Lights1
-                if ( ( (w0 >> 16) & 0xFF ) != G_MV_L0) {
+                if ( ( (w0 >> 16) & 0xFF ) != G_MV_L1) {
                     printf("Found G_MOVEMEM but is not a light1\n");
                     break;
                 }
