@@ -55,78 +55,78 @@ reflection_map_gold:
   width: 32
   height: 32
   format: RGBA16
-silver_trophy_dl7:
-  symbol: silver_trophy_dl7
+gold_trophy_dl:
+  symbol: gold_trophy_dl
   type: gfx
   mio0: 0x821D10
   offset: 0x5E70
-silver_trophy_dl8:
-  symbol: silver_trophy_dl8
+gold_trophy_dl2:
+  symbol: gold_trophy_dl2
   type: gfx
   mio0: 0x821D10
   offset: 0x5F20
-silver_trophy_dl9:
-  symbol: silver_trophy_dl9
+gold_trophy_dl3:
+  symbol: gold_trophy_dl3
   type: gfx
   mio0: 0x821D10
   offset: 0x5FD0
-silver_trophy_dl10:
-  symbol: silver_trophy_dl10
+gold_trophy_dl4:
+  symbol: gold_trophy_dl4
   type: gfx
   mio0: 0x821D10
   offset: 0x6218
-silver_trophy_dl11:
-  symbol: silver_trophy_dl11
+gold_trophy_dl5:
+  symbol: gold_trophy_dl5
   type: gfx
   mio0: 0x821D10
   offset: 0x62C8
-silver_trophy_dl12:
-  symbol: silver_trophy_dl12
+gold_trophy_dl6:
+  symbol: gold_trophy_dl6
   type: gfx
   mio0: 0x821D10
   offset: 0x6518
-silver_trophy_dl13:
-  symbol: silver_trophy_dl13
+gold_trophy_dl7:
+  symbol: gold_trophy_dl7
   type: gfx
   mio0: 0x821D10
   offset: 0x6720
-silver_trophy_dl14:
-  symbol: silver_trophy_dl14
+gold_trophy_dl8:
+  symbol: gold_trophy_dl8
   type: gfx
   mio0: 0x821D10
   offset: 0x6880
-silver_trophy_dl15:
-  symbol: silver_trophy_dl15
+gold_trophy_dl9:
+  symbol: gold_trophy_dl9
   type: gfx
   mio0: 0x821D10
   offset: 0x6948
-silver_trophy_dl16:
-  symbol: silver_trophy_dl16
+gold_trophy_dl10:
+  symbol: gold_trophy_dl10
   type: gfx
   mio0: 0x821D10
   offset: 0x69D8
-silver_trophy_dl17:
-  symbol: silver_trophy_dl17
+gold_trophy_dl11:
+  symbol: gold_trophy_dl11
   type: gfx
   mio0: 0x821D10
   offset: 0x6A28
-silver_trophy_dl18:
-  symbol: silver_trophy_dl18
+gold_trophy_dl12:
+  symbol: gold_trophy_dl12
   type: gfx
   mio0: 0x821D10
   offset: 0x6A78
-silver_trophy_dl19:
-  symbol: silver_trophy_dl19
+gold_trophy_dl13:
+  symbol: gold_trophy_dl13
   type: gfx
   mio0: 0x821D10
   offset: 0x6AC8
-silver_trophy_dl20:
-  symbol: silver_trophy_dl20
+gold_trophy_dl14:
+  symbol: gold_trophy_dl14
   type: gfx
   mio0: 0x821D10
   offset: 0x6B18
-silver_trophy_dl21:
-  symbol: silver_trophy_dl21
+gold_trophy_dl15:
+  symbol: gold_trophy_dl15
   type: gfx
   mio0: 0x821D10
   offset: 0x6B68
@@ -139,63 +139,81 @@ texture_podium1:
   width: 32
   height: 32
   format: RGBA16
-silver_trophy_dl22:
-  symbol: silver_trophy_dl22
+podium_dl:
+  symbol: podium_dl
   type: gfx
   mio0: 0x821D10
   offset: 0x7510
-silver_trophy_dl23:
-  symbol: silver_trophy_dl23
+podium_dl2:
+  symbol: podium_dl2
   type: gfx
   mio0: 0x821D10
   offset: 0x75E0
-silver_trophy_dl24:
-  symbol: silver_trophy_dl24
+podium_dl3:
+  symbol: podium_dl3
   type: gfx
   mio0: 0x821D10
   offset: 0x75F0
-silver_trophy_dl25:
-  symbol: silver_trophy_dl25
+podium_dl4:
+  symbol: podium_dl4
   type: gfx
   mio0: 0x821D10
   offset: 0x7600
-silver_trophy_dl26:
-  symbol: silver_trophy_dl26
+texture_podium2:
+  symbol: gTexturePodium2
+  type: texture
+  mio0: 0x821D10
+  offset: 0x7760
+  size: 2048
+  width: 32
+  height: 32
+  format: RGBA16
+podium2_dl:
+  symbol: podium2_dl
   type: gfx
   mio0: 0x821D10
   offset: 0x7F60
-silver_trophy_dl27:
-  symbol: silver_trophy_dl27
+podium2_dl2:
+  symbol: podium2_dl2
   type: gfx
   mio0: 0x821D10
   offset: 0x8030
-silver_trophy_dl28:
-  symbol: silver_trophy_dl28
+podium2_dl3:
+  symbol: podium2_dl3
   type: gfx
   mio0: 0x821D10
   offset: 0x8040
-silver_trophy_dl29:
-  symbol: silver_trophy_dl29
+podium2_dl4:
+  symbol: podium2_dl4
   type: gfx
   mio0: 0x821D10
   offset: 0x8050
-silver_trophy_dl30:
-  symbol: silver_trophy_dl30
+texture_podium3:
+  symbol: gTexturePodium3
+  type: texture
+  mio0: 0x821D10
+  offset: 0x8070
+  size: 2048
+  width: 32
+  height: 32
+  format: RGBA16
+podium3_dl:
+  symbol: podium3_dl
   type: gfx
   mio0: 0x821D10
   offset: 0x89B0
-silver_trophy_dl31:
-  symbol: silver_trophy_dl31
+podium3_dl2:
+  symbol: podium3_dl2
   type: gfx
   mio0: 0x821D10
   offset: 0x8A80
-silver_trophy_dl32:
-  symbol: silver_trophy_dl32
+podium3_dl3:
+  symbol: podium3_dl3
   type: gfx
   mio0: 0x821D10
   offset: 0x8A90
-silver_trophy_dl33:
-  symbol: silver_trophy_dl33
+podium3_dl4:
+  symbol: podium3_dl4
   type: gfx
   mio0: 0x821D10
   offset: 0x8AA0
