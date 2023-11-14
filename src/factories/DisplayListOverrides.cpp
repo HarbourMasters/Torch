@@ -55,9 +55,10 @@ int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t heig
     return 0;
 }
 
-int Light(uint32_t dl) {
-    uint32_t ptr = SEGMENT_OFFSET(dl);
-    SPDLOG_INFO("FLIGHT\n");
+int Light(uint32_t lightsn, int32_t count) {
+    uint32_t ptr = SEGMENT_OFFSET(lightsn - 8);
+    printf("FLIGHT: %X\n", ptr);
+    printf("count: %d\n", count);
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
         auto symbol = node["symbol"].as<std::string>();

@@ -81,7 +81,9 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
-    gfxd_light_callback(GFXDOverride::Light);
+    //gfxd_light_callback(GFXDOverride::Light);
+
+    gfxd_lightsn_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
@@ -105,7 +107,7 @@ void DebugDisplayList(uint32_t w0, uint32_t w1){
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
-    gfxd_light_callback(GFXDOverride::Light);
+    //gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
     gfxd_execute();
     int bp = 0;
@@ -301,9 +303,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     YAML::Node light;
                     light["type"] = "lights";
                     light["mio0"] = addr.value();
-                    printf("asdf: %X\n", addr.value());
                     light["offset"] = ptr;
-                    printf("offset: %X\n", ptr);
                     light["symbol"] = output;
                     auto result = factory->parse(rom, light);
                     if(result.has_value()){
