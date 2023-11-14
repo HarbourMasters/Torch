@@ -310,6 +310,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                         Companion::Instance->RegisterAsset(output, light);
                     }
                 }
+                break;
             }
             case static_cast<uint8_t>(G_VTX): {
                 uint32_t nvtx;
