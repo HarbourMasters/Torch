@@ -1,0 +1,162 @@
+silver_trophy_dl:
+  symbol: silver_trophy_dl
+  type: gfx
+  mio0: 0x821D10
+  offset: 0xFE0
+silver_trophy_dl2:
+  symbol: silver_trophy_dl2
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x10B8
+silver_trophy_dl3:
+  symbol: silver_trophy_dl3
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x1188
+silver_trophy_dl4:
+  symbol: silver_trophy_dl4
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x1260
+silver_trophy_dl5:
+  symbol: silver_trophy_dl5
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x1418
+silver_trophy_dl6:
+  symbol: silver_trophy_dl6
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x14D0
+reflection_map_brass:
+  symbol: reflection_map_brass
+  type: texture
+  mio0: 0x821D10
+  offset: 0x4670
+  size: 2048
+  width: 32
+  height: 32
+  format: RGBA16
+reflection_map_silver:
+  symbol: reflection_map_silver
+  type: texture
+  mio0: 0x821D10
+  offset: 0x4E70
+  size: 2048
+  width: 32
+  height: 32
+  format: RGBA16
+reflection_map_gold:
+  symbol: reflection_map_gold
+  type: texture
+  mio0: 0x821D10
+  offset: 0x5670
+  size: 2048
+  width: 32
+  height: 32
+  format: RGBA16
+silver_trophy_dl7:
+  symbol: silver_trophy_dl7
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x5E70
+silver_trophy_dl8:
+  symbol: silver_trophy_dl8
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x5F20
+silver_trophy_dl9:
+  symbol: silver_trophy_dl9
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x5FD0
+silver_trophy_dl10:
+  symbol: silver_trophy_dl10
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6218
+silver_trophy_dl11:
+  symbol: silver_trophy_dl11
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x62C8
+silver_trophy_dl12:
+  symbol: silver_trophy_dl12
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6518
+silver_trophy_dl13:
+  symbol: silver_trophy_dl13
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6720
+silver_trophy_dl14:
+  symbol: silver_trophy_dl14
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6880
+silver_trophy_dl15:
+  symbol: silver_trophy_dl15
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6948
+silver_trophy_dl16:
+  symbol: silver_trophy_dl16
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x69D8
+silver_trophy_dl17:
+  symbol: silver_trophy_dl17
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6A28
+silver_trophy_dl18:
+  symbol: silver_trophy_dl18
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6A78
+silver_trophy_dl19:
+  symbol: silver_trophy_dl19
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6AC8
+silver_trophy_dl20:
+  symbol: silver_trophy_dl20
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6B18
+silver_trophy_dl21:
+  symbol: silver_trophy_dl21
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x6B68
+texture_podium1:
+  symbol: gTexturePodium1
+  type: texture
+  mio0: 0x821D10
+  offset: 0x6BD0
+  size: 2048
+  width: 32
+  height: 32
+  format: RGBA16
+silver_trophy_dl19:
+  symbol: silver_trophy_dl22
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x7510
+silver_trophy_dl20:
+  symbol: silver_trophy_dl23
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x75E0
+silver_trophy_dl21:
+  symbol: silver_trophy_dl24
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x75F0
+silver_trophy_dl22:
+  symbol: silver_trophy_dl25
+  type: gfx
+  mio0: 0x821D10
+  offset: 0x7600
+  

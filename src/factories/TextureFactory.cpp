@@ -57,6 +57,12 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
     auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
     auto format = node["format"].as<std::string>();
+
+    if (format.empty()) {
+        printf("ERRROR!!!!");
+        return;
+    }
+
     std::transform(format.begin(), format.end(), format.begin(), tolower);
     (*replacement) += "." + format;
 

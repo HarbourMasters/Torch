@@ -36,7 +36,7 @@ void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     auto y = (int16_t) light.l[0].l.dir[1];
     auto z = (int16_t) light.l[0].l.dir[2];
 
-    SPDLOG_INFO("Found light: {:X} {:X} {:X} {:X} {:X}", r, g, b, r2, g2);
+    SPDLOG_INFO("Read light: {:X} {:X} {:X} {:X} {:X}", r, g, b, r2, g2);
 
     write << fourSpaceTab;
     write << r << ", " << g << ", " << b << ",\n";
@@ -60,7 +60,6 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     auto offset = node["offset"].as<uint32_t>();
     auto symbol = node["symbol"].as<std::string>();
 
-    printf("HERE");
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
     LUS::BinaryReader reader(decoded.data() + offset, sizeof(Lights1Raw));
 

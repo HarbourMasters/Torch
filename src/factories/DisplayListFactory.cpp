@@ -27,7 +27,7 @@ void GFXDSetGBIVersion(){
         case GBIVersion::F3D:
             gfxd_target(gfxd_f3d);
             break;
-        case GBIVersion::F3DEX:
+        case GBIVersion::f3dex:
             gfxd_target(gfxd_f3dex);
             break;
         case GBIVersion::F3DB:
@@ -81,6 +81,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
+    gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
@@ -104,6 +105,7 @@ void DebugDisplayList(uint32_t w0, uint32_t w1){
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
+    gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
     gfxd_execute();
     int bp = 0;
@@ -274,6 +276,41 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 }
                 break;
             }
+            // Lights
+            case static_cast<uint8_t>(G_MOVEMEM): {
+                uint32_t ptr = SEGMENT_OFFSET(w1);
+
+                // Make sure it's a Lights1
+                if ( ( (w0 >> 16) & 0xFF ) != G_MV_L0) {
+                    printf("Found G_MOVEMEM but is not a light1\n");
+                    break;
+                }
+
+                printf("Found LIGHTS1 %X", ptr);
+                if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
+                    SPDLOG_INFO("Could not find declared light at 0x{:X}, trying to autogenerate it", w1);
+                    auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
+                    if(!addr.has_value()) {
+                        SPDLOG_WARN("Warning: Could not find segment {}", SEGMENT_NUMBER(w1));
+                        break;
+                    }
+                    printf("Creating light\n");
+                    auto rom = Companion::Instance->GetRomData();
+                    auto factory = Companion::Instance->GetFactory("LIGHTS")->get();
+                    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + to_hex(w1, false));
+                    YAML::Node light;
+                    light["type"] = "lights";
+                    light["mio0"] = addr.value();
+                    printf("asdf: %X\n", addr.value());
+                    light["offset"] = ptr;
+                    printf("offset: %X\n", ptr);
+                    light["symbol"] = output;
+                    auto result = factory->parse(rom, light);
+                    if(result.has_value()){
+                        Companion::Instance->RegisterAsset(output, light);
+                    }
+                }
+            }
             case static_cast<uint8_t>(G_VTX): {
                 uint32_t nvtx;
 
@@ -281,7 +318,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     case GBIVersion::F3DEX2:
                         nvtx = C0(12, 8);
                         break;
-                    case GBIVersion::F3DEX:
+                    case GBIVersion::f3dex:
                     case GBIVersion::F3DEXB:
                         nvtx = C0(10, 6);
                         break;

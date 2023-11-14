@@ -165,7 +165,7 @@ void Companion::Process() {
         if(key == "F3D") {
             this->gGBIVersion = GBIVersion::F3D;
         } else if(key == "F3DEX") {
-            this->gGBIVersion = GBIVersion::F3DEX;
+            this->gGBIVersion = GBIVersion::f3dex;
         } else if(key == "F3DB") {
             this->gGBIVersion = GBIVersion::F3DB;
         } else if(key == "F3DEX2") {

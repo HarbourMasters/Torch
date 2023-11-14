@@ -55,6 +55,21 @@ int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t heig
     return 0;
 }
 
+int Light(uint32_t dl) {
+    uint32_t ptr = SEGMENT_OFFSET(dl);
+    SPDLOG_INFO("FLIGHT\n");
+    if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
+        auto node = std::get<1>(decl.value());
+        auto symbol = node["symbol"].as<std::string>();
+        SPDLOG_INFO("Found light: 0x{:X} Symbol: {}", ptr, symbol);
+        gfxd_puts(symbol.c_str());
+        return 1;
+    }
+
+    SPDLOG_WARN("Warning: Could not find light at 0x{:X}", ptr);
+    return 0;
+}
+
 int DisplayList(uint32_t dl) {
     uint32_t ptr = SEGMENT_OFFSET(dl);
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){

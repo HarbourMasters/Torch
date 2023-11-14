@@ -15,7 +15,7 @@ namespace fs = std::filesystem;
 
 enum class GBIVersion {
     F3D,
-    F3DEX,
+    f3dex,
     F3DB,
     F3DEX2,
     F3DEXB,
