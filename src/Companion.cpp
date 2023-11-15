@@ -213,7 +213,7 @@ void Companion::Process() {
     SPDLOG_INFO("------------------------------------------------");
     spdlog::set_pattern(line);
 
-    SPDLOG_INFO("Starting CubeOS...");
+    SPDLOG_INFO("Starting Torch...");
     SPDLOG_INFO("Game: {}", gCartridge->GetGameTitle());
     SPDLOG_INFO("CRC: {}", gCartridge->GetCRC());
     SPDLOG_INFO("Version: {}", gCartridge->GetVersion());
@@ -369,7 +369,7 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
 
     SPDLOG_INFO("------------------------------------------------");
 
-    SPDLOG_INFO("Starting CubeOS...");
+    SPDLOG_INFO("Starting Torch...");
     SPDLOG_INFO("Scanning {}", folder);
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());

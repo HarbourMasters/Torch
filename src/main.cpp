@@ -10,17 +10,6 @@ int main(int argc, char *argv[]) {
         * It extracts from a baserom and generates code or an otr.\n\
         * It can also generate an otr from a folder of assets.\n"
     };
-
-    app.require_subcommand();
-
-    /**
-     * Generate OTR or C Code
-     * 
-     * ./cubeos generate otr baserom.z64
-     * ./cubeos generate code baserom.z64
-     * 
-    **/
-    //auto otr = app.add_subcommand("otr", "Generates an otr");
     std::string mode;
     std::string filename;
     std::string target;
@@ -29,6 +18,8 @@ int main(int argc, char *argv[]) {
     bool debug = false;
     bool header = false;
 
+    app.require_subcommand();
+    
     /* Generate an OTR */
     auto otr = app.add_subcommand("otr", "OTR - Generates an otr\n");
 

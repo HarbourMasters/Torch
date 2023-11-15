@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 
 const input = '/Volumes/Moon/dot/HM64/bkp/Ghostship/levels/intro/leveldata.c'
-const output = '/Volumes/Moon/dot/HM64/sm64-cc0/CubeOS/assets/sm64/us/levels/intro.yml'
+const output = '/Volumes/Moon/dot/HM64/sm64-cc0/Torch/assets/sm64/us/levels/intro.yml'
 const mio0 = '0x26A3A0'
 
 function seg_offset(a){
