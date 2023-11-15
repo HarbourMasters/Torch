@@ -24,19 +24,19 @@ std::string to_hex(T number, const bool append0x = true) {
 
 void GFXDSetGBIVersion(){
     switch (Companion::Instance->GetGBIVersion()) {
-        case GBIVersion::F3D:
+        case GBIVersion::f3d:
             gfxd_target(gfxd_f3d);
             break;
-        case GBIVersion::F3DEX:
+        case GBIVersion::f3dex:
             gfxd_target(gfxd_f3dex);
             break;
-        case GBIVersion::F3DB:
+        case GBIVersion::f3db:
             gfxd_target(gfxd_f3db);
             break;
-        case GBIVersion::F3DEX2:
+        case GBIVersion::f3dex2:
             gfxd_target(gfxd_f3dex2);
             break;
-        case GBIVersion::F3DEXB:
+        case GBIVersion::f3dexb:
             gfxd_target(gfxd_f3dexb);
             break;
     }
@@ -278,11 +278,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 uint32_t nvtx;
 
                 switch (gbi) {
-                    case GBIVersion::F3DEX2:
+                    case GBIVersion::f3dex2:
                         nvtx = C0(12, 8);
                         break;
-                    case GBIVersion::F3DEX:
-                    case GBIVersion::F3DEXB:
+                    case GBIVersion::f3dex:
+                    case GBIVersion::f3dexb:
                         nvtx = C0(10, 6);
                         break;
                     default:

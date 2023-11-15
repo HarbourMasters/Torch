@@ -38,12 +38,6 @@ dl8:
   type: gfx
   mio0: 0x825800
   offset: 0x33D8
-startup_logo2:
-  symbol: startup_logo2
-  type: vtx
-  count: 1093
-  offset: 0x3538
-  mio0: 0x825800
 dl9:
   symbol: startup_logo_dl9
   type: gfx
@@ -59,11 +53,6 @@ dl11:
   type: gfx
   mio0: 0x825800
   offset: 0x7CE8
-dl12:
-  symbol: startup_logo_dl12
-  type: gfx
-  mio0: 0x825800
-  offset: 0x7C50
 dl13:
   symbol: startup_logo_dl13
   type: gfx
@@ -110,7 +99,7 @@ dl21:
   mio0: 0x825800
   offset: 0x87A0
 reflection_map_gold:
-  symbol: reflection_map_gold
+  symbol: gTextureReflectionMapGold
   type: texture
   mio0: 0x825800
   offset: 0x8A48
