@@ -29,8 +29,7 @@ int main(int argc, char *argv[]) {
     bool debug = false;
     bool header = false;
 
-    /* Generate OTR */
-
+    /* Generate an OTR */
     auto otr = app.add_subcommand("otr", "OTR - Generates an otr\n");
 
     otr->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
@@ -56,10 +55,11 @@ int main(int argc, char *argv[]) {
 
     });
 
+    /* Generate C code */
     auto code = app.add_subcommand("code", "Code - Generates C code\n");
 
     code->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
-    
+
     code->add_flag("-d,--debug", debug, "Verbose Debug Mode; adds offsets to C code");
     code->parse_complete_callback([&]() {
         auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
