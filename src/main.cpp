@@ -43,7 +43,6 @@ int main(int argc, char *argv[]) {
         auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
 
         if (header) {
-            printf("HEADER");
             instance->Init(ExportType::Header);
         } else {
             instance->Init(ExportType::Binary);
