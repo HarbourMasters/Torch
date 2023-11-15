@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <cstdint>
 
 namespace N64 {
 enum class CountryCode {

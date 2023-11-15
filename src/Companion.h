@@ -1,28 +1,71 @@
 #pragma once
 
 #include <string>
-#include <utility>
-#include <vector>
-#include <unordered_map>
+#include <optional>
 #include <filesystem>
-#include "factories/RawFactory.h"
+#include <vector>
+#include <fstream>
+#include <unordered_map>
+#include <variant>
+#include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
+
+class SWrapper;
+namespace fs = std::filesystem;
+
+enum class GBIVersion {
+    f3d,
+    f3dex,
+    f3db,
+    f3dex2,
+    f3dexb,
+};
+
+enum class GBIMinorVersion {
+    None,
+    Mk64,
+};
 
 class Companion {
 public:
     static Companion* Instance;
-    explicit Companion(std::filesystem::path  rom) : gRomPath(std::move(rom)) {}
-    void Init();
+    explicit Companion(std::filesystem::path rom, bool otr, bool debug) : gRomPath(std::move(rom)), gOTRMode(otr), gIsDebug(debug) {}
+    void Init(ExportType type);
     void Process();
-    N64::Cartridge* GetCartridge() { return this->cartridge; }
+    bool IsOTRMode() { return this->gOTRMode; }
+    bool IsDebug() { return this->gIsDebug; }
+    N64::Cartridge* GetCartridge() { return this->gCartridge; }
+    std::vector<uint8_t> GetRomData() { return this->gRomData; }
+    std::string GetOutputPath() { return this->gOutputPath; }
+    GBIVersion GetGBIVersion() { return this->gGBIVersion; }
+    GBIMinorVersion GetGBIMinorVersion() { return this->gGBIMinorVersion; }
+    std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment);
+    std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
+    std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
 
     static void Pack(const std::string& folder, const std::string& output);
+    std::string NormalizeAsset(const std::string& name) const;
+    void RegisterAsset(const std::string& name, YAML::Node& node);
 private:
-    std::filesystem::path gRomPath;
+    bool gOTRMode = false;
+    bool gIsDebug = false;
+    GBIVersion gGBIVersion = GBIVersion::f3d;
+    GBIMinorVersion gGBIMinorVersion = GBIMinorVersion::None;
+    std::string gOutputPath;
+    std::string gCurrentFile;
+    ExportType gExporterType;
+    fs::path gCurrentDirectory;
+    N64::Cartridge* gCartridge;
     std::vector<uint8_t> gRomData;
-    std::unordered_map<std::string, RawFactory*> gFactories;
-    N64::Cartridge* cartridge;
+    std::filesystem::path gRomPath;
+    std::vector<uint32_t> gSegments;
 
-    void RegisterFactory(const std::string& type, RawFactory* factory);
-    RawFactory* GetFactory(const std::string& type);
+    std::variant<std::vector<std::string>, std::string> gWriteOrder;
+    std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
+    std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
+    std::map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
+    std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
+
+    void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
+    void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
 };

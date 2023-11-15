@@ -39,8 +39,11 @@ class BinaryWriter {
 
     std::vector<char> ToVector();
 
-  protected:
+    void Finish(std::ostream &output);
+
+protected:
     std::shared_ptr<Stream> mStream;
     Endianness mEndianness = Endianness::Native;
+
 };
 } // namespace LUS

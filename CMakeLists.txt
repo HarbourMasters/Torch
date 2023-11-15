@@ -1,17 +1,37 @@
 cmake_minimum_required(VERSION 3.12)
-project(CubeOS)
+project(torch)
 include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
+
+# Link libgfxd
+# Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
+
+FetchContent_Declare(
+    libgfxd
+    GIT_REPOSITORY https://github.com/glankk/libgfxd.git
+    GIT_TAG 96fd3b849f38b3a7c7b7f3ff03c5921d328e6cdf
+)
+
+FetchContent_GetProperties(libgfxd)
+
+if(NOT libgfxd_POPULATED)
+    FetchContent_Populate(libgfxd)
+    include_directories(${libgfxd_SOURCE_DIR})
+    set(LGFXD_SRC gfxd.c uc_f3d.c uc_f3db.c uc_f3dex.c uc_f3dexb.c uc_f3dex2.c)
+    foreach (LGFXD_FILE ${LGFXD_SRC})
+        list(APPEND LGFXD_FILES "${libgfxd_SOURCE_DIR}/${LGFXD_FILE}")
+    endforeach()
+endif()
+
 
 # Source files
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp)
+file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp)
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/**/*.c)
-set(SRC_DIR ${CXX_FILES} ${C_FILES})
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
 set(USE_STANDALONE ON)
 set(VPKTOOL_BUILD_GUI OFF)
@@ -26,8 +46,23 @@ else()
     add_library(${PROJECT_NAME} SHARED ${SRC_DIR})
 endif()
 
+if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+endif()
+
 # Fetch Dependencies
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/binarytools)
+
+if(EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
+FetchContent_Declare(
+    GSL
+    GIT_REPOSITORY https://github.com/Microsoft/GSL.git
+    GIT_TAG a3534567187d2edc428efd3f13466ff75fe5805c
+)
+FetchContent_MakeAvailable(GSL)
+target_link_libraries(${PROJECT_NAME} PRIVATE GSL)
+endif()
 
 # Link BinaryTools
 add_dependencies(${PROJECT_NAME} BinaryTools)
@@ -46,7 +81,6 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
     GIT_TAG f7320141120f720aecc4c32be25586e7da9eb978
 )
-
 set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)

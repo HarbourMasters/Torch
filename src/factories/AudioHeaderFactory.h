@@ -1,9 +1,11 @@
 #pragma once
 
-#include "RawFactory.h"
+#include "BaseFactory.h"
 
-class AudioHeaderFactory : public RawFactory {
+class AudioHeaderFactory : public BaseFactory {
 public:
-    AudioHeaderFactory() = default;
-    bool process(LUS::BinaryWriter* write, YAML::Node& data, std::vector<uint8_t>& buffer) override;
+    std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
+    inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
+        return {};
+    }
 };
