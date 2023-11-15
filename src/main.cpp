@@ -36,9 +36,9 @@ int main(int argc, char *argv[]) {
 
     otr->add_flag("-t,--target", target, "OTR output destination");
     otr->add_flag("-o,--otr", otrMode, "OTR Mode");
-    otr->add_flag("-f,--folder", folder, "Generate OTR from a folder");
+    otr->add_flag("-d,--dir", folder, "Generate OTR from a directory of assets");
     otr->add_flag("-z,--zeader", header, "Generates a header");
-    otr->add_flag("-d,--debug", debug, "Verbose Debug Mode");
+    otr->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
     otr->parse_complete_callback([&]() {
         auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
 
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
 
     code->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
-    code->add_flag("-d,--debug", debug, "Verbose Debug Mode; adds offsets to C code");
+    code->add_flag("-v,--verbose", debug, "Verbose Debug Mode; adds offsets to C code");
     code->parse_complete_callback([&]() {
         auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
         instance->Init(ExportType::Code);
