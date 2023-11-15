@@ -20,11 +20,13 @@ int main(int argc, char *argv[]) {
     std::string mode;
     std::string filename;
     bool otrMode = false;
+    bool debug = false;
     otr->add_option("mode", mode, "<extract_mode> modes: code, otr")->required();
     otr->add_option("rom", filename, "z64 rom")->required()->check(CLI::ExistingFile);
     otr->add_flag("-o,--otr", otrMode, "OTR Mode");
+    otr->add_flag("-d,--debug", debug, "Debug Mode; adds offsets to C files");
     otr->parse_complete_callback([&]() {
-        auto instance = Companion::Instance = new Companion(filename, otrMode);
+        auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
         if(mode == "header") {
             instance->Init(ExportType::Header);
         } else if(mode == "code") {

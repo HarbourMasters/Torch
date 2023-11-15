@@ -29,10 +29,11 @@ enum class GBIMinorVersion {
 class Companion {
 public:
     static Companion* Instance;
-    explicit Companion(std::filesystem::path rom, bool otr) : gRomPath(std::move(rom)), gOTRMode(otr) {}
+    explicit Companion(std::filesystem::path rom, bool otr, bool debug) : gRomPath(std::move(rom)), gOTRMode(otr), gIsDebug(debug) {}
     void Init(ExportType type);
     void Process();
     bool IsOTRMode() { return this->gOTRMode; }
+    bool IsDebug() { return this->gIsDebug; }
     N64::Cartridge* GetCartridge() { return this->gCartridge; }
     std::vector<uint8_t> GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gOutputPath; }
@@ -47,6 +48,7 @@ public:
     void RegisterAsset(const std::string& name, YAML::Node& node);
 private:
     bool gOTRMode = false;
+    bool gIsDebug = false;
     GBIVersion gGBIVersion = GBIVersion::F3D;
     GBIMinorVersion gGBIMinorVersion = GBIMinorVersion::None;
     std::string gOutputPath;

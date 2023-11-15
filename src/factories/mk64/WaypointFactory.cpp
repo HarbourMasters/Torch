@@ -29,14 +29,14 @@ void MK64::WaypointCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
         auto z = waypoints[i].posZ;
 
         // Track segment
-        auto seg = waypoints[i].posZ;
+        auto seg = waypoints[i].trackSegment;
 
         if(i <= waypoints.size() - 1) {
             write << fourSpaceTab;
         }
 
         // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
-        write << "{" << NUM(x) << ", " << NUM(y) << "}, {" << NUM(z) << ", " << NUM(seg) << " },\n";
+        write << "{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << ", " << NUM(seg) << " },\n";
     }
     write << "};\n\n";
 }
@@ -67,8 +67,6 @@ std::optional<std::shared_ptr<IParsedData>> MK64::WaypointFactory::parse(std::ve
 
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<MK64::TrackWaypoint> waypoints;
-
-    printf("WAYPOINT");
 
     for(size_t i = 0; i < count; i++) {
         auto x = reader.ReadInt16();

@@ -56,6 +56,7 @@ void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     const auto symbol = node["symbol"].as<std::string>();
+    const auto offset = node["offset"].as<uint32_t>();
     char out[0xFFFF] = {0};
 
     gfxd_input_buffer(cmds.data(), sizeof(uint32_t) * cmds.size());
@@ -99,6 +100,10 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_dl_callback(GFXDOverride::DisplayList);
     gfxd_lightsn_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
+
+    if (Companion::Instance->IsDebug()) {
+        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+    }
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
@@ -265,10 +270,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
                 if(!dec.has_value()){
-                    SPDLOG_INFO("Could not find declared display list at 0x{:X}, trying to autogenerate it", w1);
+                    SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating  it", w1);
                     auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
                     if(!addr.has_value()) {
-                        SPDLOG_WARN("Warning: Could not find segment {}", SEGMENT_NUMBER(w1));
+                        SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
                         break;
                     }
 
@@ -292,25 +297,22 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 }
                 break;
             }
-            // Lights
+            // Lights1
             case static_cast<uint8_t>(G_MOVEMEM): {
                 uint32_t ptr = SEGMENT_OFFSET(w1);
 
-                // Make sure it's a Lights1
+                // Ignore if not a Lights1 command
                 if ( ( (w0 >> 16) & 0xFF ) != G_MV_L1) {
-                    printf("Found G_MOVEMEM but is not a light1\n");
                     break;
                 }
 
-                printf("Found LIGHTS1 %X", ptr);
                 if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
-                    SPDLOG_INFO("Could not find declared light at 0x{:X}, trying to autogenerate it", w1);
+                    SPDLOG_INFO("Addr to Lights1 command at 0x{:X} not in yaml, autogenerating  it", w1);
                     auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
                     if(!addr.has_value()) {
-                        SPDLOG_WARN("Warning: Could not find segment {}", SEGMENT_NUMBER(w1));
+                        SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
                         break;
                     }
-                    printf("Creating light\n");
                     auto rom = Companion::Instance->GetRomData();
                     auto factory = Companion::Instance->GetFactory("LIGHTS")->get();
                     std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + to_hex(w1, false));
@@ -345,10 +347,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 uint32_t ptr = SEGMENT_OFFSET(w1);
 
                 if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
-                    SPDLOG_INFO("Could not find declared vtx at 0x{:X}, trying to autogenerate it", w1);
+                    SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating  it", w1);
                     auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
                     if(!addr.has_value()) {
-                        SPDLOG_WARN("Warning: Could not find segment {}", SEGMENT_NUMBER(w1));
+                        SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
                         break;
                     }
 

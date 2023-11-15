@@ -58,11 +58,6 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
     auto format = node["format"].as<std::string>();
 
-    if (format.empty()) {
-        printf("ERRROR!!!!");
-        return;
-    }
-
     std::transform(format.begin(), format.end(), format.begin(), tolower);
     (*replacement) += "." + format;
 
@@ -114,6 +109,13 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     auto height = node["height"].as<uint32_t>();
     auto size = node["size"].as<size_t>();
     auto offset = node["offset"].as<size_t>();
+
+    if (format.empty()) {
+        SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
+                      Please add one of the following formats\n\
+                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp", offset);
+        return std::nullopt;
+    }
 
 	if(!gTextureTypes.contains(format)) {
 		return std::nullopt;

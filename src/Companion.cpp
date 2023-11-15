@@ -61,9 +61,10 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     std::ostringstream stream;
 
     auto type = node["type"].as<std::string>();
+    auto offset = node["offset"].as<uint32_t>();
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
-    SPDLOG_INFO("Processing {} [{}]", name, type);
+    SPDLOG_INFO("[{}] Processing {} at 0x{:X}", type, name, offset);
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
         SPDLOG_ERROR("No factory found for {}", name);

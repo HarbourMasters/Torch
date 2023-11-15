@@ -50,7 +50,7 @@ int Vtx(uint32_t vtx, int32_t num) {
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
         auto symbol = node["symbol"].as<std::string>();
-        SPDLOG_INFO("Found vtx: 0x{:X} Symbol: {}", ptr, symbol);
+        SPDLOG_INFO("Wrote vtx: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
     }
@@ -64,7 +64,7 @@ int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t heig
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
         auto symbol = node["symbol"].as<std::string>();
-        SPDLOG_INFO("Found texture: 0x{:X} Symbol: {}", ptr, symbol);
+        SPDLOG_INFO("Wrote texture: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
     }
@@ -75,12 +75,10 @@ int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t heig
 
 int Light(uint32_t lightsn, int32_t count) {
     uint32_t ptr = SEGMENT_OFFSET(lightsn);
-    printf("FLIGHT: %X\n", ptr);
-    printf("count: %d\n", count);
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
         auto symbol = node["symbol"].as<std::string>();
-        SPDLOG_INFO("Found light: 0x{:X} Symbol: {}", ptr, symbol);
+        SPDLOG_INFO("Wrote light: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
     }
@@ -94,12 +92,12 @@ int DisplayList(uint32_t dl) {
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
         auto symbol = node["symbol"].as<std::string>();
-        SPDLOG_INFO("Found display list: 0x{:X} Symbol: {}", ptr, symbol);
+        SPDLOG_INFO("Wrote display list: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
     }
 
-    SPDLOG_WARN("Warning: Could not find display list at 0x{:X}", ptr);
+    SPDLOG_WARN("Warning: Could not find display list to override at 0x{:X}", ptr);
     return 0;
 }
 }
