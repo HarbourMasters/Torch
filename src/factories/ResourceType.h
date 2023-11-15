@@ -24,5 +24,8 @@ enum class ResourceType {
     SDialog = 0x53444C47,     // SDLG
     Dictionary = 0x44494354,  // DICT
     Geo = 0x47454F20,         // GEO
+
+    // MK64
+    Waypoints = 0x46665666,   // TrackWaypoints
 };
 } // namespace LUS

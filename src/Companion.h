@@ -21,17 +21,24 @@ enum class GBIVersion {
     f3dexb,
 };
 
+enum class GBIMinorVersion {
+    None,
+    Mk64,
+};
+
 class Companion {
 public:
     static Companion* Instance;
-    explicit Companion(std::filesystem::path rom, bool otr) : gRomPath(std::move(rom)), gOTRMode(otr) {}
+    explicit Companion(std::filesystem::path rom, bool otr, bool debug) : gRomPath(std::move(rom)), gOTRMode(otr), gIsDebug(debug) {}
     void Init(ExportType type);
     void Process();
     bool IsOTRMode() { return this->gOTRMode; }
+    bool IsDebug() { return this->gIsDebug; }
     N64::Cartridge* GetCartridge() { return this->gCartridge; }
     std::vector<uint8_t> GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gOutputPath; }
     GBIVersion GetGBIVersion() { return this->gGBIVersion; }
+    GBIMinorVersion GetGBIMinorVersion() { return this->gGBIMinorVersion; }
     std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
@@ -41,7 +48,9 @@ public:
     void RegisterAsset(const std::string& name, YAML::Node& node);
 private:
     bool gOTRMode = false;
+    bool gIsDebug = false;
     GBIVersion gGBIVersion = GBIVersion::f3d;
+    GBIMinorVersion gGBIMinorVersion = GBIMinorVersion::None;
     std::string gOutputPath;
     std::string gCurrentFile;
     ExportType gExporterType;

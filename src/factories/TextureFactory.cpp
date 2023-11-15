@@ -57,6 +57,7 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
     auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
     auto format = node["format"].as<std::string>();
+
     std::transform(format.begin(), format.end(), format.begin(), tolower);
     (*replacement) += "." + format;
 
@@ -77,7 +78,11 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
     file.close();
 
-    write << "ALIGNED8 static const u8 " << symbol << "[] = {\n";
+    if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) {
+        write << "u8 " << symbol << "[] = {\n";
+    } else {
+        write << "ALIGNED8 static const u8 " << symbol << "[] = {\n";
+    }
     write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << (*replacement) << ".inc.c\"\n";
     write << "};\n\n";
 }
@@ -104,6 +109,13 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     auto height = node["height"].as<uint32_t>();
     auto size = node["size"].as<size_t>();
     auto offset = node["offset"].as<size_t>();
+
+    if (format.empty()) {
+        SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
+                      Please add one of the following formats\n\
+                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp", offset);
+        return std::nullopt;
+    }
 
 	if(!gTextureTypes.contains(format)) {
 		return std::nullopt;

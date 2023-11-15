@@ -15,6 +15,7 @@
 #include "factories/DisplayListFactory.h"
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
+#include "factories/mk64/WaypointFactory.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
@@ -50,6 +51,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
     // this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
 
+    // MK64 specific
+    this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
+
     this->Process();
 }
 
@@ -57,9 +61,10 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     std::ostringstream stream;
 
     auto type = node["type"].as<std::string>();
+    auto offset = node["offset"].as<uint32_t>();
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
-    SPDLOG_INFO("Processing {} [{}]", name, type);
+    SPDLOG_INFO("[{}] Processing {} at 0x{:X}", type, name, offset);
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
         SPDLOG_ERROR("No factory found for {}", name);
@@ -172,6 +177,9 @@ void Companion::Process() {
             this->gGBIVersion = GBIVersion::f3dex2;
         } else if(key == "F3DEXB") {
             this->gGBIVersion = GBIVersion::f3dexb;
+        } else if (key == "F3DEX_MK64") {
+            this->gGBIVersion = GBIVersion::f3dex;
+            this->gGBIMinorVersion = GBIMinorVersion::Mk64;
         } else {
             SPDLOG_ERROR("Invalid GBI version");
             return;
@@ -205,7 +213,7 @@ void Companion::Process() {
     SPDLOG_INFO("------------------------------------------------");
     spdlog::set_pattern(line);
 
-    SPDLOG_INFO("Starting CubeOS...");
+    SPDLOG_INFO("Starting Torch...");
     SPDLOG_INFO("Game: {}", gCartridge->GetGameTitle());
     SPDLOG_INFO("CRC: {}", gCartridge->GetCRC());
     SPDLOG_INFO("Version: {}", gCartridge->GetVersion());
@@ -361,7 +369,7 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
 
     SPDLOG_INFO("------------------------------------------------");
 
-    SPDLOG_INFO("Starting CubeOS...");
+    SPDLOG_INFO("Starting Torch...");
     SPDLOG_INFO("Scanning {}", folder);
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());

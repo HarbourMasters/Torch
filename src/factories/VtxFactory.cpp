@@ -19,7 +19,12 @@ void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
 void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
-    auto symbol = node["symbol"].as<std::string>();
+    const auto symbol = node["symbol"].as<std::string>();
+    const auto offset = node["offset"].as<uint32_t>();
+
+    if (Companion::Instance->IsDebug()) {
+        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+    }
 
     write << "Vtx " << symbol << "[] = {\n";
 
@@ -47,6 +52,11 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
         write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
     }
+
+    if (Companion::Instance->IsDebug()) {
+        write << fourSpaceTab << "// 0x" << std::hex << std::uppercase << (offset + (16 * vtx.size())) << "\n";
+    }
+
     write << "};\n\n";
 }
 
