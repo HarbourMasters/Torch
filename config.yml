@@ -1,99 +1,15 @@
-# Supported game versions
-# SM64 [JP, US]
-# MK64 [US]
+# This is a sample configuration file to use on Torch.
+# You can find more information about the configuration file on the wiki (WIP)
 
-8a20a5c83d6ceb0f0506cfc9fa20d8f438cafe51:
-  name: Super Mario 64 [JP]
-  path: generated/jp
+N64Hash:
+  name: Game              # The name of the game; you can use any name you want.
+  path: assets/example/   # The path to the ymls folder
   config:
-    gbi: F3D
-    sort: OFFSET
+    gbi: F3D              # You can use F3D, F3DEX, F3DEX-MK64, F3DB, F3DEX2, F3DEXB,
+    sort: OFFSET          # This is how the assets are going to be sorted when generating the Header / C files. You can use OFFSET, ROFFSET for a reverse order or even specify a manual order using a list with the types.
     output:
-      binary: smcube.otr
-  segments:
-    - 0x000000
-    - 0x000000
-    - 0x1076d0
-    - 0x1ff740
-    - 0x271b20
-    - 0x128be0
-    - 0x186810
-    - 0x268520
-    - 0x1f0530
-    - 0x31c770
-    - 0x26ea40
-    - 0x36dad0
-    - 0x130c50
-    - 0x1b7400
-    - 0x380e60
-    - 0x1fec00
-    - 0x1076a0
-    - 0x000000
-    - 0x000000
-    - 0x218130
-    - 0x268020
-    - 0x2aa240
-    - 0x2170d0
-    - 0x125db0
-
-9bef1128717f958171a4afac3ed78ee2bb4e86ce:
-  name: Super Mario 64 [US]
-  path: assets/sm64/us
-  config:
-    gbi: F3D
-    sort: OFFSET
-    output:
-      binary: smcube.otr
-  segments:
-    - 0x000000
-    - 0x000000
-    - 0x108a40
-    - 0x201410
-    - 0x114750
-    - 0x12a7e0
-    - 0x188440
-    - 0x26a3a0
-    - 0x1f2200
-    - 0x31e1d0
-    - 0x2708c0
-    - 0x36f530
-    - 0x132850
-    - 0x1b9070
-    - 0x3828c0
-    - 0x2008d0
-    - 0x108a10
-    - 0x000000
-    - 0x000000
-    - 0x219e00
-    - 0x269ea0
-    - 0x2abca0
-    - 0x218da0
-    - 0x1279b0
-
-579c48e211ae952530ffc8738709f078d5dd215e:
-  name: Mario Kart 64 [US]
-  path: assets/mk64/us
-  config:
-    gbi: F3DEX_MK64
-    sort: OFFSET
-    output:
-      binary: mkcube.otr
-  segments:
-    - 0x000000
-    - 0x000000
-    - 0x12aae0
-    - 0x000000
-    - 0x000000
-    - 0x000000
-    - 0x825800
-    - 0x000000
-    - 0x000000
-    - 0x88cd70
-    - 0x729a30
-    - 0x821D10
-    - 0x7fa3c0
-    - 0x132b50
-    - 0x000000
-    - 0x145470
-
-
+      binary: example.otr # The name of the output binary file
+      headers: include    # The name of the output headers folder
+      code: code          # The name of the output code folder
+  segments:               # A list with all the segmented addresses in order
+    - 0x12345678
