@@ -14,11 +14,11 @@ class SWrapper;
 namespace fs = std::filesystem;
 
 enum class GBIVersion {
-    F3D,
+    f3d,
     f3dex,
-    F3DB,
-    F3DEX2,
-    F3DEXB,
+    f3db,
+    f3dex2,
+    f3dexb,
 };
 
 enum class GBIMinorVersion {
@@ -49,7 +49,7 @@ public:
 private:
     bool gOTRMode = false;
     bool gIsDebug = false;
-    GBIVersion gGBIVersion = GBIVersion::F3D;
+    GBIVersion gGBIVersion = GBIVersion::f3d;
     GBIMinorVersion gGBIMinorVersion = GBIMinorVersion::None;
     std::string gOutputPath;
     std::string gCurrentFile;

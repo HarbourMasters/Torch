@@ -168,15 +168,15 @@ void Companion::Process() {
         auto key = gbi.as<std::string>();
 
         if(key == "F3D") {
-            this->gGBIVersion = GBIVersion::F3D;
+            this->gGBIVersion = GBIVersion::f3d;
         } else if(key == "F3DEX") {
             this->gGBIVersion = GBIVersion::f3dex;
         } else if(key == "F3DB") {
-            this->gGBIVersion = GBIVersion::F3DB;
+            this->gGBIVersion = GBIVersion::f3db;
         } else if(key == "F3DEX2") {
-            this->gGBIVersion = GBIVersion::F3DEX2;
+            this->gGBIVersion = GBIVersion::f3dex2;
         } else if(key == "F3DEXB") {
-            this->gGBIVersion = GBIVersion::F3DEXB;
+            this->gGBIVersion = GBIVersion::f3dexb;
         } else if (key == "F3DEX_MK64") {
             this->gGBIVersion = GBIVersion::f3dex;
             this->gGBIMinorVersion = GBIMinorVersion::Mk64;
