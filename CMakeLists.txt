@@ -24,7 +24,6 @@ if(NOT libgfxd_POPULATED)
     endforeach()
 endif()
 
-
 # Source files
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
@@ -49,6 +48,7 @@ endif()
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS_DEBUG "-g")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+    set(CMAKE_CXX_FLAGS "-Wno-narrowing")
 endif()
 
 # Fetch Dependencies
