@@ -49,6 +49,75 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS_DEBUG "-g")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
     set(CMAKE_CXX_FLAGS "-Wno-narrowing")
+else()
+    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
+                /w;
+                /Od;
+                /MTd
+            >
+            $<$<CONFIG:Release>:
+                /Oi;
+                /Gy;
+                /W3;
+                /MT
+            >
+            /permissive-;
+            /MP;
+            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
+            ${DEFAULT_CXX_EXCEPTION_HANDLING}
+        )
+        target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
+    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
+                /MTd
+            >
+            $<$<CONFIG:Release>:
+                /O2;
+                /Oi;
+                /Gy;
+                /MT
+            >
+            /permissive-;
+            /MP;
+            /w;
+            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
+            ${DEFAULT_CXX_EXCEPTION_HANDLING}
+        )
+        endif()
+    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        target_link_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
+                /INCREMENTAL
+            >
+            $<$<CONFIG:Release>:
+                /OPT:REF;
+                /OPT:ICF;
+                /INCREMENTAL:NO;
+                /FORCE:MULTIPLE
+            >
+            /MANIFEST:NO;
+            /DEBUG;
+            /SUBSYSTEM:WINDOWS
+        )
+    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+        target_link_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
+                /STACK:8777216
+            >
+            $<$<CONFIG:Release>:
+                /OPT:REF;
+                /OPT:ICF;
+                /INCREMENTAL:NO;
+                /FORCE:MULTIPLE
+            >
+            /MANIFEST:NO;
+            /DEBUG;
+            /SUBSYSTEM:WINDOWS
+        )
+    endif()
 endif()
 
 # Fetch Dependencies
