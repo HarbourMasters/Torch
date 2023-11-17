@@ -27,5 +27,6 @@ enum class ResourceType {
 
     // MK64
     Waypoints = 0x46665666,   // TrackWaypoints
+    Metadata  = 0x46664666,   // Metadata
 };
 } // namespace LUS

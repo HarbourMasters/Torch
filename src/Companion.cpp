@@ -16,6 +16,7 @@
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/mk64/WaypointFactory.h"
+#include "factories/mk64/CourseMetadata.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
@@ -53,6 +54,7 @@ void Companion::Init(const ExportType type) {
 
     // MK64 specific
     this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
+    this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
 
     this->Process();
 }
@@ -448,4 +450,8 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(cons
 std::string Companion::NormalizeAsset(const std::string& name) const {
     auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;
     return path;
+}
+
+void Companion::AppendCourseMetadata(const CourseMetadata& metadata) {
+    this->gCourseMetadata.push_back(metadata);
 }
