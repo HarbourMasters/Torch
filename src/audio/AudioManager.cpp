@@ -10,6 +10,7 @@
 #include "hj/pyutils.h"
 #include "spdlog/spdlog.h"
 #include "binarytools/BinaryReader.h"
+#include "spdlog/spdlog.h"
 
 std::unordered_map<std::string, uint32_t> name_table;
 AudioManager* AudioManager::Instance;
@@ -52,15 +53,15 @@ AudioBankSample* SampleBank::AddSample(uint32_t addr, size_t sampleSize, const A
 }
 
 void Bank::print() const {
-    std::cout << "Bank: " << name << std::endl;
-    std::cout << "Instruments: " << std::to_string(insts.size()) << std::endl;
-    std::cout << "Drums: " << std::to_string(drums.size()) << std::endl;
-    std::cout << "Samples: " << std::to_string(samples.size()) << std::endl;
-    std::cout << "Envelopes: " << std::to_string(envelopes.size()) << std::endl;
-    std::cout << "All Instruments: " << std::to_string(allInsts.size()) << std::endl;
-    std::cout << "Inst Offsets: " << std::to_string(instOffsets.size()) << std::endl;
-    std::cout << "Sample Bank: " << sampleBank->name << std::endl;
-    std::cout << "Sample Bank Offset: " << std::to_string(sampleBank->offset) << std::endl;
+    SPDLOG_DEBUG("Bank: {}", name);
+    SPDLOG_DEBUG("Instruments: {}", std::to_string(insts.size()));
+    SPDLOG_DEBUG("Drums: {}", std::to_string(drums.size()));
+    SPDLOG_DEBUG("Samples: {}", std::to_string(samples.size()));
+    SPDLOG_DEBUG("Envelopes: {}", std::to_string(envelopes.size()));
+    SPDLOG_DEBUG("All Instruments: {}", std::to_string(allInsts.size()));
+    SPDLOG_DEBUG("Inst Offsets: {}", std::to_string(instOffsets.size()));
+    SPDLOG_DEBUG("Sample Bank: {}", sampleBank->name);
+    SPDLOG_DEBUG("Sample Bank Offset: {}", std::to_string(sampleBank->offset));
 }
 
 std::vector<Entry> AudioManager::parse_seq_file(std::vector<uint8_t>& buffer, uint32_t offset, bool isCTL){
@@ -651,6 +652,7 @@ AudioBankSample AudioManager::get_aifc(int32_t index) {
         }
     }
 
+    SPDLOG_ERROR("Invalid Index {}", index);
     throw std::runtime_error("Invalid index");
 }
 
