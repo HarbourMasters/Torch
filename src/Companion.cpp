@@ -329,7 +329,7 @@ void Companion::Process() {
             std::ofstream file(output, std::ios::binary);
 
             if(gExporterType == ExportType::Header) {
-                std::string symbol = entry.path().stem();
+                std::string symbol = entry.path().stem().string();
                 std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
                 file << "#ifndef " << symbol << "_H" << std::endl;
                 file << "#define " << symbol << "_H" << std::endl << std::endl;

@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <optional>
 #include <yaml-cpp/yaml.h>
 #include <strhash64/StrHash64.h>
 #include <binarytools/BinaryWriter.h>

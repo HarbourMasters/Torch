@@ -68,9 +68,9 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     // Directional light
 
     // Ambient
-    auto r = reader.ReadInt8();
-    auto g = reader.ReadInt8();
-    auto b = reader.ReadInt8();
+    auto r = (uint8_t)reader.ReadInt8();
+    auto g = (uint8_t)reader.ReadInt8();
+    auto b = (uint8_t)reader.ReadInt8();
     //auto nil = reader.ReadInt32();
     reader.Seek(5, LUS::SeekOffsetType::Current);
 
