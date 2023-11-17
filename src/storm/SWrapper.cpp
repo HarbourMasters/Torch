@@ -14,8 +14,7 @@ SWrapper::SWrapper(const std::string& path) {
     }
 
     if(!SFileCreateArchive(path.c_str(), MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_ARCHIVE_V2, 4096, &this->hMpq)){
-        std::cout << "Failed to create archive: " << path << std::endl;
-        std::cout << GetLastError() << std::endl;
+        SPDLOG_ERROR("Failed to create archive {} with error code {}", path, GetLastError());
         return;
     }
 }
@@ -48,30 +47,28 @@ bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
     size_t size = data.size();
 
     if(size == 0){
+        SPDLOG_ERROR("File at path {} is empty", path);
         std::cout << "File empty: " << path << std::endl;
         return false;
     }
 
     if(size >> 32){
-        std::cout << "File too large: " << path << std::endl;
+        SPDLOG_ERROR("File at path {} is too large with size {}", path, size);
         return false;
     }
 
     if(!SFileCreateFile(this->hMpq, path.c_str(), theTime, size, 0, MPQ_FILE_COMPRESS, &hFile)){
-        std::cout << "Failed to create file: " << path << std::endl;
-        std::cout << GetLastError() << std::endl;
+        SPDLOG_ERROR("Failed to create file at path {} with error {}", path, GetLastError());
         return false;
     }
 
     if(!SFileWriteFile(hFile, (void*) raw, size, MPQ_COMPRESSION_ZLIB)){
-        std::cout << "Failed to write file: " << path << std::endl;
-        std::cout << GetLastError() << std::endl;
+        SPDLOG_ERROR("Failed to write file at path {} with error {}", path, GetLastError());
         return false;
     }
 
     if(!SFileCloseFile(hFile)){
-        std::cout << "Failed to close file: " << path << std::endl;
-        std::cout << GetLastError() << std::endl;
+        SPDLOG_ERROR("Failed to close file at path {} with error {}", path, GetLastError());
         return false;
     }
 
@@ -80,7 +77,7 @@ bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
 
 void SWrapper::Close() {
     if(this->hMpq == nullptr) {
-        std::cout << "Archive already closed" << std::endl;
+        SPDLOG_ERROR("Archive already closed");
         return;
     }
     SFileCloseArchive(this->hMpq);
