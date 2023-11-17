@@ -457,10 +457,13 @@ void Companion::AppendCourseMetadata(const CourseMetadata& metadata) {
     this->gCourseMetadata.push_back(metadata);
 }
 
-bool CompareCourseId(const Companion::CourseMetadata& a, const Companion::CourseMetadata& b) {
+bool Companion::CompareCourseId(const CourseMetadata& a, const CourseMetadata& b) {
     return a.courseId < b.courseId;
 }
 
 void Companion::SortCourseMetadata(void) {
-    std::sort(this->gCourseMetadata.begin(), this->gCourseMetadata.end(), CompareCourseId);
+    std::sort(this->gCourseMetadata.begin(), this->gCourseMetadata.end(),
+            [this](const CourseMetadata& a, const CourseMetadata& b) {
+                return CompareCourseId(a, b);
+            });
 }

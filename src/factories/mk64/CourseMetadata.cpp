@@ -31,7 +31,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
 
     std::ofstream file;
 
-    // Sort by course id
+    // Sort metadata array by course id
     Companion::Instance->SortCourseMetadata();
 
     file.open("gCourseNames.inc.c");
