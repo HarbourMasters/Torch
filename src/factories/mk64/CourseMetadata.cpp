@@ -3,6 +3,7 @@
 #include "Companion.h"
 #include "utils/MIODecoder.h"
 #include "spdlog/spdlog.h"
+#include <algorithm>
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
@@ -29,6 +30,9 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
 
     std::ofstream file;
+
+    // Sort by course id
+    Companion::Instance->SortCourseMetadata();
 
     file.open("gCourseNames.inc.c");
     if (file.is_open()) {

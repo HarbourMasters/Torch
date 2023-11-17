@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem>
+#include <algorithm>
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -454,4 +455,12 @@ std::string Companion::NormalizeAsset(const std::string& name) const {
 
 void Companion::AppendCourseMetadata(const CourseMetadata& metadata) {
     this->gCourseMetadata.push_back(metadata);
+}
+
+bool CompareCourseId(const Companion::CourseMetadata& a, const Companion::CourseMetadata& b) {
+    return a.courseId < b.courseId;
+}
+
+void Companion::SortCourseMetadata(void) {
+    std::sort(this->gCourseMetadata.begin(), this->gCourseMetadata.end(), CompareCourseId);
 }

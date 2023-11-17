@@ -8,6 +8,8 @@ namespace MK64 {
         std::string unk;
     };
 
+    bool CompareCourseId(const CourseMetadata& a, const CourseMetadata& b);
+
     class MetadataData : public IParsedData {
     public:
         std::vector<YamlMetadata> mMetadata;

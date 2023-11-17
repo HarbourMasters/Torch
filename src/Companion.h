@@ -53,6 +53,9 @@ public:
     GBIMinorVersion GetGBIMinorVersion() { return this->gGBIMinorVersion; }
     std::vector<CourseMetadata> GetCourseMetadata() { return this->gCourseMetadata; }
     void AppendCourseMetadata(const CourseMetadata& metadata);
+    bool CompareCourseId(const CourseMetadata& a, const CourseMetadata& b);
+
+    void SortCourseMetadata(void);
     std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
