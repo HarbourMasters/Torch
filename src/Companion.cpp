@@ -67,19 +67,19 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     SPDLOG_INFO("[{}] Processing {} at 0x{:X}", type, name, offset);
     auto factory = this->GetFactory(type);
     if (!factory.has_value()) {
-        SPDLOG_ERROR("No factory found for {}", name);
+        SPDLOG_ERROR("[{}] No factory found for {}", type, name);
         return;
     }
 
     auto result = factory->get()->parse(this->gRomData, node);
     if (!result.has_value()) {
-        SPDLOG_ERROR("Failed to process {}", name);
+        SPDLOG_ERROR("[{}] Failed to process {}", type, name);
         return;
     }
 
     auto exporter = factory->get()->GetExporter(this->gExporterType);
     if (!exporter.has_value()) {
-        SPDLOG_ERROR("No exporter found for {}", name);
+        SPDLOG_ERROR("[{}] No exporter found for {} of type {}", type, name, this->gExporterType);
         return;
     }
 
@@ -107,7 +107,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     }
     }
 
-    SPDLOG_INFO("Processed {}", name);
+    SPDLOG_INFO("[{}] Processed {}", type, name);
     this->gWriteMap[this->gCurrentFile][type].emplace_back(node["offset"].as<uint32_t>(), stream.str());
 }
 
