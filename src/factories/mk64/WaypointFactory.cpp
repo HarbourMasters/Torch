@@ -35,7 +35,7 @@ void MK64::WaypointCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
             write << fourSpaceTab;
         }
 
-        // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
+        // { x, y, z, seg }
         write << "{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << ", " << NUM(seg) << " },\n";
     }
     write << "};\n\n";

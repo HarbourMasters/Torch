@@ -17,6 +17,9 @@
 #include "factories/LightsFactory.h"
 #include "factories/mk64/WaypointFactory.h"
 #include "factories/mk64/CourseMetadata.h"
+#include "factories/mk64/CourseVtx.h"
+#include "factories/mk64/SpawnData.h"
+#include "factories/mk64/TrackSections.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
@@ -54,8 +57,11 @@ void Companion::Init(const ExportType type) {
     // this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
 
     // MK64 specific
+    this->RegisterFactory("MK64:VTX", std::make_shared<MK64::VtxFactory>());
     this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
+    this->RegisterFactory("MK64:TRACKSECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
     this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
+    this->RegisterFactory("MK64:SPAWNDATA", std::make_shared<MK64::SpawnDataFactory>());
 
     this->Process();
 }
