@@ -6,6 +6,7 @@
 #include "factories/sm64/DialogFactory.h"
 #include "factories/sm64/DictionaryFactory.h"
 #include "factories/sm64/TextFactory.h"
+#include "factories/sm64/GeoLayoutFactory.h"
 #include "factories/BankFactory.h"
 #include "factories/AudioHeaderFactory.h"
 #include "factories/SampleFactory.h"
@@ -49,7 +50,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
     this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
-    // this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
+    this->RegisterFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
 
     // MK64 specific
     this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
@@ -61,10 +62,15 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     std::ostringstream stream;
 
     auto type = node["type"].as<std::string>();
-    auto offset = node["offset"].as<uint32_t>();
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
-    SPDLOG_INFO("[{}] Processing {} at 0x{:X}", type, name, offset);
+    if(node["offset"]) {
+        auto offset = node["offset"].as<uint32_t>();
+        SPDLOG_INFO("[{}] Processing {} at 0x{:X}", type, name, offset);
+    } else {
+        SPDLOG_INFO("[{}] Processing {}", type, name);
+    }
+
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
         SPDLOG_ERROR("No factory found for {}", name);
@@ -108,7 +114,9 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     }
 
     SPDLOG_INFO("Processed {}", name);
-    this->gWriteMap[this->gCurrentFile][type].emplace_back(node["offset"].as<uint32_t>(), stream.str());
+    if(node["offset"]) {
+        this->gWriteMap[this->gCurrentFile][type].emplace_back(node["offset"].as<uint32_t>(), stream.str());
+    }
 }
 
 void Companion::Process() {
@@ -403,13 +411,18 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
     wrapper.Close();
 }
 
-void Companion::RegisterAsset(const std::string& name, YAML::Node& node) {
-    if(!node["offset"]) return;
+std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(const std::string& name, YAML::Node& node) {
+    if(!node["offset"]) return std::nullopt;
+
     this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, false);
 
     auto output = (this->gCurrentDirectory / name).string();
     std::replace(output.begin(), output.end(), '\\', '/');
-    this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
+
+    auto entry = std::make_tuple(output, node);
+    this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = entry;
+
+    return entry;
 }
 
 void Companion::RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory) {
