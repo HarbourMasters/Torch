@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     bool header = false;
 
     app.require_subcommand();
-    
+
     /* Generate an OTR */
     auto otr = app.add_subcommand("otr", "OTR - Generates an otr\n");
 
@@ -38,9 +38,9 @@ int main(int argc, char *argv[]) {
         } else {
             instance->Init(ExportType::Binary);
         }
-        
+
         if (!folder.empty()) {
-                Companion::Pack(folder, target);
+            Companion::Pack(folder, target);
         }
 
     });

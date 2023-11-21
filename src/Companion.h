@@ -45,7 +45,7 @@ public:
 
     static void Pack(const std::string& folder, const std::string& output);
     std::string NormalizeAsset(const std::string& name) const;
-    void RegisterAsset(const std::string& name, YAML::Node& node);
+    std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
 private:
     bool gOTRMode = false;
     bool gIsDebug = false;

@@ -5,22 +5,9 @@
 #include "Companion.h"
 #include <gfxd.h>
 #include <fstream>
+#include <utils/TorchUtils.h>
 
 #define C0(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
-
-template< typename T >
-std::string to_hex(T number, const bool append0x = true) {
-    std::stringstream stream;
-    if(append0x) {
-        stream << "0x";
-    }
-    stream << std::setfill ('0') << std::setw(sizeof(T)*2)
-           << std::hex << number;
-
-    auto format = stream.str();
-    std::transform(format.begin(), format.end(), format.begin(), ::toupper);
-    return format;
-}
 
 void GFXDSetGBIVersion(){
     switch (Companion::Instance->GetGBIVersion()) {
@@ -270,7 +257,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
                 if(!dec.has_value()){
-                    SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating  it", w1);
+                    SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", w1);
                     auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
                     if(!addr.has_value()) {
                         SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
@@ -279,7 +266,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                     auto rom = Companion::Instance->GetRomData();
                     auto factory = Companion::Instance->GetFactory("GFX")->get();
-                    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + to_hex(w1, false));
+                    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + Torch::to_hex(w1, false));
                     YAML::Node dl;
                     dl["type"] = "GFX";
                     dl["mio0"] = addr.value();
@@ -307,7 +294,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 }
 
                 if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
-                    SPDLOG_INFO("Addr to Lights1 command at 0x{:X} not in yaml, autogenerating  it", w1);
+                    SPDLOG_INFO("Addr to Lights1 command at 0x{:X} not in yaml, autogenerating it", w1);
                     auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
                     if(!addr.has_value()) {
                         SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
@@ -315,7 +302,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     }
                     auto rom = Companion::Instance->GetRomData();
                     auto factory = Companion::Instance->GetFactory("LIGHTS")->get();
-                    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + to_hex(w1, false));
+                    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + Torch::to_hex(w1, false));
                     YAML::Node light;
                     light["type"] = "lights";
                     light["mio0"] = addr.value();
@@ -356,7 +343,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                     auto rom = Companion::Instance->GetRomData();
                     auto factory = Companion::Instance->GetFactory("VTX")->get();
-                    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + to_hex(w1, false));
+                    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(w1, false));
                     YAML::Node vtx;
                     vtx["type"] = "VTX";
                     vtx["mio0"] = addr.value();
