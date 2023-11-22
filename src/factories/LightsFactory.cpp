@@ -49,16 +49,27 @@ void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
 void LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;
     auto writer = LUS::BinaryWriter();
+    auto size = sizeof(light.l) / sizeof(LightRaw);
 
     WriteHeader(writer, LUS::ResourceType::Lights, 0);
-    writer.Write((uint32_t) sizeof(light));
 
+    writer.Write(reinterpret_cast<char*>(light.a.l.col), 3);
+    writer.Write(reinterpret_cast<char*>(light.a.l.colc), 3);
+
+    writer.Write(static_cast<uint32_t>(size));
+
+    for(size_t i = 0; i < size; i++) {
+        writer.Write(reinterpret_cast<char*>(light.l[i].l.col), 3);
+        writer.Write(reinterpret_cast<char*>(light.l[i].l.colc), 3);
+        writer.Write(reinterpret_cast<char*>(light.l[i].l.dir), 3);
+    }
+    writer.Finish(write);
+    writer.Close();
 }
 
 std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto mio0 = node["mio0"].as<size_t>();
     auto offset = node["offset"].as<uint32_t>();
-    auto symbol = node["symbol"].as<std::string>();
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
     LUS::BinaryReader reader(decoded.data() + offset, sizeof(Lights1Raw));

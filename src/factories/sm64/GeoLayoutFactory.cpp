@@ -69,7 +69,7 @@ uint64_t RegisterOrLoadDisplayList(uint32_t ptr) {
     YAML::Node dl;
     dl["type"] = "GFX";
     dl["mio0"] = addr.value();
-    dl["offset"] = ptr;
+    dl["offset"] = SEGMENT_OFFSET(ptr);
     dl["symbol"] = output;
     auto result = factory->parse(rom, dl);
 
@@ -379,7 +379,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 }
 
                 if (params & 0x80) {
-                    auto ptr = *reinterpret_cast<uint32_t*>(&cmd_pos[0]);
+                    auto ptr = BSWAP32(*reinterpret_cast<uint32_t*>(&cmd_pos[0]));
                     arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
                     cmd_pos += 2 << CMD_SIZE_SHIFT;
                 }
@@ -397,8 +397,10 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 cmd_pos = read_vec3s_angle(vector, &cmd_pos[1]);
 
+                arguments.emplace_back(vector);
+
                 if (params & 0x80) {
-                    auto ptr = *reinterpret_cast<uint32_t*>(&cmd_pos[0]);
+                    auto ptr = BSWAP32(*reinterpret_cast<uint32_t*>(&cmd_pos[0]));
                     arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
                     cmd_pos += 2 << CMD_SIZE_SHIFT;
                 }
@@ -410,7 +412,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 Vec3s translation = {};
                 auto layer = cur_geo_cmd_u8(0x01);
-                auto ptr = cur_geo_cmd_u32(0x08);
+                auto  ptr = cur_geo_cmd_u32(0x08);
                 auto cmd_pos = reinterpret_cast<int16_t*>(cmd);
 
                 arguments.emplace_back(layer);
@@ -434,7 +436,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 arguments.emplace_back(translation);
 
                 if (params & 0x80) {
-                    auto ptr = *reinterpret_cast<uint32_t*>(&cmd_pos[0]);
+                    auto ptr = BSWAP32(*reinterpret_cast<uint32_t*>(&cmd_pos[0]));
                     arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
                     cmd_pos += 0x02 << CMD_SIZE_SHIFT;
                 }

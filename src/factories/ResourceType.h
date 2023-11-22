@@ -17,7 +17,7 @@ enum class ResourceType {
     Bank = 0x42414E4B,        // BANK
     Sample = 0x41554643,      // AIFC
     Sequence = 0x53455143,    // SEQC
-    Lights = 0x46669697,      // LIGHTS
+    Lights = 0x46669697,      // LGTS
 
     // SM64
     Anim = 0x414E494D,        // ANIM
