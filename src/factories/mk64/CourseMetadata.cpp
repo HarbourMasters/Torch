@@ -34,6 +34,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
 
     std::ofstream file;
 
+
     // // Sort metadata array by course id
     // Companion::Instance->SortCourseMetadata();
 
@@ -41,6 +42,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     if (file.is_open()) {
         file << "char *gCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
+            // Remove debug line once proven that sort worked right (start at id 0 and go up)
+            SPDLOG_INFO("Processing Course Id: "+std::to_string(m.courseId));
             file << m.gCourseNames << ", ";
         }
         file << "\n};\n\n";
@@ -139,12 +142,10 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
     //const auto &metadata = m;
 
     std::vector<CourseMetadata> yamlData;
-    for (const auto &metadata : m[dir]) {
+    for (const auto &it : m[dir]) {
+        const auto& metadata = it["course"];
 
-        SPDLOG_INFO("RUN3");
-
-        auto id = metadata["mario_raceway"]["courseId"].as<uint32_t>();
-        SPDLOG_INFO("RUN4");
+        auto id = metadata["courseId"].as<uint32_t>();
         auto name = metadata["name"].as<std::string>();
         auto debugName = metadata["debug_name"].as<std::string>();
         auto cup = metadata["cup"].as<std::string>();
@@ -153,9 +154,8 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         auto waypointWidth2 = metadata["waypoint_width2"].as<std::string>();
 
         auto D_800DCBB4 = metadata["D_800DCBB4"].as<std::string>();
-        SPDLOG_INFO("RUN5");
+
         auto steeringSensitivity = metadata["cpu_steering_sensitivity"].as<uint32_t>();
-        SPDLOG_INFO("RUN6");
 
         CourseMetadata data;
 
