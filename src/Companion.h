@@ -26,18 +26,6 @@ enum class GBIMinorVersion {
     Mk64,
 };
 
-struct CourseMetadata {
-    uint32_t courseId;
-    std::string gCourseNames;
-    std::string gDebugCourseNames;
-    std::string gCupSelectionByCourseId;
-    uint32_t gPerCupIndexByCourseId;
-    std::string gWaypointWidth;
-    std::string gWaypointWidth2;
-    std::string D_800DCBB4;
-    uint32_t gCPUSteeringSensitivity;
-};
-
 class Companion {
 public:
     static Companion* Instance;
@@ -51,11 +39,10 @@ public:
     std::string GetOutputPath() { return this->gOutputPath; }
     GBIVersion GetGBIVersion() { return this->gGBIVersion; }
     GBIMinorVersion GetGBIMinorVersion() { return this->gGBIMinorVersion; }
-    std::vector<CourseMetadata> GetCourseMetadata() { return this->gCourseMetadata; }
-    void AppendCourseMetadata(const CourseMetadata& metadata);
-    bool CompareCourseId(const CourseMetadata& a, const CourseMetadata& b);
+    std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
+    //bool CompareCourseId(const CourseMetadata& a, const CourseMetadata& b);
 
-    void SortCourseMetadata(void);
+    //void SortCourseMetadata(void);
     std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
@@ -70,13 +57,14 @@ private:
     GBIMinorVersion gGBIMinorVersion = GBIMinorVersion::None;
     std::string gOutputPath;
     std::string gCurrentFile;
+    std::vector<std::string> gTables;
     ExportType gExporterType;
     fs::path gCurrentDirectory;
     N64::Cartridge* gCartridge;
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     std::vector<uint32_t> gSegments;
-    std::vector<CourseMetadata> gCourseMetadata;
+    std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
 
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
@@ -84,6 +72,8 @@ private:
     std::map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
+    void ProcessTables(YAML::Node& rom);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
+    void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
 };

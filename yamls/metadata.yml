@@ -1,0 +1,6 @@
+metadata:
+  symbol: metadata
+  type: MK64:METADATA
+  offset: 0x0
+  mio0: 0x0
+  dir: courses/

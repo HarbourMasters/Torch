@@ -16,23 +16,26 @@ void MK64::CourseMetadataHeaderExporter::Export(std::ostream &write, std::shared
     //     return;
     // }
 
-    // write << "extern YamlMetadata " << symbol << "[];\n";
+    // write << "extern CourseMetadata " << symbol << "[];\n";
 }
 
 void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    //auto metadata = std::static_pointer_cast<MetadataData>(raw)->mMetadata;
+    auto metadata = std::static_pointer_cast<MetadataData>(raw)->mMetadata;
     //auto name = node["gCourseNames"].as<std::string>();
-
-    auto metadata = Companion::Instance->GetCourseMetadata();
 
     if (metadata.empty()) {
         SPDLOG_ERROR("Course metadata null");
     }
 
+    std::sort(metadata.begin(), metadata.end(),
+        [this](const CourseMetadata& a, const CourseMetadata& b) {
+            return a.courseId < b.courseId;
+    });
+
     std::ofstream file;
 
-    // Sort metadata array by course id
-    Companion::Instance->SortCourseMetadata();
+    // // Sort metadata array by course id
+    // Companion::Instance->SortCourseMetadata();
 
     file.open("gCourseNames.inc.c");
     if (file.is_open()) {
@@ -127,39 +130,52 @@ void MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std::shared
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto id = node["courseId"].as<uint32_t>();
-    auto name = node["name"].as<std::string>();
-    auto debugName = node["debug_name"].as<std::string>();
-    auto cup = node["cup"].as<std::string>();
-    auto cupIndex = node["cupIndex"].as<uint32_t>();
-    auto waypointWidth = node["waypoint_width"].as<std::string>();
-    auto waypointWidth2 = node["waypoint_width2"].as<std::string>();
+    auto dir = node["dir"].as<std::string>();
+    SPDLOG_INFO("RUN");
 
-    auto D_800DCBB4 = node["D_800DCBB4"].as<std::string>();
-    auto steeringSensitivity = node["cpu_steering_sensitivity"].as<uint32_t>();
+    auto m = Companion::Instance->GetCourseMetadata();
 
-    CourseMetadata data;
+    SPDLOG_INFO("RUN2");
+    //const auto &metadata = m;
 
-    data.courseId = id;
-    data.gCourseNames = name;
-    data.gDebugCourseNames = debugName;
-    data.gCupSelectionByCourseId = cup;
-    data.gPerCupIndexByCourseId = cupIndex;
+    std::vector<CourseMetadata> yamlData;
+    for (const auto &metadata : m[dir]) {
 
-    data.gWaypointWidth = waypointWidth;
-    data.gWaypointWidth2 = waypointWidth2;
+        SPDLOG_INFO("RUN3");
 
-    data.D_800DCBB4 = D_800DCBB4;
-    data.gCPUSteeringSensitivity = steeringSensitivity;
+        auto id = metadata["mario_raceway"]["courseId"].as<uint32_t>();
+        SPDLOG_INFO("RUN4");
+        auto name = metadata["name"].as<std::string>();
+        auto debugName = metadata["debug_name"].as<std::string>();
+        auto cup = metadata["cup"].as<std::string>();
+        auto cupIndex = metadata["cupIndex"].as<uint32_t>();
+        auto waypointWidth = metadata["waypoint_width"].as<std::string>();
+        auto waypointWidth2 = metadata["waypoint_width2"].as<std::string>();
 
-    std::vector<YamlMetadata> yamlData;
+        auto D_800DCBB4 = metadata["D_800DCBB4"].as<std::string>();
+        SPDLOG_INFO("RUN5");
+        auto steeringSensitivity = metadata["cpu_steering_sensitivity"].as<uint32_t>();
+        SPDLOG_INFO("RUN6");
 
-    yamlData.push_back(YamlMetadata({""}));
+        CourseMetadata data;
+
+        data.courseId = id;
+        data.gCourseNames = name;
+        data.gDebugCourseNames = debugName;
+        data.gCupSelectionByCourseId = cup;
+        data.gPerCupIndexByCourseId = cupIndex;
+
+        data.gWaypointWidth = waypointWidth;
+        data.gWaypointWidth2 = waypointWidth2;
+
+        data.D_800DCBB4 = D_800DCBB4;
+        data.gCPUSteeringSensitivity = steeringSensitivity;
 
 
-    //std::vector<CourseMetadata> metadata = Companion::Instance->GetCourseMetadata();
-    Companion::Instance->AppendCourseMetadata(data);
-
+        yamlData.push_back(CourseMetadata(
+            {id, name, debugName, cup, cupIndex, waypointWidth, waypointWidth2, D_800DCBB4, steeringSensitivity}
+        ));
+    }
 
     return std::make_shared<MetadataData>(yamlData);
 }

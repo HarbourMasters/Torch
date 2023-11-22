@@ -4,15 +4,23 @@
 
 namespace MK64 {
 
-    struct YamlMetadata {
-        std::string unk;
+    struct CourseMetadata {
+        uint32_t courseId;
+        std::string gCourseNames;
+        std::string gDebugCourseNames;
+        std::string gCupSelectionByCourseId;
+        uint32_t gPerCupIndexByCourseId;
+        std::string gWaypointWidth;
+        std::string gWaypointWidth2;
+        std::string D_800DCBB4;
+        uint32_t gCPUSteeringSensitivity;
     };
 
     class MetadataData : public IParsedData {
     public:
-        std::vector<YamlMetadata> mMetadata;
+        std::vector<CourseMetadata> mMetadata;
 
-        explicit MetadataData(std::vector<YamlMetadata> metadata) : mMetadata(metadata) {}
+        explicit MetadataData(std::vector<CourseMetadata> metadata) : mMetadata(metadata) {}
     };
 
     class CourseMetadataHeaderExporter : public BaseExporter {

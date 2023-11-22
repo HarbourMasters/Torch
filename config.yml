@@ -6,6 +6,8 @@
     sort: OFFSET
     output:
       binary: mkcube.otr
+  tables:
+    - courses/
   segments:
     - 0x000000
     - 0x000000
