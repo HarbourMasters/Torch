@@ -3,6 +3,36 @@
 #include <cstdint>
 #include "DisplayListFactory.h"
 
+typedef struct {
+    uint32_t w0;
+    uint32_t w1;
+} Words;
+
+typedef union {
+    Words words;
+    long long int	force_structure_alignment;
+} Gfx;
+
+typedef struct {
+    short		    ob[3];
+    unsigned short	flag;
+    short		    tc[2];
+    unsigned char	cn[4];
+} Vtx_t;
+
+typedef struct {
+    short		    ob[3];
+    unsigned short	flag;
+    short		    tc[2];
+    signed char	    n[3];
+    unsigned char   a;
+} Vtx_tn;
+
+typedef union {
+    Vtx_t  v;
+    Vtx_tn n;
+} Vtx;
+
 namespace GFXDOverride {
 void Quadrangle(const Gfx* gfx);
 void Triangle2(const Gfx* gfx);

@@ -77,6 +77,14 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         return;
     }
 
+    if(node["segments"]) {
+        for(auto segment = node["segments"].begin(); segment != node["segments"].end(); ++segment) {
+            auto id = std::stoi(segment->first.as<std::string>().substr(3));
+            auto replacement = segment->second.as<uint32_t>();
+            this->gTemporalSegments[id] = replacement;
+        }
+    }
+
     auto result = factory->get()->parse(this->gRomData, node);
     if(!result.has_value()){
         SPDLOG_ERROR("Failed to process {}", name);
@@ -265,6 +273,7 @@ void Companion::Process() {
             std::string output = (this->gCurrentDirectory / entryName).string();
             std::replace(output.begin(), output.end(), '\\', '/');
 
+            this->gTemporalSegments.clear();
             this->ExtractNode(asset->second, output, wrapper);
         }
 
@@ -439,6 +448,11 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
 }
 
 std::optional<std::uint32_t> Companion::GetSegmentedAddr(const uint8_t segment) {
+
+    if(this->gTemporalSegments.contains(segment)) {
+        return this->gTemporalSegments[segment];
+    }
+
     if(segment >= this->gSegments.size()) {
         return std::nullopt;
     }
