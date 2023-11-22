@@ -19,6 +19,7 @@
 #define G_MTX_OTR 0x36
 #define G_TEXRECT_WIDE 0x37
 #define G_FILLWIDERECT 0x38
+#define G_MOVEMEM_OTR_HASH 0x42
 
 /* GFX Effects */
 #define G_SETGRAYSCALE 0x39
@@ -126,10 +127,40 @@ _DW({                                                                           
 #define gsSPVertexOTR(v, n, v0) \
     { (_SHIFTL(G_VTX_OTR_HASH, 24, 8) | _SHIFTL((n), 12, 8) | _SHIFTL((v0) + (n), 1, 7)), (uintptr_t)(v) }
 
-#define gsSPBranchListOTRHash(dl) gsDma1p(G_DL_OTR_HASH, dl, 0, G_DL_NOPUSH)
-#define gsSPBranchListOTRFilePath(dl) gsDma1p(G_DL_OTR_FILEPATH, dl, 0, G_DL_NOPUSH)
-#define gsSPDisplayListOTRHash(dl) gsDma1p(G_DL_OTR_HASH, dl, 0, G_DL_PUSH)
-#define gsSPDisplayListOTRFilePath(dl) gsDma1p(G_DL_OTR_FILEPATH, dl, 0, G_DL_PUSH)
+#define	gsDPSetTextureOTRImage(fmt, siz, width, i)	\
+    {{									\
+        _SHIFTL(G_SETTIMG_OTR_HASH, 24, 8) | _SHIFTL(fmt, 21, 3) |			\
+        _SHIFTL(siz, 19, 2) | _SHIFTL((width)-1, 0, 12),		\
+        (uintptr_t)(i)						\
+    }}
+
+#define gsSPBranchListOTRHash(dl) \
+    {{									\
+        (_SHIFTL((G_DL_OTR_HASH), 24, 8) | _SHIFTL((0x01), 16, 8) | 			\
+         _SHIFTL((0), 0, 16)), 						\
+            (uintptr_t)(dl)						\
+    }}
+
+#define gsSPBranchListOTRFilePath(dl) \
+    {{									\
+        (_SHIFTL((G_DL_OTR_FILEPATH), 24, 8) | _SHIFTL((0x01), 16, 8) | 			\
+         _SHIFTL((0), 0, 16)), 						\
+            (uintptr_t)(dl)						\
+    }}
+
+#define gsSPDisplayListOTRHash(dl) \
+    {{									\
+        (_SHIFTL((G_DL_OTR_HASH), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
+         _SHIFTL((0), 0, 16)), 						\
+            (uintptr_t)(dl)						\
+    }}
+
+#define gsSPDisplayListOTRFilePath(dl) \
+    {{									\
+        (_SHIFTL((G_DL_OTR_FILEPATH), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
+         _SHIFTL((0), 0, 16)), 						\
+            (uintptr_t)(dl)						\
+    }}
 #define gDPSetGrayscaleColor(pkt, r, g, b, lerp) DPRGBColor(pkt, G_SETINTENSITY, r, g, b, lerp)
 #define gsDPSetGrayscaleColor(r, g, b, a) sDPRGBColor(G_SETINTENSITY, r, g, b, a)
 

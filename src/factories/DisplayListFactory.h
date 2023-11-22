@@ -3,10 +3,6 @@
 #include "BaseFactory.h"
 #include "n64/CommandMacros.h"
 
-#define F3DEX
-#define _LANGUAGE_C
-#include "n64/gbi.h"
-
 class DListData : public IParsedData {
 public:
     std::vector<uint32_t> mGfxs;

@@ -24,6 +24,7 @@ enum class GBIVersion {
 enum class GBIMinorVersion {
     None,
     Mk64,
+    SM64
 };
 
 class Companion {
@@ -45,7 +46,7 @@ public:
 
     static void Pack(const std::string& folder, const std::string& output);
     std::string NormalizeAsset(const std::string& name) const;
-    void RegisterAsset(const std::string& name, YAML::Node& node);
+    std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
 private:
     bool gOTRMode = false;
     bool gIsDebug = false;
@@ -59,6 +60,7 @@ private:
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     std::vector<uint32_t> gSegments;
+    std::unordered_map<uint32_t, uint32_t> gTemporalSegments;
 
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
