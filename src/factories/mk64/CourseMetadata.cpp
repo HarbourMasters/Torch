@@ -40,53 +40,53 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
 
     file.open("gCourseNames.inc.c");
     if (file.is_open()) {
-        file << "char *gCourseNames[] = {\n" << fourSpaceTab;
+       // file << "char *gCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             // Remove debug line once proven that sort worked right (start at id 0 and go up)
             SPDLOG_INFO("Processing Course Id: "+std::to_string(m.courseId));
-            file << m.gCourseNames << ", ";
+            file << '"' << m.gCourseNames << "\", ";
         }
-        file << "\n};\n\n";
+       // file << "\n};\n\n";
     }
     file.close();
 
     file.open("gDebugCourseNames.inc.c");
     if (file.is_open()) {
-        file << "char *gDebugCourseNames[] = {\n" << fourSpaceTab;
+       // file << "char *gDebugCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
-            file << m.gDebugCourseNames << ", ";
+            file << '"' << m.gDebugCourseNames << "\", ";
         }
-        file << "\n};\n\n";
+        //file << "\n};\n\n";
     }
     file.close();
 
     file.open("gCupSelectionByCourseId.inc.c");
     if (file.is_open()) {
-        file << "char *gCupSelectionByCourseId[] = {\n" << fourSpaceTab;
+        //file << "char *gCupSelectionByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << m.gCupSelectionByCourseId << ", ";
         }
-        file << "\n};\n\n";
+       // file << "\n};\n\n";
     }
     file.close();
 
     file.open("gPerCupIndexByCourseId.inc.c");
     if (file.is_open()) {
-        file << "const u8 gPerCupIndexByCourseId[] = {\n" << fourSpaceTab;
+        //file << "const u8 gPerCupIndexByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << m.gPerCupIndexByCourseId << ", ";
         }
-        file << "\n};\n\n";
+        //file << "\n};\n\n";
     }
     file.close();
 
     file.open("gWaypointWidth.inc.c");
     if (file.is_open()) {
-        file << "f32 gWaypointWidth[] = {\n" << fourSpaceTab;
+       // file << "f32 gWaypointWidth[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << m.gWaypointWidth << ", ";
         }
-        file << "\n};\n\n";
+       // file << "\n};\n\n";
     }
     file.close();
 
@@ -102,21 +102,57 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
 
     file.open("D_800DCBB4.inc.c");
     if (file.is_open()) {
-        file << "uintptr_t *D_800DCBB4[] = {\n" << fourSpaceTab;
+        //file << "uintptr_t *D_800DCBB4[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << m.D_800DCBB4 << ", ";
         }
-        file << "\n};\n\n";
+        //file << "\n};\n\n";
     }
     file.close();
 
     file.open("gCPUSteeringSensitivity.inc.c");
     if (file.is_open()) {
-        file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
+        //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << m.gCPUSteeringSensitivity << ", ";
         }
-        file << "\n};\n\n";
+        //file << "\n};\n\n";
+    }
+    file.close();
+
+    file.open("gCourseBombKartSpawns.inc.c");
+    if (file.is_open()) {
+        //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            for (const auto& bombKart : m.bombKartSpawns) {
+                file << "{ ";
+                file << bombKart.waypointIndex << ", ";
+                file << bombKart.startingState << ", ";
+                file << bombKart.unk_04 << ", ";
+                file << bombKart.x << ", ";
+                file << bombKart.z << ", ";
+                file << bombKart.unk10 << ", ";
+                file << bombKart.unk14;
+                file << " },\n";
+            }
+        }
+        //file << "\n};\n\n";
+    }
+    file.close();
+
+    file.open("gCoursePathSizes.inc.c");
+    if (file.is_open()) {
+        //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.gCoursePathSizes) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
+        //file << "\n};\n\n";
     }
     file.close();
 }
@@ -142,8 +178,8 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
     //const auto &metadata = m;
 
     std::vector<CourseMetadata> yamlData;
-    for (const auto &it : m[dir]) {
-        const auto& metadata = it["course"];
+    for (const auto &yamls : m[dir]) {
+        const auto& metadata = yamls["course"];
 
         auto id = metadata["courseId"].as<uint32_t>();
         auto name = metadata["name"].as<std::string>();
@@ -171,9 +207,24 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         data.D_800DCBB4 = D_800DCBB4;
         data.gCPUSteeringSensitivity = steeringSensitivity;
 
+        for (const auto& bombKart : metadata["gCourseBombKartSpawns"]) {
+            data.bombKartSpawns.push_back(BombKartSpawns({
+                bombKart[0].as<uint16_t>(),
+                bombKart[1].as<uint16_t>(),
+                bombKart[2].as<float>(),
+                bombKart[3].as<float>(),
+                bombKart[4].as<float>(),
+                bombKart[5].as<float>(),
+                bombKart[6].as<float>(),
+            }));
+        }
+
+        for (const auto& size : metadata["gCoursePathSizes"]) {
+            data.gCoursePathSizes.push_back(size.as<uint16_t>());
+        }
 
         yamlData.push_back(CourseMetadata(
-            {id, name, debugName, cup, cupIndex, waypointWidth, waypointWidth2, D_800DCBB4, steeringSensitivity}
+            {data}
         ));
     }
 

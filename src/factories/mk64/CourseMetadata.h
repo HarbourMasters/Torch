@@ -4,6 +4,16 @@
 
 namespace MK64 {
 
+    struct BombKartSpawns {
+        uint16_t waypointIndex;
+        uint16_t startingState;
+        float unk_04;
+        float x;
+        float z;
+        float unk10;
+        float unk14;
+    };
+
     struct CourseMetadata {
         uint32_t courseId;
         std::string gCourseNames;
@@ -14,6 +24,8 @@ namespace MK64 {
         std::string gWaypointWidth2;
         std::string D_800DCBB4;
         uint32_t gCPUSteeringSensitivity;
+        std::vector<BombKartSpawns> bombKartSpawns;
+        std::vector<uint16_t> gCoursePathSizes;
     };
 
     class MetadataData : public IParsedData {
