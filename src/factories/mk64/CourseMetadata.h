@@ -15,25 +15,25 @@ namespace MK64 {
     };
 
     struct CourseMetadata {
-        uint32_t courseId;
-        std::string gCourseNames;
-        std::string gDebugCourseNames;
-        std::string gCupSelectionByCourseId;
-        uint32_t gPerCupIndexByCourseId;
-        std::string gWaypointWidth;
-        std::string gWaypointWidth2;
+        uint32_t id;
+        std::string name;
+        std::string debugName;
+        std::string cup;
+        uint32_t cupIndex;
+        std::string waypointWidth;
+        std::string waypointWidth2;
         std::string D_800DCBB4;
-        uint32_t gCPUSteeringSensitivity;
+        uint32_t steeringSensitivity;
         std::vector<BombKartSpawns> bombKartSpawns;
-        std::vector<uint16_t> gCoursePathSizes;
+        std::vector<uint16_t> pathSizes;
         std::vector<float> D_0D009418;
         std::vector<float> D_0D009568;
         std::vector<float> D_0D0096B8;
         std::vector<float> D_0D009808;
-        std::vector<std::string> gCoursePathTable;
-        std::vector<std::string> gCoursePathTableUnknown;
-        std::vector<int16_t> sSkyColors;
-        std::vector<int16_t> sSkyColors2;
+        std::vector<std::string> pathTable;
+        std::vector<std::string> pathTableUnknown;
+        std::vector<int16_t> skyColors;
+        std::vector<int16_t> skyColors2;
     };
 
     class MetadataData : public IParsedData {
