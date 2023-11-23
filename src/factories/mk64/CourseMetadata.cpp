@@ -137,13 +137,11 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
                 file << " },\n";
             }
         }
-        //file << "\n};\n\n";
     }
     file.close();
 
     file.open("gCoursePathSizes.inc.c");
     if (file.is_open()) {
-        //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << "// " << m.gCourseNames << "\n";
             file << "{ ";
@@ -152,7 +150,110 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
-        //file << "\n};\n\n";
+    }
+    file.close();
+
+    file.open("D_0D009418.inc.c");
+    if (file.is_open()) {
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.D_0D009418) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
+    }
+    file.close();
+
+    file.open("D_0D009568.inc.c");
+    if (file.is_open()) {
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.D_0D009568) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
+    }
+    file.close();
+
+    file.open("D_0D0096B8.inc.c");
+    if (file.is_open()) {
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.D_0D0096B8) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
+    }
+    file.close();
+
+    file.open("D_0D009808.inc.c");
+    if (file.is_open()) {
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.D_0D009808) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
+    }
+    file.close();
+
+    file.open("gCoursePathTable.inc.c");
+    if (file.is_open()) {
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.gCoursePathTable) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
+    }
+    file.close();
+
+    file.open("gCoursePathTableUnknown.inc.c");
+    if (file.is_open()) {
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.gCoursePathTableUnknown) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
+    }
+    file.close();
+
+    file.open("sSkyColors.inc.c");
+    if (file.is_open()) {
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.sSkyColors) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
+    }
+    file.close();
+
+    file.open("sSkyColors2.inc.c");
+    if (file.is_open()) {
+        for (const auto& m : metadata) {
+            file << "// " << m.gCourseNames << "\n";
+            file << "{ ";
+            for (const auto& size : m.sSkyColors2) {
+                file << size << ", ";
+            }
+            file << "},\n";
+        }
     }
     file.close();
 }
@@ -174,7 +275,6 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
 
     auto m = Companion::Instance->GetCourseMetadata();
 
-    SPDLOG_INFO("RUN2");
     //const auto &metadata = m;
 
     std::vector<CourseMetadata> yamlData;
@@ -219,8 +319,41 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
             }));
         }
 
+    SPDLOG_INFO("RUN2");
         for (const auto& size : metadata["gCoursePathSizes"]) {
             data.gCoursePathSizes.push_back(size.as<uint16_t>());
+        }
+SPDLOG_INFO("RUN3");
+        for (const auto& value : metadata["D_0D009418"]) {
+            data.D_0D009418.push_back(value.as<float>());
+        }
+SPDLOG_INFO("RUN4");
+        for (const auto& value : metadata["D_0D009568"]) {
+            data.D_0D009568.push_back(value.as<float>());
+        }
+
+        for (const auto& value : metadata["D_0D0096B8"]) {
+            data.D_0D0096B8.push_back(value.as<float>());
+        }
+
+        for (const auto& value : metadata["D_0D009808"]) {
+            data.D_0D009808.push_back(value.as<float>());
+        }
+
+        for (const auto& str : metadata["gCoursePathTable"]) {
+            data.gCoursePathTable.push_back(str.as<std::string>());
+        }
+
+        for (const auto& str : metadata["gCoursePathTableUnknown"]) {
+            data.gCoursePathTableUnknown.push_back(str.as<std::string>());
+        }
+
+        for (const auto& value : metadata["sSkyColors"]) {
+            data.sSkyColors.push_back(value.as<int16_t>());
+        }
+
+        for (const auto& value : metadata["sSkyColors2"]) {
+            data.sSkyColors2.push_back(value.as<int16_t>());
         }
 
         yamlData.push_back(CourseMetadata(

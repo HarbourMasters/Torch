@@ -26,6 +26,14 @@ namespace MK64 {
         uint32_t gCPUSteeringSensitivity;
         std::vector<BombKartSpawns> bombKartSpawns;
         std::vector<uint16_t> gCoursePathSizes;
+        std::vector<float> D_0D009418;
+        std::vector<float> D_0D009568;
+        std::vector<float> D_0D0096B8;
+        std::vector<float> D_0D009808;
+        std::vector<std::string> gCoursePathTable;
+        std::vector<std::string> gCoursePathTableUnknown;
+        std::vector<int16_t> sSkyColors;
+        std::vector<int16_t> sSkyColors2;
     };
 
     class MetadataData : public IParsedData {
