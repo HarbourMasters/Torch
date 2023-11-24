@@ -1,29 +1,15 @@
-579c48e211ae952530ffc8738709f078d5dd215e:
-  name: Mario Kart 64 [US]
-  path: yamls/
+# This is a sample configuration file to use on Torch.
+# You can find more information about the configuration file on the wiki (WIP)
+
+N64Hash:
+  name: Game              # The name of the game; you can use any name you want.
+  path: assets/example/   # The path to the ymls folder
   config:
-    gbi: F3DEX_MK64
-    sort: OFFSET
+    gbi: F3D              # You can use F3D, F3DEX, F3DEX-MK64, F3DB, F3DEX2, F3DEXB,
+    sort: OFFSET          # This is how the assets are going to be sorted when generating the Header / C files. You can use OFFSET, ROFFSET for a reverse order or even specify a manual order using a list with the types.
     output:
-      binary: mkcube.otr
-  tables:
-    - courses/
-  segments:
-    - 0x000000
-    - 0x000000
-    - 0x12aae0
-    - 0x000000
-    - 0x000000
-    - 0x000000
-    - 0x825800
-    - 0x000000
-    - 0x000000
-    - 0x88cd70
-    - 0x729a30
-    - 0x821D10
-    - 0x7fa3c0
-    - 0x132b50
-    - 0x000000
-    - 0x145470
-
-
+      binary: example.otr # The name of the output binary file
+      headers: include    # The name of the output headers folder
+      code: code          # The name of the output code folder
+  segments:               # A list with all the segmented addresses in order
+    - 0x12345678
