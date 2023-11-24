@@ -278,22 +278,74 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
 
     std::vector<CourseMetadata> yamlData;
     for (const auto &yamls : m[dir]) {
+
+        if (!yamls["course"]) {
+            SPDLOG_ERROR("Course yaml missing root label of course\nEx. course:");
+            return nullptr;
+        }
+
         const auto& metadata = yamls["course"];
 
         if (!metadata["id"]) {
             SPDLOG_ERROR("Course yaml missing entry for id\nEx. id: 4");
-            break;
+            return nullptr;
         }
 
         auto id = metadata["id"].as<uint32_t>();
+
+        if (!metadata["name"]) {
+            SPDLOG_ERROR("Course yaml missing entry for name\nEx. name: my course name");
+            return nullptr;
+        }
+
         auto name = metadata["name"].as<std::string>();
+
+        if (!metadata["debug_name"]) {
+            SPDLOG_ERROR("Course yaml missing entry for debug_name\nEx. debug_name: my short course name");
+            return nullptr;
+        }
+
         auto debugName = metadata["debug_name"].as<std::string>();
+
+        if (!metadata["cup"]) {
+            SPDLOG_ERROR("Course yaml missing entry for cup\nEx. cup: FLOWER_CUP");
+            return nullptr;
+        }
+
         auto cup = metadata["cup"].as<std::string>();
+
+        if (!metadata["cupIndex"]) {
+            SPDLOG_ERROR("Course yaml missing entry for cupIndex\nEx. cupIndex: 4");
+            return nullptr;
+        }
+
         auto cupIndex = metadata["cupIndex"].as<uint32_t>();
+
+        if (!metadata["waypoint_width"]) {
+            SPDLOG_ERROR("Course yaml missing entry for waypoint_width\nEx. waypoint_width: 50.0f");
+            return nullptr;
+        }
+        
         auto waypointWidth = metadata["waypoint_width"].as<std::string>();
+        
+        if (!metadata["waypoint_width2"]) {
+            SPDLOG_ERROR("Course yaml missing entry for waypoint_width2\nEx. waypoint_width2: 0.3f");
+            return nullptr;
+        }
+
         auto waypointWidth2 = metadata["waypoint_width2"].as<std::string>();
 
+        if (!metadata["D_800DCBB4"]) {
+            SPDLOG_ERROR("Course yaml missing entry for D_800DCBB4\nEx. D_800DCBB4: D_800DCB34");
+            return nullptr;
+        }
+
         auto D_800DCBB4 = metadata["D_800DCBB4"].as<std::string>();
+
+        if (!metadata["cpu_steering_sensitivity"]) {
+            SPDLOG_ERROR("Course yaml missing entry for cpu_steering_sensitivity\nEx. cpu_steering_sensitivity: 48");
+            return nullptr;
+        }
 
         auto steeringSensitivity = metadata["cpu_steering_sensitivity"].as<uint32_t>();
 
@@ -311,6 +363,11 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         data.D_800DCBB4 = D_800DCBB4;
         data.steeringSensitivity = steeringSensitivity;
 
+        if (!metadata["bomb_kart_spawns"]) {
+            SPDLOG_ERROR("Course yaml missing entry for bomb_kart_spawns\nEx. bomb_kart_spawns:\n  - [ 40, 3, 0.8333333, 0.0, 0.0, 0.0, 0.0]");
+            return nullptr;
+        }
+
         for (const auto& bombKart : metadata["bomb_kart_spawns"]) {
             data.bombKartSpawns.push_back(BombKartSpawns({
                 bombKart[0].as<uint16_t>(),
@@ -323,37 +380,81 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
             }));
         }
 
-SPDLOG_INFO("RUN2");
+        if (!metadata["path_sizes"]) {
+            SPDLOG_ERROR("Course yaml missing entry for path_sizes\nEx. path_sizes: [ 0x0258, 0x0001, 0x0001, 0x0001, 0x0001, 0x0000, 0x0000, 0x0000 ]");
+            return nullptr;
+        }
+
         for (const auto& size : metadata["path_sizes"]) {
             data.pathSizes.push_back(size.as<uint16_t>());
         }
-SPDLOG_INFO("RUN3");
+
+        if (!metadata["D_0D009418"]) {
+            SPDLOG_ERROR("Course yaml missing entry for D_0D009418\nEx. D_0D009418: [ 4.1666665, 5.5833334, 6.1666665, 6.75 ]");
+            return nullptr;
+        }
+
         for (const auto& value : metadata["D_0D009418"]) {
             data.D_0D009418.push_back(value.as<float>());
         }
-SPDLOG_INFO("RUN4");
+
+        if (!metadata["D_0D009568"]) {
+            SPDLOG_ERROR("Course yaml missing entry for D_0D009568\nEx. D_0D009568: [ 3.75, 5.1666665, 5.75, 6.3333334 ]");
+            return nullptr;
+        }
+
         for (const auto& value : metadata["D_0D009568"]) {
             data.D_0D009568.push_back(value.as<float>());
+        }
+
+        if (!metadata["D_0D0096B8"]) {
+            SPDLOG_ERROR("Course yaml missing entry for D_0D0096B8\nEx.   D_0D0096B8: [ 3.3333332, 3.9166667, 4.5, 5.0833334 ]");
+            return nullptr;
         }
 
         for (const auto& value : metadata["D_0D0096B8"]) {
             data.D_0D0096B8.push_back(value.as<float>());
         }
 
+        if (!metadata["D_0D009808"]) {
+            SPDLOG_ERROR("Course yaml missing entry for D_0D009808\nEx. D_0D009808: [ 3.75, 5.1666665, 5.75, 6.3333334 ]");
+            return nullptr;
+        }
+
         for (const auto& value : metadata["D_0D009808"]) {
             data.D_0D009808.push_back(value.as<float>());
+        }
+
+        if (!metadata["path_table"]) {
+            SPDLOG_ERROR("Course yaml missing entry for path_table\nEx. path_table: [ d_course_mario_raceway_track_waypoints, nullPath,   nullPath,   nullPath ]");
+            return nullptr;
         }
 
         for (const auto& str : metadata["path_table"]) {
             data.pathTable.push_back(str.as<std::string>());
         }
 
+        if (!metadata["path_table_unknown"]) {
+            SPDLOG_ERROR("Course yaml missing entry for path_table_unknown\nEx. path_table_unknown: [ d_course_mario_raceway_unknown_waypoints, nullPath,   nullPath,   nullPath ]");
+            return nullptr;
+        }
+
         for (const auto& str : metadata["path_table_unknown"]) {
             data.pathTableUnknown.push_back(str.as<std::string>());
         }
 
+        if (!metadata["sky_colors"]) {
+            SPDLOG_ERROR("Course yaml missing entry for sky_colors\nEx. sky_colors: [ 128, 4280, 6136, 216, 7144, 32248 ]");
+            return nullptr;
+        }
+
         for (const auto& value : metadata["sky_colors"]) {
             data.skyColors.push_back(value.as<int16_t>());
+        }
+
+        if (!metadata["sky_colors2"]) {
+            SPDLOG_ERROR("Course yaml missing entry for sky_colors2\nEx. sky_colors2: [ 0, 0, 0, 0, 0, 0 ]");
+            return nullptr;
         }
 
         for (const auto& value : metadata["sky_colors2"]) {
