@@ -68,17 +68,17 @@ std::optional<std::shared_ptr<IParsedData>> MK64::WaypointFactory::parse(std::ve
     
     if (!node["mio0"]) {
         SPDLOG_ERROR("yaml missing entry for mio0.\nEx. mio0: 0x10100");
-        return nullptr;
+        return std::nullopt;
     }
 
     if (!node["offset"]) {
         SPDLOG_ERROR("yaml missing entry for offset.\nEx. offset: 0x100");
-        return nullptr;
+        return std::nullopt;
     }
 
     if (!node["count"]) {
         SPDLOG_ERROR("Asset in yaml missing entry for vtx count.\nEx. count: 30\nThis means 30 vertices (an array size of 30).");
-        return nullptr;
+        return std::nullopt;
     }
     
     auto mio0 = node["mio0"].as<size_t>();
