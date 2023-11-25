@@ -1,6 +1,7 @@
 #include "WaypointFactory.h"
 
 #include "Companion.h"
+#include "spdlog/spdlog.h"
 #include "utils/MIODecoder.h"
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
@@ -19,6 +20,12 @@ void MK64::WaypointHeaderExporter::Export(std::ostream &write, std::shared_ptr<I
 
 void MK64::WaypointCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto waypoints = std::static_pointer_cast<WaypointData>(raw)->mWaypoints;
+
+    if (!node["symbol"]) {
+        SPDLOG_ERROR("Asset in yaml missing entry for symbol.\nEx. symbol: myVariableNameHere");
+        return;
+    }
+
     auto symbol = node["symbol"].as<std::string>();
 
     write << "TrackWaypoint " << symbol << "[] = {\n";
@@ -58,6 +65,22 @@ void MK64::WaypointBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::WaypointFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    
+    if (!node["mio0"]) {
+        SPDLOG_ERROR("yaml missing entry for mio0.\nEx. mio0: 0x10100");
+        return nullptr;
+    }
+
+    if (!node["offset"]) {
+        SPDLOG_ERROR("yaml missing entry for offset.\nEx. offset: 0x100");
+        return nullptr;
+    }
+
+    if (!node["count"]) {
+        SPDLOG_ERROR("Asset in yaml missing entry for vtx count.\nEx. count: 30\nThis means 30 vertices (an array size of 30).");
+        return nullptr;
+    }
+    
     auto mio0 = node["mio0"].as<size_t>();
     auto offset = node["offset"].as<uint32_t>();
     auto count = node["count"].as<size_t>();

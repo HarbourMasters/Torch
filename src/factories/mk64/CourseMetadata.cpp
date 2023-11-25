@@ -24,8 +24,10 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
 
     if (metadata.empty()) {
         SPDLOG_ERROR("Course metadata null");
+        return;
     }
 
+    // Sort the data by id, 0 to 20 and beyond.
     std::sort(metadata.begin(), metadata.end(),
         [this](const CourseMetadata& a, const CourseMetadata& b) {
             return a.id < b.id;
