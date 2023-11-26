@@ -1,6 +1,8 @@
 #include "DialogFactory.h"
-#include "utils/MIODecoder.h"
+
+#include "Companion.h"
 #include "spdlog/spdlog.h"
+#include "utils/MIODecoder.h"
 
 void SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
@@ -18,6 +20,9 @@ void SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPa
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    VERIFY_ENTRY(node, "mio0", "yaml missing entry for mio0.\nEx. mio0: 0x10100")
+    VERIFY_ENTRY(node, "offset", "yaml missing entry for offset.\nEx. offset: 0x100")
+
     auto offset = node["offset"].as<int32_t>();
     auto mio0 = node["mio0"].as<size_t>();
 

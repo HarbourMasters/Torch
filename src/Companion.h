@@ -10,6 +10,13 @@
 #include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
 
+#define VERIFY_ENTRY(node, label, desc) \
+    if (!node[label]) {                 \
+        SPDLOG_ERROR(desc);             \
+        return std::nullopt;            \
+    }
+
+
 class SWrapper;
 namespace fs = std::filesystem;
 

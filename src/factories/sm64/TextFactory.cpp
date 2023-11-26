@@ -1,5 +1,9 @@
 #include "TextFactory.h"
+
+#include "Companion.h"
+#include "spdlog/spdlog.h"
 #include "utils/MIODecoder.h"
+
 
 void SM64::TextBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
@@ -12,6 +16,9 @@ void SM64::TextBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPars
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::TextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
+    VERIFY_ENTRY(data, "mio0", "yaml missing entry for mio0.\nEx. mio0: 0x10100")
+    VERIFY_ENTRY(data, "offset", "yaml missing entry for offset.\nEx. offset: 0x100")
+
     auto offset = data["offset"].as<size_t>();
     auto mio0 = data["mio0"].as<size_t>();
 

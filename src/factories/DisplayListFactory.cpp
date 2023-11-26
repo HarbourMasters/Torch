@@ -43,7 +43,12 @@ void GFXDSetGBIVersion(){
 }
 
 void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    if (!node["symbol"]) {
+        SPDLOG_ERROR("DL yaml entry missing symbol.");
+        return;
+    }
     const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -126,7 +131,6 @@ void DebugDisplayList(uint32_t w0, uint32_t w1){
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
-    //gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
     gfxd_execute();
     int bp = 0;
@@ -241,6 +245,9 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     const auto gbi = Companion::Instance->GetGBIVersion();
+
+    VERIFY_ENTRY(node, "mio0", "yaml missing entry for mio0.\nEx. mio0: 0x10100")
+    VERIFY_ENTRY(node, "offset", "yaml missing entry for offset.\nEx. offset: 0x100")
 
     const auto mio0 = node["mio0"].as<uint32_t>();
     const auto offset = node["offset"].as<int32_t>();

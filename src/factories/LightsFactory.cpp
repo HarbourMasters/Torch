@@ -56,6 +56,10 @@ void LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDa
 }
 
 std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    VERIFY_ENTRY(node, "mio0", "yaml missing entry for mio0.\nEx. mio0: 0x10100")
+    VERIFY_ENTRY(node, "offset", "yaml missing entry for offset.\nEx. offset: 0x100")
+    VERIFY_ENTRY(node, "symbol", "Asset in yaml missing entry for symbol.\nEx. symbol: mySymbolName")
+
     auto mio0 = node["mio0"].as<size_t>();
     auto offset = node["offset"].as<uint32_t>();
     auto symbol = node["symbol"].as<std::string>();
