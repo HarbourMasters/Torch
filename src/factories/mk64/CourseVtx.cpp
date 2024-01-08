@@ -1,4 +1,4 @@
-#include "VtxFactory.h"
+#include "CourseVtx.h"
 
 #include "Companion.h"
 #include "spdlog/spdlog.h"
@@ -7,7 +7,7 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
-void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+void MK64::VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
 
     if(Companion::Instance->IsOTRMode()){
@@ -15,17 +15,17 @@ void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
         return;
     }
 
-    write << "extern Vtx " << symbol << "[];\n";
+    write << "extern CourseVtx " << symbol << "[];\n";
 }
 
-void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+void MK64::VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
 
     if (!node["symbol"]) {
         SPDLOG_ERROR("Asset in yaml missing entry for symbol.\nEx. symbol: myVariableNameHere");
         return;
     }
-    
+
     const auto symbol = node["symbol"].as<std::string>();
     const auto offset = node["offset"].as<uint32_t>();
 
@@ -33,7 +33,7 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
 
-    write << "Vtx " << symbol << "[] = {\n";
+    write << "CourseVtx " << symbol << "[] = {\n";
 
     for (int i = 0; i < vtx.size(); ++i) {
         auto v = vtx[i];
@@ -41,8 +41,6 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         auto x = v.ob[0];
         auto y = v.ob[1];
         auto z = v.ob[2];
-
-        auto flag = v.flag;
 
         auto tc1 = v.tc[0];
         auto tc2 = v.tc[1];
@@ -56,8 +54,8 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
             write << fourSpaceTab;
         }
 
-        // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
-        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
+        // {{{ x, y, z }, { tc1, tc2 }, { c1, c2, c3, c4 }}}
+        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
     }
 
     if (Companion::Instance->IsDebug()) {
@@ -67,7 +65,7 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
     write << "};\n\n";
 }
 
-void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+void MK64::VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
@@ -77,7 +75,6 @@ void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
         writer.Write(v.ob[0]);
         writer.Write(v.ob[1]);
         writer.Write(v.ob[2]);
-        writer.Write(v.flag);
         writer.Write(v.tc[0]);
         writer.Write(v.tc[1]);
         writer.Write(v.cn[0]);
@@ -89,7 +86,7 @@ void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     writer.Finish(write);
 }
 
-std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> MK64::VtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     
     VERIFY_ENTRY(node, "mio0", "yaml missing entry for mio0.\nEx. mio0: 0x10100")
     VERIFY_ENTRY(node, "offset", "yaml missing entry for offset.\nEx. offset: 0x100")
@@ -100,16 +97,15 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
     auto count = node["count"].as<size_t>();
 
     auto decoded = MIO0Decoder::Decode(buffer, mio0);
-    LUS::BinaryReader reader(decoded.data() + offset, count * sizeof(VtxRaw) );
+    LUS::BinaryReader reader(decoded.data() + offset, count * sizeof(CourseVtx) );
 
     reader.SetEndianness(LUS::Endianness::Big);
-    std::vector<VtxRaw> vertices;
+    std::vector<CourseVtx> vertices;
 
     for(size_t i = 0; i < count; i++) {
         auto x = reader.ReadInt16();
         auto y = reader.ReadInt16();
         auto z = reader.ReadInt16();
-        auto flag = reader.ReadUInt16();
         auto tc1 = reader.ReadInt16();
         auto tc2 = reader.ReadInt16();
         auto cn1 = reader.ReadUByte();
@@ -117,8 +113,8 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
         auto cn3 = reader.ReadUByte();
         auto cn4 = reader.ReadUByte();
 
-        vertices.push_back(VtxRaw({
-           {x, y, z}, flag, {tc1, tc2}, {cn1, cn2, cn3, cn4}
+        vertices.push_back(CourseVtx({
+           {x, y, z}, {tc1, tc2}, {cn1, cn2, cn3, cn4}
        }));
     }
 

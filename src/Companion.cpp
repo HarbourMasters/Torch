@@ -16,11 +16,16 @@
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/mk64/WaypointFactory.h"
+#include "factories/mk64/CourseMetadata.h"
+#include "factories/mk64/CourseVtx.h"
+#include "factories/mk64/SpawnData.h"
+#include "factories/mk64/TrackSections.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
 #include <iostream>
 #include <filesystem>
+#include <algorithm>
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -52,7 +57,11 @@ void Companion::Init(const ExportType type) {
     // this->RegisterFactory("GEO_LAYOUT", new SGeoFactory());
 
     // MK64 specific
+    this->RegisterFactory("MK64:VTX", std::make_shared<MK64::VtxFactory>());
     this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
+    this->RegisterFactory("MK64:TRACKSECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
+    this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
+    this->RegisterFactory("MK64:SPAWNDATA", std::make_shared<MK64::SpawnDataFactory>());
 
     this->Process();
 }
@@ -111,6 +120,41 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     this->gWriteMap[this->gCurrentFile][type].emplace_back(node["offset"].as<uint32_t>(), stream.str());
 }
 
+void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot) {
+    for (const auto &entry : std::filesystem::directory_iterator(dirPath)) {
+        if (entry.is_directory()) {
+            // Skip the root directory if specified
+            if (skipRoot && entry.path() == dirPath) {
+                continue;
+            }
+
+            // Recursive call for subdirectories
+            LoadYAMLRecursively(entry.path(), result, false);
+        } else if (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml") {
+            // Load YAML file and add it to the result vector
+            result.push_back(YAML::LoadFile(entry.path().string()));
+        }
+    }
+}
+
+void Companion::ProcessTables(YAML::Node& rom) {
+        auto dirs = rom["tables"].as<std::vector<std::string>>();
+
+        for (const auto &dir : dirs) {
+            std::vector<YAML::Node> configNodes;
+            LoadYAMLRecursively(dir, configNodes, true);
+            gCourseMetadata[dir] = configNodes;
+        }
+
+        // Now dirToNodesMap contains associations between directories and their loaded YAML files
+        // Example: Access YAML nodes for dirs[0]
+        for (const auto &node : gCourseMetadata[dirs[0]]) {
+            // Process each YAML node as needed
+            // Example: Print the content of each YAML file for dirs[0]
+            std::cout << node << std::endl;
+        }
+}
+
 void Companion::Process() {
 
     if(!fs::exists("config.yml")) {
@@ -133,6 +177,7 @@ void Companion::Process() {
         SPDLOG_ERROR("No config found for {}", gCartridge->GetHash());
         return;
     }
+
 
     auto rom = config[gCartridge->GetHash()];
     auto cfg = rom["config"];
@@ -196,6 +241,10 @@ void Companion::Process() {
         this->gWriteOrder = std::vector<std::string> {
             "LIGHTS", "TEXTURE", "VTX", "GFX"
         };
+    }
+    
+    if (rom["tables"]) {
+        ProcessTables(rom);
     }
 
     if(std::holds_alternative<std::vector<std::string>>(this->gWriteOrder)) {
@@ -449,3 +498,14 @@ std::string Companion::NormalizeAsset(const std::string& name) const {
     auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;
     return path;
 }
+
+// bool Companion::CompareCourseId(const CourseMetadata& a, const CourseMetadata& b) {
+//     return a.courseId < b.courseId;
+// }
+
+// void Companion::SortCourseMetadata(void) {
+//     std::sort(this->gCourseMetadata.begin(), this->gCourseMetadata.end(),
+//             [this](const CourseMetadata& a, const CourseMetadata& b) {
+//                 return CompareCourseId(a, b);
+//             });
+// }
