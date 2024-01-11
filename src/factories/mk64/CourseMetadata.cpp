@@ -39,7 +39,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     // // Sort metadata array by course id
     // Companion::Instance->SortCourseMetadata();
 
-    file.open("gCourseNames.inc.c");
+    file.open("src/course_data/gCourseNames.inc.c");
     if (file.is_open()) {
        // file << "char *gCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -51,7 +51,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gDebugCourseNames.inc.c");
+    file.open("src/course_data/gDebugCourseNames.inc.c");
     if (file.is_open()) {
        // file << "char *gDebugCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -61,7 +61,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gCupSelectionByCourseId.inc.c");
+    file.open("src/course_data/gCupSelectionByCourseId.inc.c");
     if (file.is_open()) {
         //file << "char *gCupSelectionByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -71,7 +71,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gPerCupIndexByCourseId.inc.c");
+    file.open("src/course_data/gPerCupIndexByCourseId.inc.c");
     if (file.is_open()) {
         //file << "const u8 gPerCupIndexByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -81,7 +81,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gWaypointWidth.inc.c");
+    file.open("src/course_data/gWaypointWidth.inc.c");
     if (file.is_open()) {
        // file << "f32 gWaypointWidth[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -91,7 +91,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gWaypointWidth2.inc.c");
+    file.open("src/course_data/gWaypointWidth2.inc.c");
     if (file.is_open()) {
         file << "f32 gWaypointWidth2[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -101,7 +101,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("D_800DCBB4.inc.c");
+    file.open("src/course_data/D_800DCBB4.inc.c");
     if (file.is_open()) {
         //file << "uintptr_t *D_800DCBB4[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -111,7 +111,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gCPUSteeringSensitivity.inc.c");
+    file.open("src/course_data/gCPUSteeringSensitivity.inc.c");
     if (file.is_open()) {
         //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -121,7 +121,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gCourseBombKartSpawns.inc.c");
+    file.open("src/course_data/gCourseBombKartSpawns.inc.c");
     if (file.is_open()) {
         //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -141,7 +141,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gCoursePathSizes.inc.c");
+    file.open("src/course_data/gCoursePathSizes.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -154,7 +154,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("D_0D009418.inc.c");
+    file.open("src/course_data/D_0D009418.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -167,7 +167,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("D_0D009568.inc.c");
+    file.open("src/course_data/D_0D009568.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -180,7 +180,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("D_0D0096B8.inc.c");
+    file.open("src/course_data/D_0D0096B8.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -193,7 +193,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("D_0D009808.inc.c");
+    file.open("src/course_data/D_0D009808.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -206,7 +206,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gCoursePathTable.inc.c");
+    file.open("src/course_data/gCoursePathTable.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -219,7 +219,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("gCoursePathTableUnknown.inc.c");
+    file.open("src/course_data/gCoursePathTableUnknown.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -232,7 +232,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("sSkyColors.inc.c");
+    file.open("src/course_data/sSkyColors.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -245,7 +245,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("sSkyColors2.inc.c");
+    file.open("src/course_data/sSkyColors2.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
