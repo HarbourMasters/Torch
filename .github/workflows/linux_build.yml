@@ -15,10 +15,10 @@ jobs:
               run: sudo apt-get install cmake ninja-build libbz2-dev
             - name: Build
               run: |
-                cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Debug
+                cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
                 cmake --build build-cmake -j
             - name: Publish packaged artifacts
               uses: actions/upload-artifact@v4
               with:
                 name: linux-x64
-                path: build-cmake/torch
+                path: build-cmake/torch*
