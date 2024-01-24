@@ -21,9 +21,9 @@ jobs:
               run: |
                 mkdir torch-release
                 mv build-cmake/torch torch-release/
-                cp /usr/local/lib/libbz2.so.1.0 torch-release/
+                cp "$(ldconfig -p | grep libbz2.so.1.0 | tr ' ' '\n' | grep /| head -n1)" torch-release/
             - name: Publish packaged artifacts
               uses: actions/upload-artifact@v4
               with:
                 name: linux-x64
-                path: build-cmake/torch
+                path: torch-release
