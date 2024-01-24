@@ -19,5 +19,5 @@ jobs:
       - name: Publish packaged artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x64
+          name: torch-windows-x64
           path: build/x64

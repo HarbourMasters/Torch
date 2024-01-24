@@ -25,5 +25,5 @@ jobs:
       - name: Publish packaged artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-x64
+          name: torch-linux-x64
           path: torch-release
