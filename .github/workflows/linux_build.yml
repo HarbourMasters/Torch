@@ -17,8 +17,13 @@ jobs:
               run: |
                 cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
                 cmake --build build-cmake -j
+            - name: Create Package
+              run: |
+                mkdir torch-release
+                mv build-cmake/torch torch-release/
+                mv /lib/libbz2.so.1.0 torch-release/
             - name: Publish packaged artifacts
               uses: actions/upload-artifact@v4
               with:
                 name: linux-x64
-                path: build-cmake/torch*
+                path: build-cmake/torch
