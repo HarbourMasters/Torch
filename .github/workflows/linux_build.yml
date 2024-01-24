@@ -17,3 +17,8 @@ jobs:
               run: |
                 cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Debug
                 cmake --build build-cmake -j
+            - name: Publish packaged artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                name: linux-x64
+                path: build-cmake/torch
