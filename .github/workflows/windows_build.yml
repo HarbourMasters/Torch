@@ -1,0 +1,16 @@
+name: Windows Compile
+
+on:
+    push:
+      branches: [ "*" ]
+    pull_request:
+      branches: [ "master" ]
+
+jobs:
+    build:
+        runs-on: windows-2019
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build
+              run: |
+                cmake -S . -B "build/x64" -G "Visual Studio 16 2019" -T v142 -A x64 -DCMAKE_BUILD_TYPE=Debug
