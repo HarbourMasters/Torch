@@ -1,4 +1,4 @@
-name: Linux Compile
+name: Windows Compile
 
 on:
   push:
@@ -8,11 +8,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    if: false
+    runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get install cmake ninja-build libbz2-dev
+        run: brew install cmake ninja xcode-tools
       - name: Build
         run: |
           cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
@@ -21,9 +22,8 @@ jobs:
         run: |
           mkdir torch-release
           mv build-cmake/torch torch-release/
-          cp "$(ldconfig -p | grep libbz2.so.1.0 | tr ' ' '\n' | grep /| head -n1)" torch-release/
       - name: Publish packaged artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-x64
-          path: torch-release
+            name: mac-x64
+            path: torch-release
