@@ -14,6 +14,7 @@ jobs:
             - name: Build
               run: |
                 cmake -S . -B "build/x64" -G "Visual Studio 16 2019" -T v142 -A x64 -DCMAKE_BUILD_TYPE=Release
+                cmake --build build-cmake -j
             - name: Publish packaged artifacts
               uses: actions/upload-artifact@v4
               with:
