@@ -31,8 +31,14 @@ A generic asset processor for N64 games
 
 ### Dependencies
 
+#### Ubuntu
 ``` bash
 sudo apt-get install cmake ninja-build libbz2-dev
+```
+
+#### Fedora
+``` bash
+sudo dnf install cmake ninja-build
 ```
 
 ### Compile

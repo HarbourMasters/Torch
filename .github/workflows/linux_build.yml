@@ -1,0 +1,19 @@
+name: Linux Compile
+
+on:
+    push:
+      branches: [ "*" ]
+    pull_request:
+      branches: [ "master" ]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install dependencies
+              run: sudo apt-get install cmake ninja-build libbz2-dev
+            - name: Build
+              run: |
+                cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Debug
+                cmake --build build-cmake -j
