@@ -1,4 +1,4 @@
-name: Windows Compile
+name: Macos Compile
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-    if: false
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
