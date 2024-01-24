@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install cmake ninja xcode-tools
+        run: brew install cmake ninja xcodes
       - name: Build
         run: |
           cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
