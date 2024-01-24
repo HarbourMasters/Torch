@@ -21,7 +21,7 @@ jobs:
               run: |
                 mkdir torch-release
                 mv build-cmake/torch torch-release/
-                mv /usr/local/libbz2.so.1.0 torch-release/
+                cp /usr/local/lib/libbz2.so.1.0 torch-release/
             - name: Publish packaged artifacts
               uses: actions/upload-artifact@v4
               with:
