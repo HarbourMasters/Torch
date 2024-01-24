@@ -31,14 +31,8 @@ A generic asset processor for N64 games
 
 ### Dependencies
 
-#### Ubuntu
 ``` bash
 sudo apt-get install cmake ninja-build libbz2-dev
-```
-
-#### Fedora
-``` bash
-sudo dnf install cmake ninja-build
 ```
 
 ### Compile
@@ -72,4 +66,22 @@ Requires Xcode (or xcode-tools) && `cmake, ninja` (can be installed via homebrew
 ``` bash
 cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build-cmake -j
+```
+
+# Docker
+
+Build the Docker image:
+``` bash
+docker build -t torch .
+```
+
+When building and using other tools, append the following in front of every command you run:
+``` bash
+docker run --rm -v .:/torch torch
+```
+
+For example:
+``` bash
+docker run --rm -v .:/torch torch cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Debug
+docker run --rm -v .:/torch torch cmake --build build-cmake -j
 ```
