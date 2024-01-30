@@ -21,11 +21,11 @@ std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vect
     auto offset = node["offset"].as<int32_t>();
     auto mio0 = node["mio0"].as<size_t>();
 
-    auto decoded = MIO0Decoder::Decode(buffer, mio0);
+    auto decoded = MIO0Decoder::Decode(buffer, offset);
     auto bytes = (uint8_t*) decoded.data();
     LUS::BinaryReader reader(bytes, decoded.size());
     reader.SetEndianness(LUS::Endianness::Big);
-    reader.Seek(offset, LUS::SeekOffsetType::Start);
+    reader.Seek(mio0, LUS::SeekOffsetType::Start);
 
     auto unused = reader.ReadUInt32();
     auto linesPerBox = reader.ReadUByte();

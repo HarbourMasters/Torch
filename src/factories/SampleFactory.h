@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "BaseFactory.h"
 #include "audio/AudioManager.h"
 
@@ -7,7 +9,7 @@ class SampleData : public IParsedData {
 public:
     AudioBankSample mSample;
 
-    SampleData(AudioBankSample sample) : mSample(sample) {}
+    explicit SampleData(AudioBankSample sample) : mSample(std::move(sample)) {}
 };
 
 class SampleBinaryExporter : public BaseExporter {
@@ -17,7 +19,8 @@ class SampleBinaryExporter : public BaseExporter {
 class SampleFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
-    inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
+
+    std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
             REGISTER(Binary, SampleBinaryExporter)
         };

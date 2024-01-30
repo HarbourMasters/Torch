@@ -34,7 +34,7 @@ void Companion::Init(const ExportType type) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
-    this->gExporterType = type;
+    this->gConfig.exporterType = type;
     this->RegisterFactory("BLOB", std::make_shared<BlobFactory>());
     this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
     this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
@@ -77,37 +77,34 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         return;
     }
 
-    if(node["segments"]) {
-        for(auto segment = node["segments"].begin(); segment != node["segments"].end(); ++segment) {
-            auto id = std::stoi(segment->first.as<std::string>().substr(3));
-            auto replacement = segment->second.as<uint32_t>();
-            this->gTemporalSegments[id] = replacement;
-        }
-    }
-
     auto result = factory->get()->parse(this->gRomData, node);
     if(!result.has_value()){
         SPDLOG_ERROR("Failed to process {}", name);
         return;
     }
 
-    auto exporter = factory->get()->GetExporter(this->gExporterType);
+    auto exporter = factory->get()->GetExporter(this->gConfig.exporterType);
     if(!exporter.has_value()){
         SPDLOG_ERROR("No exporter found for {}", name);
         return;
     }
 
     for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
-        if(snd.second) continue;
+        if(snd.second) {
+            continue;
+        }
         std::string doutput = (this->gCurrentDirectory / fst).string();
         std::replace(doutput.begin(), doutput.end(), '\\', '/');
         this->gAssetDependencies[this->gCurrentFile][fst].second = true;
         this->ExtractNode(snd.first, doutput, binary);
     }
 
-    switch (this->gExporterType) {
+    switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
-            if(binary == nullptr) break;
+            if(binary == nullptr)  {
+                break;
+            }
+
             stream.str("");
             stream.clear();
             exporter->get()->Export(stream, result.value(), name, node, &name);
@@ -127,6 +124,17 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     }
 }
 
+void Companion::ParseCurrentFileConfig(YAML::Node node) {
+    if(node["segments"]) {
+        for(auto segment = node["segments"].begin(); segment != node["segments"].end(); ++segment) {
+            const auto id = std::stoi(segment->first.as<std::string>().substr(3));
+            const auto replacement = segment->second.as<uint32_t>();
+            this->gConfig.segment.local[id] = replacement;
+            SPDLOG_DEBUG("Segment {} replaced with 0x{:X}", id, replacement);
+        }
+    }
+}
+
 void Companion::Process() {
 
     if(!fs::exists("config.yml")) {
@@ -140,42 +148,45 @@ void Companion::Process() {
     this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator( input ), {} );
     input.close();
 
-    this->gCartridge = new N64::Cartridge(this->gRomData);
-    gCartridge->Initialize();
+    this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
+    this->gCartridge->Initialize();
 
     YAML::Node config = YAML::LoadFile("config.yml");
 
-    if(!config[gCartridge->GetHash()]){
-        SPDLOG_ERROR("No config found for {}", gCartridge->GetHash());
+    if(!config[this->gCartridge->GetHash()]){
+        SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
         return;
     }
 
-    auto rom = config[gCartridge->GetHash()];
+    auto rom = config[this->gCartridge->GetHash()];
     auto cfg = rom["config"];
 
     if(!cfg) {
-        SPDLOG_ERROR("No config found for {}", gCartridge->GetHash());
+        SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
         return;
     }
 
     if(rom["segments"]) {
-        this->gSegments = rom["segments"].as<std::vector<uint32_t>>();
+        auto segments = rom["segments"].as<std::vector<uint32_t>>();
+        for (int i = 0; i < segments.size(); i++) {
+            this->gConfig.segment.global[i + 1] = segments[i];
+        }
     }
     auto path = rom["path"].as<std::string>();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
 
-    switch (gExporterType) {
+    switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
-            this->gOutputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : "generic.otr";
+            this->gConfig.outputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : "generic.otr";
             break;
         }
         case ExportType::Header: {
-            this->gOutputPath = opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
+            this->gConfig.outputPath = opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
             break;
         }
         case ExportType::Code: {
-            this->gOutputPath = opath && opath["code"] ? opath["code"].as<std::string>() : "code";
+            this->gConfig.outputPath = opath && opath["code"] ? opath["code"].as<std::string>() : "code";
             break;
         }
     }
@@ -184,18 +195,18 @@ void Companion::Process() {
         auto key = gbi.as<std::string>();
 
         if(key == "F3D") {
-            this->gGBIVersion = GBIVersion::f3d;
+            this->gConfig.gbi.version = GBIVersion::f3d;
         } else if(key == "F3DEX") {
-            this->gGBIVersion = GBIVersion::f3dex;
+            this->gConfig.gbi.version = GBIVersion::f3dex;
         } else if(key == "F3DB") {
-            this->gGBIVersion = GBIVersion::f3db;
+            this->gConfig.gbi.version = GBIVersion::f3db;
         } else if(key == "F3DEX2") {
-            this->gGBIVersion = GBIVersion::f3dex2;
+            this->gConfig.gbi.version = GBIVersion::f3dex2;
         } else if(key == "F3DEXB") {
-            this->gGBIVersion = GBIVersion::f3dexb;
+            this->gConfig.gbi.version = GBIVersion::f3dexb;
         } else if (key == "F3DEX_MK64") {
-            this->gGBIVersion = GBIVersion::f3dex;
-            this->gGBIMinorVersion = GBIMinorVersion::Mk64;
+            this->gConfig.gbi.version = GBIVersion::f3dex;
+            this->gConfig.gbi.subversion = GBIMinorVersion::Mk64;
         } else {
             SPDLOG_ERROR("Invalid GBI version");
             return;
@@ -230,29 +241,41 @@ void Companion::Process() {
     spdlog::set_pattern(line);
 
     SPDLOG_INFO("Starting Torch...");
-    SPDLOG_INFO("Game: {}", gCartridge->GetGameTitle());
-    SPDLOG_INFO("CRC: {}", gCartridge->GetCRC());
-    SPDLOG_INFO("Version: {}", gCartridge->GetVersion());
-    SPDLOG_INFO("Country: [{}]", gCartridge->GetCountryCode());
-    SPDLOG_INFO("Hash: {}", gCartridge->GetHash());
+    SPDLOG_INFO("Game: {}", this->gCartridge->GetGameTitle());
+    SPDLOG_INFO("CRC: {}", this->gCartridge->GetCRC());
+    SPDLOG_INFO("Version: {}", this->gCartridge->GetVersion());
+    SPDLOG_INFO("Country: [{}]", this->gCartridge->GetCountryCode());
+    SPDLOG_INFO("Hash: {}", this->gCartridge->GetHash());
     SPDLOG_INFO("Assets: {}", path);
 
-    auto wrapper = this->gExporterType == ExportType::Binary ? new SWrapper(this->gOutputPath) : nullptr;
+    auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
 
     auto vWriter = LUS::BinaryWriter();
     vWriter.SetEndianness(LUS::Endianness::Big);
     vWriter.Write(static_cast<uint8_t>(LUS::Endianness::Big));
-    vWriter.Write(gCartridge->GetCRC());
+    vWriter.Write(this->gCartridge->GetCRC());
 
     for (const auto & entry : fs::recursive_directory_iterator(path)){
-        if(entry.is_directory()) continue;
-        YAML::Node root = YAML::LoadFile(entry.path().string());
+        if(entry.is_directory())  {
+            continue;
+        }
+
+        const auto yamlPath = entry.path().string();
+
+        if(yamlPath.find(".yaml") == std::string::npos && yamlPath.find(".yml") == std::string::npos) {
+            continue;
+        }
+
+        YAML::Node root = YAML::LoadFile(yamlPath);
         this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
-        this->gCurrentFile = entry.path().string();
+        this->gCurrentFile = yamlPath;
 
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto node = asset->second;
-            if(!asset->second["offset"]) continue;
+
+            if(!asset->second["offset"])  {
+                continue;
+            }
 
             auto output = (this->gCurrentDirectory / asset->first.as<std::string>()).string();
             std::replace(output.begin(), output.end(), '\\', '/');
@@ -261,26 +284,40 @@ void Companion::Process() {
         }
 
         // Stupid hack because the iteration broke the assets
-        root = YAML::LoadFile(entry.path().string());
+        root = YAML::LoadFile(yamlPath);
+        this->gConfig.segment.local.clear();
+
+        if(root[":config"]) {
+            this->ParseCurrentFileConfig(root[":config"]);
+        }
+
+        spdlog::set_pattern(regular);
+        SPDLOG_INFO("------------------------------------------------");
+        spdlog::set_pattern(line);
 
         for(auto asset = root.begin(); asset != root.end(); ++asset){
-
-            spdlog::set_pattern(regular);
-            SPDLOG_INFO("------------------------------------------------");
-            spdlog::set_pattern(line);
 
             auto entryName = asset->first.as<std::string>();
             std::string output = (this->gCurrentDirectory / entryName).string();
             std::replace(output.begin(), output.end(), '\\', '/');
 
-            this->gTemporalSegments.clear();
+             if(entryName.find(":config") != std::string::npos) {
+                continue;
+            }
+
+            this->gConfig.segment.temporal.clear();
+
             this->ExtractNode(asset->second, output, wrapper);
+
+            spdlog::set_pattern(regular);
+            SPDLOG_INFO("------------------------------------------------");
+            spdlog::set_pattern(line);
         }
 
-        if(gExporterType != ExportType::Binary){
-            std::string output = (this->gOutputPath / this->gCurrentDirectory).string();
+        if(this->gConfig.exporterType != ExportType::Binary){
+            std::string output = (this->gConfig.outputPath / this->gCurrentDirectory).string();
 
-            switch (gExporterType) {
+            switch (this->gConfig.exporterType) {
                 case ExportType::Header: {
                     output += "/definition.h";
                     break;
@@ -345,7 +382,7 @@ void Companion::Process() {
 
             std::ofstream file(output, std::ios::binary);
 
-            if(gExporterType == ExportType::Header) {
+            if(this->gConfig.exporterType == ExportType::Header) {
                 std::string symbol = entry.path().stem().string();
                 std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
                 file << "#ifndef " << symbol << "_H" << std::endl;
@@ -360,9 +397,6 @@ void Companion::Process() {
         }
     }
 
-    spdlog::set_pattern(regular);
-    SPDLOG_INFO("------------------------------------------------");
-    spdlog::set_pattern(line);
     if(wrapper != nullptr) {
         SPDLOG_INFO("Writing version file");
         wrapper->CreateFile("version", vWriter.ToVector());
@@ -393,7 +427,10 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
     std::unordered_map<std::string, std::vector<char>> files;
 
     for (const auto & entry : fs::recursive_directory_iterator(folder)){
-        if(entry.is_directory()) continue;
+        if(entry.is_directory())  {
+            continue;
+        }
+
         std::ifstream input( entry.path(), std::ios::binary );
         auto data = std::vector( std::istreambuf_iterator( input ), {} );
         input.close();
@@ -447,17 +484,23 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
     return this->gFactories[type];
 }
 
-std::optional<std::uint32_t> Companion::GetSegmentedAddr(const uint8_t segment) {
+std::optional<std::uint32_t> Companion::GetSegmentedAddr(const uint8_t segment) const {
 
-    if(this->gTemporalSegments.contains(segment)) {
-        return this->gTemporalSegments[segment];
+    auto segments = this->gConfig.segment;
+
+    if(segments.temporal.contains(segment)) {
+        return segments.temporal[segment];
     }
 
-    if(segment >= this->gSegments.size()) {
-        return std::nullopt;
+    if(segments.local.contains(segment)) {
+        return segments.local[segment];
     }
 
-    return this->gSegments[segment];
+    if(segments.global.contains(segment)) {
+        return segments.global[segment];
+    }
+
+    return std::nullopt;
 }
 
 std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(const uint32_t addr){

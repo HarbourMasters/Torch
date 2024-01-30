@@ -71,8 +71,8 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     auto mio0 = node["mio0"].as<size_t>();
     auto offset = node["offset"].as<uint32_t>();
 
-    auto decoded = MIO0Decoder::Decode(buffer, mio0);
-    LUS::BinaryReader reader(decoded.data() + offset, sizeof(Lights1Raw));
+    auto decoded = MIO0Decoder::Decode(buffer, offset);
+    LUS::BinaryReader reader(decoded.data() + mio0, sizeof(Lights1Raw));
 
     reader.SetEndianness(LUS::Endianness::Big);
     Lights1Raw lights;
