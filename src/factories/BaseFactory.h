@@ -15,8 +15,9 @@
 
 #define REGISTER(type, c) { ExportType::type, std::make_shared<c>() },
 
-#define SEGMENT_OFFSET(a) ((uint32_t)(a)&0x00FFFFFF)
-#define SEGMENT_NUMBER(x) ((x >> 24) & 0xFF)
+#define SEGMENT_OFFSET(a) ((uint32_t)(a) & 0x00FFFFFF)
+#define SEGMENT_NUMBER(x) (((uint32_t)(x) >> 24) & 0xFF)
+#define IS_SEGMENTED(x) (((x) & 0x01000000 > 0) && (SEGMENT_NUMBER(x) < 0x20))
 
 #define tab "\t"
 #define fourSpaceTab "    "

@@ -87,8 +87,8 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
     auto offset = node["offset"].as<uint32_t>();
     auto count = node["count"].as<size_t>();
 
-    auto decoded = MIO0Decoder::Decode(buffer, mio0);
-    LUS::BinaryReader reader(decoded.data() + offset, count * sizeof(VtxRaw) );
+    auto decoded = MIO0Decoder::Decode(buffer, offset);
+    LUS::BinaryReader reader(decoded.data() + mio0, count * sizeof(VtxRaw) );
 
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<VtxRaw> vertices;

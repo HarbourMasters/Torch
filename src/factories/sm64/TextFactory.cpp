@@ -16,11 +16,11 @@ std::optional<std::shared_ptr<IParsedData>> SM64::TextFactory::parse(std::vector
     auto mio0 = data["mio0"].as<size_t>();
 
     std::vector<uint8_t> text;
-    auto decoded = MIO0Decoder::Decode(buffer, mio0);
+    auto decoded = MIO0Decoder::Decode(buffer, offset);
     auto bytes = (uint8_t*) decoded.data();
 
-    while(bytes[offset] != 0xFF){
-        auto c = bytes[offset++];
+    while(bytes[mio0] != 0xFF){
+        auto c = bytes[mio0++];
         text.push_back(c);
     }
     text.push_back(0xFF);

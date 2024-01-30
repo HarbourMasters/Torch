@@ -37,7 +37,8 @@ std::unordered_map<std::string, uint8_t> gF3DExTable = {
 };
 
 std::unordered_map<GBIVersion, std::unordered_map<std::string, uint8_t>> gGBITable = {
-    { GBIVersion::f3d, gF3DTable }
+    { GBIVersion::f3d, gF3DTable },
+    { GBIVersion::f3dex, gF3DExTable },
 };
 
 #define GBI(cmd) gGBITable[Companion::Instance->GetGBIVersion()][#cmd]
@@ -257,14 +258,33 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     writer.Finish(write);
 }
 
-std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& raw_buffer, YAML::Node& node) {
     const auto gbi = Companion::Instance->GetGBIVersion();
 
-    const auto mio0 = node["mio0"].as<uint32_t>();
-    const auto offset = node["offset"].as<int32_t>();
-    auto decoded = MIO0Decoder::Decode(buffer, mio0);
+    auto offset = node["offset"].as<uint32_t>();
+    const bool isCompressed = node["mio0"] ? true : false;
 
-    LUS::BinaryReader reader(decoded.data(), decoded.size());
+    std::vector<uint8_t> buffer;
+
+    if(IS_SEGMENTED(offset)){
+        const auto segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(offset));
+
+        if(!segment.has_value()) {
+            SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(offset));
+            return std::nullopt;
+        }
+
+        offset = segment.value() + SEGMENT_OFFSET(offset);
+    }
+
+    if(isCompressed){
+        const auto mio0 = node["mio0"].as<uint32_t>();
+        buffer = MIO0Decoder::Decode(raw_buffer, mio0);
+    } else {
+        buffer = raw_buffer;
+    }
+
+    LUS::BinaryReader reader(buffer.data(), buffer.size());
     reader.SetEndianness(LUS::Endianness::Big);
     reader.Seek(offset, LUS::SeekOffsetType::Start);
 
@@ -282,25 +302,53 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         }
 
         if(opcode == GBI(G_DL)) {
-            auto ptr = SEGMENT_OFFSET(w1);
-            auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
-            if(!dec.has_value()){
-                SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", w1);
-                auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
-                if(!addr.has_value()) {
+            std::optional<uint32_t> segment;
+            uint32_t ptr;
+
+            if(IS_SEGMENTED(w1)){
+                segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
+
+                if(!segment.has_value()) {
                     SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
                     continue;
                 }
 
+                ptr = SEGMENT_OFFSET(w1);
+            } else {
+                ptr = w1;
+            }
+
+            auto dec = Companion::Instance->GetNodeByAddr(w1);
+
+            if(!dec.has_value()){
+                SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", w1);
+
                 auto rom = Companion::Instance->GetRomData();
                 auto factory = Companion::Instance->GetFactory("GFX")->get();
-                std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + Torch::to_hex(addr.value() + w1, false));
+
+                std::string output;
                 YAML::Node dl;
+
+                if(isCompressed){
+                    dl["mio0"] = segment.has_value() ? segment.value() : ptr;
+                    if(segment.has_value()) {
+                        SPDLOG_INFO("Found compressed and segmented display list at 0x{:X}", ptr);
+                        output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + Torch::to_hex(segment.value() + w1, false));
+                    } else {
+                        SPDLOG_INFO("Found compressed display list at 0x{:X}", ptr);
+                        output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(w1, false));
+                    }
+                } else {
+                    SPDLOG_INFO("Found display list at 0x{:X}", ptr);
+                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(w1, false));
+                }
+
+
                 dl["type"] = "GFX";
-                dl["mio0"] = addr.value();
                 dl["offset"] = ptr;
                 dl["symbol"] = output;
+
                 auto result = factory->parse(rom, dl);
 
                 if(!result.has_value()){
@@ -376,7 +424,21 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 break;
             }
 
-            uint32_t ptr = SEGMENT_OFFSET(w1);
+            std::optional<uint32_t> segment;
+            uint32_t ptr;
+
+            if(IS_SEGMENTED(w1)){
+                segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
+
+                if(!segment.has_value()) {
+                    SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
+                    continue;
+                }
+
+                ptr = SEGMENT_OFFSET(w1);
+            } else {
+                ptr = w1;
+            }
 
             if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
                 SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating  it", w1);
@@ -388,10 +450,25 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 auto rom = Companion::Instance->GetRomData();
                 auto factory = Companion::Instance->GetFactory("VTX")->get();
-                std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(addr.value() + w1, false));
+
+                std::string output;
                 YAML::Node vtx;
+
+                if(isCompressed){
+                    vtx["mio0"] = segment.has_value() ? segment.value() : ptr;
+                    if(segment.has_value()) {
+                        SPDLOG_INFO("Found compressed and segmented display list at 0x{:X}", ptr);
+                        output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(segment.value() + w1, false));
+                    } else {
+                        SPDLOG_INFO("Found compressed display list at 0x{:X}", ptr);
+                        output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
+                    }
+                } else {
+                    SPDLOG_INFO("Found display list at 0x{:X}", ptr);
+                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(w1, false));
+                }
+
                 vtx["type"] = "VTX";
-                vtx["mio0"] = addr.value();
                 vtx["offset"] = ptr;
                 vtx["count"] = nvtx;
                 vtx["symbol"] = output;

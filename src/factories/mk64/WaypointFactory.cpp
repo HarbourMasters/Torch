@@ -62,8 +62,8 @@ std::optional<std::shared_ptr<IParsedData>> MK64::WaypointFactory::parse(std::ve
     auto offset = node["offset"].as<uint32_t>();
     auto count = node["count"].as<size_t>();
 
-    auto decoded = MIO0Decoder::Decode(buffer, mio0);
-    LUS::BinaryReader reader(decoded.data() + offset, count * sizeof(MK64::TrackWaypoint) );
+    auto decoded = MIO0Decoder::Decode(buffer, offset);
+    LUS::BinaryReader reader(decoded.data() + mio0, count * sizeof(MK64::TrackWaypoint) );
 
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<MK64::TrackWaypoint> waypoints;

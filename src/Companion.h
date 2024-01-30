@@ -27,47 +27,74 @@ enum class GBIMinorVersion {
     SM64
 };
 
+struct SegmentConfig {
+    std::unordered_map<uint32_t, uint32_t> global;
+    std::unordered_map<uint32_t, uint32_t> local;
+    std::unordered_map<uint32_t, uint32_t> temporal;
+};
+
+struct GBIConfig {
+    GBIVersion version = GBIVersion::f3d;
+    GBIMinorVersion subversion = GBIMinorVersion::None;
+};
+
+struct TorchConfig {
+    GBIConfig gbi;
+    SegmentConfig segment;
+    std::string outputPath;
+    ExportType exporterType;
+    bool otrMode;
+    bool debug;
+};
+
 class Companion {
 public:
     static Companion* Instance;
-    explicit Companion(std::filesystem::path rom, bool otr, bool debug) : gRomPath(std::move(rom)), gOTRMode(otr), gIsDebug(debug) {}
+
+    explicit Companion(std::filesystem::path rom, const bool otr, const bool debug) : gRomPath(std::move(rom)), gCartridge(nullptr) {
+        this->gConfig.otrMode = otr;
+        this->gConfig.debug = debug;
+    }
+
     void Init(ExportType type);
     void Process();
-    bool IsOTRMode() { return this->gOTRMode; }
-    bool IsDebug() { return this->gIsDebug; }
-    N64::Cartridge* GetCartridge() { return this->gCartridge; }
+
+    bool IsOTRMode() const { return this->gConfig.otrMode; }
+    bool IsDebug() const { return this->gConfig.debug; }
+
+    N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
     std::vector<uint8_t> GetRomData() { return this->gRomData; }
-    std::string GetOutputPath() { return this->gOutputPath; }
-    GBIVersion GetGBIVersion() { return this->gGBIVersion; }
-    GBIMinorVersion GetGBIMinorVersion() { return this->gGBIMinorVersion; }
-    std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment);
+    std::string GetOutputPath() { return this->gConfig.outputPath; }
+
+    GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
+    GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
+
+    std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
 
     static void Pack(const std::string& folder, const std::string& output);
     std::string NormalizeAsset(const std::string& name) const;
+
+    TorchConfig& GetConfig() { return this->gConfig; }
+
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
 private:
-    bool gOTRMode = false;
-    bool gIsDebug = false;
-    GBIVersion gGBIVersion = GBIVersion::f3d;
-    GBIMinorVersion gGBIMinorVersion = GBIMinorVersion::None;
-    std::string gOutputPath;
-    std::string gCurrentFile;
-    ExportType gExporterType;
+    TorchConfig gConfig;
     fs::path gCurrentDirectory;
-    N64::Cartridge* gCartridge;
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
-    std::vector<uint32_t> gSegments;
-    std::unordered_map<uint32_t, uint32_t> gTemporalSegments;
+    std::shared_ptr<N64::Cartridge> gCartridge;
 
+    // Temporal Variables
+    std::string gCurrentFile;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
     std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
+    void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
 };

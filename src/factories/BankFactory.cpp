@@ -92,6 +92,10 @@ std::optional<std::shared_ptr<IParsedData>> BankFactory::parse(std::vector<uint8
     auto banks = AudioManager::Instance->get_banks();
     auto bankId = data["id"].as<uint32_t>();
 
+    if(AudioManager::Instance == nullptr){
+        throw std::runtime_error("AudioManager not initialized");
+    }
+
     auto gSampleTable = Companion::Instance->GetCartridge()->GetCountry() == N64::CountryCode::Japan ? gJPSampleTable : gUSSampleTable;
     return std::make_shared<BankData>(banks[bankId], bankId, gSampleTable);
 }

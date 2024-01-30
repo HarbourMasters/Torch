@@ -17,14 +17,14 @@ static const std::unordered_map <std::string, TextureType> gTextureTypes = {
 	{ "IA16", TextureType::GrayscaleAlpha16bpp },
 };
 
-uint8_t* alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
+std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
     int32_t inPos;
     uint16_t bitMask;
     int16_t outPos = 0;
-    auto out = new uint8_t[width * height];
+    const auto out = new uint8_t[width * height];
 
-    for (inPos = 0; inPos < (width * height) / 16; inPos++) {
-        bitMask = 0x8000;
+    for (int32_t inPos = 0; inPos < (width * height) / 16; inPos++) {
+        uint16_t bitMask = 0x8000;
 
         while (bitMask != 0) {
             if (BSWAP16(in[inPos]) & bitMask) {
@@ -38,7 +38,10 @@ uint8_t* alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
         }
     }
 
-    return out;
+    auto result = std::vector(out, out + width * height);
+    delete[] out;
+
+    return result;
 }
 
 void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
@@ -126,16 +129,16 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     std::vector<uint8_t> result;
 
 	if(node["mio0"]){
+        auto decoded = MIO0Decoder::Decode(buffer, offset);
         auto mio0 = node["mio0"].as<size_t>();
-        auto decoded = MIO0Decoder::Decode(buffer, mio0);
-        auto data = decoded.data() + offset;
+        auto data = decoded.data() + mio0;
+
         if(type == TextureType::GrayscaleAlpha1bpp){
-            auto ia8 = alloc_ia8_text_from_i1((uint16_t*) data, 8, 16);
-            result = std::vector(ia8, ia8 + 8 * 16);
-            delete[] ia8;
+            result = alloc_ia8_text_from_i1((uint16_t*) data, 8, 16);
+        } else {
+            result = std::vector(data, data + size);
         }
 
-        result = std::vector(data, data + size);
 	} else {
         result = std::vector(buffer.data() + offset, buffer.data() + offset + size);
 	}
