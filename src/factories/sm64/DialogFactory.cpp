@@ -1,6 +1,6 @@
 #include "DialogFactory.h"
-#include "utils/MIODecoder.h"
 #include "spdlog/spdlog.h"
+#include "utils/Decompressor.h"
 
 void SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
@@ -18,14 +18,12 @@ void SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPa
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto offset = node["offset"].as<int32_t>();
-    auto mio0 = node["mio0"].as<size_t>();
+    auto [root, segment] = Decompressor::AutoDecode(node, buffer);
 
-    auto decoded = MIO0Decoder::Decode(buffer, offset);
-    auto bytes = (uint8_t*) decoded.data();
-    LUS::BinaryReader reader(bytes, decoded.size());
+    LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
-    reader.Seek(mio0, LUS::SeekOffsetType::Start);
+    // Validate this
+    // reader.Seek(mio0, LUS::SeekOffsetType::Start);
 
     auto unused = reader.ReadUInt32();
     auto linesPerBox = reader.ReadUByte();
@@ -38,8 +36,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vect
     auto str = SEGMENT_OFFSET(reader.ReadInt32());
     std::vector<uint8_t> text;
 
-    while(bytes[str] != 0xFF){
-        auto c = bytes[str++];
+    while(root->data[str] != 0xFF){
+        auto c = root->data[str++];
         text.push_back(c);
     }
     text.push_back(0xFF);

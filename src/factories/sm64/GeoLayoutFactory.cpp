@@ -1,7 +1,6 @@
 #include "GeoLayoutFactory.h"
 
 #include "spdlog/spdlog.h"
-#include "utils/MIODecoder.h"
 #include "geo/GeoCommand.h"
 #include "Companion.h"
 #include "geo/GeoUtils.h"
@@ -193,7 +192,7 @@ void SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr<IParsed
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    const size_t offset = Torch::translate(node["offset"].as<uint32_t>());
+    const size_t offset = Torch::translate(GetSafeNode<uint32_t>(node, "offset"));
     auto cmd = buffer.data() + offset;
     bool processing = true;
     std::vector<GeoCommand> commands;

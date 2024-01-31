@@ -1,6 +1,6 @@
 #include "DisplayListFactory.h"
 #include "DisplayListOverrides.h"
-#include "utils/MIODecoder.h"
+#include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <gfxd.h>
@@ -64,7 +64,7 @@ void GFXDSetGBIVersion(){
 }
 
 void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -76,8 +76,9 @@ void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
 void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
-    const auto symbol = node["symbol"].as<std::string>();
-    const auto offset = node["offset"].as<uint32_t>();
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+
     char out[0xFFFF] = {0};
 
     gfxd_input_buffer(cmds.data(), sizeof(uint32_t) * cmds.size());
@@ -163,11 +164,12 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         if(opcode == GBI(G_VTX)) {
             auto nvtx = (C0(0, 16)) / sizeof(Vtx);
             auto didx = C0(16, 4);
-            uint32_t ptr = SEGMENT_OFFSET(w1);
+            auto ptr = Decompressor::TranslateAddr(w1);
+            auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
-            if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
-                uint64_t hash = CRC64(std::get<0>(decl.value()).c_str());
-                SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(decl.value()));
+            if(dec.has_value()){
+                uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
+                SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
 
                 // TODO: Find a better way to do this because its going to break on other games
                 Gfx value = gsSPVertexOTR(didx, nvtx, 0);
@@ -188,7 +190,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
 
         if(opcode == GBI(G_DL)) {
-            auto ptr = SEGMENT_OFFSET(w1);
+            auto ptr = Decompressor::TranslateAddr(w1);
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             Gfx value = gsSPDisplayListOTRHash(ptr);
@@ -209,8 +211,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
 
         if(opcode == GBI(G_MOVEMEM)) {
-            uint32_t ptr = SEGMENT_OFFSET(w1);
-
+            auto ptr = Decompressor::TranslateAddr(w1);
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             w0 &= 0x00FFFFFF;
@@ -231,7 +232,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
 
         if(opcode == GBI(G_SETTIMG)) {
-            auto ptr = SEGMENT_OFFSET(w1);
+            auto ptr = Decompressor::TranslateAddr(w1);
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
@@ -261,32 +262,11 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& raw_buffer, YAML::Node& node) {
     const auto gbi = Companion::Instance->GetGBIVersion();
 
-    auto offset = node["offset"].as<uint32_t>();
-    const bool isCompressed = node["mio0"] ? true : false;
-
-    std::vector<uint8_t> buffer;
-
-    if(IS_SEGMENTED(offset)){
-        const auto segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(offset));
-
-        if(!segment.has_value()) {
-            SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(offset));
-            return std::nullopt;
-        }
-
-        offset = segment.value() + SEGMENT_OFFSET(offset);
-    }
-
-    if(isCompressed){
-        const auto mio0 = node["mio0"].as<uint32_t>();
-        buffer = MIO0Decoder::Decode(raw_buffer, mio0);
-    } else {
-        buffer = raw_buffer;
-    }
-
-    LUS::BinaryReader reader(buffer.data(), buffer.size());
+    auto [_, segment] = Decompressor::AutoDecode(node, raw_buffer);
+    LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
-    reader.Seek(offset, LUS::SeekOffsetType::Start);
+    // Validate this
+    // reader.Seek(offset, LUS::SeekOffsetType::Start);
 
     std::vector<uint32_t> gfxs;
     auto processing = true;
@@ -304,24 +284,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         if(opcode == GBI(G_DL)) {
 
             std::optional<uint32_t> segment;
-            uint32_t ptr;
 
-            if(IS_SEGMENTED(w1)){
-                segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
-
-                if(!segment.has_value()) {
-                    SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
-                    continue;
-                }
-
-                ptr = SEGMENT_OFFSET(w1);
-            } else {
-                ptr = w1;
-            }
-
-            auto dec = Companion::Instance->GetNodeByAddr(w1);
-
-            if(!dec.has_value()){
+            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
                 SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", w1);
 
                 auto rom = Companion::Instance->GetRomData();
@@ -329,22 +293,17 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 std::string output;
                 YAML::Node dl;
+                uint32_t ptr = Decompressor::TranslateAddr(w1);
 
-                if(isCompressed){
-                    dl["mio0"] = segment.has_value() ? segment.value() : ptr;
-                    if(segment.has_value()) {
-                        SPDLOG_INFO("Found compressed and segmented display list at 0x{:X}", ptr);
-                        output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + Torch::to_hex(segment.value() + w1, false));
-                    } else {
-                        SPDLOG_INFO("Found compressed display list at 0x{:X}", ptr);
-                        output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(w1, false));
-                    }
+                if(Decompressor::IsSegmented(w1)){
+                    SPDLOG_INFO("Found segmented display list at 0x{:X}", w1);
+                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + Torch::to_hex(ptr, false));
                 } else {
                     SPDLOG_INFO("Found display list at 0x{:X}", ptr);
                     output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(w1, false));
                 }
 
-
+                Decompressor::CopyCompression(node, dl);
                 dl["type"] = "GFX";
                 dl["offset"] = ptr;
                 dl["symbol"] = output;
@@ -357,14 +316,13 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 Companion::Instance->RegisterAsset(output, dl);
             } else {
-                SPDLOG_WARN("Warning: Could not find display list at 0x{:X}", ptr);
+                SPDLOG_WARN("Warning: Could not find display list at 0x{:X}", w1);
             }
         }
 
         if(opcode == GBI(G_MOVEMEM)) {
             uint8_t index = 0;
             uint8_t offset = 0;
-            uint32_t ptr = SEGMENT_OFFSET(w1);
 
             switch (Companion::Instance->GetGBIVersion()) {
                 case GBIVersion::f3d:
@@ -385,26 +343,33 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 }
             }
 
-
-            if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
+            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
                 SPDLOG_INFO("Addr to Lights1 command at 0x{:X} not in yaml, autogenerating it", w1);
-                auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
-                if(!addr.has_value()) {
-                    SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
-                    continue;
-                }
                 auto rom = Companion::Instance->GetRomData();
                 auto factory = Companion::Instance->GetFactory("LIGHTS")->get();
-                std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + Torch::to_hex(addr.value() + w1, false));
+
+                std::string output;
                 YAML::Node light;
+                uint32_t ptr = Decompressor::TranslateAddr(w1);
+
+                if(Decompressor::IsSegmented(w1)){
+                    SPDLOG_INFO("Found segmented lights at 0x{:X}", w1);
+                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + Torch::to_hex(ptr, false));
+                } else {
+                    SPDLOG_INFO("Found lights at 0x{:X}", ptr);
+                    output = Companion::Instance->NormalizeAsset("lights1_" + Torch::to_hex(w1, false));
+                }
+
+                Decompressor::CopyCompression(node, light);
                 light["type"] = "lights";
-                light["mio0"] = addr.value();
                 light["offset"] = ptr;
                 light["symbol"] = output;
                 auto result = factory->parse(rom, light);
                 if(result.has_value()){
                     Companion::Instance->RegisterAsset(output, light);
                 }
+            } else {
+                SPDLOG_WARN("Warning: Could not find lights at 0x{:X}", w1);
             }
         }
 
@@ -424,50 +389,25 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 break;
             }
 
-            std::optional<uint32_t> segment;
-            uint32_t ptr;
+            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
+                SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating it", w1);
 
-            if(IS_SEGMENTED(w1)){
-                segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
-
-                if(!segment.has_value()) {
-                    SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
-                    continue;
-                }
-
-                ptr = SEGMENT_OFFSET(w1);
-            } else {
-                ptr = w1;
-            }
-
-            if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); !decl.has_value()){
-                SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating  it", w1);
-                auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(w1));
-                if(!addr.has_value()) {
-                    SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(w1));
-                    break;
-                }
-
+                auto ptr = Decompressor::TranslateAddr(w1);
                 auto rom = Companion::Instance->GetRomData();
                 auto factory = Companion::Instance->GetFactory("VTX")->get();
 
                 std::string output;
                 YAML::Node vtx;
 
-                if(isCompressed){
-                    vtx["mio0"] = segment.has_value() ? segment.value() : ptr;
-                    if(segment.has_value()) {
-                        SPDLOG_INFO("Found compressed and segmented display list at 0x{:X}", ptr);
-                        output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(segment.value() + w1, false));
-                    } else {
-                        SPDLOG_INFO("Found compressed display list at 0x{:X}", ptr);
-                        output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
-                    }
+                if(Decompressor::IsSegmented(w1)){
+                    SPDLOG_INFO("Found segmented vtx at 0x{:X}", ptr);
+                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(ptr, false));
                 } else {
-                    SPDLOG_INFO("Found display list at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(w1, false));
+                    SPDLOG_INFO("Found vtx at 0x{:X}", ptr);
+                    output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
                 }
 
+                Decompressor::CopyCompression(node, vtx);
                 vtx["type"] = "VTX";
                 vtx["offset"] = ptr;
                 vtx["count"] = nvtx;
@@ -476,6 +416,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 if(result.has_value()){
                     Companion::Instance->RegisterAsset(output, vtx);
                 }
+            } else {
+                SPDLOG_WARN("Warning: Could not find vtx at 0x{:X}", w1);
             }
         }
 

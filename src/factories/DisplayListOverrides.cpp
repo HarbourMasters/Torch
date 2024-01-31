@@ -14,7 +14,7 @@ void Triangle2(const Gfx* gfx) {
     auto w1 = gfx->words.w1;
 
     auto v1 = std::to_string( ((w0 >> 16) & 0xFF) / 2 );
-    auto v2 = std::to_string( ((w0 >> 8) & 0xFF) / 2 ); 
+    auto v2 = std::to_string( ((w0 >> 8) & 0xFF) / 2 );
     auto v3 = std::to_string( (w0 & 0xFF) / 2 );
 
     auto v4 = std::to_string( ((w1 >> 16) & 0xFF) / 2 );
@@ -49,7 +49,7 @@ int Vtx(uint32_t vtx, int32_t num) {
     uint32_t ptr = SEGMENT_OFFSET(vtx);
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
-        auto symbol = node["symbol"].as<std::string>();
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Wrote vtx: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
@@ -63,7 +63,7 @@ int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t heig
     uint32_t ptr = SEGMENT_OFFSET(timg);
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
-        auto symbol = node["symbol"].as<std::string>();
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Wrote texture: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
@@ -77,7 +77,7 @@ int Light(uint32_t lightsn, int32_t count) {
     uint32_t ptr = SEGMENT_OFFSET(lightsn);
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
-        auto symbol = node["symbol"].as<std::string>();
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Wrote light: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
@@ -91,7 +91,7 @@ int DisplayList(uint32_t dl) {
     uint32_t ptr = SEGMENT_OFFSET(dl);
     if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
         auto node = std::get<1>(decl.value());
-        auto symbol = node["symbol"].as<std::string>();
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Wrote display list: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;

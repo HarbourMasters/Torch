@@ -1,17 +1,16 @@
 #include "DictionaryFactory.h"
-#include "utils/MIODecoder.h"
 
 void SM64::DictionaryBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
-    auto data = std::static_pointer_cast<DictionaryData>(raw);
+    const auto data = std::static_pointer_cast<DictionaryData>(raw);
 
     WriteHeader(writer, LUS::ResourceType::Dictionary, 0);
 
-    writer.Write((uint32_t) data->mDictionary.size());
+    writer.Write(static_cast<uint32_t>(data->mDictionary.size()));
     for(auto& [key, value] : data->mDictionary){
         writer.Write(key);
-        writer.Write((uint32_t) value.size());
-        writer.Write((char*) value.data(), value.size());
+        writer.Write(static_cast<uint32_t>(value.size()));
+        writer.Write(reinterpret_cast<char*>(value.data()), value.size());
     }
     writer.Finish(write);
 }
@@ -24,7 +23,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::DictionaryFactory::parse(std::
         auto offset = it->second.as<size_t>();
 
         std::vector<uint8_t> text;
-        auto bytes = (uint8_t*) buffer.data();
+        const auto bytes = buffer.data();
 
         while(bytes[offset] != 0xFF){
             auto c = bytes[offset++];

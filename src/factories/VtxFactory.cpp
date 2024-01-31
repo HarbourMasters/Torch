@@ -1,13 +1,13 @@
 #include "VtxFactory.h"
 
 #include "Companion.h"
-#include "utils/MIODecoder.h"
+#include "utils/Decompressor.h"
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
 void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -19,8 +19,8 @@ void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
 void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
-    const auto symbol = node["symbol"].as<std::string>();
-    const auto offset = node["offset"].as<uint32_t>();
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     if (Companion::Instance->IsDebug()) {
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
@@ -83,12 +83,10 @@ void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 }
 
 std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto mio0 = node["mio0"].as<size_t>();
-    auto offset = node["offset"].as<uint32_t>();
-    auto count = node["count"].as<size_t>();
+    auto count = GetSafeNode<size_t>(node, "count");
 
-    auto decoded = MIO0Decoder::Decode(buffer, offset);
-    LUS::BinaryReader reader(decoded.data() + mio0, count * sizeof(VtxRaw) );
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    LUS::BinaryReader reader(segment.data, count * sizeof(VtxRaw));
 
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<VtxRaw> vertices;

@@ -1,5 +1,5 @@
 #include "TextureFactory.h"
-#include "utils/MIODecoder.h"
+#include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <iomanip>
@@ -45,7 +45,7 @@ std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t
 }
 
 void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+    auto symbol = GetSafeNode(node, "symbol", entryName);
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
 
     if(Companion::Instance->IsOTRMode()){
@@ -58,8 +58,8 @@ void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
 
 void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
-    auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
-    auto format = node["format"].as<std::string>();
+    auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto format = GetSafeNode<std::string>(node, "format");
 
     std::transform(format.begin(), format.end(), format.begin(), tolower);
     (*replacement) += "." + format;
@@ -107,11 +107,11 @@ void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
 }
 
 std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto format = node["format"].as<std::string>();
-    auto width = node["width"].as<uint32_t>();
-    auto height = node["height"].as<uint32_t>();
-    auto size = node["size"].as<size_t>();
-    auto offset = node["offset"].as<size_t>();
+    auto format = GetSafeNode<std::string>(node, "format");
+    auto width  = GetSafeNode<uint32_t>(node, "width");
+    auto height = GetSafeNode<uint32_t>(node, "height");
+    auto size   = GetSafeNode<uint32_t>(node, "size");
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
@@ -126,26 +126,18 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
 
 	TextureType type = gTextureTypes.at(format);
 
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     std::vector<uint8_t> result;
 
-	if(node["mio0"]){
-        auto decoded = MIO0Decoder::Decode(buffer, offset);
-        auto mio0 = node["mio0"].as<size_t>();
-        auto data = decoded.data() + mio0;
-
-        if(type == TextureType::GrayscaleAlpha1bpp){
-            result = alloc_ia8_text_from_i1((uint16_t*) data, 8, 16);
-        } else {
-            result = std::vector(data, data + size);
-        }
-
-	} else {
-        result = std::vector(buffer.data() + offset, buffer.data() + offset + size);
-	}
+    if(type == TextureType::GrayscaleAlpha1bpp){
+        result = alloc_ia8_text_from_i1((uint16_t*) segment.data, 8, 16);
+    } else {
+        result = std::vector(segment.data, segment.data + segment.size);
+    }
 
     SPDLOG_INFO("Texture: {} {}x{} {}", format, width, height, size);
     SPDLOG_INFO("Offset: {}", offset);
-    SPDLOG_INFO("Has MIO0: {}", node["mio0"] ? "true" : "false");
+    SPDLOG_INFO("Has MIO0: {}", Decompressor::IsCompressed(node) ? "true" : "false");
     SPDLOG_INFO("Size: {}", result.size());
 
     if(result.size() == 0){

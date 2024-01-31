@@ -1,5 +1,5 @@
 #include "BlobFactory.h"
-#include "utils/MIODecoder.h"
+#include "utils/Decompressor.h"
 #include <iomanip>
 
 void BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -26,18 +26,8 @@ void BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     writer.Finish(write);
 }
 
-std::optional<std::shared_ptr<IParsedData>> BlobFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
-    auto size = data["size"].as<uint32_t>();
-	auto offset = data["offset"].as<uint32_t>();
-    std::shared_ptr<RawBuffer> result;
-
-	if(data["mio0"]){
-		auto decoded = MIO0Decoder::Decode(buffer, offset);
-        auto cursor = data["mio0"].as<uint32_t>();
-        result = std::make_shared<RawBuffer>(decoded.data() + cursor, size);
-	} else {
-        result = std::make_shared<RawBuffer>(buffer.data() + offset, size);
-	}
-
-    return result;
+std::optional<std::shared_ptr<IParsedData>> BlobFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto size = GetSafeNode<size_t>(node, "size");
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    return std::make_shared<RawBuffer>(segment.data, segment.size);
 }
