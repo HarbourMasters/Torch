@@ -40,7 +40,7 @@ std::optional<T> GetNode(YAML::Node& node, const std::string& key) {
 template<typename T>
 T GetSafeNode(YAML::Node& node, const std::string& key) {
     if(!node[key]) {
-        throw std::runtime_error("Failed to find entry");
+        throw std::runtime_error("Failed to find " + key);
     }
 
     return node[key].as<T>();

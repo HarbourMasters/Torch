@@ -298,16 +298,39 @@ void Companion::Process() {
         for(auto asset = root.begin(); asset != root.end(); ++asset){
 
             auto entryName = asset->first.as<std::string>();
-            std::string output = (this->gCurrentDirectory / entryName).string();
-            std::replace(output.begin(), output.end(), '\\', '/');
+            auto assetNode = asset->second;
 
-             if(entryName.find(":config") != std::string::npos) {
+            if(entryName.find(":config") != std::string::npos) {
                 continue;
             }
 
-            this->gConfig.segment.temporal.clear();
+            // Parse horizontal assets
+            if(assetNode["files"]){
+                auto segment = assetNode["segment"] ? assetNode["segment"].as<uint8_t>() : -1;
+                auto files = assetNode["files"];
+                for (const auto& file : files) {
+                    auto node = file.as<YAML::Node>();
+                    auto childName = node["name"].as<std::string>();
 
-            this->ExtractNode(asset->second, output, wrapper);
+                    if(!node["offset"]) {
+                        continue;
+                    }
+
+                    if(segment != -1) {
+                        node["offset"] = (segment << 24) | node["offset"].as<uint32_t>();
+                    }
+
+                    auto output = (this->gCurrentDirectory / entryName / childName).string();
+                    std::replace(output.begin(), output.end(), '\\', '/');
+                    this->gConfig.segment.temporal.clear();
+                    this->ExtractNode(node, output, wrapper);
+                }
+            } else {
+                std::string output = (this->gCurrentDirectory / entryName).string();
+                std::replace(output.begin(), output.end(), '\\', '/');
+                this->gConfig.segment.temporal.clear();
+                this->ExtractNode(assetNode, output, wrapper);
+            }
 
             spdlog::set_pattern(regular);
             SPDLOG_INFO("------------------------------------------------");
