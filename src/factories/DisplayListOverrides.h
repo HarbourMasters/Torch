@@ -14,16 +14,16 @@ typedef union {
 } Gfx;
 
 typedef struct {
-    short		    ob[3];
-    unsigned short	flag;
-    short		    tc[2];
+    int16_t		    ob[3];
+    uint16_t	    flag;
+    int16_t		    tc[2];
     unsigned char	cn[4];
 } Vtx_t;
 
 typedef struct {
-    short		    ob[3];
-    unsigned short	flag;
-    short		    tc[2];
+    int16_t		    ob[3];
+    uint16_t	    flag;
+    int16_t		    tc[2];
     signed char	    n[3];
     unsigned char   a;
 } Vtx_tn;
