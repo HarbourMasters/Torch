@@ -17,6 +17,32 @@ static const std::unordered_map <std::string, TextureType> gTextureTypes = {
 	{ "IA16", TextureType::GrayscaleAlpha16bpp },
 };
 
+size_t CalculateTextureSize(TextureType type, uint32_t width, uint32_t height) {
+    switch (type) {
+        // 4 bytes per pixel
+        case TextureType::RGBA32bpp:
+            return width * height * 4;
+        // 2 bytes per pixel
+        case TextureType::RGBA16bpp:
+        case TextureType::GrayscaleAlpha16bpp:
+            return width * height * 2;
+        // 1 byte per pixel
+        case TextureType::Grayscale8bpp:
+        case TextureType::Palette8bpp:
+        case TextureType::GrayscaleAlpha8bpp:
+        // TODO: We need to validate this MegaMech
+        case TextureType::GrayscaleAlpha1bpp:
+            return width * height;
+        // 1/2 byte per pixel
+        case TextureType::Palette4bpp:
+        case TextureType::Grayscale4bpp:
+        case TextureType::GrayscaleAlpha4bpp:
+            return (width * height) / 2;
+        default:
+            return 0;
+    }
+}
+
 std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
     int32_t inPos;
     uint16_t bitMask;
@@ -110,7 +136,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     auto format = GetSafeNode<std::string>(node, "format");
     auto width  = GetSafeNode<uint32_t>(node, "width");
     auto height = GetSafeNode<uint32_t>(node, "height");
-    auto size   = GetSafeNode<uint32_t>(node, "size");
+    auto size   = GetSafeNode<uint32_t>(node, "size", CalculateTextureSize(gTextureTypes.at(format), width, height));
     auto offset = Decompressor::TranslateAddr(GetSafeNode<uint32_t>(node, "offset"));
 
     if (format.empty()) {
@@ -126,7 +152,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
 
 	TextureType type = gTextureTypes.at(format);
 
-    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
     std::vector<uint8_t> result;
 
     if(type == TextureType::GrayscaleAlpha1bpp){
@@ -135,10 +161,12 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         result = std::vector(segment.data, segment.data + segment.size);
     }
 
-    SPDLOG_INFO("Texture: {} {}x{} {}", format, width, height, size);
+    SPDLOG_INFO("Texture: {}", format);
+    SPDLOG_INFO("Width: {}", width);
+    SPDLOG_INFO("Height: {}", height);
+    SPDLOG_INFO("Size: {}", size);
     SPDLOG_INFO("Offset: 0x{:X}", offset);
     SPDLOG_INFO("Is Compressed: {}", Decompressor::IsCompressed(node) ? "true" : "false");
-    SPDLOG_INFO("Size: {}", result.size());
 
     if(result.size() == 0){
         return std::nullopt;

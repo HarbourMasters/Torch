@@ -35,7 +35,7 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
     }
 }
 
-DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer) {
+DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer, std::optional<size_t> manualSize) {
     if(!node["offset"]){
         throw std::runtime_error("Failed to find offset");
     }
@@ -45,7 +45,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     if(node["mio0"]){
         const auto mio0 = node["mio0"].as<uint32_t>();
         auto decoded = Decode(buffer, offset, CompressionType::MIO0);
-        auto size = node["size"] ? node["size"].as<size_t>() : decoded->size - mio0;
+        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - mio0);
 
         return {
             .root = decoded,
@@ -63,7 +63,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     return {
         .root = nullptr,
-        .segment = { buffer.data() + offset, node["size"] ? node["size"].as<size_t>() : buffer.size() - offset }
+        .segment = { buffer.data() + offset, node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - offset) }
     };
 }
 
