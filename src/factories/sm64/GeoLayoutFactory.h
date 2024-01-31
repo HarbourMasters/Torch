@@ -2,6 +2,7 @@
 
 #include "../BaseFactory.h"
 #include "geo/GeoCommand.h"
+#include <vector>
 
 namespace SM64 {
 
