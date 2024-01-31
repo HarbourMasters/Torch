@@ -185,7 +185,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
             } else {
-                SPDLOG_WARN("Warning: Could not find vtx at 0x{:X}", ptr);
+                SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
             }
         }
 
@@ -206,7 +206,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
             } else {
-                SPDLOG_WARN("Warning: Could not find display list at 0x{:X}", ptr);
+                SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
             }
         }
 
@@ -227,7 +227,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
             } else {
-                SPDLOG_WARN("Warning: Could not find movemem at 0x{:X}", ptr);
+                SPDLOG_WARN("Could not find movemem at 0x{:X}", ptr);
             }
         }
 
@@ -248,7 +248,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
             } else {
-                SPDLOG_WARN("Warning: Could not find texture at 0x{:X}", ptr);
+                SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
             }
         }
 
@@ -316,7 +316,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 Companion::Instance->RegisterAsset(output, dl);
             } else {
-                SPDLOG_WARN("Warning: Could not find display list at 0x{:X}", w1);
+                SPDLOG_WARN("Could not find display list at 0x{:X}", w1);
             }
         }
 
@@ -369,7 +369,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     Companion::Instance->RegisterAsset(output, light);
                 }
             } else {
-                SPDLOG_WARN("Warning: Could not find lights at 0x{:X}", w1);
+                SPDLOG_WARN("Could not find lights at 0x{:X}", w1);
             }
         }
 
@@ -417,7 +417,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     Companion::Instance->RegisterAsset(output, vtx);
                 }
             } else {
-                SPDLOG_WARN("Warning: Could not find vtx at 0x{:X}", w1);
+                SPDLOG_WARN("Could not find vtx at 0x{:X}", w1);
             }
         }
 
