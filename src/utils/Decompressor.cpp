@@ -20,7 +20,6 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 
 	switch (type) {
         case CompressionType::MIO0: {
-
             mio0_header_t head;
             if(!mio0_decode_header(in_buf, &head)){
                 throw std::runtime_error("Failed to decode MIO0 header");
