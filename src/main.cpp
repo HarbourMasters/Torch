@@ -16,44 +16,64 @@ int main(int argc, char *argv[]) {
     std::string folder;
     bool otrMode = false;
     bool debug = false;
-    bool header = false;
 
     app.require_subcommand();
 
     /* Generate an OTR */
-    auto otr = app.add_subcommand("otr", "OTR - Generates an otr\n");
+    const auto otr = app.add_subcommand("otr", "OTR - Generates an otr\n");
 
     otr->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
-
-    otr->add_flag("-t,--target", target, "OTR output destination");
-    otr->add_flag("-o,--otr", otrMode, "OTR Mode");
-    otr->add_flag("-d,--dir", folder, "Generate OTR from a directory of assets");
-    otr->add_flag("-z,--zeader", header, "Generates a header");
     otr->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
-    otr->parse_complete_callback([&]() {
-        auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
 
-        if (header) {
-            instance->Init(ExportType::Header);
-        } else {
-            instance->Init(ExportType::Binary);
-        }
-
-        if (!folder.empty()) {
-            Companion::Pack(folder, target);
-        }
-
+    otr->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, true, debug);
+        instance->Init(ExportType::Binary);
     });
 
     /* Generate C code */
-    auto code = app.add_subcommand("code", "Code - Generates C code\n");
+    const auto code = app.add_subcommand("code", "Code - Generates C code\n");
 
     code->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
-
     code->add_flag("-v,--verbose", debug, "Verbose Debug Mode; adds offsets to C code");
+
     code->parse_complete_callback([&]() {
-        auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
+        const auto instance = Companion::Instance = new Companion(filename, false, debug);
         instance->Init(ExportType::Code);
+    });
+
+    /* Generate a binary */
+    const auto binary = app.add_subcommand("binary", "Binary - Generates a binary\n");
+
+    binary->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+
+    binary->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, false, debug);
+        instance->Init(ExportType::Binary);
+    });
+
+    /* Generate headers */
+    const auto header = app.add_subcommand("header", "Header - Generates headers only\n");
+
+    header->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    header->add_flag("-o,--otr", otrMode, "OTR Mode");
+
+    header->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
+        instance->Init(ExportType::Header);
+    });
+
+    /* Pack an otr from a folder */
+    const auto pack = app.add_subcommand("pack", "Pack - Packs an otr from a folder\n");
+
+    pack->add_option("<folder>", folder, "Generate OTR from a directory of assets")->required()->check(CLI::ExistingDirectory);
+    pack->add_option("<target>", target, "OTR output destination")->required();
+
+    pack->parse_complete_callback([&] {
+        if (!folder.empty()) {
+            Companion::Pack(folder, target);
+        } else {
+            std::cout << "The folder is empty" << std::endl;
+        }
     });
 
     try {
