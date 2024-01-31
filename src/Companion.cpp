@@ -1,7 +1,7 @@
 #include "Companion.h"
 
 #include "storm/SWrapper.h"
-#include "utils/MIODecoder.h"
+#include "utils/Decompressor.h"
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/DialogFactory.h"
 #include "factories/sm64/DictionaryFactory.h"
@@ -61,7 +61,7 @@ void Companion::Init(const ExportType type) {
 void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary) {
     std::ostringstream stream;
 
-    auto type = node["type"].as<std::string>();
+    auto type = GetSafeNode<std::string>(node, "type");
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
     if(node["offset"]) {
@@ -408,7 +408,7 @@ void Companion::Process() {
     spdlog::set_pattern(regular);
     SPDLOG_INFO("------------------------------------------------");
 
-    MIO0Decoder::ClearCache();
+    Decompressor::ClearCache();
     this->gCartridge = nullptr;
     Instance = nullptr;
 }

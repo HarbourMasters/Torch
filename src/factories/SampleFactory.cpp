@@ -1,5 +1,4 @@
 #include "SampleFactory.h"
-#include "utils/MIODecoder.h"
 
 void SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();

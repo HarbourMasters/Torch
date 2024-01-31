@@ -1,13 +1,13 @@
 #include "WaypointFactory.h"
 
 #include "Companion.h"
-#include "utils/MIODecoder.h"
+#include "utils/Decompressor.h"
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
 void MK64::WaypointHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -19,7 +19,7 @@ void MK64::WaypointHeaderExporter::Export(std::ostream &write, std::shared_ptr<I
 
 void MK64::WaypointCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto waypoints = std::static_pointer_cast<WaypointData>(raw)->mWaypoints;
-    auto symbol = node["symbol"].as<std::string>();
+    auto symbol = GetSafeNode(node, "symbol", entryName);
 
     write << "TrackWaypoint " << symbol << "[] = {\n";
 
@@ -58,12 +58,10 @@ void MK64::WaypointBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::WaypointFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto mio0 = node["mio0"].as<size_t>();
-    auto offset = node["offset"].as<uint32_t>();
-    auto count = node["count"].as<size_t>();
+    auto count = GetSafeNode<size_t>(node, "count");
 
-    auto decoded = MIO0Decoder::Decode(buffer, offset);
-    LUS::BinaryReader reader(decoded.data() + mio0, count * sizeof(MK64::TrackWaypoint) );
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    LUS::BinaryReader reader(segment.data, count * sizeof(MK64::TrackWaypoint));
 
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<MK64::TrackWaypoint> waypoints;

@@ -1,5 +1,4 @@
 #include "BankFactory.h"
-#include "utils/MIODecoder.h"
 #include "Companion.h"
 #include "audio/samples_table.h"
 

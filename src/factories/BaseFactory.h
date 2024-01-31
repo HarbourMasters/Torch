@@ -28,6 +28,33 @@ enum class ExportType {
     Binary,
 };
 
+template<typename T>
+std::optional<T> GetNode(YAML::Node& node, const std::string& key) {
+    if(!node[key]) {
+        return std::nullopt;
+    }
+
+    return std::optional<T>(node[key].as<T>());
+}
+
+template<typename T>
+T GetSafeNode(YAML::Node& node, const std::string& key) {
+    if(!node[key]) {
+        throw std::runtime_error("Failed to find entry");
+    }
+
+    return node[key].as<T>();
+}
+
+template<typename T>
+T GetSafeNode(YAML::Node& node, const std::string& key, const T& def) {
+    if(!node[key]) {
+        return def;
+    }
+
+    return node[key].as<T>();
+}
+
 class IParsedData {};
 
 template<typename T>

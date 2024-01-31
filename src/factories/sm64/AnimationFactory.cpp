@@ -1,10 +1,9 @@
 #include "AnimationFactory.h"
-#include "utils/MIODecoder.h"
 #include "spdlog/spdlog.h"
 
 void SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
-    auto anim = std::static_pointer_cast<AnimationData>(raw);
+    const auto anim = std::static_pointer_cast<AnimationData>(raw);
 
     WriteHeader(writer, LUS::ResourceType::Anim, 0);
     writer.Write(anim->mFlags);
@@ -29,11 +28,11 @@ void SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto headerNode = node["header"];
-    auto valuesNode = node["values"];
-    auto indexNode = node["indices"];
+    auto headerNode = GetSafeNode<YAML::Node>(node, "header");
+    auto valuesNode = GetSafeNode<YAML::Node>(node, "values");
+    auto indexNode = GetSafeNode<YAML::Node>(node, "indices");
 
-	LUS::BinaryReader header(reinterpret_cast<char *>(buffer.data()) + headerNode["offset"].as<uint32_t>(), headerNode["size"].as<uint32_t>());
+	LUS::BinaryReader header(reinterpret_cast<char *>(buffer.data()) + GetSafeNode<uint32_t>(headerNode, "offset"), GetSafeNode<uint32_t>(headerNode, "size"));
 	header.SetEndianness(LUS::Endianness::Big);
 
 	auto flags = header.ReadInt16();
@@ -46,17 +45,17 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
     header.ReadUInt32();
 	auto length = header.ReadUInt32();
 
-    LUS::BinaryReader indices(reinterpret_cast<char*>(buffer.data()) + indexNode["offset"].as<uint32_t>(), indexNode["size"].as<uint32_t>());
+    LUS::BinaryReader indices(reinterpret_cast<char*>(buffer.data()) + GetSafeNode<uint32_t>(indexNode, "offset"), GetSafeNode<uint32_t>(indexNode, "size"));
     indices.SetEndianness(LUS::Endianness::Big);
-    size_t indexLength = indexNode["size"].as<uint32_t>() / sizeof(int16_t);
+    size_t indexLength = GetSafeNode<uint32_t>(indexNode, "size") / sizeof(int16_t);
     std::vector<int16_t> indicesData;
     for (size_t i = 0; i < indexLength; i++) {
         indicesData.push_back(indices.ReadInt16());
     }
 
-    LUS::BinaryReader values((char*) buffer.data() + valuesNode["offset"].as<uint32_t>(), valuesNode["size"].as<uint32_t>());
+    LUS::BinaryReader values(reinterpret_cast<char*>(buffer.data()) + GetSafeNode<uint32_t>(valuesNode, "offset"), GetSafeNode<uint32_t>(valuesNode, "size"));
 	values.SetEndianness(LUS::Endianness::Big);
-	size_t entries = valuesNode["size"].as<uint32_t>() / sizeof(uint16_t);
+	size_t entries = GetSafeNode<uint32_t>(valuesNode, "size") / sizeof(uint16_t);
     std::vector<uint16_t> valuesData;
     for (size_t i = 0; i < entries; i++) {
         valuesData.push_back(values.ReadUInt16());

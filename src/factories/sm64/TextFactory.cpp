@@ -1,5 +1,5 @@
 #include "TextFactory.h"
-#include "utils/MIODecoder.h"
+#include "utils/Decompressor.h"
 
 void SM64::TextBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
@@ -11,16 +11,14 @@ void SM64::TextBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPars
     writer.Finish(write);
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::TextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
-    auto offset = data["offset"].as<size_t>();
-    auto mio0 = data["mio0"].as<size_t>();
+std::optional<std::shared_ptr<IParsedData>> SM64::TextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
 
     std::vector<uint8_t> text;
-    auto decoded = MIO0Decoder::Decode(buffer, offset);
-    auto bytes = (uint8_t*) decoded.data();
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    size_t idx = 0;
 
-    while(bytes[mio0] != 0xFF){
-        auto c = bytes[mio0++];
+    while(segment.data[idx] != 0xFF){
+        auto c = segment.data[idx++];
         text.push_back(c);
     }
     text.push_back(0xFF);

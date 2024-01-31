@@ -1,11 +1,11 @@
 #include "LightsFactory.h"
 
-#include "utils/MIODecoder.h"
+#include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 
 void LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -17,7 +17,7 @@ void LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedDa
 
 void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;
-    auto symbol = node["symbol"].as<std::string>();
+    auto symbol = GetSafeNode(node, "symbol", entryName);
 
     write << "Lights1 " << symbol << " = gdSPDefLights1 (\n";
 
@@ -68,11 +68,9 @@ void LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDa
 }
 
 std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto mio0 = node["mio0"].as<size_t>();
-    auto offset = node["offset"].as<uint32_t>();
-
-    auto decoded = MIO0Decoder::Decode(buffer, offset);
-    LUS::BinaryReader reader(decoded.data() + mio0, sizeof(Lights1Raw));
+    auto decoded = Decompressor::AutoDecode(node, buffer);
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    LUS::BinaryReader reader(segment.data, sizeof(Lights1Raw));
 
     reader.SetEndianness(LUS::Endianness::Big);
     Lights1Raw lights;
@@ -90,7 +88,6 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     auto g2 = reader.ReadUByte();
     auto b2 = reader.ReadUByte();
 
-
     reader.Seek(5, LUS::SeekOffsetType::Current);
 
     // Direction
@@ -98,6 +95,7 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     auto y = reader.ReadInt8();
     auto z = reader.ReadInt8();
 
+    // TODO: This is a hack, but it works for now.
     // The struct has several copies/padding. The zeros skip those for gdSPDefLights1.
     lights = {r, g, b, 0, 0, 0, 0, 0, r2, g2, b2, 0, 0, 0, 0, 0, x, y, z};
 
