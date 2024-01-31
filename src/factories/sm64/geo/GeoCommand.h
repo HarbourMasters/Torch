@@ -199,7 +199,7 @@ inline std::ostream& operator<<(std::ostream& out, const GeoOpcode& opcode) {
     BSWAP32((*(s32 *) &cmd[CMD_PROCESS_OFFSET(offset)]))
 
 #define cur_geo_cmd_u32(offset) \
-    BSWAP32((*(uint32_t *) &cmd[CMD_PROCESS_OFFSET(offset)]))
+    (uint32_t) BSWAP32((*(uint32_t *) &cmd[CMD_PROCESS_OFFSET(offset)]))
 
 class GeoLayoutCommand {
 public:

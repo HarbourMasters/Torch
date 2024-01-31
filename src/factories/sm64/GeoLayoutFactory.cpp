@@ -555,7 +555,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
             }
         }
 
-        commands.push_back({opcode, arguments});
+        commands.push_back({ opcode, arguments });
     }
 
     return std::make_shared<GeoLayout>(commands);

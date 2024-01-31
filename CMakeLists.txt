@@ -3,6 +3,7 @@ project(torch)
 include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 11)
 
 # Link libgfxd
 # Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
@@ -55,13 +56,13 @@ else()
             $<$<CONFIG:Debug>:
                 /w;
                 /Od;
-                /MTd
+                /MDd
             >
             $<$<CONFIG:Release>:
                 /Oi;
                 /Gy;
                 /W3;
-                /MT
+                /MD
             >
             /permissive-;
             /MP;
@@ -72,13 +73,13 @@ else()
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_compile_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
-                /MTd
+                /MDd
             >
             $<$<CONFIG:Release>:
                 /O2;
                 /Oi;
                 /Gy;
-                /MT
+                /MD
             >
             /permissive-;
             /MP;
@@ -100,7 +101,7 @@ else()
             >
             /MANIFEST:NO;
             /DEBUG;
-            /SUBSYSTEM:WINDOWS
+            /SUBSYSTEM:CONSOLE
         )
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_link_options(${PROJECT_NAME} PRIVATE
@@ -115,7 +116,7 @@ else()
             >
             /MANIFEST:NO;
             /DEBUG;
-            /SUBSYSTEM:WINDOWS
+            /SUBSYSTEM:CONSOLE
         )
     endif()
 endif()
