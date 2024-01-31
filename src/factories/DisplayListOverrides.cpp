@@ -1,5 +1,6 @@
 #include "DisplayListOverrides.h"
 
+#include "utils/Decompressor.h"
 #include "DisplayListFactory.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -46,9 +47,11 @@ void Quadrangle(const Gfx* gfx) {
 }
 
 int Vtx(uint32_t vtx, int32_t num) {
-    uint32_t ptr = SEGMENT_OFFSET(vtx);
-    if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
-        auto node = std::get<1>(decl.value());
+    auto ptr = Decompressor::TranslateAddr(vtx);
+    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+
+    if(dec.has_value()){
+        auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Wrote vtx: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
@@ -60,9 +63,11 @@ int Vtx(uint32_t vtx, int32_t num) {
 }
 
 int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t height, int32_t pal) {
-    uint32_t ptr = SEGMENT_OFFSET(timg);
-    if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
-        auto node = std::get<1>(decl.value());
+    auto ptr = Decompressor::TranslateAddr(timg);
+    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+
+    if(dec.has_value()){
+        auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Wrote texture: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
@@ -74,9 +79,11 @@ int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t heig
 }
 
 int Light(uint32_t lightsn, int32_t count) {
-    uint32_t ptr = SEGMENT_OFFSET(lightsn);
-    if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
-        auto node = std::get<1>(decl.value());
+    auto ptr = Decompressor::TranslateAddr(lightsn);
+    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+
+    if(dec.has_value()){
+        auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Wrote light: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
@@ -88,9 +95,11 @@ int Light(uint32_t lightsn, int32_t count) {
 }
 
 int DisplayList(uint32_t dl) {
-    uint32_t ptr = SEGMENT_OFFSET(dl);
-    if(const auto decl = Companion::Instance->GetNodeByAddr(ptr); decl.has_value()){
-        auto node = std::get<1>(decl.value());
+    auto ptr = Decompressor::TranslateAddr(dl);
+    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+
+    if(dec.has_value()){
+        auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Wrote display list: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
