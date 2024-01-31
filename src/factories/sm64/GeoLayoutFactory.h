@@ -3,10 +3,11 @@
 #include "../BaseFactory.h"
 #include "geo/GeoCommand.h"
 #include <vector>
-
-namespace SM64 {
+#include <variant>
 
 typedef std::variant<uint8_t, int8_t, uint16_t, int16_t, uint32_t, int32_t, uint64_t, Vec2f, Vec3f, Vec3s, Vec3i, Vec4f, Vec4s> GeoArgument;
+
+namespace SM64 {
 
 struct GeoCommand {
     GeoOpcode opcode;
