@@ -111,7 +111,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     auto width  = GetSafeNode<uint32_t>(node, "width");
     auto height = GetSafeNode<uint32_t>(node, "height");
     auto size   = GetSafeNode<uint32_t>(node, "size");
-    auto offset = GetSafeNode<uint32_t>(node, "offset");
+    auto offset = Decompressor::TranslateAddr(GetSafeNode<uint32_t>(node, "offset"));
 
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
@@ -130,14 +130,14 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     std::vector<uint8_t> result;
 
     if(type == TextureType::GrayscaleAlpha1bpp){
-        result = alloc_ia8_text_from_i1((uint16_t*) segment.data, 8, 16);
+        result = alloc_ia8_text_from_i1(reinterpret_cast<uint16_t*>(segment.data), 8, 16);
     } else {
         result = std::vector(segment.data, segment.data + segment.size);
     }
 
     SPDLOG_INFO("Texture: {} {}x{} {}", format, width, height, size);
-    SPDLOG_INFO("Offset: {}", offset);
-    SPDLOG_INFO("Has MIO0: {}", Decompressor::IsCompressed(node) ? "true" : "false");
+    SPDLOG_INFO("Offset: 0x{:X}", offset);
+    SPDLOG_INFO("Is Compressed: {}", Decompressor::IsCompressed(node) ? "true" : "false");
     SPDLOG_INFO("Size: {}", result.size());
 
     if(result.size() == 0){

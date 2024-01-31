@@ -63,7 +63,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     return {
         .root = nullptr,
-        .segment = { buffer.data() + offset, buffer.size() - offset }
+        .segment = { buffer.data() + offset, node["size"] ? node["size"].as<size_t>() : buffer.size() - offset }
     };
 }
 
