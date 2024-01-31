@@ -64,12 +64,14 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     auto type = GetSafeNode<std::string>(node, "type");
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
+    spdlog::set_pattern(regular);
     if(node["offset"]) {
         auto offset = node["offset"].as<uint32_t>();
-        SPDLOG_INFO("[{}] Processing {} at 0x{:X}", type, name, offset);
+        SPDLOG_INFO("- [{}] Processing {} at 0x{:X}", type, name, offset);
     } else {
-        SPDLOG_INFO("[{}] Processing {}", type, name);
+        SPDLOG_INFO("- [{}] Processing {}", type, name);
     }
+    spdlog::set_pattern(line);
 
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
@@ -97,6 +99,9 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         std::replace(doutput.begin(), doutput.end(), '\\', '/');
         this->gAssetDependencies[this->gCurrentFile][fst].second = true;
         this->ExtractNode(snd.first, doutput, binary);
+        spdlog::set_pattern(regular);
+        SPDLOG_INFO("------------------------------------------------");
+        spdlog::set_pattern(line);
     }
 
     switch (this->gConfig.exporterType) {
