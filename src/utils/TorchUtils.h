@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 
 namespace Torch {
 template< typename T >
