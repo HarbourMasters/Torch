@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <cassert>
 #include <cstring>
+#include <factories/BaseFactory.h>
+
 #include "hj/zip.h"
 #include "hj/pyutils.h"
 #include "spdlog/spdlog.h"
@@ -13,6 +15,7 @@
 #include "spdlog/spdlog.h"
 
 std::unordered_map<std::string, uint32_t> name_table;
+std::unordered_map<uint32_t, std::string> sample_table;
 AudioManager* AudioManager::Instance;
 
 std::vector<uint32_t> PyUtils::range(uint32_t start, uint32_t end) {
@@ -606,14 +609,14 @@ void AudioManager::write_aifc(AudioBankSample* entry, LUS::BinaryWriter &out) {
     if(entry->loop.count != 0){
         START_CUSTOM_SECTION("\x0bVADPCMLOOPS")
         uint16_t one = BSWAP16(1);
-        tmp.Write((char*) &one, 2);
-        tmp.Write((char*) &one, 2);
-        tmp.Write((uint32_t) entry->loop.start);
-        tmp.Write((uint32_t) entry->loop.end);
-        tmp.Write((int32_t) entry->loop.count);
+        tmp.Write(reinterpret_cast<char*>(&one), 2);
+        tmp.Write(reinterpret_cast<char*>(&one), 2);
+        tmp.Write(entry->loop.start);
+        tmp.Write(entry->loop.end);
+        tmp.Write(entry->loop.count);
         for(size_t i = 0; i < 16; i++){
             int16_t loop = BSWAP16(entry->loop.state.value()[i]);
-            tmp.Write((char*) &loop, 2);
+            tmp.Write(reinterpret_cast<char*>(&loop), 2);
         }
         END_SECTION();
     }
@@ -622,6 +625,18 @@ void AudioManager::write_aifc(AudioBankSample* entry, LUS::BinaryWriter &out) {
     out.Seek(4, LUS::SeekOffsetType::Start);
     out.Write((uint32_t) BSWAP32(len));
 
+}
+
+void AudioManager::bind_sample(YAML::Node& node, const std::string& path){
+    auto id = GetSafeNode<uint32_t>(node, "id");
+    sample_table[id] = path;
+}
+
+std::string& AudioManager::get_sample(uint32_t id) {
+    if(!sample_table.contains(id)) {
+        throw std::runtime_error("Failed to find sample with id " + std::to_string(id));
+    }
+    return sample_table[id];
 }
 
 void AudioManager::create_aifc(int32_t index, LUS::BinaryWriter &out) {

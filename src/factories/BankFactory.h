@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "BaseFactory.h"
 #include "audio/AudioManager.h"
 
@@ -7,9 +9,8 @@ class BankData : public IParsedData {
 public:
     Bank mBank;
     uint32_t mBankId;
-    const char** mSampleTable;
 
-    BankData(Bank bank, uint32_t bankId, const char** sampleTable) : mBank(bank), mBankId(bankId), mSampleTable(sampleTable) {}
+    BankData(Bank bank, const uint32_t bankId) : mBank(std::move(bank)), mBankId(bankId) {}
 };
 
 class BankBinaryExporter : public BaseExporter {

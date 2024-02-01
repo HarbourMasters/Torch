@@ -138,7 +138,9 @@ class AudioManager {
 public:
     static AudioManager* Instance;
     void initialize(std::vector<uint8_t>& buffer, YAML::Node& data);
+    void bind_sample(YAML::Node& node, const std::string& path);
     void create_aifc(int32_t index, LUS::BinaryWriter& writer);
+    std::string& get_sample(uint32_t id);
     AudioBankSample get_aifc(int32_t index);
     std::map<uint32_t, Bank> get_banks();
     uint32_t get_index(AudioBankSample* bank);

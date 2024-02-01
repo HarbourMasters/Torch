@@ -253,6 +253,7 @@ void Companion::Process() {
     SPDLOG_INFO("Hash: {}", this->gCartridge->GetHash());
     SPDLOG_INFO("Assets: {}", path);
 
+    AudioManager::Instance = new AudioManager();
     auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
 
     auto vWriter = LUS::BinaryWriter();
@@ -277,15 +278,52 @@ void Companion::Process() {
 
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto node = asset->second;
+            auto entryName = asset->first.as<std::string>();
 
-            if(!asset->second["offset"])  {
-                continue;
+            // Parse horizontal assets
+            if(node["files"]){
+                auto segment = node["segment"] ? node["segment"].as<uint8_t>() : -1;
+                const auto files = node["files"];
+                for (const auto& file : files) {
+                    auto assetNode = file.as<YAML::Node>();
+                    auto childName = assetNode["name"].as<std::string>();
+                    auto output = (this->gCurrentDirectory / entryName / childName).string();
+                    std::replace(output.begin(), output.end(), '\\', '/');
+
+                    if(assetNode["type"]){
+                        const auto type = GetSafeNode<std::string>(assetNode, "type");
+                        if(type == "SAMPLE"){
+                            AudioManager::Instance->bind_sample(assetNode, output);
+                        }
+                    }
+
+                    if(!assetNode["offset"]) {
+                        continue;
+                    }
+
+                    if(segment != -1) {
+                        assetNode["offset"] = (segment << 24) | assetNode["offset"].as<uint32_t>();
+                    }
+
+                    this->gAddrMap[this->gCurrentFile][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
+                }
+            } else {
+                auto output = (this->gCurrentDirectory / entryName).string();
+                std::replace(output.begin(), output.end(), '\\', '/');
+
+                if(node["type"]){
+                    const auto type = GetSafeNode<std::string>(node, "type");
+                    if(type == "SAMPLE"){
+                        AudioManager::Instance->bind_sample(node, output);
+                    }
+                }
+
+                if(!node["offset"])  {
+                    continue;
+                }
+
+                this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
             }
-
-            auto output = (this->gCurrentDirectory / asset->first.as<std::string>()).string();
-            std::replace(output.begin(), output.end(), '\\', '/');
-
-            this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
         }
 
         // Stupid hack because the iteration broke the assets
