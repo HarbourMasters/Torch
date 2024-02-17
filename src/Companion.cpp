@@ -138,6 +138,11 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             SPDLOG_DEBUG("Segment {} replaced with 0x{:X}", id, replacement);
         }
     }
+    if(node["header"]) {
+        for(auto line = node["header"].begin(); line != node["header"].end(); ++line) {
+            this->gFileHeader += line->as<std::string>() + "\n";
+        }
+    }
 }
 
 void Companion::Process() {
@@ -329,6 +334,7 @@ void Companion::Process() {
         // Stupid hack because the iteration broke the assets
         root = YAML::LoadFile(yamlPath);
         this->gConfig.segment.local.clear();
+        this->gFileHeader.clear();
 
         if(root[":config"]) {
             this->ParseCurrentFileConfig(root[":config"]);
@@ -389,7 +395,7 @@ void Companion::Process() {
                     break;
                 }
                 case ExportType::Code: {
-                    output += "/root.inc.c";
+                    output += "/bin.c";
                     break;
                 }
                 default: break;
@@ -456,6 +462,9 @@ void Companion::Process() {
                 file << buffer;
                 file << std::endl << "#endif" << std::endl;
             } else {
+                if(!this->gFileHeader.empty()) {
+                    file << this->gFileHeader << std::endl;
+                }
                 file << buffer;
             }
 
