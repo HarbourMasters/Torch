@@ -15,6 +15,7 @@ static const std::unordered_map <std::string, TextureType> gTextureTypes = {
 	{ "IA4", TextureType::GrayscaleAlpha4bpp },
 	{ "IA8", TextureType::GrayscaleAlpha8bpp },
 	{ "IA16", TextureType::GrayscaleAlpha16bpp },
+    { "TLUT", TextureType::TLUT },
 };
 
 size_t CalculateTextureSize(TextureType type, uint32_t width, uint32_t height) {
@@ -23,6 +24,7 @@ size_t CalculateTextureSize(TextureType type, uint32_t width, uint32_t height) {
         case TextureType::RGBA32bpp:
             return width * height * 4;
         // 2 bytes per pixel
+        case TextureType::TLUT:
         case TextureType::RGBA16bpp:
         case TextureType::GrayscaleAlpha16bpp:
             return width * height * 2;
@@ -138,15 +140,15 @@ void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
 
 std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto format = GetSafeNode<std::string>(node, "format");
-    auto width  = GetSafeNode<uint32_t>(node, "width");
-    auto height = GetSafeNode<uint32_t>(node, "height");
-    auto size   = GetSafeNode<uint32_t>(node, "size", CalculateTextureSize(gTextureTypes.at(format), width, height));
+    uint32_t width;
+    uint32_t height;
+    uint32_t size;
     auto offset = Decompressor::TranslateAddr(GetSafeNode<uint32_t>(node, "offset"));
 
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
                       Please add one of the following formats\n\
-                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp", offset);
+                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp, tlut", offset);
         return std::nullopt;
     }
 
@@ -156,6 +158,15 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
 
 	TextureType type = gTextureTypes.at(format);
 
+    if(type == TextureType::TLUT){
+        width = GetSafeNode<uint32_t>(node, "colors");
+        height = 1;
+    } else {
+        width = GetSafeNode<uint32_t>(node, "width");
+        height = GetSafeNode<uint32_t>(node, "height");
+    }
+
+    size = GetSafeNode<uint32_t>(node, "size", CalculateTextureSize(gTextureTypes.at(format), width, height));
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
     std::vector<uint8_t> result;
 
@@ -166,8 +177,12 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     }
 
     SPDLOG_INFO("Texture: {}", format);
-    SPDLOG_INFO("Width: {}", width);
-    SPDLOG_INFO("Height: {}", height);
+    if(type == TextureType::TLUT){
+        SPDLOG_INFO("Colors: {}", width);
+    } else {
+        SPDLOG_INFO("Width: {}", width);
+        SPDLOG_INFO("Height: {}", height);
+    }
     SPDLOG_INFO("Size: {}", size);
     SPDLOG_INFO("Offset: 0x{:X}", offset);
     SPDLOG_INFO("Is Compressed: {}", Decompressor::IsCompressed(node) ? "true" : "false");

@@ -14,6 +14,7 @@ enum class TextureType {
     GrayscaleAlpha4bpp,
     GrayscaleAlpha8bpp,
     GrayscaleAlpha16bpp,
+    TLUT
 };
 
 class TextureData : public IParsedData {
