@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <yaml-cpp/yaml.h>
 #include <optional>
+#include <cstdint>
 
 enum class CompressionType {
     MIO0,

@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <cstdint>
 
 namespace Torch {
 template< typename T >
