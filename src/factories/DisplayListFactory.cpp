@@ -299,7 +299,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 if(Decompressor::IsSegmented(w1)){
                     SPDLOG_INFO("Found segmented display list at 0x{:X}", w1);
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + Torch::to_hex(ptr, false));
+                    ptr = w1;
+                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
                 } else {
                     SPDLOG_INFO("Found display list at 0x{:X}", ptr);
                     output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(w1, false));
@@ -356,7 +357,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 if(Decompressor::IsSegmented(w1)){
                     SPDLOG_INFO("Found segmented lights at 0x{:X}", w1);
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + Torch::to_hex(ptr, false));
+                    ptr = w1;
+                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
                 } else {
                     SPDLOG_INFO("Found lights at 0x{:X}", ptr);
                     output = Companion::Instance->NormalizeAsset("lights1_" + Torch::to_hex(w1, false));
@@ -403,7 +405,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 if(Decompressor::IsSegmented(w1)){
                     SPDLOG_INFO("Found segmented vtx at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(ptr, false));
+                    ptr = w1;
+                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
                 } else {
                     SPDLOG_INFO("Found vtx at 0x{:X}", ptr);
                     output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
