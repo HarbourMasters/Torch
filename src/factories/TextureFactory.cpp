@@ -81,7 +81,11 @@ void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
         return;
     }
 
-    write << "extern u8 " << symbol << "[" << data.size() << "];\n";
+    if(node["ctype"]) {
+        write << "extern " << node["ctype"].as<std::string>() << " " << symbol << "[];\n";
+    } else {
+        write << "extern u8 " << symbol << "[];\n";
+    }
 }
 
 void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {

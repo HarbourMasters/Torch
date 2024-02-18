@@ -139,8 +139,25 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         }
     }
     if(node["header"]) {
-        for(auto line = node["header"].begin(); line != node["header"].end(); ++line) {
-            this->gFileHeader += line->as<std::string>() + "\n";
+        auto header = node["header"];
+        switch (this->gConfig.exporterType) {
+            case ExportType::Header: {
+                if(header["header"].IsSequence()) {
+                    for(auto line = header["header"].begin(); line != header["header"].end(); ++line) {
+                        this->gFileHeader += line->as<std::string>() + "\n";
+                    }
+                }
+                break;
+            }
+            case ExportType::Code: {
+                if(header["code"].IsSequence()) {
+                    for(auto line = header["code"].begin(); line != header["code"].end(); ++line) {
+                        this->gFileHeader += line->as<std::string>() + "\n";
+                    }
+                }
+                break;
+            }
+            default: break;
         }
     }
 }
@@ -387,15 +404,16 @@ void Companion::Process() {
         }
 
         if(this->gConfig.exporterType != ExportType::Binary){
-            std::string output = (this->gConfig.outputPath / this->gCurrentDirectory).string();
+            auto fsout = fs::path(this->gConfig.outputPath);
+            std::string filename = this->gCurrentDirectory.filename().string();
 
             switch (this->gConfig.exporterType) {
                 case ExportType::Header: {
-                    output += "/definition.h";
+                    fsout /= filename + ".h";
                     break;
                 }
                 case ExportType::Code: {
-                    output += "/bin.c";
+                    fsout /= this->gCurrentDirectory / "bin.c";
                     break;
                 }
                 default: break;
@@ -447,6 +465,7 @@ void Companion::Process() {
                 continue;
             }
 
+            std::string output = fsout.string();
             std::replace(output.begin(), output.end(), '\\', '/');
             if(!exists(fs::path(output).parent_path())){
                 create_directories(fs::path(output).parent_path());
@@ -459,6 +478,9 @@ void Companion::Process() {
                 std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
                 file << "#ifndef " << symbol << "_H" << std::endl;
                 file << "#define " << symbol << "_H" << std::endl << std::endl;
+                if(!this->gFileHeader.empty()) {
+                    file << this->gFileHeader << std::endl;
+                }
                 file << buffer;
                 file << std::endl << "#endif" << std::endl;
             } else {
