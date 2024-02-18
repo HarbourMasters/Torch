@@ -63,18 +63,32 @@ int Vtx(uint32_t vtx, int32_t num) {
 }
 
 int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t height, int32_t pal) {
-    auto ptr = Decompressor::TranslateAddr(timg);
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto dec = Companion::Instance->GetNodeByAddr(timg);
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
-        SPDLOG_INFO("Found Texture: 0x{:X} Symbol: {}", ptr, symbol);
+        SPDLOG_INFO("Found Texture: 0x{:X} Symbol: {}", timg, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
     }
 
-    SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
+    SPDLOG_WARN("Could not find texture at 0x{:X}", timg);
+    return 0;
+}
+
+int Palette(uint32_t tlut, int32_t idx, int32_t count) {
+    auto dec = Companion::Instance->GetNodeByAddr(tlut);
+
+    if(dec.has_value()){
+        auto node = std::get<1>(dec.value());
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
+        SPDLOG_INFO("Found TLUT: 0x{:X} Symbol: {}", tlut, symbol);
+        gfxd_puts(symbol.c_str());
+        return 1;
+    }
+
+    SPDLOG_WARN("Could not find tlut at 0x{:X}", tlut);
     return 0;
 }
 

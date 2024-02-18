@@ -108,6 +108,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
+    gfxd_tlut_callback(GFXDOverride::Palette);
     gfxd_lightsn_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
 
@@ -136,6 +137,7 @@ void DebugDisplayList(uint32_t w0, uint32_t w1){
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
+    gfxd_tlut_callback(GFXDOverride::Palette);
     //gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
     gfxd_execute();
