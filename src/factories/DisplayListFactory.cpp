@@ -166,7 +166,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         if(opcode == GBI(G_VTX)) {
             auto nvtx = (C0(0, 16)) / sizeof(Vtx);
             auto didx = C0(16, 4);
-            auto ptr = Decompressor::TranslateAddr(w1);
+            auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             if(dec.has_value()){
@@ -192,7 +192,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
 
         if(opcode == GBI(G_DL)) {
-            auto ptr = Decompressor::TranslateAddr(w1);
+            auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             Gfx value = gsSPDisplayListOTRHash(ptr);
@@ -213,7 +213,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
 
         if(opcode == GBI(G_MOVEMEM)) {
-            auto ptr = Decompressor::TranslateAddr(w1);
+            auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             w0 &= 0x00FFFFFF;
@@ -234,7 +234,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
 
         if(opcode == GBI(G_SETTIMG)) {
-            auto ptr = Decompressor::TranslateAddr(w1);
+            auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
@@ -295,15 +295,14 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 std::string output;
                 YAML::Node dl;
-                uint32_t ptr = Decompressor::TranslateAddr(w1);
+                uint32_t ptr = w1;
 
                 if(Decompressor::IsSegmented(w1)){
                     SPDLOG_INFO("Found segmented display list at 0x{:X}", w1);
-                    ptr = w1;
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_dl_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
+                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(ptr)) +"_dl_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
                 } else {
                     SPDLOG_INFO("Found display list at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(w1, false));
+                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(ptr, false));
                 }
 
                 Decompressor::CopyCompression(node, dl);
@@ -353,7 +352,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                 std::string output;
                 YAML::Node light;
-                uint32_t ptr = Decompressor::TranslateAddr(w1);
+                uint32_t ptr = w1;
 
                 if(Decompressor::IsSegmented(w1)){
                     SPDLOG_INFO("Found segmented lights at 0x{:X}", w1);
@@ -396,7 +395,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
                 SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating it", w1);
 
-                auto ptr = Decompressor::TranslateAddr(w1);
+                auto ptr = w1;
                 auto rom = Companion::Instance->GetRomData();
                 auto factory = Companion::Instance->GetFactory("VTX")->get();
 

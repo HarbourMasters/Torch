@@ -46,8 +46,7 @@ void Quadrangle(const Gfx* gfx) {
     gfxd_puts(")");
 }
 
-int Vtx(uint32_t vtx, int32_t num) {
-    auto ptr = Decompressor::TranslateAddr(vtx);
+int Vtx(uint32_t ptr, int32_t num) {
     auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
     if(dec.has_value()){
@@ -62,38 +61,37 @@ int Vtx(uint32_t vtx, int32_t num) {
     return 0;
 }
 
-int Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t height, int32_t pal) {
-    auto dec = Companion::Instance->GetNodeByAddr(timg);
+int Texture(uint32_t ptr, int32_t fmt, int32_t siz, int32_t width, int32_t height, int32_t pal) {
+    auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
-        SPDLOG_INFO("Found Texture: 0x{:X} Symbol: {}", timg, symbol);
+        SPDLOG_INFO("Found Texture: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
     }
 
-    SPDLOG_WARN("Could not find texture at 0x{:X}", timg);
+    SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
     return 0;
 }
 
-int Palette(uint32_t tlut, int32_t idx, int32_t count) {
-    auto dec = Companion::Instance->GetNodeByAddr(tlut);
+int Palette(uint32_t ptr, int32_t idx, int32_t count) {
+    auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
-        SPDLOG_INFO("Found TLUT: 0x{:X} Symbol: {}", tlut, symbol);
+        SPDLOG_INFO("Found TLUT: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
         return 1;
     }
 
-    SPDLOG_WARN("Could not find tlut at 0x{:X}", tlut);
+    SPDLOG_WARN("Could not find tlut at 0x{:X}", ptr);
     return 0;
 }
 
-int Light(uint32_t lightsn, int32_t count) {
-    auto ptr = Decompressor::TranslateAddr(lightsn);
+int Light(uint32_t ptr, int32_t count) {
     auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
     if(dec.has_value()){
@@ -108,8 +106,7 @@ int Light(uint32_t lightsn, int32_t count) {
     return 0;
 }
 
-int DisplayList(uint32_t dl) {
-    auto ptr = Decompressor::TranslateAddr(dl);
+int DisplayList(uint32_t ptr) {
     auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
     if(dec.has_value()){

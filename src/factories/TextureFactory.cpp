@@ -143,7 +143,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     uint32_t width;
     uint32_t height;
     uint32_t size;
-    auto offset = Decompressor::TranslateAddr(GetSafeNode<uint32_t>(node, "offset"));
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
