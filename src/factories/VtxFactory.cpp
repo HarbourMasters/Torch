@@ -1,4 +1,5 @@
 #include "VtxFactory.h"
+#include "spdlog/spdlog.h"
 
 #include "Companion.h"
 #include "utils/Decompressor.h"

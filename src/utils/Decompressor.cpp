@@ -40,9 +40,16 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         throw std::runtime_error("Failed to find offset");
     }
 
-    auto offset = node["offset"].as<uint32_t>();    
+    auto offset = node["offset"].as<uint32_t>();
 
-    if(node["mio0"]){
+    offset = TranslateAddr(offset, IS_SEGMENTED(offset)); 
+
+    LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
+    reader.SetEndianness(LUS::Endianness::Big);
+
+    std::string header = reader.ReadCString();
+
+    if (header == "MIO0") {
         const auto mio0 = node["mio0"].as<uint32_t>();
 
         offset = TranslateAddr(offset, IS_SEGMENTED(offset));        
@@ -54,17 +61,12 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             .root = decoded,
             .segment = { decoded->data + mio0, size }
         };
+    } else if (header == "YAY0") {
+        throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
+    } else if (header == "YAZ0") {
+        throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
     }
 
-    if(node["yay0"]){
-        throw std::runtime_error("Yay0 not implemented");
-    }
-
-    if(node["yaz0"]){
-        throw std::runtime_error("Yaz0 not implemented");
-    }
-
-    offset = TranslateAddr(offset);
 
     return {
         .root = nullptr,
