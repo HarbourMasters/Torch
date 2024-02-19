@@ -40,10 +40,13 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         throw std::runtime_error("Failed to find offset");
     }
 
-    const auto offset = TranslateAddr(node["offset"].as<uint32_t>());
+    auto offset = node["offset"].as<uint32_t>();    
 
     if(node["mio0"]){
         const auto mio0 = node["mio0"].as<uint32_t>();
+
+        offset = TranslateAddr(offset, IS_SEGMENTED(offset));        
+
         auto decoded = Decode(buffer, offset, CompressionType::MIO0);
         auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - mio0);
 
@@ -61,13 +64,15 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         throw std::runtime_error("Yaz0 not implemented");
     }
 
+    offset = TranslateAddr(offset);
+
     return {
         .root = nullptr,
         .segment = { buffer.data() + offset, node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - offset) }
     };
 }
 
-uint32_t Decompressor::TranslateAddr(uint32_t addr){
+uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
     if(IS_SEGMENTED(addr)){
         const auto segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(addr));
 
@@ -76,7 +81,7 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr){
             return 0;
         }
 
-        return segment.value() + SEGMENT_OFFSET(addr);
+        return segment.value() + (!baseAddress ? SEGMENT_OFFSET(addr) : 0);
     }
 
     return addr;

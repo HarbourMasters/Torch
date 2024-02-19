@@ -29,7 +29,7 @@ class Decompressor {
 public:
     static DataChunk* Decode(const std::vector<uint8_t>& buffer, uint32_t offset, CompressionType type);
     static DecompressedData AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer, std::optional<size_t> size = std::nullopt);
-    static uint32_t TranslateAddr(uint32_t addr);
+    static uint32_t TranslateAddr(uint32_t addr, bool baseAddress = false);
     static bool IsSegmented(uint32_t addr);
     static bool IsCompressed(YAML::Node& node);
     static void CopyCompression(YAML::Node& from, YAML::Node& to);
