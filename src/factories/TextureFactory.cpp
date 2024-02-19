@@ -110,6 +110,7 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
         file << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i]) << ", ";
     }
+    file << std::endl;
 
     file.close();
 

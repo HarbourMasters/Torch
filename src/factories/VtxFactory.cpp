@@ -4,7 +4,7 @@
 #include "utils/Decompressor.h"
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
-#define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
+#define COL(c) std::dec << std::setfill(' ') << std::setw(3) << c
 
 void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);

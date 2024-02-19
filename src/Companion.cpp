@@ -413,7 +413,7 @@ void Companion::Process() {
                     break;
                 }
                 case ExportType::Code: {
-                    fsout /= this->gCurrentDirectory / "bin.c";
+                    fsout /= this->gCurrentDirectory / (filename + ".c");
                     break;
                 }
                 default: break;
