@@ -78,9 +78,10 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         {
             node["compression_type"] = (uint32_t)  CompressionType::MIO0;
 
+            SPDLOG_INFO("OFFSET: 0x{:x}", IS_SEGMENTED(offset));
             offset = SEGMENT_OFFSET(offset);
 
-            SPDLOG_INFO("OFFSET: 0x{:x}", offset);
+
 
 
             auto decoded = Decode(buffer, compressed_offset, CompressionType::MIO0);
@@ -113,7 +114,6 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
     if(IS_SEGMENTED(addr)){
         const auto segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(addr));
-
         if(!segment.has_value()) {
             SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(addr));
             return 0;
