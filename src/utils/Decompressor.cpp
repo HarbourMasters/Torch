@@ -78,7 +78,9 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         {
             node["compression_type"] = (uint32_t)  CompressionType::MIO0;
 
-            offset = TranslateAddr(offset, IS_SEGMENTED(offset));
+            offset = SEGMENT_OFFSET(offset);
+
+            SPDLOG_INFO("OFFSET: 0x{:x}", offset);
 
 
             auto decoded = Decode(buffer, compressed_offset, CompressionType::MIO0);
