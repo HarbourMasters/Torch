@@ -89,6 +89,7 @@ private:
     // Temporal Variables
     std::string gCurrentFile;
     std::string gFileHeader;
+    uint32_t gCurrentPad = 0;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
     std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
