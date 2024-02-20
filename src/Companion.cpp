@@ -123,11 +123,11 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             if(this->gConfig.exporterType == ExportType::Code) {
                 if(node["pad"]){
                     auto pad = GetSafeNode<uint32_t>(node, "pad");
-                    stream << "char pad_" << gCurrentPad++ << "[] = {\n";
+                    stream << "char pad_" << gCurrentPad++ << "[] = {\n" << tab;
                     for(int i = 0; i < pad; i++){
                         stream << "0x00, ";
                     }
-                    stream << "};\n\n";
+                    stream << "\n};\n\n";
                 }
             }
 
