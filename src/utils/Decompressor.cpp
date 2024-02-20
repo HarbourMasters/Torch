@@ -42,32 +42,66 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     auto offset = node["offset"].as<uint32_t>();
 
-    offset = TranslateAddr(offset, IS_SEGMENTED(offset)); 
 
-    LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
-    reader.SetEndianness(LUS::Endianness::Big);
+    uint32_t compressed_offset = 0;
+    std::string header = "";
 
-    std::string header = reader.ReadCString();
+    if (node["compressed_offset"]) {
+        compressed_offset = node["compressed_offset"].as<uint32_t>();
+        LUS::BinaryReader reader((char*) buffer.data() + compressed_offset, sizeof(uint32_t));
+        reader.SetEndianness(LUS::Endianness::Big);
 
-    if (header == "MIO0") {
-        const auto mio0 = node["mio0"].as<uint32_t>();
-
-        offset = TranslateAddr(offset, IS_SEGMENTED(offset));        
-
-        auto decoded = Decode(buffer, offset, CompressionType::MIO0);
-        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - mio0);
-
-        return {
-            .root = decoded,
-            .segment = { decoded->data + mio0, size }
-        };
-    } else if (header == "YAY0") {
-        throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
-    } else if (header == "YAZ0") {
-        throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
+        header = reader.ReadCString();
     }
 
+    auto type = CompressionType::None;
 
+    // Check if a compressed header exists
+    if (header == "MIO0") {
+        SPDLOG_INFO("MIO0 HEADER FOUND");
+        type = CompressionType::MIO0;
+    } else if (header == "YAY0") {
+        type = CompressionType::YAY0;
+    } else if (header == "YAZ0") {
+        type = CompressionType::YAZ0;
+    }
+
+    // If not a compressed header, is it a section of compressed data?
+    if (node["compression_type"]) {
+        type = static_cast<CompressionType>(node["compression_type"].as<uint32_t>());
+    }
+    SPDLOG_INFO("TYPE: {}", (uint32_t) type);
+
+    // Process compressed assets
+    switch(type) {
+        case CompressionType::MIO0:
+        {
+            node["compression_type"] = (uint32_t)  CompressionType::MIO0;
+
+            offset = TranslateAddr(offset, IS_SEGMENTED(offset));
+
+
+            auto decoded = Decode(buffer, compressed_offset, CompressionType::MIO0);
+            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
+            return {
+                .root = decoded,
+                .segment = { decoded->data + offset, size }
+            };
+        }
+        case CompressionType::YAY0:
+            node["compression_type"] = (uint32_t) CompressionType::YAY0;
+            throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
+            break;
+        case CompressionType::YAZ0:
+            node["compression_type"] = (uint32_t) CompressionType::YAZ0;
+            throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
+            break;
+
+    }
+
+    offset = TranslateAddr(offset);
+
+    // Uncompressed
     return {
         .root = nullptr,
         .segment = { buffer.data() + offset, node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - offset) }
@@ -104,21 +138,12 @@ bool Decompressor::IsSegmented(uint32_t addr) {
     return false;
 }
 
-bool Decompressor::IsCompressed(YAML::Node& node) {
-    return node["mio0"] || node["yay0"] || node["yaz0"];
-}
-
 void Decompressor::CopyCompression(YAML::Node& from, YAML::Node& to){
-    if(from["mio0"]){
-        to["mio0"] = from["mio0"];
+    if (from["compressed_offset"]) {
+        to["compressed_offset"] = to["compressed_offset"];
     }
-
-    if(from["yay0"]){
-        to["yay0"] = from["yay0"];
-    }
-
-    if(from["yaz0"]){
-        to["yaz0"] = from["yaz0"];
+    if (from["compression_type"]) {
+        to["compression_type"] = to["compression_type"];
     }
 }
 

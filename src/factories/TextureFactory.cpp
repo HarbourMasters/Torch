@@ -190,7 +190,6 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     }
     SPDLOG_INFO("Size: {}", size);
     SPDLOG_INFO("Offset: 0x{:X}", offset);
-    SPDLOG_INFO("Is Compressed: {}", Decompressor::IsCompressed(node) ? "true" : "false");
 
     if(result.size() == 0){
         return std::nullopt;

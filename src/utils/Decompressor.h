@@ -9,8 +9,8 @@
 
 enum class CompressionType {
     MIO0,
-    Yay0,
-    Yaz0,
+    YAY0,
+    YAZ0,
     None,
 };
 
@@ -31,7 +31,6 @@ public:
     static DecompressedData AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer, std::optional<size_t> size = std::nullopt);
     static uint32_t TranslateAddr(uint32_t addr, bool baseAddress = false);
     static bool IsSegmented(uint32_t addr);
-    static bool IsCompressed(YAML::Node& node);
     static void CopyCompression(YAML::Node& from, YAML::Node& to);
 
     static void ClearCache();

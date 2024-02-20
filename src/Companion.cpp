@@ -298,6 +298,11 @@ void Companion::Process() {
         this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = yamlPath;
 
+        uint32_t compressed_offset = 0;
+        if (root[":config"]["compressed_offset"]) {
+            compressed_offset = root[":config"]["compressed_offset"].as<uint32_t>();
+        }
+
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto node = asset->second;
             auto entryName = asset->first.as<std::string>();
@@ -368,6 +373,10 @@ void Companion::Process() {
 
             if(entryName.find(":config") != std::string::npos) {
                 continue;
+            }
+
+            assetNode["compressed_offset"] = compressed_offset;
+                if (compressed_offset) {
             }
 
             // Parse horizontal assets
