@@ -3,9 +3,15 @@
 #include <iomanip>
 
 void BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto symbol = GetSafeNode(node, "symbol", entryName);
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
-    write << "u8 " << entryName << "[] = {\n" << tab;
+    if(node["ctype"]) {
+        write << node["ctype"].as<std::string>() << " " << symbol << "[] = {\n" << tab;
+    } else {
+        write << "u8 " << symbol << "[] = {\n" << tab;
+    }
+
     for (int i = 0; i < data.size(); i++) {
         if ((i % 15 == 0) && i != 0) {
             write << "\n" << tab;
@@ -13,7 +19,7 @@ void BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> 
 
         write << "0x" << std::hex << std::setw(2) << std::setfill('0') << (int) data[i] << ", ";
     }
-    write << "\n};\n";
+    write << "\n};\n\n";
 }
 
 void BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
