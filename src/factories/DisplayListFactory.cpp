@@ -118,9 +118,9 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
-    gfxd_puts("};\n\n");
 
     write << std::string(out);
+    write << "}; // size = 0x" << std::hex << std::uppercase << (sizeof(uint32_t) * cmds.size()) << "\n\n";
 }
 
 void DebugDisplayList(uint32_t w0, uint32_t w1){
@@ -428,6 +428,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         gfxs.push_back(w0);
         gfxs.push_back(w1);
     }
+
+
 
     return std::make_shared<DListData>(gfxs);
 }
