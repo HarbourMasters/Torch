@@ -1,0 +1,550 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+
+#define STBI_NO_LINEAR
+#define STBI_NO_HDR
+#define STBI_NO_TGA
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
+#include "n64graphics.h"
+#include "libmio0/utils.h"
+
+// SCALE_M_N: upscale/downscale M-bit integer to N-bit
+#define SCALE_5_8(VAL_) (((VAL_) * 0xFF) / 0x1F)
+#define SCALE_8_5(VAL_) ((((VAL_) + 4) * 0x1F) / 0xFF)
+#define SCALE_4_8(VAL_) ((VAL_) * 0x11)
+#define SCALE_8_4(VAL_) ((VAL_) / 0x11)
+#define SCALE_3_8(VAL_) ((VAL_) * 0x24)
+#define SCALE_8_3(VAL_) ((VAL_) / 0x24)
+
+typedef struct {
+    enum {
+        IMG_FORMAT_RGBA,
+        IMG_FORMAT_IA,
+        IMG_FORMAT_I,
+        IMG_FORMAT_CI,
+    } format;
+    int depth;
+} img_format;
+
+//---------------------------------------------------------
+// N64 RGBA/IA/I/CI -> internal RGBA/IA
+//---------------------------------------------------------
+
+rgba* raw2rgba(const uint8_t* raw, int width, int height, int depth) {
+    rgba* img;
+    int img_size;
+
+    img_size = width * height * sizeof(*img);
+    img = malloc(img_size);
+    if (!img) {
+        ERROR("Error allocating %d bytes\n", img_size);
+        return NULL;
+    }
+
+    if (depth == 16) {
+        for (int i = 0; i < width * height; i++) {
+            img[i].red = SCALE_5_8((raw[i * 2] & 0xF8) >> 3);
+            img[i].green = SCALE_5_8(((raw[i * 2] & 0x07) << 2) | ((raw[i * 2 + 1] & 0xC0) >> 6));
+            img[i].blue = SCALE_5_8((raw[i * 2 + 1] & 0x3E) >> 1);
+            img[i].alpha = (raw[i * 2 + 1] & 0x01) ? 0xFF : 0x00;
+        }
+    } else if (depth == 32) {
+        for (int i = 0; i < width * height; i++) {
+            img[i].red = raw[i * 4];
+            img[i].green = raw[i * 4 + 1];
+            img[i].blue = raw[i * 4 + 2];
+            img[i].alpha = raw[i * 4 + 3];
+        }
+    }
+
+    return img;
+}
+
+ia* raw2ia(const uint8_t* raw, int width, int height, int depth) {
+    ia* img;
+    int img_size;
+
+    img_size = width * height * sizeof(*img);
+    img = malloc(img_size);
+    if (!img) {
+        ERROR("Error allocating %u bytes\n", img_size);
+        return NULL;
+    }
+
+    switch (depth) {
+        case 16:
+            for (int i = 0; i < width * height; i++) {
+                img[i].intensity = raw[i * 2];
+                img[i].alpha = raw[i * 2 + 1];
+            }
+            break;
+        case 8:
+            for (int i = 0; i < width * height; i++) {
+                img[i].intensity = SCALE_4_8((raw[i] & 0xF0) >> 4);
+                img[i].alpha = SCALE_4_8(raw[i] & 0x0F);
+            }
+            break;
+        case 4:
+            for (int i = 0; i < width * height; i++) {
+                uint8_t bits;
+                bits = raw[i / 2];
+                if (i % 2) {
+                    bits &= 0xF;
+                } else {
+                    bits >>= 4;
+                }
+                img[i].intensity = SCALE_3_8((bits >> 1) & 0x07);
+                img[i].alpha = (bits & 0x01) ? 0xFF : 0x00;
+            }
+            break;
+        case 1:
+            for (int i = 0; i < width * height; i++) {
+                uint8_t bits;
+                uint8_t mask;
+                bits = raw[i / 8];
+                mask = 1 << (7 - (i % 8)); // MSb->LSb
+                bits = (bits & mask) ? 0xFF : 0x00;
+                img[i].intensity = bits;
+                img[i].alpha = bits;
+            }
+            break;
+        default:
+            ERROR("Error invalid depth %d\n", depth);
+            break;
+    }
+
+    return img;
+}
+
+ia* raw2i(const uint8_t* raw, int width, int height, int depth) {
+    ia* img = NULL;
+    int img_size;
+
+    img_size = width * height * sizeof(*img);
+    img = malloc(img_size);
+    if (!img) {
+        ERROR("Error allocating %u bytes\n", img_size);
+        return NULL;
+    }
+
+    switch (depth) {
+        case 8:
+            for (int i = 0; i < width * height; i++) {
+                img[i].intensity = raw[i];
+                img[i].alpha = 0xFF;
+            }
+            break;
+        case 4:
+            for (int i = 0; i < width * height; i++) {
+                uint8_t bits;
+                bits = raw[i / 2];
+                if (i % 2) {
+                    bits &= 0xF;
+                } else {
+                    bits >>= 4;
+                }
+                img[i].intensity = SCALE_4_8(bits);
+                img[i].alpha = 0xFF;
+            }
+            break;
+        default:
+            ERROR("Error invalid depth %d\n", depth);
+            break;
+    }
+
+    return img;
+}
+
+// convert CI raw data and palette to raw data (either RGBA16 or IA16)
+uint8_t* ci2raw(const uint8_t* rawci, const uint8_t* palette, int width, int height, int ci_depth) {
+    uint8_t* raw;
+    int raw_size;
+
+    // first convert to raw RGBA
+    raw_size = sizeof(uint16_t) * width * height;
+    raw = malloc(raw_size);
+    if (!raw) {
+        ERROR("Error allocating %u bytes\n", raw_size);
+        return NULL;
+    }
+
+    for (int i = 0; i < width * height; i++) {
+        int pal_idx = rawci[i];
+        if (ci_depth == 4) {
+            int byte_idx = i / 2;
+            int nibble = 1 - (i % 2);
+            int shift = 4 * nibble;
+            pal_idx = (rawci[byte_idx] >> shift) & 0xF;
+        }
+        raw[2 * i] = palette[2 * pal_idx];
+        raw[2 * i + 1] = palette[2 * pal_idx + 1];
+    }
+
+    return raw;
+}
+
+//---------------------------------------------------------
+// internal RGBA/IA -> N64 RGBA/IA/I/CI
+// returns length written to 'raw' used or -1 on error
+//---------------------------------------------------------
+
+int rgba2raw(uint8_t* raw, const rgba* img, int width, int height, int depth) {
+    int size = width * height * depth / 8;
+    INFO("Converting RGBA%d %dx%d to raw\n", depth, width, height);
+
+    if (depth == 16) {
+        for (int i = 0; i < width * height; i++) {
+            uint8_t r, g, b, a;
+            r = SCALE_8_5(img[i].red);
+            g = SCALE_8_5(img[i].green);
+            b = SCALE_8_5(img[i].blue);
+            a = img[i].alpha ? 0x1 : 0x0;
+            raw[i * 2] = (r << 3) | (g >> 2);
+            raw[i * 2 + 1] = ((g & 0x3) << 6) | (b << 1) | a;
+        }
+    } else if (depth == 32) {
+        for (int i = 0; i < width * height; i++) {
+            raw[i * 4] = img[i].red;
+            raw[i * 4 + 1] = img[i].green;
+            raw[i * 4 + 2] = img[i].blue;
+            raw[i * 4 + 3] = img[i].alpha;
+        }
+    } else {
+        ERROR("Error invalid depth %d\n", depth);
+        size = -1;
+    }
+
+    return size;
+}
+
+int ia2raw(uint8_t* raw, const ia* img, int width, int height, int depth) {
+    int size = width * height * depth / 8;
+    INFO("Converting IA%d %dx%d to raw\n", depth, width, height);
+
+    switch (depth) {
+        case 16:
+            for (int i = 0; i < width * height; i++) {
+                raw[i * 2] = img[i].intensity;
+                raw[i * 2 + 1] = img[i].alpha;
+            }
+            break;
+        case 8:
+            for (int i = 0; i < width * height; i++) {
+                uint8_t val = SCALE_8_4(img[i].intensity);
+                uint8_t alpha = SCALE_8_4(img[i].alpha);
+                raw[i] = (val << 4) | alpha;
+            }
+            break;
+        case 4:
+            for (int i = 0; i < width * height; i++) {
+                uint8_t val = SCALE_8_3(img[i].intensity);
+                uint8_t alpha = img[i].alpha ? 0x01 : 0x00;
+                uint8_t old = raw[i / 2];
+                if (i % 2) {
+                    raw[i / 2] = (old & 0xF0) | (val << 1) | alpha;
+                } else {
+                    raw[i / 2] = (old & 0x0F) | (((val << 1) | alpha) << 4);
+                }
+            }
+            break;
+        case 1:
+            for (int i = 0; i < width * height; i++) {
+                uint8_t val = img[i].intensity;
+                uint8_t old = raw[i / 8];
+                uint8_t bit = 1 << (7 - (i % 8));
+                if (val) {
+                    raw[i / 8] = old | bit;
+                } else {
+                    raw[i / 8] = old & (~bit);
+                }
+            }
+            break;
+        default:
+            ERROR("Error invalid depth %d\n", depth);
+            size = -1;
+            break;
+    }
+
+    return size;
+}
+
+int i2raw(uint8_t* raw, const ia* img, int width, int height, int depth) {
+    int size = width * height * depth / 8;
+    INFO("Converting I%d %dx%d to raw\n", depth, width, height);
+
+    switch (depth) {
+        case 8:
+            for (int i = 0; i < width * height; i++) {
+                raw[i] = img[i].intensity;
+            }
+            break;
+        case 4:
+            for (int i = 0; i < width * height; i++) {
+                uint8_t val = SCALE_8_4(img[i].intensity);
+                uint8_t old = raw[i / 2];
+                if (i % 2) {
+                    raw[i / 2] = (old & 0xF0) | val;
+                } else {
+                    raw[i / 2] = (old & 0x0F) | (val << 4);
+                }
+            }
+            break;
+        default:
+            ERROR("Error invalid depth %d\n", depth);
+            size = -1;
+            break;
+    }
+
+    return size;
+}
+
+//---------------------------------------------------------
+// internal RGBA/IA -> PNG
+//---------------------------------------------------------
+
+int rgba2png(unsigned char** png_output, int* size_output, const rgba* img, int width, int height) {
+    int ret = 0;
+
+    // convert to format stb_image_write expects
+    uint8_t* data = malloc(4 * width * height);
+    if (data) {
+        for (int j = 0; j < height; j++) {
+            for (int i = 0; i < width; i++) {
+                int idx = j * width + i;
+                data[4 * idx] = img[idx].red;
+                data[4 * idx + 1] = img[idx].green;
+                data[4 * idx + 2] = img[idx].blue;
+                data[4 * idx + 3] = img[idx].alpha;
+            }
+        }
+
+
+        *png_output = stbi_write_png_to_mem(data, 0, width, height, 4, size_output);
+
+        free(data);
+    }
+
+    return ret;
+}
+
+int ia2png(unsigned char** png_output, int* size_output, const ia* img, int width, int height) {
+    int ret = 0;
+
+    // convert to format stb_image_write expects
+    uint8_t* data = malloc(2 * width * height);
+    if (data) {
+        for (int j = 0; j < height; j++) {
+            for (int i = 0; i < width; i++) {
+                int idx = j * width + i;
+                data[2 * idx] = img[idx].intensity;
+                data[2 * idx + 1] = img[idx].alpha;
+            }
+        }
+
+        (*png_output) = stbi_write_png_to_mem(data, 0, width, height, 2, size_output);
+
+        free(data);
+    }
+
+    return ret;
+}
+
+//---------------------------------------------------------
+// PNG -> internal RGBA/IA
+//---------------------------------------------------------
+
+rgba* png2rgba(unsigned char* png_input, int size_input, int* width, int* height) {
+    rgba* img = NULL;
+    int w = 0;
+    int h = 0;
+    int channels = 0;
+    int img_size;
+
+    stbi_uc* data = stbi_load_from_memory(png_input, size_input, &w, &h, &channels, STBI_default);
+    if (!data || w <= 0 || h <= 0) {
+        ERROR("Error loading file\n");
+        return NULL;
+    }
+    INFO("Read %dx%d channels: %d\n", w, h, channels);
+
+    img_size = w * h * sizeof(*img);
+    img = malloc(img_size);
+    if (!img) {
+        ERROR("Error allocating %u bytes\n", img_size);
+        return NULL;
+    }
+
+    switch (channels) {
+        case 3: // red, green, blue
+        case 4: // red, green, blue, alpha
+            for (int j = 0; j < h; j++) {
+                for (int i = 0; i < w; i++) {
+                    int idx = j * w + i;
+                    img[idx].red = data[channels * idx];
+                    img[idx].green = data[channels * idx + 1];
+                    img[idx].blue = data[channels * idx + 2];
+                    if (channels == 4) {
+                        img[idx].alpha = data[channels * idx + 3];
+                    } else {
+                        img[idx].alpha = 0xFF;
+                    }
+                }
+            }
+            break;
+        case 2: // grey, alpha
+            for (int j = 0; j < h; j++) {
+                for (int i = 0; i < w; i++) {
+                    int idx = j * w + i;
+                    img[idx].red = data[2 * idx];
+                    img[idx].green = data[2 * idx];
+                    img[idx].blue = data[2 * idx];
+                    img[idx].alpha = data[2 * idx + 1];
+                }
+            }
+            break;
+        default:
+            ERROR("Don't know how to read channels: %d\n", channels);
+            free(img);
+            img = NULL;
+    }
+
+    // cleanup
+    stbi_image_free(data);
+
+    *width = w;
+    *height = h;
+    return img;
+}
+
+ia* png2ia(unsigned char* png_input, int size_input, int* width, int* height) {
+    ia* img = NULL;
+    int w = 0, h = 0;
+    int channels = 0;
+    int img_size;
+
+    stbi_uc* data = stbi_load_from_memory(png_input, size_input, &w, &h, &channels, STBI_default);
+    if (!data || w <= 0 || h <= 0) {
+        ERROR("Error loading file\n");
+        return NULL;
+    }
+    INFO("Read %dx%d channels: %d\n", w, h, channels);
+
+    img_size = w * h * sizeof(*img);
+    img = malloc(img_size);
+    if (!img) {
+        ERROR("Error allocating %d bytes\n", img_size);
+        return NULL;
+    }
+
+    switch (channels) {
+        case 3: // red, green, blue
+        case 4: // red, green, blue, alpha
+            ERROR("Warning: averaging RGB PNG to create IA\n");
+            for (int j = 0; j < h; j++) {
+                for (int i = 0; i < w; i++) {
+                    int idx = j * w + i;
+                    int sum = data[channels * idx] + data[channels * idx + 1] + data[channels * idx + 2];
+                    img[idx].intensity = (sum + 1) / 3; // add 1 to round up where appropriate
+                    if (channels == 4) {
+                        img[idx].alpha = data[channels * idx + 3];
+                    } else {
+                        img[idx].alpha = 0xFF;
+                    }
+                }
+            }
+            break;
+        case 2: // grey, alpha
+            for (int j = 0; j < h; j++) {
+                for (int i = 0; i < w; i++) {
+                    int idx = j * w + i;
+                    img[idx].intensity = data[2 * idx];
+                    img[idx].alpha = data[2 * idx + 1];
+                }
+            }
+            break;
+        default:
+            ERROR("Don't know how to read channels: %d\n", channels);
+            free(img);
+            img = NULL;
+    }
+
+    // cleanup
+    stbi_image_free(data);
+
+    *width = w;
+    *height = h;
+    return img;
+}
+
+// find index of palette color
+// return -1 if not found
+static int pal_find_color(const palette_t* pal, uint16_t val) {
+    for (int i = 0; i < pal->used; i++) {
+        if (pal->data[i] == val) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// find value in palette, or add if not there
+// returns palette index entered or -1 if palette full
+static int pal_add_color(palette_t* pal, uint16_t val) {
+    int idx;
+    idx = pal_find_color(pal, val);
+    if (idx < 0) {
+        if (pal->used == pal->max) {
+            ERROR("Error: trying to use more than %d\n", pal->max);
+        } else {
+            idx = pal->used;
+            pal->data[pal->used] = val;
+            pal->used++;
+        }
+    }
+    return idx;
+}
+
+// convert from raw (RGBA16 or IA16) format to CI + palette
+// returns 1 on success
+int raw2ci(uint8_t* rawci, palette_t* pal, const uint8_t* raw, int raw_len, int ci_depth) {
+    // assign colors to palette
+    pal->used = 0;
+    memset(pal->data, 0, sizeof(pal->data));
+    int ci_idx = 0;
+    for (int i = 0; i < raw_len; i += sizeof(uint16_t)) {
+        uint16_t val = read_u16_be(&raw[i]);
+        int pal_idx = pal_add_color(pal, val);
+        if (pal_idx < 0) {
+            ERROR("Error adding color @ (%d): %d (used: %d/%d)\n", i, pal_idx, pal->used, pal->max);
+            return 0;
+        } else {
+            switch (ci_depth) {
+                case 8:
+                    rawci[ci_idx] = (uint8_t) pal_idx;
+                    break;
+                case 4: {
+                    int byte_idx = ci_idx / 2;
+                    int nibble = 1 - (ci_idx % 2);
+                    uint8_t mask = 0xF << (4 * (1 - nibble));
+                    rawci[byte_idx] = (rawci[byte_idx] & mask) | (pal_idx << (4 * nibble));
+                    break;
+                }
+            }
+            ci_idx++;
+        }
+    }
+    return 1;
+}
+
+const char* n64graphics_get_read_version(void) {
+    return "stb_image 2.19";
+}
+
+const char* n64graphics_get_write_version(void) {
+    return "stb_image_write 1.09";
+}

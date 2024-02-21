@@ -76,6 +76,25 @@ int main(int argc, char *argv[]) {
         }
     });
 
+    /* Generate modding files */
+    const auto modding_root = app.add_subcommand("modding", "Modding - Generates modding files like png\n");
+    const auto modding_import = modding_root->add_subcommand("import", "Import - Import modified files to generate C code\n");
+    const auto modding_export = modding_root->add_subcommand("export", "Export - Export modified files to a folder\n");
+
+    modding_import->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+
+    modding_import->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, false, debug, true);
+        instance->Init(ExportType::Code);
+    });
+
+    modding_export->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+
+    modding_export->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, false, debug);
+        instance->Init(ExportType::Modding);
+    });
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError &e) {
