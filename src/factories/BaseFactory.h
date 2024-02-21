@@ -26,6 +26,7 @@ enum class ExportType {
     Header,
     Code,
     Binary,
+    Modding,
 };
 
 template<typename T>
@@ -72,6 +73,7 @@ public:
 class BaseFactory {
 public:
     virtual std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) = 0;
+    virtual std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) = 0;
     std::optional<std::shared_ptr<BaseExporter>> GetExporter(ExportType type) {
         auto exporters = this->GetExporters();
         if (exporters.find(type) != exporters.end()) {
@@ -79,6 +81,7 @@ public:
         }
         return std::nullopt;
     }
+    virtual bool SupportModdedAssets() = 0;
 private:
     virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() = 0;
 };
