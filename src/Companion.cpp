@@ -192,7 +192,7 @@ void Companion::ParseModdingConfig() {
     if(!fs::exists(path)) {
         throw std::runtime_error("No modding config found, please run in export mode first");
     }
-    auto modding = YAML::LoadFile(path);
+    auto modding = YAML::LoadFile(path.string());
     for(auto assets = modding["assets"].begin(); assets != modding["assets"].end(); ++assets) {
         auto name = assets->first.as<std::string>();
         auto asset = assets->second.as<std::string>();
