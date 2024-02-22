@@ -121,6 +121,37 @@ ia* raw2ia(const uint8_t* raw, int width, int height, int depth) {
     return img;
 }
 
+ci* raw2ci_torch(const uint8_t* raw, int width, int height, int depth) {
+    ci* img = NULL;
+    int img_size;
+
+    img_size = width * height * sizeof(*img);
+    img = malloc(img_size);
+    if (!img) {
+        ERROR("Error allocating %u bytes\n", img_size);
+        return NULL;
+    }
+
+    switch (depth) {
+        case 8:
+            for (int i = 0; i < width * height; i++) {
+                img[i].index = raw[i];
+            }
+        break;
+        case 4:
+            for (int i = 0; i < width * height; i++) {
+                int pos = i / 2;
+                img[i].index = i % 2 ? raw[pos] & 0xF : raw[pos] >> 4;
+            }
+        break;
+        default:
+            ERROR("Error invalid depth %d\n", depth);
+        break;
+    }
+
+    return img;
+}
+
 ia* raw2i(const uint8_t* raw, int width, int height, int depth) {
     ia* img = NULL;
     int img_size;
@@ -303,6 +334,37 @@ int i2raw(uint8_t* raw, const ia* img, int width, int height, int depth) {
     return size;
 }
 
+int ci2raw_torch(uint8_t* raw, const ci* img, int width, int height, int depth) {
+    int size = width * height * depth / 8;
+    INFO("Converting I%d %dx%d to raw\n", depth, width, height);
+
+    switch (depth) {
+        case 8:
+            for (int i = 0; i < width * height; i++) {
+                raw[i] = img[i].index;
+            }
+        break;
+        case 4:
+            for(int y = 0; y < height; y++) {
+                for(int x = 0; x < width; x += 2) {
+                    const size_t pos = (y * width + x) / 2;
+
+                    const uint8_t cR1 = img[y * width + x].index;
+                    const uint8_t cR2 = img[y * width + x + 1].index;
+
+                    raw[pos] = cR1 << 4 | cR2;
+                }
+            }
+        break;
+        default:
+            ERROR("Error invalid depth %d\n", depth);
+        size = -1;
+        break;
+    }
+
+    return size;
+}
+
 //---------------------------------------------------------
 // internal RGBA/IA -> PNG
 //---------------------------------------------------------
@@ -354,6 +416,27 @@ int ia2png(unsigned char** png_output, int* size_output, const ia* img, int widt
     return ret;
 }
 
+int ci2png(unsigned char** png_output, int* size_output, const ci* img, int width, int height) {
+    int ret = 0;
+
+    // convert to format stb_image_write expects
+    uint8_t* data = malloc(width * height);
+    if (data) {
+        for (int j = 0; j < height; j++) {
+            for (int i = 0; i < width; i++) {
+                int idx = j * width + i;
+                data[idx] = img[idx].index;
+            }
+        }
+
+        (*png_output) = stbi_write_plte_png_to_mem(data, 0, width, height, 1, NULL, 0, size_output);
+
+        free(data);
+    }
+
+    return ret;
+}
+
 //---------------------------------------------------------
 // PNG -> internal RGBA/IA
 //---------------------------------------------------------
@@ -372,7 +455,7 @@ rgba* png2rgba(unsigned char* png_input, int size_input, int* width, int* height
     }
     INFO("Read %dx%d channels: %d\n", w, h, channels);
 
-    img_size = w * h * sizeof(*img);
+    img_size = w * h * sizeof(rgba);
     img = malloc(img_size);
     if (!img) {
         ERROR("Error allocating %u bytes\n", img_size);
@@ -411,6 +494,68 @@ rgba* png2rgba(unsigned char* png_input, int size_input, int* width, int* height
             ERROR("Don't know how to read channels: %d\n", channels);
             free(img);
             img = NULL;
+    }
+
+    // cleanup
+    stbi_image_free(data);
+
+    *width = w;
+    *height = h;
+    return img;
+}
+
+rgb* png2rgb(unsigned char* png_input, int size_input, int* width, int* height) {
+    rgba* img = NULL;
+    int w = 0;
+    int h = 0;
+    int channels = 0;
+    int img_size;
+
+    stbi_uc* data = stbi_load_from_memory(png_input, size_input, &w, &h, &channels, STBI_rgb);
+    if (!data || w <= 0 || h <= 0) {
+        ERROR("Error loading file\n");
+        return NULL;
+    }
+    INFO("Read %dx%d channels: %d\n", w, h, channels);
+
+    img_size = w * h * sizeof(*img);
+    img = malloc(img_size);
+    if (!img) {
+        ERROR("Error allocating %u bytes\n", img_size);
+        return NULL;
+    }
+
+    switch (channels) {
+        case 3: // red, green, blue
+        case 4: // red, green, blue
+        for (int j = 0; j < h; j++) {
+            for (int i = 0; i < w; i++) {
+                int idx = j * w + i;
+                img[idx].red = data[channels * idx];
+                img[idx].green = data[channels * idx + 1];
+                img[idx].blue = data[channels * idx + 2];
+                if (channels == 4) {
+                    img[idx].alpha = data[channels * idx + 3];
+                } else {
+                    img[idx].alpha = 0xFF;
+                }
+            }
+        }
+        break;
+        case 2: // grey, alpha
+            for (int j = 0; j < h; j++) {
+                for (int i = 0; i < w; i++) {
+                    int idx = j * w + i;
+                    img[idx].red = data[2 * idx];
+                    img[idx].green = data[2 * idx];
+                    img[idx].blue = data[2 * idx];
+                }
+            }
+        break;
+        default:
+            ERROR("Don't know how to read channels: %d\n", channels);
+        free(img);
+        img = NULL;
     }
 
     // cleanup
@@ -471,6 +616,58 @@ ia* png2ia(unsigned char* png_input, int size_input, int* width, int* height) {
             ERROR("Don't know how to read channels: %d\n", channels);
             free(img);
             img = NULL;
+    }
+
+    // cleanup
+    stbi_image_free(data);
+
+    *width = w;
+    *height = h;
+    return img;
+}
+
+ci* png2ci(unsigned char* png_input, int size_input, int* width, int* height) {
+    ci* img = NULL;
+    int w = 0, h = 0;
+    int channels = 0;
+    int img_size;
+
+    stbi_uc* data = stbi_load_from_memory(png_input, size_input, &w, &h, &channels, STBI_default);
+    if (!data || w <= 0 || h <= 0) {
+        ERROR("Error loading file\n");
+        return NULL;
+    }
+    INFO("Read %dx%d channels: %d\n", w, h, channels);
+
+    img_size = w * h * sizeof(*img);
+    img = malloc(img_size);
+    if (!img) {
+        ERROR("Error allocating %d bytes\n", img_size);
+        return NULL;
+    }
+
+    switch (channels) {
+        case 3: // red, green, blue
+        case 4: // red, green, blue, alpha
+        for (int j = 0; j < h; j++) {
+            for (int i = 0; i < w; i++) {
+                int idx = j * w + i;
+                img[idx].index = data[channels * idx];
+            }
+        }
+        break;
+        case 2: // grey, alpha
+            for (int j = 0; j < h; j++) {
+                for (int i = 0; i < w; i++) {
+                    int idx = j * w + i;
+                    img[idx].index = data[2 * idx];
+                }
+            }
+        break;
+        default:
+            ERROR("Don't know how to read channels: %d\n", channels);
+        free(img);
+        img = NULL;
     }
 
     // cleanup
