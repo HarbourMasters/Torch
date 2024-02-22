@@ -1211,6 +1211,122 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
    return out;
 }
 
+typedef struct _pixel
+{
+   uint8_t red;
+   uint8_t green;
+   uint8_t blue;
+   uint8_t alpha;
+} pixel;
+
+STBIWDEF unsigned char *stbi_write_plte_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, pixel* plte, int plte_size, int *out_len) {
+   int force_filter = stbi_write_force_png_filter;
+   int ctype[5] = { -1, 3, 4, 2, 6 };
+   unsigned char sig[8] = { 137,80,78,71,13,10,26,10 };
+   unsigned char *out,*o, *filt, *zlib;
+   signed char *line_buffer;
+   int j,zlen;
+
+   if (stride_bytes == 0)
+      stride_bytes = x * n;
+
+   if (force_filter >= 5) {
+      force_filter = -1;
+   }
+
+   filt = (unsigned char *) STBIW_MALLOC((x*n+1) * y); if (!filt) return 0;
+   line_buffer = (signed char *) STBIW_MALLOC(x * n); if (!line_buffer) { STBIW_FREE(filt); return 0; }
+   for (j=0; j < y; ++j) {
+      int filter_type;
+      if (force_filter > -1) {
+         filter_type = force_filter;
+         stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, force_filter, line_buffer);
+      } else { // Estimate the best filter by running through all of them:
+         int best_filter = 0, best_filter_val = 0x7fffffff, est, i;
+         for (filter_type = 0; filter_type < 5; filter_type++) {
+            stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, filter_type, line_buffer);
+
+            // Estimate the entropy of the line using this filter; the less, the better.
+            est = 0;
+            for (i = 0; i < x*n; ++i) {
+               est += abs((signed char) line_buffer[i]);
+            }
+            if (est < best_filter_val) {
+               best_filter_val = est;
+               best_filter = filter_type;
+            }
+         }
+         if (filter_type != best_filter) {  // If the last iteration already got us the best filter, don't redo it
+            stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, best_filter, line_buffer);
+            filter_type = best_filter;
+         }
+      }
+      // when we get here, filter_type contains the filter type, and line_buffer contains the data
+      filt[j*(x*n+1)] = (unsigned char) filter_type;
+      STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
+   }
+   STBIW_FREE(line_buffer);
+   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, stbi_write_png_compression_level);
+   STBIW_FREE(filt);
+   if (!zlib) return 0;
+
+   // each tag requires 12 bytes of overhead
+   // out = (unsigned char *) STBIW_MALLOC(8 + 12+13 + 12+zlen + 12 + (plte_size * 3 + 12)) + (plte_size + 12);
+   // if (!out) return 0;
+   // *out_len = 8 + 12+13 + 12+zlen + 12 + (plte_size * 3 + 12) + (plte_size + 12);
+
+   out = (unsigned char *) STBIW_MALLOC(8 + 12+13 + 12+zlen + 12 + (32 * 3 + 12));
+   if (!out) return 0;
+   *out_len = 8 + 12+13 + 12+zlen + 12 + (32 * 3 + 12);
+
+   o=out;
+   STBIW_MEMMOVE(o,sig,8); o+= 8;
+   stbiw__wp32(o, 13); // header length
+   stbiw__wptag(o, "IHDR");
+   stbiw__wp32(o, x);
+   stbiw__wp32(o, y);
+   *o++ = 8;
+   *o++ = STBIW_UCHAR(3);
+   *o++ = 0;
+   *o++ = 0;
+   *o++ = 0;
+   stbiw__wpcrc(&o,13);
+
+   // WRITE PLTE Chunk
+   stbiw__wp32(o, 32 * 3);
+   stbiw__wptag(o, "PLTE");
+   // STBIW_MEMMOVE(0, sig, 3*16); o+=3*16;
+   for (j=0; j < 32; j++) {
+      *o++ = STBIW_UCHAR(j);
+      *o++ = STBIW_UCHAR(j);
+      *o++ = STBIW_UCHAR(j);
+   }
+   stbiw__wpcrc(&o, 32 * 3);
+
+   // Write tRNS Chunk
+   // stbiw__wp32(o, plte_size);
+   // stbiw__wptag(o, "tRNS");
+   // for (j=0; j < plte_size; j++) {
+   //    *o++ = STBIW_UCHAR(plte[j].alpha);
+   // }
+   // stbiw__wpcrc(&o, plte_size);
+
+   stbiw__wp32(o, zlen);
+   stbiw__wptag(o, "IDAT");
+   STBIW_MEMMOVE(o, zlib, zlen);
+   o += zlen;
+   STBIW_FREE(zlib);
+   stbiw__wpcrc(&o, zlen);
+
+   stbiw__wp32(o,0);
+   stbiw__wptag(o, "IEND");
+   stbiw__wpcrc(&o,0);
+
+   STBIW_ASSERT(o == out + *out_len);
+
+   return out;
+}
+
 #ifndef STBI_WRITE_NO_STDIO
 STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
 {
