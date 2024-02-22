@@ -93,7 +93,8 @@ void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
 }
 
 void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
+    auto texture = std::static_pointer_cast<TextureData>(raw);
+    auto data = texture->mBuffer;
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto format = GetSafeNode<std::string>(node, "format");
 
@@ -107,12 +108,22 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
     std::ofstream file(dpath + ".inc.c", std::ios::binary);
 
-    for (int i = 0; i < data.size(); i++) {
+    size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
+
+    SPDLOG_INFO("Byte Size: {}", byteSize);
+
+    for (int i = 0; i < data.size(); i+=byteSize) {
         if (i % 16 == 0 && i != 0) {
             file << std::endl;
         }
 
-        file << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i]) << ", ";
+        file << "0x";
+
+        for (int j = 0; j < byteSize; j++) {
+            file << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i + j]);
+        }
+
+        file << ", ";
     }
     file << std::endl;
 
