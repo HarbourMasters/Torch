@@ -277,9 +277,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         auto w0 = reader.ReadUInt32();
         auto w1 = reader.ReadUInt32();
 
-        SPDLOG_INFO("w0: 0x{:X}", w0);
-        SPDLOG_INFO("w1: 0x{:X}", w1);
-
         uint8_t opcode = w0 >> 24;
 
         if(opcode == GBI(G_ENDDL)) {

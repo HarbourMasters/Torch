@@ -58,7 +58,6 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     // Check if a compressed header exists
     if (header == "MIO0") {
-        SPDLOG_INFO("MIO0 HEADER FOUND");
         type = CompressionType::MIO0;
     } else if (header == "YAY0") {
         type = CompressionType::YAY0;
@@ -70,20 +69,13 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     if (node["compression_type"]) {
         type = static_cast<CompressionType>(node["compression_type"].as<uint32_t>());
     }
-    SPDLOG_INFO("TYPE: {}", (uint32_t) type);
 
     // Process compressed assets
     switch(type) {
         case CompressionType::MIO0:
         {
             node["compression_type"] = (uint32_t)  CompressionType::MIO0;
-
-            SPDLOG_INFO("OFFSET: 0x{:x}", IS_SEGMENTED(offset));
-            
             offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
-
-
-
 
             auto decoded = Decode(buffer, compressed_offset, CompressionType::MIO0);
             auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
