@@ -354,8 +354,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 YAML::Node light;
                 uint32_t ptr = w1;
 
-
-
                 if(Decompressor::IsSegmented(w1)){
                     SPDLOG_INFO("Found segmented lights at 0x{:X}", w1);
                     ptr = w1;
