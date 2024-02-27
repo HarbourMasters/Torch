@@ -46,28 +46,35 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     std::string header = "";
 
     uint32_t compressed_offset = 0;
+    // Offset of compressed data
     if (node["compression"]["offset"]) {
         compressed_offset = node["compression"]["offset"].as<uint32_t>();
-        LUS::BinaryReader reader((char*) buffer.data() + compressed_offset, sizeof(uint32_t));
-        reader.SetEndianness(LUS::Endianness::Big);
-
-        header = reader.ReadCString();
     }
 
     auto type = CompressionType::None;
 
-    // Check if a compressed header exists
-    if (header == "MIO0") {
-        type = CompressionType::MIO0;
-    } else if (header == "YAY0") {
-        type = CompressionType::YAY0;
-    } else if (header == "YAZ0") {
-        type = CompressionType::YAZ0;
-    }
-
-    // If not a compressed header, is it a section of compressed data?
+    // Compression type known
     if (node["compression"]["type"]) {
         type = static_cast<CompressionType>(node["compression"]["type"].as<uint32_t>());
+    } else { // Find compression type
+        // Get signature of compressed data; MIO0, YAY0, YAZ0, etc.
+        if (node["compression"]["offset"]) {
+            LUS::BinaryReader reader((char*) buffer.data() + compressed_offset, sizeof(uint32_t));
+            reader.SetEndianness(LUS::Endianness::Big);
+
+            header = reader.ReadCString();
+
+            // Check if a compressed header exists
+            if (header == "MIO0") {
+                type = CompressionType::MIO0;
+            } else if (header == "YAY0") {
+                type = CompressionType::YAY0;
+            } else if (header == "YAZ0") {
+                type = CompressionType::YAZ0;
+            } else {
+                throw std::runtime_error("Unkown compression signature");
+            }
+        }
     }
 
     // Process compressed assets
@@ -93,6 +100,8 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             node["compression"]["type"] = (uint32_t) CompressionType::YAZ0;
             throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
             break;
+        default:
+            SPDLOG_DEBUG("Unknown compression type for asset. If this is compressed data something has gone wrong.");
 
     }
 
