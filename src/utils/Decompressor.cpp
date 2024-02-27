@@ -42,12 +42,12 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     auto offset = node["offset"].as<uint32_t>();
 
-
-    uint32_t compressed_offset = 0;
+    // Header of compressed file; MIO0, YAY0, or YAZ0.
     std::string header = "";
 
-    if (node["compressed_offset"]) {
-        compressed_offset = node["compressed_offset"].as<uint32_t>();
+    uint32_t compressed_offset = 0;
+    if (node["compression"]["offset"]) {
+        compressed_offset = node["compression"]["offset"].as<uint32_t>();
         LUS::BinaryReader reader((char*) buffer.data() + compressed_offset, sizeof(uint32_t));
         reader.SetEndianness(LUS::Endianness::Big);
 
@@ -66,15 +66,16 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     }
 
     // If not a compressed header, is it a section of compressed data?
-    if (node["compression_type"]) {
-        type = static_cast<CompressionType>(node["compression_type"].as<uint32_t>());
+    if (node["compression"]["type"]) {
+        type = static_cast<CompressionType>(node["compression"]["type"].as<uint32_t>());
     }
 
     // Process compressed assets
     switch(type) {
         case CompressionType::MIO0:
         {
-            node["compression_type"] = (uint32_t)  CompressionType::MIO0;
+
+            node["compression"]["type"] = (uint32_t)  CompressionType::MIO0;
             offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
 
             auto decoded = Decode(buffer, compressed_offset, CompressionType::MIO0);
@@ -85,11 +86,11 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             };
         }
         case CompressionType::YAY0:
-            node["compression_type"] = (uint32_t) CompressionType::YAY0;
+            node["compression"]["type"] = (uint32_t) CompressionType::YAY0;
             throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
             break;
         case CompressionType::YAZ0:
-            node["compression_type"] = (uint32_t) CompressionType::YAZ0;
+            node["compression"]["type"] = (uint32_t) CompressionType::YAZ0;
             throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
             break;
 
@@ -133,12 +134,12 @@ bool Decompressor::IsSegmented(uint32_t addr) {
     return false;
 }
 
-void Decompressor::CopyCompression(YAML::Node& from, YAML::Node& to){
-    if (from["compressed_offset"]) {
-        to["compressed_offset"] = to["compressed_offset"];
+void Decompressor::CopyCompression(YAML::Node& source, YAML::Node& dest){
+    if (source["compression"]["offset"]) {
+        dest["compression"]["offset"] = source["compression"]["offset"];
     }
-    if (from["compression_type"]) {
-        to["compression_type"] = to["compression_type"];
+    if (source["compression"]["type"]) {
+        dest["compression"]["type"] = source["compression"]["type"];
     }
 }
 
