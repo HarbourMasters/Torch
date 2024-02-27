@@ -45,11 +45,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     // Header of compressed file; MIO0, YAY0, or YAZ0.
     std::string header = "";
 
-    uint32_t compressed_offset = 0;
-    // Offset of compressed data
-    if (node["compression"]["offset"]) {
-        compressed_offset = node["compression"]["offset"].as<uint32_t>();
-    }
+    const auto compressed_offset = Companion::Instance->GetCompressedOffset();
 
     auto type = CompressionType::None;
 
@@ -58,8 +54,8 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         type = static_cast<CompressionType>(node["compression"]["type"].as<uint32_t>());
     } else { // Find compression type
         // Get signature of compressed data; MIO0, YAY0, YAZ0, etc.
-        if (node["compression"]["offset"]) {
-            LUS::BinaryReader reader((char*) buffer.data() + compressed_offset, sizeof(uint32_t));
+        if (compressed_offset.has_value()) {
+            LUS::BinaryReader reader((char*) buffer.data() + compressed_offset.value(), sizeof(uint32_t));
             reader.SetEndianness(LUS::Endianness::Big);
 
             header = reader.ReadCString();
@@ -72,7 +68,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             } else if (header == "YAZ0") {
                 type = CompressionType::YAZ0;
             } else {
-                throw std::runtime_error("Unkown compression signature");
+                throw std::runtime_error("Unknown compression signature; expected MIO0, YAY0, or YAZ0.");
             }
         }
     }
@@ -81,16 +77,18 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     switch(type) {
         case CompressionType::MIO0:
         {
+            if (compressed_offset.has_value()) {
+                node["compression"]["type"] = (uint32_t)  CompressionType::MIO0;
+                offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
 
-            node["compression"]["type"] = (uint32_t)  CompressionType::MIO0;
-            offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
-
-            auto decoded = Decode(buffer, compressed_offset, CompressionType::MIO0);
-            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
-            return {
-                .root = decoded,
-                .segment = { decoded->data + offset, size }
-            };
+                    auto decoded = Decode(buffer, compressed_offset.value(), CompressionType::MIO0);
+                auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
+                return {
+                    .root = decoded,
+                    .segment = { decoded->data + offset, size }
+                };
+            }
+            throw std::runtime_error("Received an incorrect compressed offset while trying to extract an asset.");
         }
         case CompressionType::YAY0:
             node["compression"]["type"] = (uint32_t) CompressionType::YAY0;
@@ -101,7 +99,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
             break;
         default:
-            SPDLOG_DEBUG("Unknown compression type for asset. If this is compressed data something has gone wrong.");
+            SPDLOG_DEBUG("Unknown compression type for asset. If this is compressed data something has gone wrong. Else, all is fine.");
 
     }
 
@@ -144,9 +142,6 @@ bool Decompressor::IsSegmented(uint32_t addr) {
 }
 
 void Decompressor::CopyCompression(YAML::Node& source, YAML::Node& dest){
-    if (source["compression"]["offset"]) {
-        dest["compression"]["offset"] = source["compression"]["offset"];
-    }
     if (source["compression"]["type"]) {
         dest["compression"]["type"] = source["compression"]["type"];
     }

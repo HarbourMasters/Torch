@@ -371,7 +371,7 @@ void Companion::Process() {
             }
 
             if (root[":config"]["compression"]["offset"]) {
-                assetNode["compression"]["offset"] = root[":config"]["compression"]["offset"];
+                gCurrentCompressedOffset = root[":config"]["compression"]["offset"].as<uint32_t>();
             }
 
             // Parse horizontal assets

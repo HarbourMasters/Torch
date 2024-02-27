@@ -73,6 +73,8 @@ public:
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
 
+    std::optional<uint32_t> GetCompressedOffset(void) const { return this->gCurrentCompressedOffset; };
+
     static void Pack(const std::string& folder, const std::string& output);
     std::string NormalizeAsset(const std::string& name) const;
 
@@ -85,6 +87,7 @@ private:
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     std::shared_ptr<N64::Cartridge> gCartridge;
+    uint32_t gCurrentCompressedOffset;
 
     // Temporal Variables
     std::string gCurrentFile;
