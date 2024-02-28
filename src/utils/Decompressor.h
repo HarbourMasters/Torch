@@ -31,7 +31,6 @@ public:
     static DecompressedData AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer, std::optional<size_t> size = std::nullopt);
     static uint32_t TranslateAddr(uint32_t addr, bool baseAddress = false);
     static bool IsSegmented(uint32_t addr);
-    static void CopyCompression(YAML::Node& source, YAML::Node& dest);
 
     static void ClearCache();
 };

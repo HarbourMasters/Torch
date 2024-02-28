@@ -305,7 +305,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(ptr, false));
                 }
 
-                Decompressor::CopyCompression(node, dl);
                 dl["type"] = "GFX";
                 dl["offset"] = ptr;
                 dl["symbol"] = output;
@@ -363,7 +362,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     output = Companion::Instance->NormalizeAsset("lights1_" + Torch::to_hex(w1, false));
                 }
 
-                Decompressor::CopyCompression(node, light);
                 light["type"] = "lights";
                 light["offset"] = ptr;
                 light["symbol"] = output;
@@ -411,7 +409,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
                 }
 
-                Decompressor::CopyCompression(node, vtx);
                 vtx["type"] = "VTX";
                 vtx["offset"] = ptr;
                 vtx["count"] = nvtx;

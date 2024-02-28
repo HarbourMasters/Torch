@@ -9,6 +9,7 @@
 #include <variant>
 #include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
+#include "utils/Decompressor.h"
 
 class SWrapper;
 namespace fs = std::filesystem;
@@ -73,7 +74,9 @@ public:
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
 
-    std::optional<uint32_t> GetCompressedOffset(void) const { return this->gCurrentCompressedOffset; };
+    std::optional<std::uint32_t> GetCompressedOffset(void) const { return this->gCurrentCompressedOffset; };
+    std::optional<CompressionType> GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
+    std::optional<CompressionType> GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
 
     static void Pack(const std::string& folder, const std::string& output);
     std::string NormalizeAsset(const std::string& name) const;
@@ -87,7 +90,6 @@ private:
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     std::shared_ptr<N64::Cartridge> gCartridge;
-    uint32_t gCurrentCompressedOffset;
 
     // Temporal Variables
     std::string gCurrentFile;
@@ -97,6 +99,8 @@ private:
     std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
+    uint32_t gCurrentCompressedOffset;
+    CompressionType gCurrentCompressionType;
 
     void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);

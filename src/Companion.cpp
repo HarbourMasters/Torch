@@ -357,6 +357,17 @@ void Companion::Process() {
             this->ParseCurrentFileConfig(root[":config"]);
         }
 
+        if (auto segments = root[":config"]["segments"]) {
+            gCurrentCompressedOffset = segments.begin()->second.as<uint32_t>();
+
+            const auto type = GetCompressionType(this->gRomData, gCurrentCompressedOffset);
+            if (type.has_value()) {
+                gCurrentCompressionType = type.value();
+            } else {
+                gCurrentCompressionType = CompressionType::None;
+            }
+        }
+
         spdlog::set_pattern(regular);
         SPDLOG_INFO("------------------------------------------------");
         spdlog::set_pattern(line);
@@ -368,10 +379,6 @@ void Companion::Process() {
 
             if(entryName.find(":config") != std::string::npos) {
                 continue;
-            }
-
-            if (root[":config"]["compression"]["offset"]) {
-                gCurrentCompressedOffset = root[":config"]["compression"]["offset"].as<uint32_t>();
             }
 
             // Parse horizontal assets
@@ -583,6 +590,29 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
     }
 
     return this->gFactories[type];
+}
+
+/**
+ * @param offset Rom offset of compressed mio0 file.
+ * @returns CompressionType
+ */
+std::optional<CompressionType> Companion::GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset) {
+    if (offset) {
+        LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
+        reader.SetEndianness(LUS::Endianness::Big);
+
+        const std::string header = reader.ReadCString();
+
+        // Check if a compressed header exists
+        if (header == "MIO0") {
+            return CompressionType::MIO0;
+        } else if (header == "YAY0") {
+            return CompressionType::YAY0;
+        } else if (header == "YAZ0") {
+            return CompressionType::YAZ0;
+        }
+    }
+    return CompressionType::None;
 }
 
 std::optional<std::uint32_t> Companion::GetSegmentedAddr(const uint8_t segment) const {
