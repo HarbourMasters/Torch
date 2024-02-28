@@ -58,7 +58,7 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         write << fourSpaceTab << "// 0x" << std::hex << std::uppercase << (offset + (16 * vtx.size())) << "\n";
     }
 
-    write << "};\n\n";
+    write << "}; // size = 0x" << std::hex << std::uppercase << (sizeof(VtxRaw) * vtx.size()) << "\n\n";
 }
 
 void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

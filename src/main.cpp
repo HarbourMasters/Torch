@@ -76,6 +76,34 @@ int main(int argc, char *argv[]) {
         }
     });
 
+    /* Generate modding files */
+    const auto modding_root = app.add_subcommand("modding", "Modding - Generates modding files like png\n");
+    const auto modding_import = modding_root->add_subcommand("import", "Import - Import modified files to generate C code\n");
+    const auto modding_export = modding_root->add_subcommand("export", "Export - Export modified files to a folder\n");
+
+    modding_import->add_option("mode", mode, "code, binary or header")->required();
+    modding_import->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+
+    modding_import->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, false, debug, true);
+        if (mode == "code") {
+            instance->Init(ExportType::Code);
+        } else if (mode == "binary") {
+            instance->Init(ExportType::Binary);
+        } else if (mode == "header") {
+            instance->Init(ExportType::Header);
+        } else {
+            std::cout << "Invalid mode" << std::endl;
+        }
+    });
+
+    modding_export->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+
+    modding_export->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, false, debug);
+        instance->Init(ExportType::Modding);
+    });
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError &e) {
