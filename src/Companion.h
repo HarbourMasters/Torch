@@ -70,11 +70,11 @@ public:
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
 
-    std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment) const;
+    std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
 
-    std::optional<std::uint32_t> GetCompressedOffset(void) const { return this->gCurrentCompressedOffset; };
+    std::optional<std::uint32_t> GetFileOffset(void) const { return this->gCurrentFileOffset; };
     std::optional<CompressionType> GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     std::optional<CompressionType> GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
 
@@ -99,7 +99,7 @@ private:
     std::map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
-    uint32_t gCurrentCompressedOffset;
+    uint32_t gCurrentFileOffset;
     CompressionType gCurrentCompressionType;
 
     void ParseCurrentFileConfig(YAML::Node node);

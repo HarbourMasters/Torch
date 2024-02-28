@@ -42,24 +42,24 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     }
 
     auto offset = node["offset"].as<uint32_t>();
-    auto compressedOffset = Companion::Instance->GetCompressedOffset();
+    auto fileOffset = Companion::Instance->GetFileOffset();
     auto type = Companion::Instance->GetCurrCompressionType();
 
     if (IS_SEGMENTED(offset)) {
-        compressedOffset = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(offset));
-        if (compressedOffset.has_value()) {
-            type = Companion::Instance->GetCompressionType(buffer, compressedOffset.value());
+        fileOffset = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(offset));
+        if (fileOffset.has_value()) {
+            type = Companion::Instance->GetCompressionType(buffer, fileOffset.value());
         }
     }
 
     // Process compressed assets
-    if (type.has_value() && compressedOffset.has_value()) {
+    if (type.has_value() && fileOffset.has_value()) {
         switch(type.value()) {
             case CompressionType::MIO0:
             {
                 offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
 
-                auto decoded = Decode(buffer, compressedOffset.value(), CompressionType::MIO0);
+                auto decoded = Decode(buffer, fileOffset.value(), CompressionType::MIO0);
                 auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
                 return {
                     .root = decoded,
@@ -89,7 +89,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
 uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
     if(IS_SEGMENTED(addr)){
-        const auto segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(addr));
+        const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
         if(!segment.has_value()) {
             SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(addr));
             return 0;
@@ -103,7 +103,7 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
 
 bool Decompressor::IsSegmented(uint32_t addr) {
     if(IS_SEGMENTED(addr)){
-        const auto segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(addr));
+        const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
 
         if(!segment.has_value()) {
             SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(addr));

@@ -357,10 +357,11 @@ void Companion::Process() {
             this->ParseCurrentFileConfig(root[":config"]);
         }
 
+        // Set compressed file offsets and compression type
         if (auto segments = root[":config"]["segments"]) {
-            gCurrentCompressedOffset = segments.begin()->second.as<uint32_t>();
+            gCurrentFileOffset = segments.begin()->second.as<uint32_t>();
 
-            const auto type = GetCompressionType(this->gRomData, gCurrentCompressedOffset);
+            const auto type = GetCompressionType(this->gRomData, gCurrentFileOffset);
             if (type.has_value()) {
                 gCurrentCompressionType = type.value();
             } else {
@@ -615,7 +616,7 @@ std::optional<CompressionType> Companion::GetCompressionType(std::vector<uint8_t
     return CompressionType::None;
 }
 
-std::optional<std::uint32_t> Companion::GetSegmentedAddr(const uint8_t segment) const {
+std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uint8_t segment) const {
 
     auto segments = this->gConfig.segment;
 
