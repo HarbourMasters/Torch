@@ -43,18 +43,20 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     auto offset = node["offset"].as<uint32_t>();
     auto fileOffset = Companion::Instance->GetFileOffset();
-    auto type = Companion::Instance->GetCurrCompressionType();
+    CompressionType type = Companion::Instance->GetCurrCompressionType();
 
     if (IS_SEGMENTED(offset)) {
         fileOffset = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(offset));
         if (fileOffset.has_value()) {
             type = Companion::Instance->GetCompressionType(buffer, fileOffset.value());
+        } else {
+            type = CompressionType::None;
         }
     }
 
     // Process compressed assets
-    if (type.has_value() && fileOffset.has_value()) {
-        switch(type.value()) {
+    if ( (type != CompressionType::None) && (fileOffset.has_value()) ) {
+        switch(type) {
             case CompressionType::MIO0:
             {
                 offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;

@@ -75,8 +75,8 @@ public:
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
 
     std::optional<std::uint32_t> GetFileOffset(void) const { return this->gCurrentFileOffset; };
-    std::optional<CompressionType> GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
-    std::optional<CompressionType> GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
+    CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
+    CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
 
     static void Pack(const std::string& folder, const std::string& output);
     std::string NormalizeAsset(const std::string& name) const;

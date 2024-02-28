@@ -360,13 +360,7 @@ void Companion::Process() {
         // Set compressed file offsets and compression type
         if (auto segments = root[":config"]["segments"]) {
             gCurrentFileOffset = segments.begin()->second.as<uint32_t>();
-
-            const auto type = GetCompressionType(this->gRomData, gCurrentFileOffset);
-            if (type.has_value()) {
-                gCurrentCompressionType = type.value();
-            } else {
-                gCurrentCompressionType = CompressionType::None;
-            }
+            gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
         }
 
         spdlog::set_pattern(regular);
@@ -597,7 +591,7 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
  * @param offset Rom offset of compressed mio0 file.
  * @returns CompressionType
  */
-std::optional<CompressionType> Companion::GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset) {
+CompressionType Companion::GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset) {
     if (offset) {
         LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
         reader.SetEndianness(LUS::Endianness::Big);
