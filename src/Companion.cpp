@@ -298,6 +298,11 @@ void Companion::Process() {
         this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = yamlPath;
 
+        // Set compressed file offsets and compression type
+        if (auto number = root[":config"]["segment_number"]) {
+            gCurrentSegmentNumber = number.as<uint32_t>();
+        }
+
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto node = asset->second;
             auto entryName = asset->first.as<std::string>();
@@ -323,15 +328,17 @@ void Companion::Process() {
                         continue;
                     }
 
-                    if(segment != -1) {
+                    if(segment != -1 || gCurrentSegmentNumber) {
                         assetNode["offset"] = (segment << 24) | assetNode["offset"].as<uint32_t>();
                     }
 
                     this->gAddrMap[this->gCurrentFile][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
                 }
             } else {
+
                 auto output = (this->gCurrentDirectory / entryName).string();
                 std::replace(output.begin(), output.end(), '\\', '/');
+
 
                 if(node["type"]){
                     const auto type = GetSafeNode<std::string>(node, "type");
@@ -342,6 +349,12 @@ void Companion::Process() {
 
                 if(!node["offset"])  {
                     continue;
+                }
+
+                if(gCurrentSegmentNumber) {
+                    if (IS_SEGMENTED(node["offset"].as<uint32_t>()) == false) {
+                        node["offset"] = (gCurrentSegmentNumber << 24) | node["offset"].as<uint32_t>();
+                    }
                 }
 
                 this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
@@ -363,6 +376,10 @@ void Companion::Process() {
             gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
         }
 
+        if (auto number = root[":config"]["segment_number"]) {
+            gCurrentSegmentNumber = number.as<uint32_t>();
+        }
+
         spdlog::set_pattern(regular);
         SPDLOG_INFO("------------------------------------------------");
         spdlog::set_pattern(line);
@@ -376,6 +393,7 @@ void Companion::Process() {
                 continue;
             }
 
+
             // Parse horizontal assets
             if(assetNode["files"]){
                 auto segment = assetNode["segment"] ? assetNode["segment"].as<uint8_t>() : -1;
@@ -388,7 +406,7 @@ void Companion::Process() {
                         continue;
                     }
 
-                    if(segment != -1) {
+                    if(segment != -1 || gCurrentFileOffset) {
                         node["offset"] = (segment << 24) | node["offset"].as<uint32_t>();
                     }
 
@@ -398,6 +416,11 @@ void Companion::Process() {
                     this->ExtractNode(node, output, wrapper);
                 }
             } else {
+                if(gCurrentFileOffset) {
+                    if (IS_SEGMENTED(assetNode["offset"].as<uint32_t>()) == false) {
+                        assetNode["offset"] = (gCurrentSegmentNumber << 24) | assetNode["offset"].as<uint32_t>();
+                    }
+                }
                 std::string output = (this->gCurrentDirectory / entryName).string();
                 std::replace(output.begin(), output.end(), '\\', '/');
                 this->gConfig.segment.temporal.clear();

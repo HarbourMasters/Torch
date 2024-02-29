@@ -47,6 +47,12 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     if (IS_SEGMENTED(offset)) {
         fileOffset = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(offset));
+
+        // Strips segment number from offsets for symbol naming.
+        if (Companion::Instance->GetCurrSegmentNumber() == SEGMENT_NUMBER(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
+
         if (fileOffset.has_value()) {
             type = Companion::Instance->GetCompressionType(buffer, fileOffset.value());
         } else {

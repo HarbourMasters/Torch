@@ -21,7 +21,11 @@ void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
+
+    if (IS_SEGMENTED(offset)) {
+        offset = SEGMENT_OFFSET(offset);
+    }
 
     if (Companion::Instance->IsDebug()) {
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";

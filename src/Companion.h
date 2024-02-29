@@ -75,6 +75,7 @@ public:
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
 
     std::optional<std::uint32_t> GetFileOffset(void) const { return this->gCurrentFileOffset; };
+    std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
 
@@ -100,6 +101,7 @@ private:
     std::map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
     uint32_t gCurrentFileOffset;
+    uint32_t gCurrentSegmentNumber;
     CompressionType gCurrentCompressionType;
 
     void ParseCurrentFileConfig(YAML::Node node);
