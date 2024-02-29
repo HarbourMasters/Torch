@@ -122,21 +122,28 @@ else()
 endif()
 
 # Fetch Dependencies
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/binarytools)
 
 if(EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
 FetchContent_Declare(
     GSL
     GIT_REPOSITORY https://github.com/Microsoft/GSL.git
     GIT_TAG a3534567187d2edc428efd3f13466ff75fe5805c
-)
-FetchContent_MakeAvailable(GSL)
-target_link_libraries(${PROJECT_NAME} PRIVATE GSL)
-endif()
+    )
+    FetchContent_MakeAvailable(GSL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE GSL)
+    endif()
 
 # Link BinaryTools
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/binarytools)
 add_dependencies(${PROJECT_NAME} BinaryTools)
 target_link_libraries(${PROJECT_NAME} PRIVATE BinaryTools)
+
+# Link n64graphics
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/n64graphics)
+add_dependencies(${PROJECT_NAME} N64Graphics)
+target_link_libraries(${PROJECT_NAME} PRIVATE N64Graphics)
 
 # Link StormLib
 

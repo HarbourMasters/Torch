@@ -4,18 +4,22 @@
 #include "Companion.h"
 #include <iomanip>
 
-static const std::unordered_map <std::string, TextureType> gTextureTypes = {
-    { "RGBA16", TextureType::RGBA16bpp },
-    { "RGBA32", TextureType::RGBA32bpp },
-    { "CI4", TextureType::Palette4bpp },
-    { "CI8", TextureType::Palette8bpp },
-    { "I4", TextureType::Grayscale4bpp },
-    { "I8", TextureType::Grayscale8bpp },
-    { "IA1", TextureType::GrayscaleAlpha1bpp },
-	{ "IA4", TextureType::GrayscaleAlpha4bpp },
-	{ "IA8", TextureType::GrayscaleAlpha8bpp },
-	{ "IA16", TextureType::GrayscaleAlpha16bpp },
-    { "TLUT", TextureType::TLUT },
+extern "C" {
+#include "n64graphics/n64graphics.h"
+}
+
+static const std::unordered_map <std::string, TextureFormat> gTextureFormats = {
+    { "RGBA16", { TextureType::RGBA16bpp, 16 } },
+    { "RGBA32", { TextureType::RGBA32bpp, 32 } },
+    { "CI4",    { TextureType::Palette4bpp, 4 } },
+    { "CI8",    { TextureType::Palette8bpp, 8 } },
+    { "I4",     { TextureType::Grayscale4bpp, 4 } },
+    { "I8",     { TextureType::Grayscale8bpp, 8 } },
+    { "IA1",    { TextureType::GrayscaleAlpha1bpp, 1 } },
+	{ "IA4",    { TextureType::GrayscaleAlpha4bpp, 4 } },
+	{ "IA8",    { TextureType::GrayscaleAlpha8bpp, 8 } },
+	{ "IA16",   { TextureType::GrayscaleAlpha16bpp, 16 } },
+    { "TLUT",   { TextureType::TLUT, 16 } },
 };
 
 size_t CalculateTextureSize(TextureType type, uint32_t width, uint32_t height) {
@@ -89,7 +93,8 @@ void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
 }
 
 void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
+    auto texture = std::static_pointer_cast<TextureData>(raw);
+    auto data = texture->mBuffer;
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto format = GetSafeNode<std::string>(node, "format");
 
@@ -103,12 +108,22 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
     std::ofstream file(dpath + ".inc.c", std::ios::binary);
 
-    for (int i = 0; i < data.size(); i++) {
+    size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
+
+    SPDLOG_INFO("Byte Size: {}", byteSize);
+
+    for (int i = 0; i < data.size(); i+=byteSize) {
         if (i % 16 == 0 && i != 0) {
             file << std::endl;
         }
 
-        file << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i]) << ", ";
+        file << "0x";
+
+        for (int j = 0; j < byteSize; j++) {
+            file << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i + j]);
+        }
+
+        file << ", ";
     }
     file << std::endl;
 
@@ -134,7 +149,7 @@ void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
 
     WriteHeader(writer, LUS::ResourceType::Texture, 0);
 
-    writer.Write((uint32_t) texture->mType);
+    writer.Write((uint32_t) texture->mFormat.type);
     writer.Write(texture->mWidth);
     writer.Write(texture->mHeight);
 
@@ -142,6 +157,62 @@ void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
     writer.Write((char*) data.data(), data.size());
     writer.Finish(write);
 }
+
+void TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+    auto texture = std::static_pointer_cast<TextureData>(data);
+    auto format = texture->mFormat;
+    uint8_t* raw = new uint8_t[CalculateTextureSize(format.type, texture->mWidth, texture->mHeight) * 2];
+    int size = 0;
+
+    auto ext = GetSafeNode<std::string>(node, "format");
+
+    std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
+    (*replacement) += "." + ext + ".png";
+
+    switch (format.type) {
+        case TextureType::TLUT:
+        case TextureType::RGBA16bpp:
+        case TextureType::RGBA32bpp: {
+            rgba* imgr = raw2rgba(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
+            if(rgba2png(&raw, &size, imgr, texture->mWidth, texture->mHeight)) {
+                throw std::runtime_error("Failed to convert texture to PNG");
+            }
+            break;
+        }
+        case TextureType::GrayscaleAlpha16bpp:
+        case TextureType::GrayscaleAlpha8bpp:
+        case TextureType::GrayscaleAlpha4bpp:
+        case TextureType::GrayscaleAlpha1bpp: {
+            ia* imgia = raw2ia(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
+            if(ia2png(&raw, &size, imgia, texture->mWidth, texture->mHeight)) {
+                throw std::runtime_error("Failed to convert texture to PNG");
+            }
+            break;
+        }
+        case TextureType::Palette8bpp:
+        case TextureType::Palette4bpp: {
+            ci* imgi = raw2ci_torch(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
+            if(ci2png(&raw, &size, imgi, texture->mWidth, texture->mHeight)) {
+                throw std::runtime_error("Failed to convert texture to PNG");
+            }
+            break;
+        }
+        case TextureType::Grayscale8bpp:
+        case TextureType::Grayscale4bpp: {
+            ia* imgi = raw2i(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
+            if(ia2png(&raw, &size, imgi, texture->mWidth, texture->mHeight)) {
+                throw std::runtime_error("Failed to convert texture to PNG");
+            }
+            break;
+        }
+        default: {
+            SPDLOG_ERROR("Unsupported texture format for modding: {}", ext);
+        }
+    }
+
+    write.write(reinterpret_cast<char*>(raw), size);
+}
+
 
 std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto format = GetSafeNode<std::string>(node, "format");
@@ -157,13 +228,13 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         return std::nullopt;
     }
 
-	if(!gTextureTypes.contains(format)) {
+	if(!gTextureFormats.contains(format)) {
 		return std::nullopt;
 	}
 
-	TextureType type = gTextureTypes.at(format);
+	TextureFormat fmt = gTextureFormats.at(format);
 
-    if(type == TextureType::TLUT){
+    if(fmt.type == TextureType::TLUT){
         width = GetSafeNode<uint32_t>(node, "colors");
         height = 1;
     } else {
@@ -171,18 +242,18 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         height = GetSafeNode<uint32_t>(node, "height");
     }
 
-    size = GetSafeNode<uint32_t>(node, "size", CalculateTextureSize(gTextureTypes.at(format), width, height));
+    size = GetSafeNode<uint32_t>(node, "size", CalculateTextureSize(gTextureFormats.at(format).type, width, height));
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
     std::vector<uint8_t> result;
 
-    if(type == TextureType::GrayscaleAlpha1bpp){
+    if(fmt.type == TextureType::GrayscaleAlpha1bpp){
         result = alloc_ia8_text_from_i1(reinterpret_cast<uint16_t*>(segment.data), 8, 16);
     } else {
         result = std::vector(segment.data, segment.data + segment.size);
     }
 
     SPDLOG_INFO("Texture: {}", format);
-    if(type == TextureType::TLUT){
+    if(fmt.type == TextureType::TLUT){
         SPDLOG_INFO("Colors: {}", width);
     } else {
         SPDLOG_INFO("Width: {}", width);
@@ -195,5 +266,104 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         return std::nullopt;
     }
 
-    return std::make_shared<TextureData>(type, width, height, result);
+    return std::make_shared<TextureData>(fmt, width, height, result);
+}
+
+std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto format = GetSafeNode<std::string>(node, "format");
+    int width;
+    int height;
+    uint32_t size;
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
+
+    if (format.empty()) {
+        SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
+                      Please add one of the following formats\n\
+                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp, tlut", offset);
+        return std::nullopt;
+    }
+
+	if(!gTextureFormats.contains(format)) {
+		return std::nullopt;
+	}
+
+	TextureFormat fmt = gTextureFormats.at(format);
+    if(fmt.type == TextureType::TLUT){
+        width = GetSafeNode<uint32_t>(node, "colors");
+        height = 1;
+    } else {
+        width = GetSafeNode<uint32_t>(node, "width");
+        height = GetSafeNode<uint32_t>(node, "height");
+    }
+
+    uint8_t* raw;
+    switch (fmt.type) {
+        case TextureType::TLUT:
+        case TextureType::RGBA16bpp:
+        case TextureType::RGBA32bpp: {
+            const auto imgr = png2rgba(buffer.data(), buffer.size(), &width, &height);
+            size = width * height * fmt.depth / 8;
+            raw = new uint8_t[size];
+            if(rgba2raw(raw, imgr, width, height, fmt.depth) <= 0){
+                throw std::runtime_error("Failed to convert PNG to texture");
+            }
+            break;
+        }
+        case TextureType::GrayscaleAlpha16bpp:
+        case TextureType::GrayscaleAlpha8bpp:
+        case TextureType::GrayscaleAlpha4bpp:
+        case TextureType::GrayscaleAlpha1bpp: {
+            const auto imgia = png2ia(buffer.data(), buffer.size(), &width, &height);
+            size = width * height * fmt.depth / 8;
+            raw = new uint8_t[size];
+            if(ia2raw(raw, imgia, width, height, fmt.depth) <= 0){
+                throw std::runtime_error("Failed to convert PNG to texture");
+            }
+            break;
+        }
+        case TextureType::Palette8bpp:
+        case TextureType::Palette4bpp: {
+            SPDLOG_WARN("Converting PNG to CI texture is kind of broken, use at your own risk!");
+            const auto imgi = png2ci(buffer.data(), buffer.size(), &width, &height);
+            size = width * height * fmt.depth / 8;
+            raw = new uint8_t[size];
+            if(ci2raw_torch(raw, imgi, width, height, fmt.depth) <= 0){
+                throw std::runtime_error("Failed to convert PNG to texture");
+            }
+            break;
+        }
+        case TextureType::Grayscale8bpp:
+        case TextureType::Grayscale4bpp: {
+            const auto imgi = png2ia(buffer.data(), buffer.size(), &width, &height);
+            size = width * height * fmt.depth / 8;
+            raw = new uint8_t[size];
+            if(i2raw(raw, imgi, width, height, fmt.depth) <= 0){
+                throw std::runtime_error("Failed to convert PNG to texture");
+            }
+            break;
+        }
+        default: {
+            SPDLOG_ERROR("Unsupported texture format for modding: {}", format);
+            return std::nullopt;
+        }
+    }
+
+    auto result = std::vector(raw, raw + size);
+
+    SPDLOG_INFO("Texture: {}", format);
+    if(fmt.type == TextureType::TLUT){
+        SPDLOG_INFO("Colors: {}", width);
+    } else {
+        SPDLOG_INFO("Width: {}", width);
+        SPDLOG_INFO("Height: {}", height);
+    }
+    SPDLOG_INFO("Size: {}", size);
+    SPDLOG_INFO("Offset: 0x{:X}", offset);
+    SPDLOG_INFO("Is Compressed: {}", Decompressor::IsCompressed(node) ? "true" : "false");
+
+    if(result.size() == 0){
+        return std::nullopt;
+    }
+
+    return std::make_shared<TextureData>(fmt, width, height, result);
 }

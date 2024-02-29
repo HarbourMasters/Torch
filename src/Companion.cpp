@@ -18,6 +18,7 @@
 #include "factories/LightsFactory.h"
 #include "factories/mk64/WaypointFactory.h"
 #include "spdlog/spdlog.h"
+#include "hj/sha1.h"
 
 #include <fstream>
 #include <iostream>
@@ -79,7 +80,29 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         return;
     }
 
-    auto result = factory->get()->parse(this->gRomData, node);
+    auto impl = factory->get();
+
+    std::optional<std::shared_ptr<IParsedData>> result;
+    if(this->gConfig.modding) {
+        if(impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
+
+            auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
+            if(!fs::exists(path)) {
+                SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
+                return;
+            }
+
+            std::ifstream input(path, std::ios::binary);
+            std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
+            input.close();
+
+            result = factory->get()->parse_modding(data, node);
+        } else {
+            result = factory->get()->parse(this->gRomData, node);
+        }
+    } else {
+        result = factory->get()->parse(this->gRomData, node);
+    }
     if(!result.has_value()){
         SPDLOG_ERROR("Failed to process {}", name);
         return;
@@ -117,8 +140,43 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             binary->CreateFile(name, std::vector(data.begin(), data.end()));
             break;
         }
+        case ExportType::Modding: {
+            stream.str("");
+            stream.clear();
+            std::string ogname = name;
+            exporter->get()->Export(stream, result.value(), name, node, &name);
+
+            auto data = stream.str();
+            if(data.empty()) {
+                break;
+            }
+
+            std::string dpath = Instance->GetOutputPath() + "/" + name;
+            if(!exists(fs::path(dpath).parent_path())){
+                create_directories(fs::path(dpath).parent_path());
+            }
+
+            this->gModdedAssetPaths[ogname] = name;
+
+            std::ofstream file(dpath, std::ios::binary);
+            file.write(data.c_str(), data.size());
+            file.close();
+            break;
+        }
         default: {
             exporter->get()->Export(stream, result.value(), name, node, &name);
+
+            if(this->gConfig.exporterType == ExportType::Code) {
+                if(node["pad"]){
+                    auto pad = GetSafeNode<uint32_t>(node, "pad");
+                    stream << "char pad_" << gCurrentPad++ << "[] = {\n" << tab;
+                    for(int i = 0; i < pad; i++){
+                        stream << "0x00, ";
+                    }
+                    stream << "\n};\n\n";
+                }
+            }
+
             break;
         }
     }
@@ -128,6 +186,20 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         this->gWriteMap[this->gCurrentFile][type].emplace_back(node["offset"].as<uint32_t>(), stream.str());
     }
 }
+
+void Companion::ParseModdingConfig() {
+    auto path = fs::path(this->gConfig.moddingPath) / "modding.yml";
+    if(!fs::exists(path)) {
+        throw std::runtime_error("No modding config found, please run in export mode first");
+    }
+    auto modding = YAML::LoadFile(path.string());
+    for(auto assets = modding["assets"].begin(); assets != modding["assets"].end(); ++assets) {
+        auto name = assets->first.as<std::string>();
+        auto asset = assets->second.as<std::string>();
+        this->gModdedAssetPaths[name] = asset;
+    }
+}
+
 
 void Companion::ParseCurrentFileConfig(YAML::Node node) {
     if(node["segments"]) {
@@ -202,7 +274,9 @@ void Companion::Process() {
     auto path = rom["path"].as<std::string>();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
+    auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
 
+    this->gConfig.moddingPath = modding_path;
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
             this->gConfig.outputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : "generic.otr";
@@ -214,6 +288,10 @@ void Companion::Process() {
         }
         case ExportType::Code: {
             this->gConfig.outputPath = opath && opath["code"] ? opath["code"].as<std::string>() : "code";
+            break;
+        }
+        case ExportType::Modding: {
+            this->gConfig.outputPath = modding_path;
             break;
         }
     }
@@ -250,6 +328,10 @@ void Companion::Process() {
         this->gWriteOrder = std::vector<std::string> {
             "LIGHTS", "TEXTURE", "VTX", "GFX"
         };
+    }
+
+    if(this->gConfig.exporterType == ExportType::Code && this->gConfig.modding) {
+        this->ParseModdingConfig();
     }
 
     if(std::holds_alternative<std::vector<std::string>>(this->gWriteOrder)) {
@@ -432,8 +514,20 @@ void Companion::Process() {
             spdlog::set_pattern(line);
         }
 
-        if(this->gConfig.exporterType != ExportType::Binary){
-            auto fsout = fs::path(this->gConfig.outputPath);
+        auto fsout = fs::path(this->gConfig.outputPath);
+
+        if(this->gConfig.exporterType == ExportType::Modding) {
+            fsout /= "modding.yml";
+            YAML::Node modding;
+
+            for (const auto& [key, value] : this->gModdedAssetPaths) {
+                modding["assets"][key] = value;
+            }
+
+            std::ofstream file(fsout.string(), std::ios::binary);
+            file << modding;
+            file.close();
+        } else if(this->gConfig.exporterType != ExportType::Binary){
             std::string filename = this->gCurrentDirectory.filename().string();
 
             switch (this->gConfig.exporterType) {
@@ -667,4 +761,8 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(cons
 std::string Companion::NormalizeAsset(const std::string& name) const {
     auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;
     return path;
+}
+
+std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
+    return Chocobo1::SHA1().addData(data).finalize().toString();
 }
