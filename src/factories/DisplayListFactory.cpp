@@ -77,7 +77,7 @@ void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     char out[0xFFFF] = {0};
 
@@ -113,6 +113,9 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     GFXDSetGBIVersion();
 
     if (Companion::Instance->IsDebug()) {
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
 
