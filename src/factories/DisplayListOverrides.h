@@ -41,4 +41,7 @@ int  Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t hei
 int  Palette(uint32_t tlut, int32_t idx, int32_t count);
 int  Light(uint32_t lightsn, int32_t count);
 int  DisplayList(uint32_t dl);
+bool SearchVTXOverlaps(uint32_t ptr, uint32_t num);
+void ClearVtx();
+std::optional<std::pair<uint32_t, uint32_t>> VtxOverlapping(uint32_t ptr);
 };

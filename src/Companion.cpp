@@ -17,6 +17,7 @@
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/mk64/WaypointFactory.h"
+#include "factories/DisplayListOverrides.h"
 #include "spdlog/spdlog.h"
 #include "hj/sha1.h"
 
@@ -434,6 +435,7 @@ void Companion::Process() {
         root = YAML::LoadFile(yamlPath);
         this->gConfig.segment.local.clear();
         this->gFileHeader.clear();
+        GFXDOverride::ClearVtx();
 
         if(root[":config"]) {
             this->ParseCurrentFileConfig(root[":config"]);

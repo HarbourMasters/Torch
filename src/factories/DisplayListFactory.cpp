@@ -125,15 +125,18 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
 void DebugDisplayList(uint32_t w0, uint32_t w1){
     uint32_t dlist[] = {w0, w1};
+    char out[0xFFFF] = {0};
+
     gfxd_input_buffer(dlist, sizeof(dlist));
-    gfxd_output_fd(fileno(stdout));
+    gfxd_output_buffer(out, sizeof(out));
+    // gfxd_output_fd(fileno(stdout));
     gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
-    gfxd_macro_fn([](){
-        gfxd_puts("> ");
-        gfxd_macro_dflt();
-        gfxd_puts("\n");
-        return 0;
-    });
+    // gfxd_macro_fn([](){
+    //     gfxd_puts("> ");
+    //     gfxd_macro_dflt();
+    //     gfxd_puts("\n");
+    //     return 0;
+    // });
     gfxd_vtx_callback(GFXDOverride::Vtx);
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
@@ -141,6 +144,8 @@ void DebugDisplayList(uint32_t w0, uint32_t w1){
     //gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
     gfxd_execute();
+
+    SPDLOG_INFO("{}", out);
 }
 
 void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -267,6 +272,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
     auto [_, segment] = Decompressor::AutoDecode(node, raw_buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
+
     // Validate this
     // reader.Seek(offset, LUS::SeekOffsetType::Start);
 
@@ -278,6 +284,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         auto w1 = reader.ReadUInt32();
 
         uint8_t opcode = w0 >> 24;
+
+        if(true){
+            DebugDisplayList(w0, w1);
+        }
 
         if(opcode == GBI(G_ENDDL)) {
             processing = false;
@@ -392,7 +402,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 break;
             }
 
-            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
+            const auto decl = Companion::Instance->GetNodeByAddr(w1);
+
+            bool overlaps = GFXDOverride::SearchVTXOverlaps(w1, !decl.has_value() ? nvtx : std::get<YAML::Node>(decl.value())["count"].as<uint32_t>());
+
+            if(!decl.has_value() && !overlaps){
                 SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating it", w1);
 
                 auto ptr = w1;

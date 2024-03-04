@@ -10,6 +10,8 @@
 
 namespace GFXDOverride {
 
+std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> gVtxOverlapMap;
+
 void Triangle2(const Gfx* gfx) {
     auto w0 = gfx->words.w0;
     auto w1 = gfx->words.w1;
@@ -47,14 +49,26 @@ void Quadrangle(const Gfx* gfx) {
 }
 
 int Vtx(uint32_t ptr, int32_t num) {
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto overlap = VtxOverlapping(ptr);
+    auto isOverlapping = overlap.has_value();
+    SPDLOG_INFO("Vtx: 0x{:X} Num: {} Overlapping: {}", ptr, num, isOverlapping);
+    auto dec = Companion::Instance->GetNodeByAddr(isOverlapping ? overlap.value().first : ptr);
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
         SPDLOG_INFO("Found Vtx: 0x{:X} Symbol: {}", ptr, symbol);
-        gfxd_puts(symbol.c_str());
-        return 1;
+        if(isOverlapping){
+            gfxd_puts("&");
+            gfxd_puts(symbol.c_str());
+            gfxd_puts("[");
+            gfxd_puts(std::to_string(overlap.value().second).c_str());
+            gfxd_puts("]");
+            return 1;
+        } else {
+            gfxd_puts(symbol.c_str());
+            return 1;
+        }
     }
 
     SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
@@ -119,5 +133,36 @@ int DisplayList(uint32_t ptr) {
 
     SPDLOG_WARN("Could not find display list to override at 0x{:X}", ptr);
     return 0;
+}
+
+bool SearchVTXOverlaps(uint32_t ptr, uint32_t num) {
+    for(auto& [key, value] : gVtxOverlapMap){
+        auto [addr, count] = value;
+        if(ptr > addr && ptr <= (addr + (count * sizeof(Vtx_t)))){
+            SPDLOG_INFO("Found Vtx Overlap: 0x{:X} Overlaps with 0x{:X} Count: {}", ptr, addr, count);
+            return true;
+        }
+    }
+
+    SPDLOG_INFO("Vtx Overlap Not Found: 0x{:X} Count: {}", ptr, num);
+
+    gVtxOverlapMap[ptr] = std::make_pair(ptr, num);
+    return false;
+}
+
+void ClearVtx() {
+    gVtxOverlapMap.clear();
+}
+
+std::optional<std::pair<uint32_t, uint32_t>> VtxOverlapping(uint32_t ptr) {
+    for(auto& [key, value] : gVtxOverlapMap){
+        auto [addr, count] = value;
+        if(ptr > addr && ptr < addr + (count * sizeof(Vtx_t))){
+            auto diff = ptr - addr;
+            return std::make_pair(addr, diff / sizeof(Vtx_t));
+        }
+    }
+
+    return std::nullopt;
 }
 }
