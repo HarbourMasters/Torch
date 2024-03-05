@@ -168,8 +168,9 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
             if(this->gConfig.exporterType == ExportType::Code) {
                 if(node["pad"]){
+                    auto filename = this->gCurrentDirectory.filename().string();
                     auto pad = GetSafeNode<uint32_t>(node, "pad");
-                    stream << "char pad_" << gCurrentPad++ << "[] = {\n" << tab;
+                    stream << "char pad_" << filename << "_" << gCurrentPad++ << "[] = {\n" << tab;
                     for(int i = 0; i < pad; i++){
                         stream << "0x00, ";
                     }
@@ -434,6 +435,7 @@ void Companion::Process() {
         root = YAML::LoadFile(yamlPath);
         this->gConfig.segment.local.clear();
         this->gFileHeader.clear();
+        this->gCurrentPad = 0;
 
         if(root[":config"]) {
             this->ParseCurrentFileConfig(root[":config"]);
