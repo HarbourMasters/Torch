@@ -17,6 +17,7 @@
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/mk64/WaypointFactory.h"
+#include "factories/sf64/ObjInitFactory.h"
 #include "factories/DisplayListOverrides.h"
 #include "spdlog/spdlog.h"
 #include "hj/sha1.h"
@@ -56,6 +57,9 @@ void Companion::Init(const ExportType type) {
 
     // MK64 specific
     this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
+
+    // SF64 specific
+    this->RegisterFactory("SF64:OBJ_INIT", std::make_shared<SF64::ObjInitFactory>());
 
     this->Process();
 }
@@ -276,6 +280,20 @@ void Companion::Process() {
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
+
+    if(cfg["enums"]){
+        auto enums = cfg["enums"];
+
+        for(auto entry = enums.begin(); entry != enums.end(); ++entry){
+            auto key = entry->first.as<std::string>();
+            auto values = entry->second;
+            std::vector<std::string> enumValues;
+            for(auto value = values.begin(); value != values.end(); ++value){
+                enumValues.push_back(value->as<std::string>());
+            }
+            this->gConfig.enums[key] = enumValues;
+        }
+    }
 
     this->gConfig.moddingPath = modding_path;
     switch (this->gConfig.exporterType) {
@@ -675,6 +693,19 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
     }
 
     return this->gFactories[type];
+}
+
+std::optional<std::string> Companion::GetEnumFromValue(const std::string& key, int id){
+    if(!this->gConfig.enums.contains(key)){
+        return std::nullopt;
+    }
+
+    auto enums = this->gConfig.enums[key];
+    if(id >= enums.size()){
+        return std::nullopt;
+    }
+
+    return enums[id];
 }
 
 std::optional<std::uint32_t> Companion::GetSegmentedAddr(const uint8_t segment) const {

@@ -47,6 +47,7 @@ struct TorchConfig {
     bool otrMode;
     bool debug;
     bool modding;
+    std::unordered_map<std::string, std::vector<std::string>> enums;
 };
 
 class Companion {
@@ -75,6 +76,7 @@ public:
     std::optional<std::uint32_t> GetSegmentedAddr(uint8_t segment) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
+    std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
 
     static std::string CalculateHash(const std::vector<uint8_t>& data);
     static void Pack(const std::string& folder, const std::string& output);

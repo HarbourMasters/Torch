@@ -27,5 +27,8 @@ enum class ResourceType {
 
     // MK64
     Waypoints = 0x46665666,   // TrackWaypoints
+
+    // SF64
+    ObjectInit = 0x4F424A49,  // OBJI
 };
 } // namespace LUS
