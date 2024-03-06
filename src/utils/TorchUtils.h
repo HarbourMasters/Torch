@@ -14,7 +14,7 @@ std::string to_hex(T number, const bool append0x = true) {
     if(append0x) {
         stream << "0x";
     }
-    stream << std::setfill ('0') << std::setw(sizeof(T)*2)
+    stream << std::setfill ('0')
            << std::hex << number;
 
     auto format = stream.str();
