@@ -203,11 +203,17 @@ void Companion::ParseModdingConfig() {
 
 void Companion::ParseCurrentFileConfig(YAML::Node node) {
     if(node["segments"]) {
-        for(auto segment = node["segments"].begin(); segment != node["segments"].end(); ++segment) {
-            const auto id = std::stoi(segment->first.as<std::string>().substr(3));
-            const auto replacement = segment->second.as<uint32_t>();
-            this->gConfig.segment.local[id] = replacement;
-            SPDLOG_DEBUG("Segment {} replaced with 0x{:X}", id, replacement);
+        auto segments = node["segments"];
+        for(size_t i = 0; i < segments.size(); i++) {
+            auto segment = segments[i];
+            if (segment.IsSequence() && segment.size() == 2) {
+                const auto id = segment[0].as<uint32_t>();
+                const auto replacement = segment[1].as<uint32_t>();
+                this->gConfig.segment.local[id] = replacement;
+                SPDLOG_DEBUG("Segment {} replaced with 0x{:X}", id, replacement);
+            } else {
+                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+            }
         }
     }
     if(node["header"]) {
@@ -381,8 +387,16 @@ void Companion::Process() {
         this->gCurrentFile = yamlPath;
 
         // Set compressed file offsets and compression type
-        if (auto number = root[":config"]["segment_number"]) {
-            gCurrentSegmentNumber = number.as<uint32_t>();
+        if (auto segments = root[":config"]["segments"]) {
+            if (segments.IsSequence() && segments.size() > 0) {
+                if (segments[0].IsSequence() && segments[0].size() == 2) {
+                    gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
+                    gCurrentFileOffset = segments[0][1].as<uint32_t>();
+                    gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+                } else {
+                    throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                }
+            }
         }
 
         for(auto asset = root.begin(); asset != root.end(); ++asset){
@@ -454,12 +468,15 @@ void Companion::Process() {
 
         // Set compressed file offsets and compression type
         if (auto segments = root[":config"]["segments"]) {
-            gCurrentFileOffset = segments.begin()->second.as<uint32_t>();
-            gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
-        }
-
-        if (auto number = root[":config"]["segment_number"]) {
-            gCurrentSegmentNumber = number.as<uint32_t>();
+            if (segments.IsSequence() && segments.size() > 0) {
+                if (segments[0].IsSequence() && segments[0].size() == 2) {
+                    gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
+                    gCurrentFileOffset = segments[0][1].as<uint32_t>();
+                    gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+                } else {
+                    throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                }
+            }
         }
 
         spdlog::set_pattern(regular);
