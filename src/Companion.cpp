@@ -55,6 +55,7 @@ void Companion::Init(const ExportType type) {
 
     // MK64 specific
     this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
+    this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::WaypointFactory>());
 
     this->Process();
 }
@@ -252,6 +253,41 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             default: break;
         }
     }
+}
+
+void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot) {
+    for (const auto &entry : std::filesystem::directory_iterator(dirPath)) {
+        if (entry.is_directory()) {
+            // Skip the root directory if specified
+            if (skipRoot && entry.path() == dirPath) {
+                continue;
+            }
+
+            // Recursive call for subdirectories
+            LoadYAMLRecursively(entry.path(), result, false);
+        } else if (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml") {
+            // Load YAML file and add it to the result vector
+            result.push_back(YAML::LoadFile(entry.path().string()));
+        }
+    }
+}
+
+void Companion::ProcessTables(YAML::Node& rom) {
+        auto dirs = rom["tables"].as<std::vector<std::string>>();
+
+        for (const auto &dir : dirs) {
+            std::vector<YAML::Node> configNodes;
+            LoadYAMLRecursively(dir, configNodes, true);
+            gCourseMetadata[dir] = configNodes;
+        }
+
+        // Now dirToNodesMap contains associations between directories and their loaded YAML files
+        // Example: Access YAML nodes for dirs[0]
+        for (const auto &node : gCourseMetadata[dirs[0]]) {
+            // Process each YAML node as needed
+            // Example: Print the content of each YAML file for dirs[0]
+            std::cout << node << std::endl;
+        }
 }
 
 void Companion::Process() {
