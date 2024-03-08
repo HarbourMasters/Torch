@@ -42,57 +42,42 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     }
 
     auto offset = node["offset"].as<uint32_t>();
-    auto fileOffset = Companion::Instance->GetFileOffset();
+
     CompressionType type = Companion::Instance->GetCurrCompressionType();
 
-    if (IS_SEGMENTED(offset)) {
-        fileOffset = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(offset));
+    switch(type) {
+        case CompressionType::MIO0:
+        {
+            auto fileOffset = TranslateAddr(offset, true);
+            offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
 
-        // Strips segment number from offsets for symbol naming.
-        if (Companion::Instance->GetCurrSegmentNumber() == SEGMENT_NUMBER(offset)) {
-            offset = SEGMENT_OFFSET(offset);
+            auto decoded = Decode(buffer, fileOffset, CompressionType::MIO0);
+            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
+            return {
+                .root = decoded,
+                .segment = { decoded->data + offset, size }
+            };
         }
+        case CompressionType::YAY0:
+            throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
+            break;
+        case CompressionType::YAZ0:
+            throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
+            break;
+        case CompressionType::None:
+        {
+            auto fileOffset = TranslateAddr(offset);
 
-        if (fileOffset.has_value()) {
-            type = Companion::Instance->GetCompressionType(buffer, fileOffset.value());
-        } else {
-            type = CompressionType::None;
-        }
-    }
+            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - fileOffset);
 
-    // Process compressed assets
-    if ( (type != CompressionType::None) && (fileOffset.has_value()) ) {
-        switch(type) {
-            case CompressionType::MIO0:
-            {
-                offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
-
-                auto decoded = Decode(buffer, fileOffset.value(), CompressionType::MIO0);
-                auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
-                return {
-                    .root = decoded,
-                    .segment = { decoded->data + offset, size }
-                };
-            }
-            case CompressionType::YAY0:
-                throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
-                break;
-            case CompressionType::YAZ0:
-                throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
-                break;
-            default:
-                SPDLOG_DEBUG("Unknown compression type for asset. If this is compressed data something has gone wrong. Else, all is fine.");
-
+            return {
+                .root = nullptr,
+                .segment = { buffer.data() + fileOffset, size }
+            };
         }
     }
 
-    offset = TranslateAddr(offset);
-
-    // Uncompressed
-    return {
-        .root = nullptr,
-        .segment = { buffer.data() + offset, node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - offset) }
-    };
+    throw std::runtime_error("Auto decode could not find a compression type nor uncompressed segment.\nThis is one of those issues that should never really happen.");
 }
 
 uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){

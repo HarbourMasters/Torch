@@ -204,6 +204,19 @@ void Companion::ParseModdingConfig() {
 void Companion::ParseCurrentFileConfig(YAML::Node node) {
     if(node["segments"]) {
         auto segments = node["segments"];
+
+        // Set global variables for segmented data
+        if (segments.IsSequence() && segments.size()) {
+            if (segments[0].IsSequence() && segments[0].size() == 2) {
+                gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
+                gCurrentFileOffset = segments[0][1].as<uint32_t>();
+                gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+            } else {
+                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+            }
+        }
+
+        // Set file offset for later use.
         for(size_t i = 0; i < segments.size(); i++) {
             auto segment = segments[i];
             if (segment.IsSequence() && segment.size() == 2) {
@@ -464,19 +477,6 @@ void Companion::Process() {
 
         if(root[":config"]) {
             this->ParseCurrentFileConfig(root[":config"]);
-        }
-
-        // Set compressed file offsets and compression type
-        if (auto segments = root[":config"]["segments"]) {
-            if (segments.IsSequence() && segments.size() > 0) {
-                if (segments[0].IsSequence() && segments[0].size() == 2) {
-                    gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
-                    gCurrentFileOffset = segments[0][1].as<uint32_t>();
-                    gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
-                } else {
-                    throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
-                }
-            }
         }
 
         spdlog::set_pattern(regular);

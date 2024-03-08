@@ -270,8 +270,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
     auto [_, segment] = Decompressor::AutoDecode(node, raw_buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
-    // Validate this
-    // reader.Seek(offset, LUS::SeekOffsetType::Start);
 
     std::vector<uint32_t> gfxs;
     auto processing = true;
