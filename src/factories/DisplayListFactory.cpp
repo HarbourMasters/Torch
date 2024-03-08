@@ -77,7 +77,7 @@ void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     char out[0xFFFF] = {0};
 
@@ -113,6 +113,9 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     GFXDSetGBIVersion();
 
     if (Companion::Instance->IsDebug()) {
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
 
@@ -267,8 +270,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
     auto [_, segment] = Decompressor::AutoDecode(node, raw_buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
-    // Validate this
-    // reader.Seek(offset, LUS::SeekOffsetType::Start);
 
     std::vector<uint32_t> gfxs;
     auto processing = true;
@@ -305,7 +306,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(ptr, false));
                 }
 
-                Decompressor::CopyCompression(node, dl);
                 dl["type"] = "GFX";
                 dl["offset"] = ptr;
                 dl["symbol"] = output;
@@ -363,7 +363,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     output = Companion::Instance->NormalizeAsset("lights1_" + Torch::to_hex(w1, false));
                 }
 
-                Decompressor::CopyCompression(node, light);
                 light["type"] = "lights";
                 light["offset"] = ptr;
                 light["symbol"] = output;
@@ -411,7 +410,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
                 }
 
-                Decompressor::CopyCompression(node, vtx);
                 vtx["type"] = "VTX";
                 vtx["offset"] = ptr;
                 vtx["count"] = nvtx;

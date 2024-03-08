@@ -204,11 +204,30 @@ void Companion::ParseModdingConfig() {
 
 void Companion::ParseCurrentFileConfig(YAML::Node node) {
     if(node["segments"]) {
-        for(auto segment = node["segments"].begin(); segment != node["segments"].end(); ++segment) {
-            const auto id = std::stoi(segment->first.as<std::string>().substr(3));
-            const auto replacement = segment->second.as<uint32_t>();
-            this->gConfig.segment.local[id] = replacement;
-            SPDLOG_DEBUG("Segment {} replaced with 0x{:X}", id, replacement);
+        auto segments = node["segments"];
+
+        // Set global variables for segmented data
+        if (segments.IsSequence() && segments.size()) {
+            if (segments[0].IsSequence() && segments[0].size() == 2) {
+                gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
+                gCurrentFileOffset = segments[0][1].as<uint32_t>();
+                gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+            } else {
+                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+            }
+        }
+
+        // Set file offset for later use.
+        for(size_t i = 0; i < segments.size(); i++) {
+            auto segment = segments[i];
+            if (segment.IsSequence() && segment.size() == 2) {
+                const auto id = segment[0].as<uint32_t>();
+                const auto replacement = segment[1].as<uint32_t>();
+                this->gConfig.segment.local[id] = replacement;
+                SPDLOG_DEBUG("Segment {} replaced with 0x{:X}", id, replacement);
+            } else {
+                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+            }
         }
     }
     if(node["header"]) {
@@ -381,6 +400,19 @@ void Companion::Process() {
         this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = yamlPath;
 
+        // Set compressed file offsets and compression type
+        if (auto segments = root[":config"]["segments"]) {
+            if (segments.IsSequence() && segments.size() > 0) {
+                if (segments[0].IsSequence() && segments[0].size() == 2) {
+                    gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
+                    gCurrentFileOffset = segments[0][1].as<uint32_t>();
+                    gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+                } else {
+                    throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                }
+            }
+        }
+
         for(auto asset = root.begin(); asset != root.end(); ++asset){
             auto node = asset->second;
             auto entryName = asset->first.as<std::string>();
@@ -406,15 +438,17 @@ void Companion::Process() {
                         continue;
                     }
 
-                    if(segment != -1) {
+                    if(segment != -1 || gCurrentSegmentNumber) {
                         assetNode["offset"] = (segment << 24) | assetNode["offset"].as<uint32_t>();
                     }
 
                     this->gAddrMap[this->gCurrentFile][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
                 }
             } else {
+
                 auto output = (this->gCurrentDirectory / entryName).string();
                 std::replace(output.begin(), output.end(), '\\', '/');
+
 
                 if(node["type"]){
                     const auto type = GetSafeNode<std::string>(node, "type");
@@ -425,6 +459,12 @@ void Companion::Process() {
 
                 if(!node["offset"])  {
                     continue;
+                }
+
+                if(gCurrentSegmentNumber) {
+                    if (IS_SEGMENTED(node["offset"].as<uint32_t>()) == false) {
+                        node["offset"] = (gCurrentSegmentNumber << 24) | node["offset"].as<uint32_t>();
+                    }
                 }
 
                 this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
@@ -454,6 +494,7 @@ void Companion::Process() {
                 continue;
             }
 
+
             // Parse horizontal assets
             if(assetNode["files"]){
                 auto segment = assetNode["segment"] ? assetNode["segment"].as<uint8_t>() : -1;
@@ -466,7 +507,7 @@ void Companion::Process() {
                         continue;
                     }
 
-                    if(segment != -1) {
+                    if(segment != -1 || gCurrentFileOffset) {
                         node["offset"] = (segment << 24) | node["offset"].as<uint32_t>();
                     }
 
@@ -476,6 +517,11 @@ void Companion::Process() {
                     this->ExtractNode(node, output, wrapper);
                 }
             } else {
+                if(gCurrentFileOffset) {
+                    if (IS_SEGMENTED(assetNode["offset"].as<uint32_t>()) == false) {
+                        assetNode["offset"] = (gCurrentSegmentNumber << 24) | assetNode["offset"].as<uint32_t>();
+                    }
+                }
                 std::string output = (this->gCurrentDirectory / entryName).string();
                 std::replace(output.begin(), output.end(), '\\', '/');
                 this->gConfig.segment.temporal.clear();
@@ -677,7 +723,30 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
     return this->gFactories[type];
 }
 
-std::optional<std::uint32_t> Companion::GetSegmentedAddr(const uint8_t segment) const {
+/**
+ * @param offset Rom offset of compressed mio0 file.
+ * @returns CompressionType
+ */
+CompressionType Companion::GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset) {
+    if (offset) {
+        LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
+        reader.SetEndianness(LUS::Endianness::Big);
+
+        const std::string header = reader.ReadCString();
+
+        // Check if a compressed header exists
+        if (header == "MIO0") {
+            return CompressionType::MIO0;
+        } else if (header == "YAY0") {
+            return CompressionType::YAY0;
+        } else if (header == "YAZ0") {
+            return CompressionType::YAZ0;
+        }
+    }
+    return CompressionType::None;
+}
+
+std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uint8_t segment) const {
 
     auto segments = this->gConfig.segment;
 

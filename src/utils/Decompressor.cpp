@@ -36,46 +36,53 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 }
 
 DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer, std::optional<size_t> manualSize) {
+
     if(!node["offset"]){
         throw std::runtime_error("Failed to find offset");
     }
 
-    auto offset = node["offset"].as<uint32_t>();    
+    auto offset = node["offset"].as<uint32_t>();
 
-    if(node["mio0"]){
-        const auto mio0 = node["mio0"].as<uint32_t>();
+    CompressionType type = Companion::Instance->GetCurrCompressionType();
 
-        offset = TranslateAddr(offset, IS_SEGMENTED(offset));        
+    switch(type) {
+        case CompressionType::MIO0:
+        {
+            auto fileOffset = TranslateAddr(offset, true);
+            offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
 
-        auto decoded = Decode(buffer, offset, CompressionType::MIO0);
-        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - mio0);
+            auto decoded = Decode(buffer, fileOffset, CompressionType::MIO0);
+            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
+            return {
+                .root = decoded,
+                .segment = { decoded->data + offset, size }
+            };
+        }
+        case CompressionType::YAY0:
+            throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
+            break;
+        case CompressionType::YAZ0:
+            throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
+            break;
+        case CompressionType::None:
+        {
+            auto fileOffset = TranslateAddr(offset);
 
-        return {
-            .root = decoded,
-            .segment = { decoded->data + mio0, size }
-        };
+            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - fileOffset);
+
+            return {
+                .root = nullptr,
+                .segment = { buffer.data() + fileOffset, size }
+            };
+        }
     }
 
-    if(node["yay0"]){
-        throw std::runtime_error("Yay0 not implemented");
-    }
-
-    if(node["yaz0"]){
-        throw std::runtime_error("Yaz0 not implemented");
-    }
-
-    offset = TranslateAddr(offset);
-
-    return {
-        .root = nullptr,
-        .segment = { buffer.data() + offset, node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - offset) }
-    };
+    throw std::runtime_error("Auto decode could not find a compression type nor uncompressed segment.\nThis is one of those issues that should never really happen.");
 }
 
 uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
     if(IS_SEGMENTED(addr)){
-        const auto segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(addr));
-
+        const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
         if(!segment.has_value()) {
             SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(addr));
             return 0;
@@ -89,7 +96,7 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
 
 bool Decompressor::IsSegmented(uint32_t addr) {
     if(IS_SEGMENTED(addr)){
-        const auto segment = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(addr));
+        const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
 
         if(!segment.has_value()) {
             SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(addr));
@@ -100,24 +107,6 @@ bool Decompressor::IsSegmented(uint32_t addr) {
     }
 
     return false;
-}
-
-bool Decompressor::IsCompressed(YAML::Node& node) {
-    return node["mio0"] || node["yay0"] || node["yaz0"];
-}
-
-void Decompressor::CopyCompression(YAML::Node& from, YAML::Node& to){
-    if(from["mio0"]){
-        to["mio0"] = from["mio0"];
-    }
-
-    if(from["yay0"]){
-        to["yay0"] = from["yay0"];
-    }
-
-    if(from["yaz0"]){
-        to["yaz0"] = from["yaz0"];
-    }
 }
 
 void Decompressor::ClearCache() {
