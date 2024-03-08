@@ -58,11 +58,14 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
     }
 
+    write << "};\n";
+
     if (Companion::Instance->IsDebug()) {
-        write << fourSpaceTab << "// 0x" << std::hex << std::uppercase << (offset + (16 * vtx.size())) << "\n";
+        write << "// " << vtx.size() << " vertices\n";
+        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(VtxRaw) * vtx.size())) << "\n";
     }
 
-    write << "}; // size = 0x" << std::hex << std::uppercase << (sizeof(VtxRaw) * vtx.size()) << "\n\n";
+    write << "\n";
 }
 
 void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

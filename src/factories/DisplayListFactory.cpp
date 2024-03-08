@@ -123,7 +123,20 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_execute();
 
     write << std::string(out);
-    write << "}; // size = 0x" << std::hex << std::uppercase << (sizeof(uint32_t) * cmds.size()) << "\n\n";
+    write << "};\n";
+
+    if (Companion::Instance->IsDebug()) {
+
+        std::string str = ((sizeof(uint32_t) * cmds.size()) / 8) == 1 ? " displaylist" : " displaylists";
+
+        write << "// " << std::hex << std::uppercase << ((sizeof(uint32_t) * cmds.size()) / 8) << str << "\n";
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
+        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(uint32_t) * (cmds.size()))) << "\n";
+    }
+
+    write << "\n";
 }
 
 void DebugDisplayList(uint32_t w0, uint32_t w1){
