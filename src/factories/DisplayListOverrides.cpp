@@ -138,7 +138,9 @@ int DisplayList(uint32_t ptr) {
 bool SearchVTXOverlaps(uint32_t ptr, uint32_t num) {
     for(auto& [key, value] : gVtxOverlapMap){
         auto [addr, count] = value;
-        if(ptr > addr && ptr <= (addr + (count * sizeof(Vtx_t)))){
+        auto end =  addr + (count * sizeof(Vtx_t));
+        
+        if(ptr > addr && ptr < end){
             SPDLOG_INFO("Found Vtx Overlap: 0x{:X} Overlaps with 0x{:X} Count: {}", ptr, addr, count);
             return true;
         }
