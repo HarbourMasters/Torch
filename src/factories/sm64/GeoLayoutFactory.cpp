@@ -16,7 +16,7 @@ uint64_t RegisterOrLoadGeoLayout(uint32_t ptr) {
     }
 
     SPDLOG_INFO("Addr to Geo Layout at 0x{:X} not in yaml, autogenerating it", ptr);
-    auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(ptr));
+    auto addr = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(ptr));
     if(!addr.has_value()) {
         SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(ptr));
         return 0;
@@ -56,7 +56,7 @@ uint64_t RegisterOrLoadDisplayList(uint32_t ptr) {
     }
 
     SPDLOG_INFO("Addr to Display List at 0x{:X} not in yaml, autogenerating it", ptr);
-    auto addr = Companion::Instance->GetSegmentedAddr(SEGMENT_NUMBER(ptr));
+    auto addr = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(ptr));
     if(!addr.has_value()) {
         SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(ptr));
         return 0;

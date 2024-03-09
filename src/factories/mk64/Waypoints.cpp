@@ -1,4 +1,4 @@
-#include "WaypointFactory.h"
+#include "Waypoints.h"
 
 #include "Companion.h"
 #include "utils/Decompressor.h"
@@ -57,7 +57,7 @@ void MK64::WaypointBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
     writer.Finish(write);
 }
 
-std::optional<std::shared_ptr<IParsedData>> MK64::WaypointFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> MK64::WaypointsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto count = GetSafeNode<size_t>(node, "count");
 
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
