@@ -9,6 +9,7 @@
 #include "n64/gbi-otr.h"
 
 #define C0(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
+#define ALIGN16(val) (((val) + 0xF) & ~0xF)
 
 std::unordered_map<std::string, uint8_t> gF3DTable = {
     { "G_VTX", 0x04 },
@@ -157,6 +158,28 @@ void DebugDisplayList(uint32_t w0, uint32_t w1){
     //gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
     gfxd_execute();
+}
+
+std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr){
+    auto decs = Companion::Instance->GetNodesByType("VTX");
+
+    if(!decs.has_value()){
+        return std::nullopt;
+    }
+
+    for(auto& dec : decs.value()){
+        auto [name, node] = dec;
+
+        auto offset = GetSafeNode<uint32_t>(node, "offset");
+        auto count = GetSafeNode<uint32_t>(node, "count");
+        auto end = ALIGN16((count * sizeof(Vtx_t)));
+
+        if(ptr > offset && ptr <= offset + end){
+            return std::make_tuple(GetSafeNode<std::string>(node, "symbol", name), node);
+        }
+    }
+
+    return std::nullopt;
 }
 
 void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -400,39 +423,57 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     nvtx = C0(10, 6);
                 break;
                 default:
-                    nvtx = (C0(0, 16)) / sizeof(Vtx);
+                    nvtx = (C0(0, 16)) / sizeof(Vtx_t);
                 break;
             }
+            const auto decl = Companion::Instance->GetNodeByAddr(w1);
 
-            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
-                SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating it", w1);
+            if(!decl.has_value()){
+                auto search = SearchVtx(w1);
 
-                auto ptr = w1;
-                auto rom = Companion::Instance->GetRomData();
-                auto factory = Companion::Instance->GetFactory("VTX")->get();
+                if(search.has_value()){
+                    auto [path, vtx] = search.value();
 
-                std::string output;
-                YAML::Node vtx;
+                    SPDLOG_INFO("Path: {}", path);
 
-                if(Decompressor::IsSegmented(w1)){
-                    SPDLOG_INFO("Found segmented vtx at 0x{:X}", ptr);
-                    ptr = w1;
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
+                    auto lOffset = GetSafeNode<uint32_t>(vtx, "offset");
+                    auto lCount = GetSafeNode<uint32_t>(vtx, "count");
+                    auto lSize = ALIGN16(lCount * sizeof(Vtx_t));
+
+                    if(w1 > lOffset && w1 <= lOffset + lSize){
+                        SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", w1, lOffset);
+                        GFXDOverride::RegisterVTXOverlap(w1, search.value());
+                    }
                 } else {
-                    SPDLOG_INFO("Found vtx at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
-                }
+                    SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating it", w1);
 
-                vtx["type"] = "VTX";
-                vtx["offset"] = ptr;
-                vtx["count"] = nvtx;
-                vtx["symbol"] = output;
-                auto result = factory->parse(rom, vtx);
-                if(result.has_value()){
-                    Companion::Instance->RegisterAsset(output, vtx);
+                    auto ptr = w1;
+                    auto rom = Companion::Instance->GetRomData();
+                    auto factory = Companion::Instance->GetFactory("VTX")->get();
+
+                    std::string output;
+                    YAML::Node vtx;
+
+                    if(Decompressor::IsSegmented(w1)){
+                        SPDLOG_INFO("Creating segmented vtx from 0x{:X}", ptr);
+                        ptr = w1;
+                        output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
+                    } else {
+                        SPDLOG_INFO("Creating vtx from 0x{:X}", ptr);
+                        output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
+                    }
+
+                    vtx["type"] = "VTX";
+                    vtx["offset"] = ptr;
+                    vtx["count"] = nvtx;
+                    vtx["symbol"] = output;
+                    auto result = factory->parse(rom, vtx);
+                    if(result.has_value()){
+                        Companion::Instance->RegisterAsset(output, vtx);
+                    }
                 }
             } else {
-                SPDLOG_WARN("Could not find vtx at 0x{:X}", w1);
+                SPDLOG_WARN("Found vtx at 0x{:X}", w1);
             }
         }
 

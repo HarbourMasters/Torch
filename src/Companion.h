@@ -76,6 +76,7 @@ public:
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
+    std::optional<std::vector<std::tuple<std::string, YAML::Node>>> GetNodesByType(const std::string& type);
 
     std::optional<std::uint32_t> GetFileOffset(void) const { return this->gCurrentFileOffset; };
     std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };

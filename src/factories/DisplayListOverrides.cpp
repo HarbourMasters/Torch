@@ -10,6 +10,8 @@
 
 namespace GFXDOverride {
 
+std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>> mVtxOverlaps;
+
 void Triangle2(const Gfx* gfx) {
     auto w0 = gfx->words.w0;
     auto w1 = gfx->words.w1;
@@ -47,6 +49,25 @@ void Quadrangle(const Gfx* gfx) {
 }
 
 int Vtx(uint32_t ptr, int32_t num) {
+    auto vtx = GetVtxOverlap(ptr);
+
+    if(vtx.has_value()){
+        auto symbol = std::get<0>(vtx.value());
+        auto node = std::get<1>(vtx.value());
+
+        auto offset = GetSafeNode<uint32_t>(node, "offset");
+        auto count = GetSafeNode<uint32_t>(node, "count");
+        auto idx = (ptr - offset) / sizeof(Vtx_t);
+
+        SPDLOG_INFO("Replaced Vtx Overlapped: 0x{:X} Symbol: {}", ptr, symbol);
+        gfxd_puts("&");
+        gfxd_puts(symbol.c_str());
+        gfxd_puts("[");
+        gfxd_puts(std::to_string(idx).c_str());
+        gfxd_puts("]");
+        return 1;
+    }
+
     auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
     if(dec.has_value()){
@@ -119,5 +140,25 @@ int DisplayList(uint32_t ptr) {
 
     SPDLOG_WARN("Could not find display list to override at 0x{:X}", ptr);
     return 0;
+}
+
+std::optional<std::tuple<std::string, YAML::Node>> GetVtxOverlap(uint32_t ptr){
+    if(mVtxOverlaps.contains(ptr)){
+        SPDLOG_INFO("Found overlap for ptr 0x{:X}", ptr);
+        return mVtxOverlaps[ptr];
+    }
+
+    SPDLOG_INFO("Failed to find overlap for ptr 0x{:X}", ptr);
+
+    return std::nullopt;
+}
+
+void RegisterVTXOverlap(uint32_t ptr, std::tuple<std::string, YAML::Node>& vtx){
+    mVtxOverlaps[ptr] = vtx;
+    SPDLOG_INFO("Register overlap for ptr 0x{:X}", ptr);
+}
+
+void ClearVtx(){
+    mVtxOverlaps.clear();
 }
 }

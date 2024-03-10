@@ -2,6 +2,7 @@
 
 #include "BaseFactory.h"
 #include "n64/CommandMacros.h"
+#include <tuple>
 
 class DListData : public IParsedData {
 public:
