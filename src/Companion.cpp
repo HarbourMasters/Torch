@@ -14,6 +14,7 @@
 #include "factories/VtxFactory.h"
 #include "factories/TextureFactory.h"
 #include "factories/DisplayListFactory.h"
+#include "factories/DisplayListOverrides.h"
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/mk64/CourseVtx.h"
@@ -482,6 +483,7 @@ void Companion::Process() {
         this->gConfig.segment.local.clear();
         this->gFileHeader.clear();
         this->gCurrentPad = 0;
+        GFXDOverride::ClearVtx();
 
         if(root[":config"]) {
             this->ParseCurrentFileConfig(root[":config"]);
@@ -781,6 +783,25 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(cons
     }
 
     return this->gAddrMap[this->gCurrentFile][addr];
+}
+
+std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNodesByType(const std::string& type){
+    std::vector<std::tuple<std::string, YAML::Node>> nodes;
+
+    if(!this->gAddrMap.contains(this->gCurrentFile)){
+        return nodes;
+    }
+
+    for(auto& [addr, tpl] : this->gAddrMap[this->gCurrentFile]){
+        auto [name, node] = tpl;
+        const auto n_type = GetSafeNode<std::string>(node, "type");
+        if(n_type == type){
+            nodes.push_back(tpl);
+        }
+    }
+
+    return nodes;
+
 }
 
 std::string Companion::NormalizeAsset(const std::string& name) const {
