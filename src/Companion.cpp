@@ -17,6 +17,7 @@
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/mk64/WaypointFactory.h"
+#include "factories/mk64/CourseMetadata.h"
 #include "spdlog/spdlog.h"
 #include "hj/sha1.h"
 
@@ -55,7 +56,7 @@ void Companion::Init(const ExportType type) {
 
     // MK64 specific
     this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointFactory>());
-    this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::WaypointFactory>());
+    this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
 
     this->Process();
 }
@@ -272,22 +273,27 @@ void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML
     }
 }
 
+/**
+ * Config yaml requires tables: [assets/courses]
+ * Activate the factory using a normal asset yaml with type and dir nodes.
+ */
 void Companion::ProcessTables(YAML::Node& rom) {
-        auto dirs = rom["tables"].as<std::vector<std::string>>();
+    auto dirs = rom["tables"].as<std::vector<std::string>>();
 
-        for (const auto &dir : dirs) {
-            std::vector<YAML::Node> configNodes;
-            LoadYAMLRecursively(dir, configNodes, true);
-            gCourseMetadata[dir] = configNodes;
-        }
+    for (const auto &dir : dirs) {
+        std::vector<YAML::Node> configNodes;
+        LoadYAMLRecursively(dir, configNodes, true);
+        gCourseMetadata[dir] = configNodes;
+    }
 
-        // Now dirToNodesMap contains associations between directories and their loaded YAML files
-        // Example: Access YAML nodes for dirs[0]
-        for (const auto &node : gCourseMetadata[dirs[0]]) {
-            // Process each YAML node as needed
-            // Example: Print the content of each YAML file for dirs[0]
+    // Write yaml data to console
+    if (this->IsDebug()) {
+        for (auto &node : gCourseMetadata[dirs[0]]) {
             std::cout << node << std::endl;
         }
+    }
+}
+
 }
 
 void Companion::Process() {
@@ -319,6 +325,10 @@ void Companion::Process() {
     if(!cfg) {
         SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
         return;
+    }
+
+    if (rom["tables"]) {
+        ProcessTables(rom);
     }
 
     if(rom["segments"]) {
