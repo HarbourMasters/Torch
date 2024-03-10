@@ -219,7 +219,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                 gCurrentFileOffset = segments[0][1].as<uint32_t>();
                 gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
             } else {
-                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
             }
         }
 
@@ -232,7 +232,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                 this->gConfig.segment.local[id] = replacement;
                 SPDLOG_DEBUG("Segment {} replaced with 0x{:X}", id, replacement);
             } else {
-                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
             }
         }
     }
@@ -414,7 +414,7 @@ void Companion::Process() {
                     gCurrentFileOffset = segments[0][1].as<uint32_t>();
                     gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
                 } else {
-                    throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <offset_of_compressed_file>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                    throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
                 }
             }
         }
