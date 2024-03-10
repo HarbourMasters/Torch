@@ -127,14 +127,13 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     write << "};\n";
 
     if (Companion::Instance->IsDebug()) {
+        const auto sz = (sizeof(uint32_t) * cmds.size());
 
-        std::string str = ((sizeof(uint32_t) * cmds.size()) / 8) == 1 ? " displaylist" : " displaylists";
-
-        write << "// " << std::hex << std::uppercase << ((sizeof(uint32_t) * cmds.size()) / 8) << str << "\n";
+        write << "// size: 0x" << std::hex << std::uppercase << (sz / 8) << "\n";
         if (IS_SEGMENTED(offset)) {
             offset = SEGMENT_OFFSET(offset);
         }
-        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(uint32_t) * (cmds.size()))) << "\n";
+        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
     }
 
     write << "\n";

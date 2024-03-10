@@ -6,6 +6,7 @@
 
 extern "C" {
 #include "n64graphics/n64graphics.h"
+#include "BaseFactory.h"
 }
 
 static const std::unordered_map <std::string, TextureFormat> gTextureFormats = {
@@ -95,6 +96,7 @@ void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
 void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto texture = std::static_pointer_cast<TextureData>(raw);
     auto data = texture->mBuffer;
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto format = GetSafeNode<std::string>(node, "format");
 
@@ -129,6 +131,13 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
     file.close();
 
+    if (Companion::Instance->IsDebug()) {
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
+        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+    }
+
     if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) {
         write << "u8 " << symbol << "[] = {\n";
     } else {
@@ -139,7 +148,19 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
     }
     write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << (*replacement) << ".inc.c\"\n";
-    write << "};\n\n";
+    write << "};\n";
+
+    if (Companion::Instance->IsDebug()) {
+        const auto sz = data.size();
+
+        write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
+        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
+    }
+
+    write << "\n";
 }
 
 void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
