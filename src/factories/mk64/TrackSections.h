@@ -4,33 +4,33 @@
 
 namespace MK64 {
 
-    struct TrackWaypoint {
-        int16_t posX;
-        int16_t posY;
-        int16_t posZ;
-        uint16_t trackSegment;
+    struct TrackSections {
+        uint32_t addr;
+        int8_t surfaceType;
+        int8_t sectionId;
+        uint16_t flags;
     };
 
-    class WaypointData : public IParsedData {
+    class TrackSectionsData : public IParsedData {
     public:
-        std::vector<TrackWaypoint> mWaypoints;
+        std::vector<TrackSections> mSecs;
 
-        explicit WaypointData(std::vector<TrackWaypoint> waypoints) : mWaypoints(waypoints) {}
+        explicit TrackSectionsData(std::vector<TrackSections> sections) : mSecs(sections) {}
     };
 
-    class WaypointHeaderExporter : public BaseExporter {
+    class TrackSectionsHeaderExporter : public BaseExporter {
         void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
     };
 
-    class WaypointBinaryExporter : public BaseExporter {
+    class TrackSectionsBinaryExporter : public BaseExporter {
         void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
     };
 
-    class WaypointCodeExporter : public BaseExporter {
+    class TrackSectionsCodeExporter : public BaseExporter {
         void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
     };
 
-    class WaypointFactory : public BaseFactory {
+    class TrackSectionsFactory : public BaseFactory {
     public:
         std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
         std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override {
@@ -38,11 +38,12 @@ namespace MK64 {
         }
         inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
             return {
-                REGISTER(Code, WaypointCodeExporter)
-                REGISTER(Header, WaypointHeaderExporter)
-                REGISTER(Binary, WaypointBinaryExporter)
+                REGISTER(Code, TrackSectionsCodeExporter)
+                REGISTER(Header, TrackSectionsHeaderExporter)
+                REGISTER(Binary, TrackSectionsBinaryExporter)
             };
         }
         bool SupportModdedAssets() override { return false; }
     };
+
 }

@@ -1,7 +1,10 @@
 #pragma once
 
-#include <cstdint>
 #include "DisplayListFactory.h"
+#include <yaml-cpp/yaml.h>
+#include <cstdint>
+#include <tuple>
+#include <string>
 
 typedef struct {
     uint32_t w0;
@@ -41,4 +44,7 @@ int  Texture(uint32_t timg, int32_t fmt, int32_t siz, int32_t width, int32_t hei
 int  Palette(uint32_t tlut, int32_t idx, int32_t count);
 int  Light(uint32_t lightsn, int32_t count);
 int  DisplayList(uint32_t dl);
+void RegisterVTXOverlap(uint32_t ptr, std::tuple<std::string, YAML::Node>& vtx);
+std::optional<std::tuple<std::string, YAML::Node>> GetVtxOverlap(uint32_t ptr);
+void ClearVtx();
 };
