@@ -332,6 +332,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 dl["type"] = "GFX";
                 dl["offset"] = ptr;
                 dl["symbol"] = output;
+                dl["autogen"] = true;
 
                 auto result = factory->parse(rom, dl);
 
@@ -389,6 +390,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 light["type"] = "lights";
                 light["offset"] = ptr;
                 light["symbol"] = output;
+                light["autogen"] = true;
                 auto result = factory->parse(rom, light);
                 if(result.has_value()){
                     Companion::Instance->RegisterAsset(output, light);
@@ -454,6 +456,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     vtx["offset"] = ptr;
                     vtx["count"] = nvtx;
                     vtx["symbol"] = output;
+                    vtx["autogen"] = true;
                     auto result = factory->parse(rom, vtx);
                     if(result.has_value()){
                         Companion::Instance->RegisterAsset(output, vtx);
