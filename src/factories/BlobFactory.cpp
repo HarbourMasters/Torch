@@ -1,10 +1,19 @@
 #include "BlobFactory.h"
+#include "Companion.h"
 #include "utils/Decompressor.h"
 #include <iomanip>
 
 void BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
+
+    if (Companion::Instance->IsDebug()) {
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
+        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+    }
 
     if(node["ctype"]) {
         write << node["ctype"].as<std::string>() << " " << symbol << "[] = {\n" << tab;
@@ -19,7 +28,19 @@ void BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> 
 
         write << "0x" << std::hex << std::setw(2) << std::setfill('0') << (int) data[i] << ", ";
     }
-    write << "\n};\n\n";
+    write << "\n};\n";
+
+    if (Companion::Instance->IsDebug()) {
+        const auto sz = data.size();
+
+        write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
+        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
+    }
+
+    write << "\n";
 }
 
 void BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
