@@ -64,7 +64,7 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
     write << "};\n";
 
     if (Companion::Instance->IsDebug()) {
-        write << "// count: " << vtx.size() << "\n";
+        write << "// count: " << vtx.size() << " Vtxs\n";
         write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(VtxRaw) * vtx.size())) << "\n";
     }
 

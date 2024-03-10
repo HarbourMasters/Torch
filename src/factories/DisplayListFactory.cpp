@@ -129,7 +129,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     if (Companion::Instance->IsDebug()) {
         const auto sz = (sizeof(uint32_t) * cmds.size());
 
-        write << "// size: 0x" << std::hex << std::uppercase << (sz / 8) << "\n";
+        write << "// count: " << (sz / 8) << " DLists\n";
         if (IS_SEGMENTED(offset)) {
             offset = SEGMENT_OFFSET(offset);
         }
