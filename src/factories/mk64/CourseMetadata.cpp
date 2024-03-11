@@ -32,11 +32,9 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     });
 
     std::ofstream file;
+    std::string outDir = "assets/course_data/";
 
-    // // Sort metadata array by course id
-    // Companion::Instance->SortCourseMetadata();
-
-    file.open("src/course_data/gCourseNames.inc.c");
+    file.open(outDir+"gCourseNames.inc.c");
     if (file.is_open()) {
        // file << "char *gCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -45,10 +43,12 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             file << '"' << m.name << "\", ";
         }
        // file << "\n};\n\n";
+        file.close();
+    } else if (file.fail()) {
+        throw std::runtime_error("Course metadata output folder is likely bad or the file is in-use");
     }
-    file.close();
 
-    file.open("src/course_data/gDebugCourseNames.inc.c");
+    file.open(outDir+"gDebugCourseNames.inc.c");
     if (file.is_open()) {
        // file << "char *gDebugCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -58,7 +58,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gCupSelectionByCourseId.inc.c");
+    file.open(outDir+"gCupSelectionByCourseId.inc.c");
     if (file.is_open()) {
         //file << "char *gCupSelectionByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -68,7 +68,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gPerCupIndexByCourseId.inc.c");
+    file.open(outDir+"gPerCupIndexByCourseId.inc.c");
     if (file.is_open()) {
         //file << "const u8 gPerCupIndexByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -78,7 +78,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gWaypointWidth.inc.c");
+    file.open(outDir+"gWaypointWidth.inc.c");
     if (file.is_open()) {
        // file << "f32 gWaypointWidth[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -88,7 +88,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gWaypointWidth2.inc.c");
+    file.open(outDir+"gWaypointWidth2.inc.c");
     if (file.is_open()) {
         file << "f32 gWaypointWidth2[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -98,7 +98,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/D_800DCBB4.inc.c");
+    file.open(outDir+"D_800DCBB4.inc.c");
     if (file.is_open()) {
         //file << "uintptr_t *D_800DCBB4[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -108,7 +108,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gCPUSteeringSensitivity.inc.c");
+    file.open(outDir+"gCPUSteeringSensitivity.inc.c");
     if (file.is_open()) {
         //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -118,7 +118,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gCourseBombKartSpawns.inc.c");
+    file.open(outDir+"gCourseBombKartSpawns.inc.c");
     if (file.is_open()) {
         //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -138,7 +138,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gCoursePathSizes.inc.c");
+    file.open(outDir+"gCoursePathSizes.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -148,23 +148,23 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 
-    file.open("src/course_data/D_0D009418.inc.c");
+    file.open(outDir+"D_0D009418.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
             file << "{ ";
-            for (const auto& size : m.D_0D009418) {
+            for (const auto size : m.D_0D009418) {
                 file << size << ", ";
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 
-    file.open("src/course_data/D_0D009568.inc.c");
+    file.open(outDir+"D_0D009568.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -177,7 +177,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/D_0D0096B8.inc.c");
+    file.open(outDir+"D_0D0096B8.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -190,7 +190,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/D_0D009808.inc.c");
+    file.open(outDir+"D_0D009808.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -203,7 +203,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gCoursePathTable.inc.c");
+    file.open(outDir+"gCoursePathTable.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -216,7 +216,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/gCoursePathTableUnknown.inc.c");
+    file.open(outDir+"gCoursePathTableUnknown.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -229,7 +229,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/sSkyColors.inc.c");
+    file.open(outDir+"sSkyColors.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -242,7 +242,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
     file.close();
 
-    file.open("src/course_data/sSkyColors2.inc.c");
+    file.open(outDir+"sSkyColors2.inc.c");
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -312,19 +312,19 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         }
 
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009418")) {
-            data.D_0D009418.push_back(value.as<float>());
+            data.D_0D009418.push_back(value.as<std::string>());
         }
 
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009568")) {
-            data.D_0D009568.push_back(value.as<float>());
+            data.D_0D009568.push_back(value.as<std::string>());
         }
 
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D0096B8")) {
-            data.D_0D0096B8.push_back(value.as<float>());
+            data.D_0D0096B8.push_back(value.as<std::string>());
         }
 
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009808")) {
-            data.D_0D009808.push_back(value.as<float>());
+            data.D_0D009808.push_back(value.as<std::string>());
         }
 
         for (const auto& str : GetSafeNode<YAML::Node>(metadata, "path_table")) {
