@@ -4,8 +4,8 @@
 #include "Companion.h"
 #include "utils/Decompressor.h"
 
-#define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
-#define HEX(x) std::hex << std::setfill(' ') << std::setw(6) << x
+#define NUM(x) std::dec << std::setfill(' ') << std::setw(7) << x
+#define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
 
 SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<int16_t> frameData, uint32_t keyOffset, std::vector<JointKey> jointKeys): mFrameCount(frameCount), mLimbCount(limbCount), mDataOffset(dataOffset), mFrameData(std::move(frameData)), mKeyOffset(keyOffset), mJointKeys(std::move(jointKeys)) {
     if((mDataOffset + sizeof(mFrameData) > mKeyOffset) && (mKeyOffset + sizeof(mJointKeys) > mDataOffset)) {
@@ -14,10 +14,10 @@ SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOff
     if(mJointKeys.size() != limbCount + 1) {
         throw std::runtime_error("Joint Key count does not match Limb count");
     }
-    if(frameData[0] != 0){
+    if(frameData.size() > 0 && frameData[0] != 0){
         SPDLOG_INFO("Found non-zero frame data on first frame");
     }
-    if(jointKeys[0].keys[1] != 0){
+    if(jointKeys.size() > 0 && jointKeys[0].keys[1] != 0){
         SPDLOG_INFO("Found non-zero joint key on first frame");
     }
 }
@@ -70,7 +70,7 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
         if((i % 12) == 0) {
             write << "\n" << fourSpaceTab;
         }
-        write << NUM(anim->mFrameData[i]) << ", ";
+        write << NUM(anim->mFrameData[i]) << ",";
     }
     write << "\n};\n\n";
 
@@ -78,14 +78,14 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
     for(auto joint : anim->mJointKeys) {
         write << fourSpaceTab << "{";
         for(int i = 0; i < 6; i++) {
-            write << NUM(joint.keys[i]) << ", ";
+            write << NUM_JOINT(joint.keys[i]) << ", ";
         }
         write << "},\n";
     }
     write << "};\n\n";
 
     write << "Animation " << symbol << " = {\n";
-    write << fourSpaceTab << NUM(anim->mFrameCount) << ", " << NUM(anim->mLimbCount) << ", " << dataName << ", " << keyName << ",\n";
+    write << fourSpaceTab << anim->mFrameCount << ", " << anim->mLimbCount << ", " << dataName << ", " << keyName << ",\n";
     write << "};\n\n";
 }
 
