@@ -14,6 +14,12 @@ SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOff
     if(mJointKeys.size() != limbCount + 1) {
         throw std::runtime_error("Joint Key count does not match Limb count");
     }
+    if(frameData[0] != 0){
+        SPDLOG_INFO("Found non-zero frame data on first frame");
+    }
+    if(jointKeys[0].keys[1] != 0){
+        SPDLOG_INFO("Found non-zero joint key on first frame");
+    }
 }
 
 void SF64::AnimHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
