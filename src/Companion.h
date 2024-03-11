@@ -28,10 +28,22 @@ enum class GBIMinorVersion {
     SM64
 };
 
+enum class TableMode {
+    Reference,
+    Append
+};
+
 struct SegmentConfig {
     std::unordered_map<uint32_t, uint32_t> global;
     std::unordered_map<uint32_t, uint32_t> local;
     std::unordered_map<uint32_t, uint32_t> temporal;
+};
+
+struct Table {
+    std::string name;
+    uint32_t start;
+    uint32_t end;
+    TableMode mode;
 };
 
 struct GBIConfig {
@@ -82,6 +94,7 @@ public:
     std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
+    std::optional<Table> SearchTable(uint32_t addr);
 
     static std::string CalculateHash(const std::vector<uint8_t>& data);
     static void Pack(const std::string& folder, const std::string& output);
@@ -102,15 +115,16 @@ private:
     std::string gCurrentFile;
     std::string gFileHeader;
     uint32_t gCurrentPad = 0;
+    uint32_t gCurrentFileOffset;
+    uint32_t gCurrentSegmentNumber;
+    CompressionType gCurrentCompressionType;
+    std::vector<Table> gTables;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
-    uint32_t gCurrentFileOffset;
-    uint32_t gCurrentSegmentNumber;
-    CompressionType gCurrentCompressionType;
 
     void ParseCurrentFileConfig(YAML::Node node);
     void ParseModdingConfig();

@@ -9,6 +9,8 @@ extern "C" {
 #include "BaseFactory.h"
 }
 
+bool isTable = false;
+
 static const std::unordered_map <std::string, TextureFormat> gTextureFormats = {
     { "RGBA16", { TextureType::RGBA16bpp, 16 } },
     { "RGBA32", { TextureType::RGBA32bpp, 32 } },
@@ -138,29 +140,44 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
 
-    if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) {
-        write << "u8 " << symbol << "[] = {\n";
+    const auto searchTable = Companion::Instance->SearchTable(offset);
+
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode] = searchTable.value();
+
+        if(mode != TableMode::Append){
+            throw std::runtime_error("Reference mode is not supported for now");
+        }
+
+        if(start == offset){
+            write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << name << "[][0x" << texture->mBuffer.size() << std::hex << std::uppercase << "] = {\n";
+        }
+
+        write << tab << "{\n";
+        write << tab << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+        write << tab << "},\n";
+
+        if(end == offset){
+            write << "};\n";
+        }
     } else {
-        if(node["ctype"]) {
-            write << node["ctype"].as<std::string>() << " " << symbol << "[] = {\n";
-        } else {
-            write << "static const u8 " << symbol << "[] = {\n";
+        write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << symbol  << "[] = {\n";
+
+        write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+        write << "};\n";
+
+        if (Companion::Instance->IsDebug()) {
+            const auto sz = data.size();
+
+            write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
+            if (IS_SEGMENTED(offset)) {
+                offset = SEGMENT_OFFSET(offset);
+            }
+            write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
         }
+
+        write << "\n";
     }
-    write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << (*replacement) << ".inc.c\"\n";
-    write << "};\n";
-
-    if (Companion::Instance->IsDebug()) {
-        const auto sz = data.size();
-
-        write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
-    }
-
-    write << "\n";
 }
 
 void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {

@@ -245,6 +245,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             }
         }
     }
+
     if(node["header"]) {
         auto header = node["header"];
         switch (this->gConfig.exporterType) {
@@ -265,6 +266,18 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                 break;
             }
             default: break;
+        }
+    }
+
+    if(node["tables"]){
+        for(auto table = node["tables"].begin(); table != node["tables"].end(); ++table){
+            auto name = table->first.as<std::string>();
+            auto range = table->second["range"].as<std::vector<uint32_t>>();
+            auto start = gCurrentSegmentNumber ? gCurrentSegmentNumber << 24 | range[0] : range[0];
+            auto end = gCurrentSegmentNumber ? gCurrentSegmentNumber << 24 | range[1] : range[1];
+            auto mode = GetSafeNode<std::string>(table->second, "mode", "APPEND");
+            TableMode tMode = mode == "REFERENCE" ? TableMode::Reference : TableMode::Append;
+            this->gTables.push_back({name, start, end, tMode});
         }
     }
 }
@@ -491,6 +504,7 @@ void Companion::Process() {
         this->gConfig.segment.local.clear();
         this->gFileHeader.clear();
         this->gCurrentPad = 0;
+        this->gTables.clear();
         GFXDOverride::ClearVtx();
 
         if(root[":config"]) {
@@ -760,6 +774,16 @@ CompressionType Companion::GetCompressionType(std::vector<uint8_t>& buffer, cons
         }
     }
     return CompressionType::None;
+}
+
+std::optional<Table> Companion::SearchTable(uint32_t addr){
+    for(auto& table : this->gTables){
+        if(addr >= table.start || addr <= table.end){
+            return table;
+        }
+    }
+
+    return std::nullopt;
 }
 
 std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uint8_t segment) const {

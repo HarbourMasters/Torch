@@ -41,6 +41,14 @@ std::vector<std::string> gCharCodeEnums = {
     "_7", "_8", "_9", "APS", "LPR", "RPR", "CLN", "PIP",
 };
 
+std::unordered_map<std::string, std::string> ASCIITable = {
+    { "CLF", "(C<)" }, { "CUP", "(C^)" }, { "CRT", "(C>)" }, { "CDN", "(Cv)" },
+    { "AUP", "^" }, { "ALF", "<" }, { "ADN", "v" }, { "ART", ">" },
+    { "EXM", "!" }, { "QST", "?" }, { "DSH", "-" }, { "CMA", "," },
+    { "PRD", "." }, { "APS", "'" }, { "LPR", "(" }, { "RPR", ")" },
+    { "CLN", ":" }, { "PIP", "| " }
+};
+
 void SF64::MessageHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
@@ -53,76 +61,15 @@ void SF64::MessageHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
 }
 
 void TextToStream(std::ostream& stream, int charCode) {
-    switch (charCode) {
-        case NEWLINE_CODE:
-            stream << "\n// ";
-            break;
-        // case CLF:
-        //     stream << "(C<)";
-        //     break;
-        // case CUP:
-        //     stream << "(C^)";
-        //     break;
-        // case CRT:
-        //     stream << "(C>)";
-        //     break;
-        // case CDN:
-        //     stream << "(Cv)";
-        //     break;
-        // case AUP:
-        //     stream << "^";
-        //     break;
-        // case ALF:
-        //     stream << "<";
-        //     break;
-        // case ADN:
-        //     stream << "v";
-        //     break;
-        // case ART:
-        //     stream << ">";
-        //     break;
-        // case EXM:
-        //     stream << "!";
-        //     break;
-        // case QST:
-        //     stream << "?";
-        //     break;
-        // case DSH:
-        //     stream << "-";
-        //     break;
-        // case CMA:
-        //     stream << ",";
-        //     break;
-        // case PRD:
-        //     stream << ".";
-        //     break;
-        // case APS:
-        //     stream << "'";
-        //     break;
-        // case LPR:
-        //     stream << "(";
-        //     break;
-        // case RPR:
-        //     stream << ")";
-        //     break;
-        // case CLN:
-        //     stream << ":";
-        //     break;
-        // case PIP:
-        //     stream << "|";
-        //     break;
-        // case SPC:
-        //     stream << " ";
-        //     break;
-        default:
-            if(charCode > 23 && charCode < 50) {
-                stream << static_cast<char>('A' + (charCode - 24));
-            } else if(charCode > 49 && charCode < 58) {
-                stream << static_cast<char>('a' + (charCode - 58));
-            } else if(charCode > 80 && charCode < 90) {
-                stream << static_cast<char>('0' + (charCode - 81));
-            }
-            break;
+    std::string enumCode = gCharCodeEnums[charCode];
+
+    if(enumCode.starts_with("_")){
+        stream << enumCode.substr(1);
+        return;
+    }
+
+    if(ASCIITable.contains(enumCode)){
+        stream << ASCIITable[enumCode];
     }
 }
 
@@ -142,9 +89,30 @@ void SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
 
+    write << "// ";
+    bool lastWasSpace = false;
     for (int i = 0; i < message.size(); ++i) {
-        TextToStream(write, message[i]);
+        const auto charCode = message[i];
+        std::string enumCode = gCharCodeEnums[charCode];
+
+        if(enumCode.find("SP") != std::string::npos){
+            if (lastWasSpace){
+                continue;
+            }
+            if (!enumCode.empty() && enumCode.back() != ' ') {
+                write << " ";
+                lastWasSpace = true;
+            }
+        } else {
+            lastWasSpace = false;
+        }
+
+        TextToStream(write,charCode );
+        if(message[i] == NEWLINE_CODE && i != message.size() - 2){
+            write << "\n// ";
+        }
     }
+    write << "\n";
 
     write << "u16 " << symbol << "[] = {\n" << fourSpaceTab;
     for (int i = 0; i < message.size(); ++i) {
