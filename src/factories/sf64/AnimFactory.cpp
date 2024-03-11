@@ -11,7 +11,7 @@ SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOff
     if((mDataOffset + sizeof(mFrameData) > mKeyOffset) && (mKeyOffset + sizeof(mJointKeys) > mDataOffset)) {
         throw std::runtime_error("Data and Key offsets overlap");
     }
-    if(mJointKeys.size() != limbCount) {
+    if(mJointKeys.size() != limbCount + 1) {
         throw std::runtime_error("Joint Key count does not match Limb count");
     }
 }
