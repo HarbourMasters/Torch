@@ -9,10 +9,10 @@
 
 SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<int16_t> frameData, uint32_t keyOffset, std::vector<JointKey> jointKeys): mFrameCount(frameCount), mLimbCount(limbCount), mDataOffset(dataOffset), mFrameData(std::move(frameData)), mKeyOffset(keyOffset), mJointKeys(std::move(jointKeys)) {
     if((mDataOffset + sizeof(mFrameData) > mKeyOffset) && (mKeyOffset + sizeof(mJointKeys) > mDataOffset)) {
-        throw std::runtime_error("Data and Key offsets overlap");
+        SPDLOG_ERROR("Data and Key offsets overlap");
     }
     if(mJointKeys.size() != limbCount + 1) {
-        throw std::runtime_error("Joint Key count does not match Limb count");
+        SPDLOG_ERROR("Joint Key count does not match Limb count");        
     }
     if(frameData.size() > 0 && frameData[0] != 0){
         SPDLOG_INFO("Found non-zero frame data on first frame");
