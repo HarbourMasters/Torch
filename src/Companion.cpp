@@ -63,6 +63,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:TRACKSECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
     this->RegisterFactory("MK64:SPAWNDATA", std::make_shared<MK64::SpawnDataFactory>());
 
+    // SF64 specific
+    this->RegisterFactory("ANIM", std::make_shared<AnimFactory>());
+
     this->Process();
 }
 
