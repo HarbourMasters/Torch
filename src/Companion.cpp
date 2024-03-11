@@ -2,6 +2,7 @@
 
 #include "storm/SWrapper.h"
 #include "utils/Decompressor.h"
+#include "factories/sf64/SkeletonFactory.h"
 #include "factories/sf64/AnimFactory.h"
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/DialogFactory.h"
@@ -68,6 +69,7 @@ void Companion::Init(const ExportType type) {
 
     // SF64 specific
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
+    this->RegisterFactory("SF64:SKELETON", std::make_shared<SF64::SkeletonFactory>());
     this->RegisterFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>());
     this->RegisterFactory("SF64:MSG_TABLE", std::make_shared<SF64::MessageLookupFactory>());
 
