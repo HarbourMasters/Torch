@@ -115,7 +115,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
     YAML::Node keyNode;
     std::vector<SF64::JointKey> jointKeys;
     std::vector<int16_t> frameData;
-    auto dataCount = 0;
+    auto dataCount = 1;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0xC);
     LUS::BinaryReader reader(segment.data, segment.size);
 
@@ -141,13 +141,13 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
         auto z = keyReader.ReadUInt16();
 
         jointKeys.push_back(SF64::JointKey({xLen, x, yLen, y, zLen, z}));
-        if(i == 0 || x != 0) {
+        if(x != 0) {
             dataCount += (xLen < 1) ? 1 : (xLen > frameCount) ? frameCount : xLen;
         }
-        if(i == 0 || y != 0) {
+        if(y != 0) {
             dataCount += (yLen < 1) ? 1 : (yLen > frameCount) ? frameCount : yLen;
         }
-        if(i == 0 || z != 0) {
+        if(z != 0) {
             dataCount += (zLen < 1) ? 1 : (zLen > frameCount) ? frameCount : zLen;
         }
     }
