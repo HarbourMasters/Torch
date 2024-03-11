@@ -301,8 +301,6 @@ void Companion::ProcessTables(YAML::Node& rom) {
     }
 }
 
-}
-
 void Companion::Process() {
 
     if(!fs::exists("config.yml")) {
