@@ -282,7 +282,7 @@ void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML
 
 /**
  * Config yaml requires tables: [assets/courses]
- * Activate the factory using a normal asset yaml with type and dir nodes.
+ * Activate the factory using a normal asset yaml with type, input_directory, and output_directory nodes.
  */
 void Companion::ProcessTables(YAML::Node& rom) {
     auto dirs = rom["tables"].as<std::vector<std::string>>();
