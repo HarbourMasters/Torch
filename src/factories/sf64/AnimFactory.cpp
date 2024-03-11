@@ -6,14 +6,13 @@
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define HEX(x) std::hex << std::setfill(' ') << std::setw(6) << x
-// #define COL(c) std::dec << std::setfill(' ') << std::setw(3) << c
 
 SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<int16_t> frameData, uint32_t keyOffset, std::vector<JointKey> jointKeys): mFrameCount(frameCount), mLimbCount(limbCount), mDataOffset(dataOffset), mFrameData(std::move(frameData)), mKeyOffset(keyOffset), mJointKeys(std::move(jointKeys)) {
     if((mDataOffset + sizeof(mFrameData) > mKeyOffset) && (mKeyOffset + sizeof(mJointKeys) > mDataOffset)) {
-        // error 1
+        throw std::runtime_error("Data and Key offsets overlap");
     }
     if(mJointKeys.size() != limbCount) {
-        // error 2
+        throw std::runtime_error("Joint Key count does not match Limb count");
     }
 }
 
@@ -29,18 +28,15 @@ void SF64::AnimHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPars
 }
 
 void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    // auto limbCount = std::static_pointer_cast<AnimData>(raw)->mLimbCount;
-    // auto frameCount = std::static_pointer_cast<AnimData>(raw)->mFrameCount;
-    // auto jointKeys = std::static_pointer_cast<AnimData>(raw)->mJointKeys;
-    // auto frameData = std::static_pointer_cast<AnimData>(raw)->mFrameData;
     auto anim = std::static_pointer_cast<SF64::AnimData>(raw);
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    // auto dataName = GetSafeNode(node, "data_symbol", entryName);
-    // auto keyName = GetSafeNode(node, "key_symbol", entryName);
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+
     auto dataOffset = anim->mDataOffset;
     auto keyOffset = anim->mKeyOffset;
     auto dataSegment = 0;
     auto keySegment = 0;
+
     std::ostringstream dataDefaultName;
     std::ostringstream keyDefaultName;
 
@@ -48,6 +44,7 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
         dataSegment = SEGMENT_NUMBER(dataOffset);
         dataOffset = SEGMENT_OFFSET(dataOffset);
     }
+
     dataDefaultName << symbol << "_frame_data_" << std::hex << dataOffset;
     auto dataName = GetSafeNode(node, "data_symbol", dataDefaultName.str());
 
@@ -57,27 +54,19 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
     }
     keyDefaultName << symbol << "_joint_key_" << std::hex << keyOffset;
     auto keyName = GetSafeNode(node, "data_symbol", keyDefaultName.str());
-    
 
-    // if (Companion::Instance->IsDebug()) {
-    //     write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    // }
+    if (Companion::Instance->IsDebug()) {
+        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+    }
 
     write << "u16 " << dataName << "[] = {";
     for(int i = 0; i < anim->mFrameData.size(); i++) {
-        
         if((i % 12) == 0) {
             write << "\n" << fourSpaceTab;
         }
-        // if(i < 3) {
-            write << NUM(anim->mFrameData[i]) << ", ";
-        // } else {
-        //     write << HEX(anim->mFrameData[i]) << ", ";
-        // }
+        write << NUM(anim->mFrameData[i]) << ", ";
     }
-    write << "\n};\n";
-
-    write << "\n";
+    write << "\n};\n\n";
 
     write << "JointKey " << keyName << "[] = {\n";
     for(auto joint : anim->mJointKeys) {
@@ -87,32 +76,23 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
         }
         write << "},\n";
     }
-    write << "};\n";
-
-    write << "\n";
-
-
-
-
+    write << "};\n\n";
 
     write << "Animation " << symbol << " = {\n";
     write << fourSpaceTab << NUM(anim->mFrameCount) << ", " << NUM(anim->mLimbCount) << ", " << dataName << ", " << keyName << ",\n";
-    write << "};\n";
-
-    write << "\n";
-
+    write << "};\n\n";
 }
 
 void SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto anim = std::static_pointer_cast<AnimData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Vertex, 0);
+    WriteHeader(writer, LUS::ResourceType::AnimData, 0);
     writer.Write(anim->mFrameCount);
     writer.Write(anim->mLimbCount);
-    writer.Write(anim->mFrameData.size());
-    writer.Write(anim->mJointKeys.size());
-    
+    writer.Write((uint32_t) anim->mFrameData.size());
+    writer.Write((uint32_t) anim->mJointKeys.size());
+
     for(auto joint : anim->mJointKeys) {
         for (int i = 0; i < 6; i++) {
             writer.Write(joint.keys[i]);
@@ -125,7 +105,6 @@ void SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPars
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    // uint32_t offset = GetSafeNode<uint32_t>(node, "offset");
     YAML::Node dataNode;
     YAML::Node keyNode;
     std::vector<SF64::JointKey> jointKeys;
@@ -135,7 +114,6 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
     LUS::BinaryReader reader(segment.data, segment.size);
 
     reader.SetEndianness(LUS::Endianness::Big);
-    // reader.Seek(offset, Start);
     int16_t frameCount = reader.ReadInt16();
     int16_t limbCount = reader.ReadInt16();
     uint32_t dataOffset = reader.ReadUInt32();
