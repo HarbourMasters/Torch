@@ -5,6 +5,26 @@
 #include "Companion.h"
 
 #define END_CODE 0x0
+#define NEWLINE_CODE 0x1
+#define SPC 15
+#define CLF 16
+#define CUP 17
+#define CRT 18
+#define CDN 19
+#define AUP 20
+#define ALF 21
+#define ADN 22
+#define ART 23
+#define EXM 50
+#define QST 51
+#define DSH 52
+#define CMA 53
+#define PRD 54
+#define APS 55
+#define LPR 56
+#define RPR 57
+#define CLN 58
+#define PIP 59
 
 std::vector<std::string> gCharCodeEnums = {
     "END", "NWL", "NP2", "NP3", "NP4", "NP5", "NP6", "NP7",
@@ -32,6 +52,80 @@ void SF64::MessageHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     write << "extern Vtx " << symbol << "[];\n";
 }
 
+void TextToStream(std::ostream& stream, int charCode) {
+    switch (charCode) {
+        case NEWLINE_CODE:
+            stream << "\n// ";
+            break;
+        // case CLF:
+        //     stream << "(C<)";
+        //     break;
+        // case CUP:
+        //     stream << "(C^)";
+        //     break;
+        // case CRT:
+        //     stream << "(C>)";
+        //     break;
+        // case CDN:
+        //     stream << "(Cv)";
+        //     break;
+        // case AUP:
+        //     stream << "^";
+        //     break;
+        // case ALF:
+        //     stream << "<";
+        //     break;
+        // case ADN:
+        //     stream << "v";
+        //     break;
+        // case ART:
+        //     stream << ">";
+        //     break;
+        // case EXM:
+        //     stream << "!";
+        //     break;
+        // case QST:
+        //     stream << "?";
+        //     break;
+        // case DSH:
+        //     stream << "-";
+        //     break;
+        // case CMA:
+        //     stream << ",";
+        //     break;
+        // case PRD:
+        //     stream << ".";
+        //     break;
+        // case APS:
+        //     stream << "'";
+        //     break;
+        // case LPR:
+        //     stream << "(";
+        //     break;
+        // case RPR:
+        //     stream << ")";
+        //     break;
+        // case CLN:
+        //     stream << ":";
+        //     break;
+        // case PIP:
+        //     stream << "|";
+        //     break;
+        // case SPC:
+        //     stream << " ";
+        //     break;
+        default:
+            if(charCode > 23 && charCode < 50) {
+                stream << static_cast<char>('A' + (charCode - 24));
+            } else if(charCode > 49 && charCode < 58) {
+                stream << static_cast<char>('a' + (charCode - 58));
+            } else if(charCode > 80 && charCode < 90) {
+                stream << static_cast<char>('0' + (charCode - 81));
+            }
+            break;
+    }
+}
+
 void SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto message = std::static_pointer_cast<MessageData>(raw)->mMessage;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -48,17 +142,22 @@ void SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
 
+    for (int i = 0; i < message.size(); ++i) {
+        TextToStream(write, message[i]);
+    }
+
     write << "u16 " << symbol << "[] = {\n" << fourSpaceTab;
     for (int i = 0; i < message.size(); ++i) {
         auto m = message[i];
-        if(m == 0){
-            write << "\n" << fourSpaceTab;
-        }
 
         write << gCharCodeEnums[m] << ", ";
+
+        if(m == NEWLINE_CODE){
+            write << "\n" << fourSpaceTab;
+        }
     }
 
-    write << "};\n";
+    write << "\n};\n";
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(message.size()) << " chars\n";
@@ -82,16 +181,16 @@ void SF64::MessageBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    std::vector<uint8_t> message;
+    std::vector<uint16_t> message;
 
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
 
-    size_t idx = 0;
-    while(segment.data[idx] != END_CODE){
-        auto c = segment.data[idx++];
+    uint16_t c = reader.ReadUInt16();
+    while(c != END_CODE){
         message.push_back(c);
+        c = reader.ReadUInt16();
     }
     message.push_back(END_CODE);
 

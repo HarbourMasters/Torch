@@ -4,26 +4,31 @@
 
 namespace SF64 {
 
-class MessageData : public IParsedData {
+struct MessageEntry {
+    int32_t id;
+    uint32_t ptr;
+};
+
+class MessageTable : public IParsedData {
 public:
-    std::vector<uint16_t> mMessage;
+    std::vector<MessageEntry> mTable;
 
-    MessageData(std::vector<uint16_t> message) : mMessage(message) {}
+    MessageTable(const std::vector<MessageEntry>&table) : mTable(table) {}
 };
 
-class MessageCodeExporter : public BaseExporter {
+class MessageLookupCodeExporter : public BaseExporter {
     void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class MessageHeaderExporter : public BaseExporter {
+class MessageLookupHeaderExporter : public BaseExporter {
     void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class MessageBinaryExporter : public BaseExporter {
+class MessageLookupBinaryExporter : public BaseExporter {
     void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class MessageFactory : public BaseFactory {
+class MessageLookupFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override {
@@ -31,9 +36,9 @@ public:
     }
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Code, MessageCodeExporter)
-            REGISTER(Header, MessageHeaderExporter)
-            REGISTER(Binary, MessageBinaryExporter)
+            REGISTER(Code, MessageLookupCodeExporter)
+            REGISTER(Header, MessageLookupHeaderExporter)
+            REGISTER(Binary, MessageLookupBinaryExporter)
         };
     }
     bool SupportModdedAssets() override { return false; }

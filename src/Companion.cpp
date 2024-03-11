@@ -29,6 +29,7 @@
 #include <iostream>
 #include <filesystem>
 #include "factories/sf64/MessageFactory.h"
+#include "factories/sf64/MessageLookupFactory.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -68,6 +69,7 @@ void Companion::Init(const ExportType type) {
     // SF64 specific
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
     this->RegisterFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>());
+    this->RegisterFactory("SF64:MSG_TABLE", std::make_shared<SF64::MessageLookupFactory>());
 
     this->Process();
 }
