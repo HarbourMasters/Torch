@@ -31,5 +31,8 @@ enum class ResourceType {
     Waypoints = 0x57505453,    // WPTS
     Metadata  = 0x4D444154,    // MDAT
     SpawnData = 0x53444154,    // SDAT
+
+    // SF64
+    AnimData = 0x414E494D,     // ANIM
 };
 } // namespace LUS
