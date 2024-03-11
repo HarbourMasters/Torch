@@ -150,7 +150,7 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
 
         if(start == offset){
-            write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << name << "[][0x" << texture->mBuffer.size() << std::hex << std::uppercase << "] = {\n";
+            write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << name << "[][" << texture->mBuffer.size() << "] = {\n";
         }
 
         write << tab << "{\n";
