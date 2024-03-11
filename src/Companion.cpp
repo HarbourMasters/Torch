@@ -285,7 +285,7 @@ void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML
  * Activate the factory using a normal asset yaml with type, input_directory, and output_directory nodes.
  */
 void Companion::ProcessTables(YAML::Node& rom) {
-    auto dirs = rom["tables"].as<std::vector<std::string>>();
+    auto dirs = rom["metadata"].as<std::vector<std::string>>();
 
     for (const auto &dir : dirs) {
         std::vector<YAML::Node> configNodes;
@@ -332,7 +332,7 @@ void Companion::Process() {
         return;
     }
 
-    if (rom["tables"]) {
+    if (rom["metadata"]) {
         ProcessTables(rom);
     }
 
