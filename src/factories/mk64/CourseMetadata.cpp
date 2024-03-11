@@ -32,7 +32,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     });
 
     std::ofstream file;
-    std::string outDir = "assets/course_data/";
+    auto outDir = GetSafeNode<std::string>(node, "out_directory");
 
     file.open(outDir+"gCourseNames.inc.c");
     if (file.is_open()) {
@@ -268,7 +268,7 @@ void MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std::shared
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto dir = GetSafeNode<std::string>(node, "dir");
+    auto dir = GetSafeNode<std::string>(node, "input_directory");
  
     auto m = Companion::Instance->GetCourseMetadata();
 
