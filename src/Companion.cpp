@@ -2,6 +2,7 @@
 
 #include "storm/SWrapper.h"
 #include "utils/Decompressor.h"
+#include "factories/sf64/AnimFactory.h"
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/DialogFactory.h"
 #include "factories/sm64/DictionaryFactory.h"
@@ -64,7 +65,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:SPAWNDATA", std::make_shared<MK64::SpawnDataFactory>());
 
     // SF64 specific
-    this->RegisterFactory("ANIM", std::make_shared<AnimFactory>());
+    this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
 
     this->Process();
 }

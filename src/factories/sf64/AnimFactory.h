@@ -2,6 +2,8 @@
 
 #include "../BaseFactory.h"
 
+namespace SF64 {
+
 struct JointKey {
     uint16_t keys[6];
 };
@@ -46,3 +48,5 @@ public:
     }
     bool SupportModdedAssets() override { return false; }
 };
+
+}
