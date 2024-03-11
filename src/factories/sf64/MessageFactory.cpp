@@ -57,7 +57,7 @@ void SF64::MessageHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
         return;
     }
 
-    write << "extern Vtx " << symbol << "[];\n";
+    write << "extern u16 " << symbol << "[];\n";
 }
 
 void TextToStream(std::ostream& stream, int charCode) {

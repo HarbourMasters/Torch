@@ -47,7 +47,7 @@ void SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_pt
             msgSymbol = GetSafeNode<std::string>(node, "symbol");
         }
 
-        write << "{ " << m.id << ", " << msgSymbol << " }, ";
+        write << "{ " << m.id << std::dec << ", " << msgSymbol << " }, ";
     }
 
     write << "\n};\n";

@@ -80,7 +80,8 @@ std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t
 }
 
 void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    auto symbol = GetSafeNode(node, "symbol", entryName);
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
 
     if(Companion::Instance->IsOTRMode()){
@@ -88,10 +89,18 @@ void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
         return;
     }
 
-    if(node["ctype"]) {
-        write << "extern " << node["ctype"].as<std::string>() << " " << symbol << "[];\n";
+    const auto searchTable = Companion::Instance->SearchTable(offset);
+
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode] = searchTable.value();
+
+        if(start != offset){
+            return;
+        }
+
+        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << data.size() << "];\n";
     } else {
-        write << "extern u8 " << symbol << "[];\n";
+        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
     }
 }
 
@@ -133,13 +142,6 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
     file.close();
 
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
@@ -161,6 +163,13 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
             write << "};\n";
         }
     } else {
+        if (Companion::Instance->IsDebug()) {
+            if (IS_SEGMENTED(offset)) {
+                offset = SEGMENT_OFFSET(offset);
+            }
+            write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+        }
+        
         write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << symbol  << "[] = {\n";
 
         write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
