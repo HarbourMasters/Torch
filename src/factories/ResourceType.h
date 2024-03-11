@@ -35,5 +35,6 @@ enum class ResourceType {
     // SF64
     AnimData = 0x414E494D,     // ANIM
     Message = 0x4D53474C,      // MSG
+    MessageTable = 0x4D534754, // MSGT
 };
 } // namespace LUS
