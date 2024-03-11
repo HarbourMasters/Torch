@@ -55,8 +55,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             file << '"' << m.debugName << "\", ";
         }
         //file << "\n};\n\n";
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gCupSelectionByCourseId.inc.c");
     if (file.is_open()) {
@@ -65,8 +65,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             file << m.cup << ", ";
         }
        // file << "\n};\n\n";
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gPerCupIndexByCourseId.inc.c");
     if (file.is_open()) {
@@ -75,8 +75,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             file << m.cupIndex << ", ";
         }
         //file << "\n};\n\n";
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gWaypointWidth.inc.c");
     if (file.is_open()) {
@@ -85,8 +85,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             file << m.waypointWidth << ", ";
         }
        // file << "\n};\n\n";
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gWaypointWidth2.inc.c");
     if (file.is_open()) {
@@ -95,8 +95,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             file << m.waypointWidth2 << ", ";
         }
         file << "\n};\n\n";
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"D_800DCBB4.inc.c");
     if (file.is_open()) {
@@ -105,8 +105,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             file << m.D_800DCBB4 << ", ";
         }
         //file << "\n};\n\n";
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gCPUSteeringSensitivity.inc.c");
     if (file.is_open()) {
@@ -115,8 +115,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             file << m.steeringSensitivity << ", ";
         }
         //file << "\n};\n\n";
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gCourseBombKartSpawns.inc.c");
     if (file.is_open()) {
@@ -135,8 +135,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
                 file << " },\n";
             }
         }
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gCoursePathSizes.inc.c");
     if (file.is_open()) {
@@ -174,8 +174,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"D_0D0096B8.inc.c");
     if (file.is_open()) {
@@ -187,8 +187,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"D_0D009808.inc.c");
     if (file.is_open()) {
@@ -200,8 +200,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gCoursePathTable.inc.c");
     if (file.is_open()) {
@@ -213,8 +213,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"gCoursePathTableUnknown.inc.c");
     if (file.is_open()) {
@@ -226,8 +226,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"sSkyColors.inc.c");
     if (file.is_open()) {
@@ -239,8 +239,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 
     file.open(outDir+"sSkyColors2.inc.c");
     if (file.is_open()) {
@@ -252,8 +252,8 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
             }
             file << "},\n";
         }
+        file.close();
     }
-    file.close();
 }
 
 void MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
