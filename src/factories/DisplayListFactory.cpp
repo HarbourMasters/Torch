@@ -361,6 +361,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         if(opcode == GBI(G_MOVEMEM)) {
             uint8_t index = 0;
             uint8_t offset = 0;
+            bool light = false;
 
             switch (Companion::Instance->GetGBIVersion()) {
                 case GBIVersion::f3d:
@@ -370,6 +371,22 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                         continue;
                     }
 
+                    break;
+               case GBIVersion::f3dex:
+                    index = C0(0, 8);
+                    offset = C0(8, 8) * 8;
+
+                    /* 
+                     * Only generate lights on the second gsSPLight.
+                     * gsSPSetLights1(name) outputs three macros:
+                     * 
+	                 * gsSPNumLights(NUMLIGHTS_1)
+	                 * gsSPLight(&name.l[0],1)
+	                 * gsSPLight(&name.a,2) <-- This ptr is used to generate the lights
+                    */
+                    if (index == GBI(G_MV_L1)) {
+                        light = true;
+                    }
                     break;
                 default: {
                     index = C0(0, 8);
@@ -381,7 +398,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 }
             }
 
-            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
+            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value() && light){
                 SPDLOG_INFO("Addr to Lights1 command at 0x{:X} not in yaml, autogenerating it", w1);
                 auto rom = Companion::Instance->GetRomData();
                 auto factory = Companion::Instance->GetFactory("LIGHTS")->get();
