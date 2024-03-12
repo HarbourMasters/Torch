@@ -367,8 +367,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 case GBIVersion::f3d:
                     index = C0(16, 8);
 
-                    if(index < GBI(G_MV_L0)) {
-                        continue;
+                    if(index == GBI(G_MV_L0) || index == GBI(G_MV_L1)) {
+                        light = true;
                     }
 
                     break;
@@ -391,8 +391,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     index = C0(0, 8);
                     offset = C0(8, 8) * 8;
 
-                    if(index != GBI(G_MV_LIGHT)) {
-                        continue;
+                    if(index == GBI(G_MV_LIGHT)) {
+                        light = true;
                     }
                 }
             }
