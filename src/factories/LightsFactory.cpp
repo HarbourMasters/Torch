@@ -12,7 +12,7 @@ void LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedDa
         return;
     }
 
-    write << "extern Lights " << symbol << ";\n";
+    write << "extern Lights1 " << symbol << ";\n";
 }
 
 void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
