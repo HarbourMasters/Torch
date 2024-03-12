@@ -373,8 +373,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                     break;
                case GBIVersion::f3dex:
-                    index = C0(0, 8);
-                    offset = C0(8, 8) * 8;
+                    uint32_t subcommand = (w0 >> 16) & 0xFF;
+                    offset = w1;
 
                     /* 
                      * Only generate lights on the second gsSPLight.
@@ -384,10 +384,9 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 	                 * gsSPLight(&name.l[0],1)
 	                 * gsSPLight(&name.a,2) <-- This ptr is used to generate the lights
                     */
-                    if (index == GBI(G_MV_L1)) {
+                    if (subcommand == GBI(G_MV_L1)) {
                         light = true;
                     }
-                    break;
                 default: {
                     index = C0(0, 8);
                     offset = C0(8, 8) * 8;
