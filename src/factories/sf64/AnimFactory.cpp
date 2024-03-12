@@ -6,19 +6,20 @@
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(7) << x
 #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
+#define VEC_SIZE(vec) ((vec).size() * sizeof((vec)[0]))
 
-SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<int16_t> frameData, uint32_t keyOffset, std::vector<JointKey> jointKeys): mFrameCount(frameCount), mLimbCount(limbCount), mDataOffset(dataOffset), mFrameData(std::move(frameData)), mKeyOffset(keyOffset), mJointKeys(std::move(jointKeys)) {
-    if((mDataOffset + sizeof(mFrameData) > mKeyOffset) && (mKeyOffset + sizeof(mJointKeys) > mDataOffset)) {
-        SPDLOG_ERROR("Data and Key offsets overlap");
+SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<int16_t> frameData, uint32_t keyOffset, std::vector<SF64::JointKey> jointKeys): mFrameCount(frameCount), mLimbCount(limbCount), mDataOffset(dataOffset), mFrameData(std::move(frameData)), mKeyOffset(keyOffset), mJointKeys(std::move(jointKeys)) {
+    if((mDataOffset + VEC_SIZE(mFrameData) > mKeyOffset) && (mKeyOffset + VEC_SIZE(mJointKeys) > mDataOffset)) {
+        SPDLOG_ERROR("SF64:ANIM error: Data and Key offsets overlap");
     }
     if(mJointKeys.size() != limbCount + 1) {
-        SPDLOG_ERROR("Joint Key count does not match Limb count");        
+        SPDLOG_ERROR("SF64:ANIM error: Joint Key count does not match Limb count");        
     }
     if(frameData.size() > 0 && frameData[0] != 0){
-        SPDLOG_INFO("Found non-zero frame data on first frame");
+        SPDLOG_INFO("SF64:ANIM alert: Found non-zero frame data on first frame");
     }
     if(jointKeys.size() > 0 && jointKeys[0].keys[1] != 0){
-        SPDLOG_INFO("Found non-zero joint key on first frame");
+        SPDLOG_INFO("SF64:ANIM alert: Found non-zero joint key on first frame");
     }
 }
 
@@ -51,18 +52,18 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
         dataOffset = SEGMENT_OFFSET(dataOffset);
     }
 
-    dataDefaultName << symbol << "_frame_data_" << std::hex << dataOffset;
+    dataDefaultName << symbol << "_frame_data_" << std::uppercase << std::hex << dataOffset;
     auto dataName = GetSafeNode(node, "data_symbol", dataDefaultName.str());
 
     if (IS_SEGMENTED(keyOffset)) {
         keySegment = SEGMENT_NUMBER(keyOffset);
         keyOffset = SEGMENT_OFFSET(keyOffset);
     }
-    keyDefaultName << symbol << "_joint_key_" << std::hex << keyOffset;
+    keyDefaultName << symbol << "_joint_key_" << std::uppercase << std::hex << keyOffset;
     auto keyName = GetSafeNode(node, "data_symbol", keyDefaultName.str());
 
     if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+        write << "// 0x" << std::uppercase << std::hex << dataOffset << "\n";
     }
 
     write << "u16 " << dataName << "[] = {";
@@ -86,11 +87,21 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
 
     write << "Animation " << symbol << " = {\n";
     write << fourSpaceTab << anim->mFrameCount << ", " << anim->mLimbCount << ", " << dataName << ", " << keyName << ",\n";
-    write << "};\n\n";
+    write << "};\n";
+    
+    if (Companion::Instance->IsDebug()) {
+        int off = offset + 0xC;
+        if(IS_SEGMENTED(off)) {
+            off = SEGMENT_OFFSET(off);
+        }
+        write << "// 0x" << std::uppercase << std::hex << off << "\n";
+    }
+
+    write<< "\n";
 }
 
 void SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    auto anim = std::static_pointer_cast<AnimData>(raw);
+    auto anim = std::static_pointer_cast<SF64::AnimData>(raw);
     auto writer = LUS::BinaryWriter();
 
     WriteHeader(writer, LUS::ResourceType::AnimData, 0);
@@ -160,5 +171,5 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
         frameData.push_back(dataReader.ReadInt16());
     }
 
-    return std::make_shared<AnimData>(frameCount, limbCount, dataOffset, frameData, keyOffset, jointKeys);
+    return std::make_shared<SF64::AnimData>(frameCount, limbCount, dataOffset, frameData, keyOffset, jointKeys);
 }
