@@ -3,6 +3,7 @@
 
 #include "Companion.h"
 #include "utils/Decompressor.h"
+#include "utils/TorchUtils.h"
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(7) << x
 #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
@@ -30,6 +31,13 @@ void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
     std::sort(limbs.begin(), limbs.end(), [](SF64::LimbData a, SF64::LimbData b) {return a.mAddr < b.mAddr;});
     std::map<uint32_t, std::string> limbDict;
 
+    if (Companion::Instance->IsDebug()) {
+        int off = limbs[0].mAddr;
+        if (IS_SEGMENTED(off)) {
+            off = SEGMENT_OFFSET(off);
+        }
+        write << "// 0x" << std::hex << std::uppercase << off << "\n";
+    }
     limbDict[0] = "NULL";
     for(SF64::LimbData limb : limbs) {
         std::ostringstream limbDefaultName;
@@ -37,17 +45,24 @@ void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
         if(IS_SEGMENTED(limbOffset)){
             limbOffset = SEGMENT_OFFSET(limbOffset);
         }
-        limbDefaultName << symbol << "_limb_" << std::dec << limb.mIndex << "_" << std::hex << limbOffset;
+        limbDefaultName << symbol << "_limb_" << std::dec << limb.mIndex << "_" << std::uppercase << std::hex << limbOffset;
         limbDict[limb.mAddr] = limbDefaultName.str();
     }
 
     for(SF64::LimbData limb : limbs) {
         write << "Limb " << limbDict[limb.mAddr] << " = {\n";
-        
-        if(limb.mDList != 0) {
-            write << fourSpaceTab << "0x" << std::hex << limb.mDList << ", ";
+        write << fourSpaceTab;
+        if(limb.mDList == 0) {
+            write << "NULL, ";
         } else {
-            write << fourSpaceTab << "NULL, ";
+            auto dec = Companion::Instance->GetNodeByAddr(limb.mDList);
+            if(dec.has_value()){
+                auto node = std::get<1>(dec.value());
+                auto symbol = GetSafeNode<std::string>(node, "symbol");
+                write << symbol << ", ";
+            } else {
+                write << "0x" << std::uppercase << std::hex << limb.mDList << ", ";
+            }
         }
         write << "{ " << limb.mTx << ", " << limb.mTy << ", " << limb.mTz << "}, ";
         write << "{ " << std::dec << limb.mRx << ", " << limb.mRy << ", " << limb.mRz << "}, ";
@@ -58,7 +73,7 @@ void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
 
     write << "Limb* " << symbol << "[] = {";
     for(int i = 0; i <= skeleton->mSkeleton.size(); i++) {
-        if ((i % 6) == 0) {
+        if ((i % 4) == 0) {
             write << "\n" << fourSpaceTab;
         }
         if (i == skeleton->mSkeleton.size()) {
@@ -67,28 +82,21 @@ void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
             write << "&" << limbDict[skeleton->mSkeleton[i].mAddr] << ", ";
         }
     }
-    write << "\n};\n\n";
+    write << "\n};\n";
+    if (Companion::Instance->IsDebug()) {
+        int sz = (skeleton->mSkeleton.size() * 0x24) + 4;
+        int off = limbs[0].mAddr;;
+        if (IS_SEGMENTED(off)) {
+            off = SEGMENT_OFFSET(off);
+        }
+        write << "// Limbs: " << std::dec << skeleton->mSkeleton.size() << "\n";
+        write << "// 0x" << std::hex << std::uppercase << (off + sz) << "\n";
+    }
+    write << "\n";
 }
 
 void SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    // auto anim = std::static_pointer_cast<AnimData>(raw);
-    // auto writer = LUS::BinaryWriter();
 
-    // WriteHeader(writer, LUS::ResourceType::AnimData, 0);
-    // writer.Write(anim->mFrameCount);
-    // writer.Write(anim->mLimbCount);
-    // writer.Write((uint32_t) anim->mFrameData.size());
-    // writer.Write((uint32_t) anim->mJointKeys.size());
-
-    // for(auto joint : anim->mJointKeys) {
-    //     for (int i = 0; i < 6; i++) {
-    //         writer.Write(joint.keys[i]);
-    //     }
-    // }
-    // for(auto data : anim->mFrameData) {
-    //     writer.Write(data);
-    // }
-    // writer.Finish(write);
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -104,7 +112,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
 
     while(limbAddr != 0) {
         limbNode["offset"] = limbAddr;
-        // std::cout << std::dec << limbIndex << ": 0x" << std::hex << limbAddr << "\n";
+
         DecompressedData limbDataRaw = Decompressor::AutoDecode(limbNode, buffer, 0x20);
         LUS::BinaryReader limbReader(limbDataRaw.segment.data, limbDataRaw.segment.size);
         limbReader.SetEndianness(LUS::Endianness::Big);
@@ -119,6 +127,44 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
         auto rw = limbReader.ReadInt16();
         auto siblingAddr = limbReader.ReadUInt32();
         auto childAddr = limbReader.ReadUInt32();
+
+        if(dListAddr != 0 && (SEGMENT_NUMBER(dListAddr) == SEGMENT_NUMBER(limbAddr))) {
+            const auto decl = Companion::Instance->GetNodeByAddr(dListAddr);
+
+            if(!decl.has_value()){
+                SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", dListAddr);
+
+                auto rom = Companion::Instance->GetRomData();
+                auto factory = Companion::Instance->GetFactory("GFX")->get();
+
+                std::string output;
+                YAML::Node dl;
+                uint32_t ptr = dListAddr;
+
+                if(Decompressor::IsSegmented(dListAddr)){
+                    SPDLOG_INFO("Found segmented display list at 0x{:X}", dListAddr);
+                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(ptr)) +"_dl_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
+                } else {
+                    SPDLOG_INFO("Found display list at 0x{:X}", ptr);
+                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(ptr, false));
+                }
+
+                dl["type"] = "GFX";
+                dl["offset"] = ptr;
+                dl["symbol"] = output;
+                dl["autogen"] = true;
+
+                auto result = factory->parse(rom, dl);
+
+                if(!result.has_value()){
+                    continue;
+                }
+
+                Companion::Instance->RegisterAsset(output, dl);
+            } else {
+                SPDLOG_WARN("Could not find display list at 0x{:X}", dListAddr);
+            }
+        }
 
         skeleton.push_back(LimbData(limbAddr, dListAddr, tx, ty, tz, rx, ry, rz, siblingAddr, childAddr, limbIndex));
         limbAddr = reader.ReadUInt32();
