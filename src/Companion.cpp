@@ -33,6 +33,7 @@
 #include "factories/sf64/SkeletonFactory.h"
 #include "factories/sf64/AnimFactory.h"
 #include "factories/sf64/ScriptFactory.h"
+#include "factories/sf64/HitboxFactory.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -75,6 +76,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>());
     this->RegisterFactory("SF64:MSG_TABLE", std::make_shared<SF64::MessageLookupFactory>());
     this->RegisterFactory("SF64:SCRIPT", std::make_shared<SF64::ScriptFactory>());
+    this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
 
 
     this->Process();

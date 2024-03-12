@@ -36,5 +36,8 @@ enum class ResourceType {
     AnimData = 0x414E494D,     // ANIM
     Message = 0x4D53474C,      // MSG
     MessageTable = 0x4D534754, // MSGT
+    Skeleton = 0x534B454C,     // SKEL
+    Script = 0x53435250,       // SCRP
+    Hitbox = 0x48544258,       // HTBX
 };
 } // namespace LUS
