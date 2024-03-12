@@ -122,6 +122,11 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     std::ofstream file(dpath + ".inc.c", std::ios::binary);
 
     size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
+    const auto bsize = GetSafeNode<uint32_t>(node, "byte_size", byteSize);
+
+    if (bsize) {
+        byteSize = bsize;
+    }
 
     SPDLOG_INFO("Byte Size: {}", byteSize);
 
