@@ -385,9 +385,9 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                      * Only generate lights on the second gsSPLight.
                      * gsSPSetLights1(name) outputs three macros:
                      * 
-	             * gsSPNumLights(NUMLIGHTS_1)
-	             * gsSPLight(&name.l[0], G_MV_L0)
-	             * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
+	                 * gsSPNumLights(NUMLIGHTS_1)
+	                 * gsSPLight(&name.l[0], G_MV_L0)
+	                 * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
                     */
                     if (subcommand == GBI(G_MV_L1)) {
                         light = true;
