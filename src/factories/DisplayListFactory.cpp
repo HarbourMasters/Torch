@@ -358,8 +358,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             }
         }
 
-	// This opcode is generally used as part of multiple macros such as gsSPSetLights1.
-	// We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
+	    // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
+	    // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
         if(opcode == GBI(G_MOVEMEM)) {
 	    // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
 	    uint8_t subcommand = (w0 >> 16) & 0xFF;
@@ -376,8 +376,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     }
 
                     break;
-	       // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
-	       // Otherwise mk64 will break.
+	           // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
+	           // Otherwise mk64 will break.
                case GBIVersion::f3dex:
                     offset = w1;
 
