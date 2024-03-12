@@ -358,7 +358,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             }
         }
 
+	// This opcode is generally used as part of multiple macros such as gsSPSetLights1.
+	// We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
         if(opcode == GBI(G_MOVEMEM)) {
+	    // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
+	    uint8_t subcommand = (w0 >> 16) & 0xFF;
             uint8_t index = 0;
             uint8_t offset = 0;
             bool light = false;
@@ -372,29 +376,30 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     }
 
                     break;
+	       // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
+	       // Otherwise mk64 will break.
                case GBIVersion::f3dex:
-                    uint32_t subcommand = (w0 >> 16) & 0xFF;
                     offset = w1;
 
                     /* 
                      * Only generate lights on the second gsSPLight.
                      * gsSPSetLights1(name) outputs three macros:
                      * 
-	                 * gsSPNumLights(NUMLIGHTS_1)
-	                 * gsSPLight(&name.l[0],1)
-	                 * gsSPLight(&name.a,2) <-- This ptr is used to generate the lights
+	             * gsSPNumLights(NUMLIGHTS_1)
+	             * gsSPLight(&name.l[0], G_MV_L0)
+	             * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
                     */
                     if (subcommand == GBI(G_MV_L1)) {
                         light = true;
                     }
-                default: {
+                case GBIVersion::f3dex2:
                     index = C0(0, 8);
                     offset = C0(8, 8) * 8;
 
                     if(index == GBI(G_MV_LIGHT)) {
                         light = true;
                     }
-                }
+                    break;
             }
 
             if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value() && light){
