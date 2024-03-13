@@ -81,7 +81,6 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
 
-
     this->Process();
 }
 
