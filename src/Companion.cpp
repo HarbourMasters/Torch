@@ -34,6 +34,7 @@
 #include "factories/sf64/AnimFactory.h"
 #include "factories/sf64/ScriptFactory.h"
 #include "factories/sf64/HitboxFactory.h"
+#include "factories/sf64/EnvSettingsFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
 #include <regex>
 
@@ -79,6 +80,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:MSG_TABLE", std::make_shared<SF64::MessageLookupFactory>());
     this->RegisterFactory("SF64:SCRIPT", std::make_shared<SF64::ScriptFactory>());
     this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
+    this->RegisterFactory("SF64:ENVSETTINGS", std::make_shared<SF64::EnvSettingsFactory>());
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
 
     this->Process();
