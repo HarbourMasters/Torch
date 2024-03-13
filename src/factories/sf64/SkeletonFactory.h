@@ -1,28 +1,21 @@
 #pragma once
 
 #include "../BaseFactory.h"
+#include "types/Vec3D.h"
 
 namespace SF64 {
 
 class LimbData : public IParsedData {
 public:
     uint32_t mAddr;
-    // std::string mSymbol;
-    // uint32_t mDList;
-    // float mTranslation[3];
-    // int16_t mRotation[3];
     uint32_t mDList;
-    float mTx;
-    float mTy;
-    float mTz;
-    int16_t mRx;
-    int16_t mRy;
-    int16_t mRz;
+    Vec3f mTrans;
+    Vec3s mRot;
     uint32_t mSibling;
     uint32_t mChild;
     int mIndex;
 
-    LimbData(uint32_t addr, uint32_t dList, float tx, float ty, float tz, float rx, float ry, float rz, uint32_t sibling, uint32_t child, int index);
+    LimbData(uint32_t addr, uint32_t dList, Vec3f trans, Vec3s rot, uint32_t sibling, uint32_t child, int index);
 };
 
 class SkeletonData : public IParsedData {

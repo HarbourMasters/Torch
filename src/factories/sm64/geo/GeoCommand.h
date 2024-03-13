@@ -6,43 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
 #include <binarytools/BinaryWriter.h>
-
-struct Vec2f {
-    float x;
-    float y;
-};
-
-struct Vec3f {
-    float x;
-    float y;
-    float z;
-};
-
-struct Vec3s {
-    int16_t x;
-    int16_t y;
-    int16_t z;
-};
-
-struct Vec3i {
-    int32_t x;
-    int32_t y;
-    int32_t z;
-};
-
-struct Vec4f {
-    float x;
-    float y;
-    float z;
-    float w;
-};
-
-struct Vec4s {
-    int16_t x;
-    int16_t y;
-    int16_t z;
-    int16_t w;
-};
+#include <types/Vec3D.h>
 
 enum class GeoOpcode {
     BranchAndLink,

@@ -28,6 +28,7 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem>
+#include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
 #include "factories/sf64/SkeletonFactory.h"
@@ -82,6 +83,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
     this->RegisterFactory("SF64:ENV_SETTINGS", std::make_shared<SF64::EnvSettingsFactory>());
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
+    this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
 
     this->Process();
 }
@@ -100,11 +102,12 @@ void Companion::ParseEnums(std::string& header) {
     std::string enumName;
 
     bool inEnum = false;
-
+    int enumIndex;
     while (std::getline(file, line)) {
         if (!inEnum && std::regex_search(line, match, enumRegex) && match.size() > 1) {
             enumName = match.str(1);
             inEnum = true;
+            enumIndex = -1;
             continue;
         }
 
@@ -118,15 +121,18 @@ void Companion::ParseEnums(std::string& header) {
         }
 
         // Remove any comments and non-alphanumeric characters
-        line = std::regex_replace(line, std::regex(R"((/\*.*?\*/)|([^a-zA-Z0-9=_\-\.]))"), "");
+        line = std::regex_replace(line, std::regex(R"((/\*.*?\*/)|(//.*$)|([^a-zA-Z0-9=_\-\.]))"), "");
 
         if(line.find("=") != std::string::npos) {
-            auto name = line.substr(0, line.find("="));
             auto value = line.substr(line.find("=") + 1);
-            this->gEnums[enumName][value.starts_with("-") ? -std::stoi(value.substr(1)) : std::stoi(value)] = name;
+            auto name = line.substr(0, line.find("="));
+            enumIndex = std::stoi(value);
+            this->gEnums[enumName][enumIndex] = name;
         } else {
-            this->gEnums[enumName][this->gEnums[enumName].size()] = line;
+            enumIndex++;
+            this->gEnums[enumName][enumIndex] = line;
         }
+        
     }
 }
 

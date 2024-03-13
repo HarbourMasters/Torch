@@ -5,7 +5,7 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
-SF64::EnvSettingsData::EnvSettingsData(int32_t type, int32_t unk_04, uint16_t bgColor, uint16_t seqId, int32_t fogR, int32_t fogG, int32_t fogB, int32_t fogN, int32_t fogF, float unk_20x, float unk_20y, float unk_20z, int32_t lightR, int32_t lightG, int32_t lightB, int32_t ambR, int32_t ambG, int32_t ambB): mType(type), mUnk_04(unk_04), mBgColor(bgColor), mSeqId(seqId), mFogR(fogR), mFogG(fogG), mFogB(fogB), mFogN(fogN), mFogF(fogF), mUnk_20x(unk_20x), mUnk_20y(unk_20y), mUnk_20z(unk_20z), mLightR(lightR), mLightG(lightG), mLightB(lightB), mAmbR(ambR), mAmbG(ambG), mAmbB(ambB) {
+SF64::EnvSettingsData::EnvSettingsData(int32_t type, int32_t unk_04, uint16_t bgColor, uint16_t seqId, int32_t fogR, int32_t fogG, int32_t fogB, int32_t fogN, int32_t fogF, Vec3f unk_20, int32_t lightR, int32_t lightG, int32_t lightB, int32_t ambR, int32_t ambG, int32_t ambB): mType(type), mUnk_04(unk_04), mBgColor(bgColor), mSeqId(seqId), mFogR(fogR), mFogG(fogG), mFogB(fogB), mFogN(fogN), mFogF(fogF), mUnk_20(unk_20), mLightR(lightR), mLightG(lightG), mLightB(lightB), mAmbR(ambR), mAmbG(ambG), mAmbB(ambB) {
     
 }
 
@@ -46,9 +46,7 @@ void SF64::EnvSettingsCodeExporter::Export(std::ostream &write, std::shared_ptr<
     write << env->mFogB << ", ";
     write << env->mFogN << ", ";
     write << env->mFogF << ", ";
-    write << "{" << env->mUnk_20x << ", ";
-    write << env->mUnk_20y << ", ";
-    write << env->mUnk_20z << "}, ";
+    write << env->mUnk_20 << ", ";
     write << env->mLightR << ", ";
     write << env->mLightG << ", ";
     write << env->mLightB << ", ";
@@ -70,6 +68,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::EnvSettingsFactory::parse(std:
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, sizeof(SF64::EnvSettingsData));
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
+    Vec3f unk_20;
     int32_t  type = reader.ReadInt32();
     int32_t  unk_04 = reader.ReadInt32();
     uint16_t bgColor = reader.ReadUInt16();
@@ -79,9 +78,9 @@ std::optional<std::shared_ptr<IParsedData>> SF64::EnvSettingsFactory::parse(std:
     int32_t  fogB = reader.ReadInt32();
     int32_t  fogN = reader.ReadInt32();
     int32_t  fogF = reader.ReadInt32();
-    float    unk_20x = reader.ReadFloat();
-    float    unk_20y = reader.ReadFloat();
-    float    unk_20z = reader.ReadFloat();
+    unk_20.x = reader.ReadFloat();
+    unk_20.y = reader.ReadFloat();
+    unk_20.z = reader.ReadFloat();
     int32_t  lightR = reader.ReadInt32();
     int32_t  lightG = reader.ReadInt32();
     int32_t  lightB = reader.ReadInt32();
@@ -89,5 +88,5 @@ std::optional<std::shared_ptr<IParsedData>> SF64::EnvSettingsFactory::parse(std:
     int32_t  ambG = reader.ReadInt32();
     int32_t  ambB = reader.ReadInt32();
 
-    return std::make_shared<SF64::EnvSettingsData>(type, unk_04, bgColor, seqId, fogR, fogG, fogB, fogN, fogF, unk_20x, unk_20y, unk_20z, lightR, lightG, lightB, ambR, ambG, ambB);
+    return std::make_shared<SF64::EnvSettingsData>(type, unk_04, bgColor, seqId, fogR, fogG, fogB, fogN, fogF, unk_20, lightR, lightG, lightB, ambR, ambG, ambB);
 }

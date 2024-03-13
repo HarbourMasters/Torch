@@ -8,7 +8,7 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(7) << x
 #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
 
-SF64::LimbData::LimbData(uint32_t addr, uint32_t dList, float tx, float ty, float tz, float rx, float ry, float rz, uint32_t sibling, uint32_t child, int index): mAddr(addr), mDList(dList), mTx(tx), mTy(ty), mTz(tz), mRx(rx), mRy(ry), mRz(rz), mSibling(sibling), mChild(child), mIndex(index) {
+SF64::LimbData::LimbData(uint32_t addr, uint32_t dList, Vec3f trans, Vec3s rot, uint32_t sibling, uint32_t child, int index): mAddr(addr), mDList(dList), mTrans(trans), mRot(rot), mSibling(sibling), mChild(child), mIndex(index) {
     
 }
 
@@ -64,8 +64,8 @@ void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
                 write << "0x" << std::uppercase << std::hex << limb.mDList << ", ";
             }
         }
-        write << "{ " << limb.mTx << ", " << limb.mTy << ", " << limb.mTz << "}, ";
-        write << "{ " << std::dec << limb.mRx << ", " << limb.mRy << ", " << limb.mRz << "}, ";
+        write << limb.mTrans << ", ";
+        write << std::dec << limb.mRot << ", ";
         write << ((limb.mSibling != 0) ? "&" : "") << limbDict[limb.mSibling] << ", ";
         write << ((limb.mChild != 0) ? "&" : "") << limbDict[limb.mChild] << ",\n";
         write << "};\n\n";
@@ -112,18 +112,19 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
 
     while(limbAddr != 0) {
         limbNode["offset"] = limbAddr;
-
+        Vec3f trans;
+        Vec3s rot;
         DecompressedData limbDataRaw = Decompressor::AutoDecode(limbNode, buffer, 0x20);
         LUS::BinaryReader limbReader(limbDataRaw.segment.data, limbDataRaw.segment.size);
         limbReader.SetEndianness(LUS::Endianness::Big);
 
         auto dListAddr = limbReader.ReadUInt32();
-        auto tx = limbReader.ReadFloat();
-        auto ty = limbReader.ReadFloat();
-        auto tz = limbReader.ReadFloat();
-        auto rx = limbReader.ReadInt16();
-        auto ry = limbReader.ReadInt16();
-        auto rz = limbReader.ReadInt16();
+        trans.x = limbReader.ReadFloat();
+        trans.y = limbReader.ReadFloat();
+        trans.z = limbReader.ReadFloat();
+        rot.x = limbReader.ReadInt16();
+        rot.y = limbReader.ReadInt16();
+        rot.z = limbReader.ReadInt16();
         auto rw = limbReader.ReadInt16();
         auto siblingAddr = limbReader.ReadUInt32();
         auto childAddr = limbReader.ReadUInt32();
@@ -166,7 +167,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
             }
         }
 
-        skeleton.push_back(LimbData(limbAddr, dListAddr, tx, ty, tz, rx, ry, rz, siblingAddr, childAddr, limbIndex));
+        skeleton.push_back(LimbData(limbAddr, dListAddr, trans, rot, siblingAddr, childAddr, limbIndex));
         limbAddr = reader.ReadUInt32();
         limbIndex++;
     }
