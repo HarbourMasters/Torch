@@ -17,7 +17,8 @@
 
 #define SEGMENT_OFFSET(a) ((uint32_t)(a) & 0x00FFFFFF)
 #define SEGMENT_NUMBER(x) (((uint32_t)(x) >> 24) & 0xFF)
-#define IS_SEGMENTED(x) (((uint32_t)(x) > 0x01000000) && (SEGMENT_NUMBER(x) < 0x20))
+// I would love to use 0x01000000, but the stupid compiler takes it as 0x01
+#define IS_SEGMENTED(x) (((uint32_t)(x) > 16777216) && (SEGMENT_NUMBER(x) < 0x20))
 
 #define tab "\t"
 #define fourSpaceTab "    "

@@ -288,6 +288,13 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             this->gTables.push_back({name, start, end, tMode});
         }
     }
+
+    if(node["vram"]){
+        auto vram = node["vram"];
+        const auto addr = GetSafeNode<uint32_t>(vram, "addr");
+        const auto offset = GetSafeNode<uint32_t>(vram, "offset");
+        this->gCurrentVram = { addr, offset };
+    }
 }
 
 void Companion::Process() {
@@ -512,6 +519,8 @@ void Companion::Process() {
         this->gConfig.segment.local.clear();
         this->gFileHeader.clear();
         this->gCurrentPad = 0;
+        this->gCurrentVram = std::nullopt;
+        this->gCurrentSegmentNumber = 0;
         this->gTables.clear();
         GFXDOverride::ClearVtx();
 
@@ -555,9 +564,10 @@ void Companion::Process() {
                     this->ExtractNode(node, output, wrapper);
                 }
             } else {
+                const auto offset = assetNode["offset"].as<uint32_t>();
                 if(gCurrentFileOffset) {
-                    if (IS_SEGMENTED(assetNode["offset"].as<uint32_t>()) == false) {
-                        assetNode["offset"] = (gCurrentSegmentNumber << 24) | assetNode["offset"].as<uint32_t>();
+                    if (IS_SEGMENTED(offset) == false) {
+                        assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
                     }
                 }
                 std::string output = (this->gCurrentDirectory / entryName).string();
@@ -735,7 +745,9 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
 }
 
 std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(const std::string& name, YAML::Node& node) {
-    if(!node["offset"]) return std::nullopt;
+    if(!node["offset"]) {
+        return std::nullopt;
+    }
 
     this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, false);
 

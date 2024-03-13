@@ -46,6 +46,11 @@ struct Table {
     TableMode mode;
 };
 
+struct VRAMEntry {
+    uint32_t addr;
+    uint32_t offset;
+};
+
 struct GBIConfig {
     GBIVersion version = GBIVersion::f3d;
     GBIMinorVersion subversion = GBIMinorVersion::None;
@@ -94,6 +99,7 @@ public:
     std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
+    std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
     std::optional<Table> SearchTable(uint32_t addr);
 
     static std::string CalculateHash(const std::vector<uint8_t>& data);
@@ -117,6 +123,7 @@ private:
     uint32_t gCurrentPad = 0;
     uint32_t gCurrentFileOffset;
     uint32_t gCurrentSegmentNumber;
+    std::optional<VRAMEntry> gCurrentVram;
     CompressionType gCurrentCompressionType;
     std::vector<Table> gTables;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;

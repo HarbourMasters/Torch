@@ -91,6 +91,16 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
         return segment.value() + (!baseAddress ? SEGMENT_OFFSET(addr) : 0);
     }
 
+    const auto vramEntry = Companion::Instance->GetCurrentVRAM();
+
+    if(vramEntry.has_value()){
+        const auto vram = vramEntry.value();
+
+        if(addr >= vram.addr){
+            return vram.offset + (addr - vram.addr);
+        }
+    }
+
     return addr;
 }
 
