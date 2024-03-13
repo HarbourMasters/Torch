@@ -32,7 +32,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
 
 void SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto script = std::static_pointer_cast<SF64::ScriptData>(raw);
     auto sortedPtrs = script->mPtrs;
     std::sort(sortedPtrs.begin(), sortedPtrs.end());
@@ -47,6 +47,12 @@ void SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
     for(int i = 0; i < sortedPtrs.size(); i++) {
         std::ostringstream scriptDefaultName;
         scriptDefaultName << symbol << "_cmds_" << std::uppercase << std::hex << cmdOff + 2 * cmdIndex;
+        if (Companion::Instance->IsDebug()) {
+            if (IS_SEGMENTED(cmdOff)) {
+                cmdOff = SEGMENT_OFFSET(cmdOff);
+            }
+            write << "// 0x" << std::hex << std::uppercase << cmdOff << "\n";
+        }
         write << "u16 " << scriptDefaultName.str() << "[] = {";
 
         for(int j = 0; j < script->mSizeMap[sortedPtrs[i]] / 2; j++, cmdIndex+=2) {
@@ -56,8 +62,23 @@ void SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
             write << MakeScriptCmd(script->mCmds[cmdIndex], script->mCmds[cmdIndex + 1])  << ", ";
         }
         scriptNames.push_back(scriptDefaultName.str());
-        write << "\n};\n\n";
+        write << "\n};";
+
+        if (Companion::Instance->IsDebug()) {
+            write << "// count: " << std::to_string(sortedPtrs.size()) << " Events\n";
+            write << "// 0x" << std::hex << std::uppercase << (cmdOff + (sortedPtrs.size() * sizeof(uint16_t))) << "\n";
+        }
+
+        write << "\n";
     }
+
+    if (Companion::Instance->IsDebug()) {
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
+        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+    }
+
     write << "u16* " << symbol << "[] = {";
     for(int i = 0; i < script->mPtrs.size(); i++) {
         if((i % 5) == 0) {
@@ -65,8 +86,13 @@ void SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
         }
         write << scriptNames[i] << ", ";
     }
-    write << "\n};\n\n";
-    
+    write << "\n};\n";
+
+    if (Companion::Instance->IsDebug()) {
+        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(uint32_t) * script->mPtrs.size())) << "\n";
+    }
+
+    write << "\n";
 }
 
 void SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -92,9 +118,9 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ScriptFactory::parse(std::vect
 
     auto sortedPtrs = scriptPtrs;
     std::sort(sortedPtrs.begin(), sortedPtrs.end());
-    
+
     auto cmdsStart = sortedPtrs[0];
-    
+
     for(int i = 0; i < sortedPtrs.size() - 1; i++) {
         sizeMap[sortedPtrs[i]] = (sortedPtrs[i+1] - sortedPtrs[i]) / sizeof(uint16_t);
     }
