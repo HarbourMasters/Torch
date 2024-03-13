@@ -179,7 +179,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
     auto exporter = factory->get()->GetExporter(this->gConfig.exporterType);
     if(!exporter.has_value()){
-        SPDLOG_ERROR("No exporter found for {}", name);
+        SPDLOG_WARN("No exporter found for {}", name);
         return;
     }
 
@@ -459,6 +459,27 @@ void Companion::Process() {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
             this->ParseEnums(file);
+        }
+    }
+
+    if(cfg["logging"]){
+        auto level = cfg["logging"].as<std::string>();
+        if(level == "TRACE") {
+            spdlog::set_level(spdlog::level::trace);
+        } else if(level == "DEBUG") {
+            spdlog::set_level(spdlog::level::debug);
+        } else if(level == "INFO") {
+            spdlog::set_level(spdlog::level::info);
+        } else if(level == "WARN") {
+            spdlog::set_level(spdlog::level::warn);
+        } else if(level == "ERROR") {
+            spdlog::set_level(spdlog::level::err);
+        } else if(level == "CRITICAL") {
+            spdlog::set_level(spdlog::level::critical);
+        } else if(level == "OFF") {
+            spdlog::set_level(spdlog::level::off);
+        } else {
+            throw std::runtime_error("Invalid logging level, please use TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL or OFF");
         }
     }
 
@@ -744,7 +765,10 @@ void Companion::Process() {
         wrapper->Close();
     }
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    auto level = spdlog::get_level();
+    spdlog::set_level(spdlog::level::info);
     SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
+    spdlog::set_level(level);
     spdlog::set_pattern(regular);
     SPDLOG_INFO("------------------------------------------------");
 
