@@ -112,18 +112,18 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
     const auto count = GetSafeNode<uint32_t>(node, "count");
     std::vector<SF64::CollisionPoly> polys;
     std::vector<Vec3s> mesh;
-    int meshCount = 0;
+    int meshSize = 0;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(SF64::CollisionPoly));
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
 
     for(int i = 0; i < count; i++) {
         int16_t v0 = reader.ReadInt16();
-        meshCount = std::max(meshCount, (int)v0);
+        meshSize = std::max(meshSize, (int)v0);
         int16_t v1 = reader.ReadInt16();
-        meshCount = std::max(meshCount, (int)v1);
+        meshSize = std::max(meshSize, (int)v1);
         int16_t v2 = reader.ReadInt16();
-        meshCount = std::max(meshCount, (int)v2);
+        meshSize = std::max(meshSize, (int)v2);
         int16_t pad1 = reader.ReadInt16();
         int16_t nx = reader.ReadInt16();
         int16_t ny = reader.ReadInt16();
@@ -133,13 +133,15 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
 
         polys.push_back(CollisionPoly({{v0, v1, v2}, pad1, {nx, ny, nz}, pad2, dist}));
     }
-
+    meshSize++;
     const auto meshOffset = GetSafeNode<uint32_t>(node, "mesh_offset", offset + count * sizeof(SF64::CollisionPoly));
-    auto [__, meshSegment] = Decompressor::AutoDecode(node, buffer, meshCount * sizeof(Vec3s));
+    YAML::Node meshNode;
+    meshNode["offset"] = meshOffset;
+    auto [__, meshSegment] = Decompressor::AutoDecode(meshNode, buffer, meshSize * sizeof(Vec3s));
     LUS::BinaryReader meshReader(meshSegment.data, meshSegment.size);
     meshReader.SetEndianness(LUS::Endianness::Big);
 
-    for(int i = 0; i < meshCount; i++) {
+    for(int i = 0; i < meshSize; i++) {
         mesh.push_back(Vec3s(meshReader.ReadInt16(), meshReader.ReadInt16(), meshReader.ReadInt16()));
     }
 

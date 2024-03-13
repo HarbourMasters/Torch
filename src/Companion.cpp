@@ -37,6 +37,7 @@
 #include "factories/sf64/HitboxFactory.h"
 #include "factories/sf64/EnvSettingsFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
+#include "factories/sf64/TriangleFactory.h"
 #include <regex>
 
 using namespace std::chrono;
@@ -84,6 +85,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:ENV_SETTINGS", std::make_shared<SF64::EnvSettingsFactory>());
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
     this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
+    this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
 
     this->Process();
 }
