@@ -25,7 +25,9 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     auto arg1 = s1 & 0x1FF;
     std::ostringstream cmd;
 
-    cmd << "EVENT_CMD(EVOP_" << std::left << std::setw(3) << std::dec << opcode << ", " << std::right << std::setw(3) << std::dec << arg1 << ", " << std::setw(5) << std::dec << s2 << ")";
+    auto enumName = Companion::Instance->GetEnumFromValue("EventOpcode", opcode).value_or("/* EVOP_UNK */ " + std::to_string(opcode));
+
+    cmd << "EVENT_CMD(" << enumName << ", " << std::right << std::setw(3) << std::dec << arg1 << ", " << std::setw(5) << std::dec << s2 << ")";
 
     return cmd.str();
 }
@@ -46,27 +48,27 @@ void SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
 
     for(int i = 0; i < sortedPtrs.size(); i++) {
         std::ostringstream scriptDefaultName;
-        scriptDefaultName << symbol << "_cmds_" << std::uppercase << std::hex << cmdOff + 2 * cmdIndex;
+        scriptDefaultName << symbol << "_cmds_" << std::uppercase << std::hex << cmdOff;
+
         if (Companion::Instance->IsDebug()) {
-            if (IS_SEGMENTED(cmdOff)) {
-                cmdOff = SEGMENT_OFFSET(cmdOff);
-            }
             write << "// 0x" << std::hex << std::uppercase << cmdOff << "\n";
         }
         write << "u16 " << scriptDefaultName.str() << "[] = {";
 
-        for(int j = 0; j < script->mSizeMap[sortedPtrs[i]] / 2; j++, cmdIndex+=2) {
+        auto cmdCount = script->mSizeMap[sortedPtrs[i]] / 2;
+        for(int j = 0; j < cmdCount; j++, cmdIndex+=2) {
             if((j % 3) == 0) {
                 write << "\n" << fourSpaceTab;
             }
             write << MakeScriptCmd(script->mCmds[cmdIndex], script->mCmds[cmdIndex + 1])  << ", ";
         }
         scriptNames.push_back(scriptDefaultName.str());
-        write << "\n};";
+        write << "\n};\n";
 
+        cmdOff += 4 * cmdCount;
         if (Companion::Instance->IsDebug()) {
-            write << "// count: " << std::to_string(sortedPtrs.size()) << " Events\n";
-            write << "// 0x" << std::hex << std::uppercase << (cmdOff + (sortedPtrs.size() * sizeof(uint16_t))) << "\n";
+            write << "// count: " << cmdCount << " commands\n";
+            write << "// 0x" << std::hex << std::uppercase << cmdOff << "\n";
         }
 
         write << "\n";
@@ -89,6 +91,7 @@ void SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
     write << "\n};\n";
 
     if (Companion::Instance->IsDebug()) {
+        write << "// count: " << script->mPtrs.size() << " events\n";
         write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(uint32_t) * script->mPtrs.size())) << "\n";
     }
 

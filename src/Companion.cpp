@@ -102,11 +102,12 @@ void Companion::ParseEnums(std::string& header) {
     std::string enumName;
 
     bool inEnum = false;
-
+    int enumIndex;
     while (std::getline(file, line)) {
         if (!inEnum && std::regex_search(line, match, enumRegex) && match.size() > 1) {
             enumName = match.str(1);
             inEnum = true;
+            enumIndex = -1;
             continue;
         }
 
@@ -120,15 +121,18 @@ void Companion::ParseEnums(std::string& header) {
         }
 
         // Remove any comments and non-alphanumeric characters
-        line = std::regex_replace(line, std::regex(R"((/\*.*?\*/)|([^a-zA-Z0-9=_\-\.]))"), "");
+        line = std::regex_replace(line, std::regex(R"((/\*.*?\*/)|(//.*$)|([^a-zA-Z0-9=_\-\.]))"), "");
 
         if(line.find("=") != std::string::npos) {
-            auto name = line.substr(0, line.find("="));
             auto value = line.substr(line.find("=") + 1);
-            this->gEnums[enumName][value.starts_with("-") ? -std::stoi(value.substr(1)) : std::stoi(value)] = name;
+            auto name = line.substr(0, line.find("="));
+            enumIndex = std::stoi(value);
+            this->gEnums[enumName][enumIndex] = name;
         } else {
-            this->gEnums[enumName][this->gEnums[enumName].size()] = line;
+            enumIndex++;
+            this->gEnums[enumName][enumIndex] = line;
         }
+        
     }
 }
 

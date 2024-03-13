@@ -25,7 +25,7 @@ void SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         write << NUM(obj.zPos2, 7) << ", ";
         write << NUM(obj.xPos, 7) << ", ";
         write << NUM(obj.yPos, 7) << ", ";
-        write << NUM(obj.rot.x, 3) << ", ";
+        write << NUM(obj.rot, 3) << ", ";
         write << enumName << " },\n";
     }
     write << "};\n";
