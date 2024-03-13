@@ -3,6 +3,7 @@
 #include "Companion.h"
 
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
+#define FLOAT(x, w) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(1) << x << "f"
 
 void SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -20,7 +21,7 @@ void SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     for(auto& obj : objs) {
         auto enumName = Companion::Instance->GetEnumFromValue("ObjectId", obj.id).value_or(std::to_string(obj.id));
         write << fourSpaceTab << "{ ";
-        write << NUM(obj.zPos1, 8) << "f, ";
+        write << FLOAT(obj.zPos1, 8) << ", ";
         write << NUM(obj.zPos2, 7) << ", ";
         write << NUM(obj.xPos, 7) << ", ";
         write << NUM(obj.yPos, 7) << ", ";
