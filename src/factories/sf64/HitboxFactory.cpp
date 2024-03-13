@@ -5,6 +5,8 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
+#define FLOAT(x, w) std::dec << std::setfill(' ') << (((int) x == x) ? "" : "  ") << std::setw(w - 2) << x << (((int) x == x) ? ".0f" : "f")
+
 SF64::HitboxData::HitboxData(std::vector<float> data, std::vector<int> types): mData(data), mTypes(types) {
     
 }
@@ -26,11 +28,18 @@ void SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
     auto hitbox = std::static_pointer_cast<SF64::HitboxData>(raw);
     auto index = 0;
     auto count = hitbox->mData[index++];
+    auto hasType2 = false;
     auto off = offset;
+    
     if(IS_SEGMENTED(off)) {
         off = SEGMENT_OFFSET(off);
     } 
-
+    for(int type : hitbox->mTypes) {
+        if(type == 2) {
+            hasType2 = true;
+            break;
+        }
+    }
     if (Companion::Instance->IsDebug()) {
         write << "// 0x" << std::uppercase << std::hex << off << "\n";
     }
@@ -45,17 +54,24 @@ void SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
             write << fourSpaceTab << "HITBOX_TYPE_3,   ";
             index++;
         } else if (hitbox->mTypes[i] == 2) {
-            write << fourSpaceTab << "HITBOX_TYPE_2,   ";
+            write << fourSpaceTab << "HITBOX_TYPE_2,    ";
             index++;
             for(int j = 0; j < 3; j++) {
-                write << hitbox->mData[index++] << ", ";
+                auto tempf = hitbox->mData[index++];
+                write << FLOAT(tempf, 6) << ", ";
             }
             write << fourSpaceTab;
         } else {
             write << " /* HITBOX_TYPE_1 */ ";
         }
+        if(hasType2 && hitbox->mTypes[i] != 2) {
+            for(int j = 0; j < 8; j++) {
+                write << fourSpaceTab;
+            }
+        }
         for(int j = 0; j < 6; j++) {
-            write << hitbox->mData[index++] << ", ";
+            auto tempf = hitbox->mData[index++];
+            write << FLOAT(tempf, 7) << ", ";
         }
         write << "\n";
     }

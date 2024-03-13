@@ -28,6 +28,7 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem>
+#include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
 #include "factories/sf64/SkeletonFactory.h"
@@ -80,6 +81,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:SCRIPT", std::make_shared<SF64::ScriptFactory>());
     this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
+    this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
 
     this->Process();
 }

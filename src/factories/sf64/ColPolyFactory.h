@@ -5,39 +5,35 @@
 
 namespace SF64 {
 
-class LimbData : public IParsedData {
+struct CollisionPoly {
+    int16_t tri[3];
+    int16_t unk_06;
+    Vec3s norm;
+    int16_t unk_0E;
+    int32_t dist;
+};
+
+class ColPolyData : public IParsedData {
 public:
-    uint32_t mAddr;
-    uint32_t mDList;
-    Vec3f mTrans;
-    Vec3s mRot;
-    uint32_t mSibling;
-    uint32_t mChild;
-    int mIndex;
+    std::vector<CollisionPoly> mPolys;
+    std::vector<Vec3s> mMesh;
 
-    LimbData(uint32_t addr, uint32_t dList, Vec3f trans, Vec3s rot, uint32_t sibling, uint32_t child, int index);
+    ColPolyData(std::vector<CollisionPoly> polys, std::vector<Vec3s> mesh);
 };
 
-class SkeletonData : public IParsedData {
-public:
-    std::vector<LimbData> mSkeleton;
-
-    explicit SkeletonData(std::vector<LimbData> skeleton) : mSkeleton(skeleton) {}
-};
-
-class SkeletonHeaderExporter : public BaseExporter {
+class ColPolyHeaderExporter : public BaseExporter {
     void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class SkeletonBinaryExporter : public BaseExporter {
+class ColPolyBinaryExporter : public BaseExporter {
     void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class SkeletonCodeExporter : public BaseExporter {
+class ColPolyCodeExporter : public BaseExporter {
     void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class SkeletonFactory : public BaseFactory {
+class ColPolyFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override {
@@ -45,9 +41,9 @@ public:
     }
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Code, SkeletonCodeExporter)
-            REGISTER(Header, SkeletonHeaderExporter)
-            REGISTER(Binary, SkeletonBinaryExporter)
+            REGISTER(Code, ColPolyCodeExporter)
+            REGISTER(Header, ColPolyHeaderExporter)
+            REGISTER(Binary, ColPolyBinaryExporter)
         };
     }
     bool SupportModdedAssets() override { return false; }

@@ -1,13 +1,9 @@
 #pragma once
 
 #include "../BaseFactory.h"
+#include "types/Vec3D.h"
 
 namespace SF64 {
-struct Vec3s {
-    /* 0x0 */ int16_t x;
-    /* 0x2 */ int16_t y;
-    /* 0x4 */ int16_t z;
-}; // size = 0x6;
 
 struct ObjectInit {
     /* 0x00 */ float zPos1;
