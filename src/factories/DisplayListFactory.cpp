@@ -129,7 +129,7 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     if (Companion::Instance->IsDebug()) {
         const auto sz = (sizeof(uint32_t) * cmds.size());
 
-        write << "// count: " << std::to_string(sz / 8) << " DLists\n";
+        write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
         if (IS_SEGMENTED(offset)) {
             offset = SEGMENT_OFFSET(offset);
         }
@@ -381,10 +381,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                case GBIVersion::f3dex:
                     offset = w1;
 
-                    /* 
+                    /*
                      * Only generate lights on the second gsSPLight.
                      * gsSPSetLights1(name) outputs three macros:
-                     * 
+                     *
 	                 * gsSPNumLights(NUMLIGHTS_1)
 	                 * gsSPLight(&name.l[0], G_MV_L0)
 	                 * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights

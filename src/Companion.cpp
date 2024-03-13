@@ -35,6 +35,8 @@
 #include "factories/sf64/ScriptFactory.h"
 #include "factories/sf64/HitboxFactory.h"
 #include "factories/sf64/EnvSettingsFactory.h"
+#include "factories/sf64/ObjInitFactory.h"
+#include <regex>
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -79,8 +81,53 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:SCRIPT", std::make_shared<SF64::ScriptFactory>());
     this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
     this->RegisterFactory("SF64:ENVSETTINGS", std::make_shared<SF64::EnvSettingsFactory>());
+    this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
 
     this->Process();
+}
+
+void Companion::ParseEnums(std::string& header) {
+    std::ifstream file(header);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file");
+    }
+
+    std::regex enumRegex(R"(enum\s+(\w+)\s*(?:\s*:\s*(\w+))?[\s\n\r]*\{)");
+
+    std::string line;
+    std::smatch match;
+    std::string enumName;
+
+    bool inEnum = false;
+
+    while (std::getline(file, line)) {
+        if (!inEnum && std::regex_search(line, match, enumRegex) && match.size() > 1) {
+            enumName = match.str(1);
+            inEnum = true;
+            continue;
+        }
+
+        if(!inEnum) {
+            continue;
+        }
+
+        if(line.find("}") != std::string::npos) {
+            inEnum = false;
+            continue;
+        }
+
+        // Remove any comments and non-alphanumeric characters
+        line = std::regex_replace(line, std::regex(R"((/\*.*?\*/)|([^a-zA-Z0-9=_\-\.]))"), "");
+
+        if(line.find("=") != std::string::npos) {
+            auto name = line.substr(0, line.find("="));
+            auto value = line.substr(line.find("=") + 1);
+            this->gEnums[enumName][value.starts_with("-") ? -std::stoi(value.substr(1)) : std::stoi(value)] = name;
+        } else {
+            this->gEnums[enumName][this->gEnums[enumName].size()] = line;
+        }
+    }
 }
 
 void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary) {
@@ -134,7 +181,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
     auto exporter = factory->get()->GetExporter(this->gConfig.exporterType);
     if(!exporter.has_value()){
-        SPDLOG_ERROR("No exporter found for {}", name);
+        SPDLOG_WARN("No exporter found for {}", name);
         return;
     }
 
@@ -407,6 +454,34 @@ void Companion::Process() {
             }
 
             entries.push_back(key);
+        }
+    }
+
+    if(cfg["enums"]) {
+        auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
+        for (auto& file : enums) {
+            this->ParseEnums(file);
+        }
+    }
+
+    if(cfg["logging"]){
+        auto level = cfg["logging"].as<std::string>();
+        if(level == "TRACE") {
+            spdlog::set_level(spdlog::level::trace);
+        } else if(level == "DEBUG") {
+            spdlog::set_level(spdlog::level::debug);
+        } else if(level == "INFO") {
+            spdlog::set_level(spdlog::level::info);
+        } else if(level == "WARN") {
+            spdlog::set_level(spdlog::level::warn);
+        } else if(level == "ERROR") {
+            spdlog::set_level(spdlog::level::err);
+        } else if(level == "CRITICAL") {
+            spdlog::set_level(spdlog::level::critical);
+        } else if(level == "OFF") {
+            spdlog::set_level(spdlog::level::off);
+        } else {
+            throw std::runtime_error("Invalid logging level, please use TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL or OFF");
         }
     }
 
@@ -692,7 +767,10 @@ void Companion::Process() {
         wrapper->Close();
     }
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    auto level = spdlog::get_level();
+    spdlog::set_level(spdlog::level::info);
     SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
+    spdlog::set_level(level);
     spdlog::set_pattern(regular);
     SPDLOG_INFO("------------------------------------------------");
 
@@ -805,6 +883,18 @@ std::optional<Table> Companion::SearchTable(uint32_t addr){
     }
 
     return std::nullopt;
+}
+
+std::optional<std::string> Companion::GetEnumFromValue(const std::string& key, int32_t id) {
+    if(!this->gEnums.contains(key)){
+        return std::nullopt;
+    }
+
+    if(!this->gEnums[key].contains(id)){
+        return std::nullopt;
+    }
+
+    return this->gEnums[key][id];
 }
 
 std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uint8_t segment) const {
