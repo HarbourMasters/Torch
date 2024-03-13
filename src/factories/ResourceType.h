@@ -39,5 +39,6 @@ enum class ResourceType {
     Skeleton = 0x534B454C,     // SKEL
     Script = 0x53435250,       // SCRP
     Hitbox = 0x48544258,       // HTBX
+    ObjectInit = 0x4F42494E,   // OBIN
 };
 } // namespace LUS

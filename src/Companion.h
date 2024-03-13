@@ -89,6 +89,7 @@ public:
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
+    std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
 
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
@@ -116,6 +117,7 @@ private:
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     std::shared_ptr<N64::Cartridge> gCartridge;
+    std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
 
     // Temporal Variables
     std::string gCurrentFile;
@@ -133,8 +135,9 @@ private:
     std::unordered_map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
-    void ParseCurrentFileConfig(YAML::Node node);
+    void ParseEnums(std::string& file);
     void ParseModdingConfig();
+    void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
 };
