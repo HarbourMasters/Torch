@@ -35,6 +35,7 @@
 #include "factories/sf64/AnimFactory.h"
 #include "factories/sf64/ScriptFactory.h"
 #include "factories/sf64/HitboxFactory.h"
+#include "factories/sf64/EnvSettingsFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
 #include <regex>
 
@@ -68,10 +69,10 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
 
     // MK64 specific
-    this->RegisterFactory("MK64:COURSEVTX", std::make_shared<MK64::CourseVtxFactory>());
-    this->RegisterFactory("MK64:TRACKWAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
-    this->RegisterFactory("MK64:TRACKSECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
-    this->RegisterFactory("MK64:SPAWNDATA", std::make_shared<MK64::SpawnDataFactory>());
+    this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
+    this->RegisterFactory("MK64:TRACK_WAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
+    this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
+    this->RegisterFactory("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
 
     // SF64 specific
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
@@ -80,6 +81,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:MSG_TABLE", std::make_shared<SF64::MessageLookupFactory>());
     this->RegisterFactory("SF64:SCRIPT", std::make_shared<SF64::ScriptFactory>());
     this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
+    this->RegisterFactory("SF64:ENV_SETTINGS", std::make_shared<SF64::EnvSettingsFactory>());
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
     this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
 
