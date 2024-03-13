@@ -80,7 +80,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:MSG_TABLE", std::make_shared<SF64::MessageLookupFactory>());
     this->RegisterFactory("SF64:SCRIPT", std::make_shared<SF64::ScriptFactory>());
     this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
-    this->RegisterFactory("SF64:ENVSETTINGS", std::make_shared<SF64::EnvSettingsFactory>());
+    this->RegisterFactory("SF64:ENV_SETTINGS", std::make_shared<SF64::EnvSettingsFactory>());
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
 
     this->Process();
