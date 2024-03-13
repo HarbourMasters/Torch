@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../BaseFactory.h"
+#include "types/Vec3D.h"
 
 namespace SF64 {
 
@@ -15,9 +16,7 @@ public:
     int32_t  mFogB;
     int32_t  mFogN;
     int32_t  mFogF;
-    float    mUnk_20x;
-    float    mUnk_20y;
-    float    mUnk_20z;
+    Vec3f    mUnk_20;
     int32_t  mLightR;
     int32_t  mLightG;
     int32_t  mLightB;
@@ -25,7 +24,7 @@ public:
     int32_t  mAmbG;
     int32_t  mAmbB;
 
-    EnvSettingsData(int32_t type, int32_t unk_04, uint16_t bgColor, uint16_t seqId, int32_t fogR, int32_t fogG, int32_t fogB, int32_t fogN, int32_t fogF, float unk_20x, float unk_20y, float unk_20z, int32_t lightR, int32_t lightG, int32_t lightB, int32_t ambR, int32_t ambG, int32_t ambB);
+    EnvSettingsData(int32_t type, int32_t unk_04, uint16_t bgColor, uint16_t seqId, int32_t fogR, int32_t fogG, int32_t fogB, int32_t fogN, int32_t fogF, Vec3f unk_20, int32_t lightR, int32_t lightG, int32_t lightB, int32_t ambR, int32_t ambG, int32_t ambB);
 };
 
 class EnvSettingsHeaderExporter : public BaseExporter {
