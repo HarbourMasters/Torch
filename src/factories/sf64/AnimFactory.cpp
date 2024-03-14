@@ -65,9 +65,15 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
     if (Companion::Instance->IsDebug()) {
         write << "// 0x" << std::uppercase << std::hex << dataOffset << "\n";
     }
-
+    auto dataCount = anim->mFrameData.size();
+    // write << "Frame data end: 0x" << std::hex << std::uppercase << (dataOffset + sizeof(uint16_t) * dataCount) << "\n";
+    // write << "JointKey start: 0x" << std::hex << std::uppercase << keyOffset << "\n";
+    if(dataOffset + sizeof(uint16_t) * dataCount > keyOffset) {
+        dataCount = (keyOffset - dataOffset) / sizeof(uint16_t);
+        write << "// SF64:ANIM error: Frame data overlaps joint key.\n";
+    }
     write << "u16 " << dataName << "[] = {";
-    for(int i = 0; i < anim->mFrameData.size(); i++) {
+    for(int i = 0; i < dataCount; i++) {
         if((i % 12) == 0) {
             write << "\n" << fourSpaceTab;
         }
@@ -127,6 +133,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
     std::vector<SF64::JointKey> jointKeys;
     std::vector<int16_t> frameData;
     auto dataCount = 1;
+    auto maxIndex = 0;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0xC);
     LUS::BinaryReader reader(segment.data, segment.size);
 
@@ -146,23 +153,27 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
     for(int i = 0; i <= limbCount; i++) {
         auto xLen = keyReader.ReadUInt16();
         auto x = keyReader.ReadUInt16();
+        maxIndex = std::max(maxIndex, (int)x);
         auto yLen = keyReader.ReadUInt16();
         auto y = keyReader.ReadUInt16();
+        maxIndex = std::max(maxIndex, (int)y);
         auto zLen = keyReader.ReadUInt16();
         auto z = keyReader.ReadUInt16();
+        maxIndex = std::max(maxIndex, (int)z);
 
         jointKeys.push_back(SF64::JointKey({xLen, x, yLen, y, zLen, z}));
-        if(x != 0) {
-            dataCount += (xLen < 1) ? 1 : (xLen > frameCount) ? frameCount : xLen;
+        if(x != 0 && xLen != 0) {
+            dataCount += (xLen > frameCount) ? frameCount: xLen;
         }
-        if(y != 0) {
-            dataCount += (yLen < 1) ? 1 : (yLen > frameCount) ? frameCount : yLen;
+        if(y != 0 && yLen != 0) {
+            dataCount += (yLen > frameCount) ? frameCount: yLen;
         }
-        if(z != 0) {
-            dataCount += (zLen < 1) ? 1 : (zLen > frameCount) ? frameCount : zLen;
+        if(z != 0 && zLen != 0) {
+            dataCount += (zLen > frameCount) ? frameCount: zLen;
         }
     }
-
+    // std::cout << dataCount << fourSpaceTab << maxIndex << "\n";
+    dataCount = std::max(dataCount, maxIndex + 1);
     auto [___, dataSegment] = Decompressor::AutoDecode(dataNode, buffer, sizeof(uint16_t) * dataCount);
     LUS::BinaryReader dataReader(dataSegment.data, dataSegment.size);
     dataReader.SetEndianness(LUS::Endianness::Big);

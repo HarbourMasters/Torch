@@ -63,6 +63,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vec
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<ObjectInit> objects;
+    bool terminator = false;
 
     bool processing = true;
     while(processing) {
@@ -76,9 +77,14 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vec
         int16_t id = reader.ReadInt16();
         reader.ReadInt16();
 
-        processing = id != -1;
-
-        objects.push_back({ zPos1, zPos2, xPos, yPos, {rotX, rotY, rotZ}, id});
+        if(id == -1) {
+            terminator = true;
+        }
+        if(terminator && ((zPos1*zPos2*xPos*yPos*rotX*rotY*rotZ) != 0 || id != -1)) {
+            processing = false;
+        } else {
+            objects.push_back({ zPos1, zPos2, xPos, yPos, {rotX, rotY, rotZ}, id});
+        }
     }
 
     return std::make_shared<ObjInitData>(objects);
