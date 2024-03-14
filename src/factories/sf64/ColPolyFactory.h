@@ -6,7 +6,7 @@
 namespace SF64 {
 
 struct CollisionPoly {
-    int16_t tri[3];
+    Vec3s tri;
     int16_t unk_06;
     Vec3s norm;
     int16_t unk_0E;

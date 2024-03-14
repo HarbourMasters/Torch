@@ -43,7 +43,7 @@ void SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         // if((i++ % 2) == 0) {
             write << "\n" << fourSpaceTab;
         // }
-        write << "{ {" << NUM(poly.tri[0], width) << ", " << NUM(poly.tri[1], width) << ", " << NUM(poly.tri[2], width) << "},  ";
+        write << "{ " << NUM(poly.tri, width) << ",  ";
         if (poly.unk_06 == 0) {
             write << "0,  ";
         } else {
@@ -142,7 +142,12 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
     meshReader.SetEndianness(LUS::Endianness::Big);
 
     for(int i = 0; i < meshSize; i++) {
-        mesh.push_back(Vec3s(meshReader.ReadInt16(), meshReader.ReadInt16(), meshReader.ReadInt16()));
+        Vec3s vtx;
+
+        vtx.x = meshReader.ReadInt16();
+        vtx.y = meshReader.ReadInt16();
+        vtx.z = meshReader.ReadInt16();
+        mesh.push_back(vtx);
     }
 
     return std::make_shared<SF64::ColPolyData>(polys, mesh);

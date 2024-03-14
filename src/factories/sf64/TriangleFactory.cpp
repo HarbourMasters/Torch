@@ -132,8 +132,12 @@ std::optional<std::shared_ptr<IParsedData>> SF64::TriangleFactory::parse(std::ve
     std::vector<std::vector<Vec3f>> meshes;
     for(int j = 0; j < meshCount; j++) {
         std::vector<Vec3f> mesh;
+        Vec3f vtx;
         for(int i = 0; i < meshSize; i++) {
-            mesh.push_back(Vec3f(meshReader.ReadFloat(), meshReader.ReadFloat(), meshReader.ReadFloat()));
+            vtx.x = meshReader.ReadFloat();
+            vtx.y = meshReader.ReadFloat();
+            vtx.z = meshReader.ReadFloat();
+            mesh.push_back(vtx);
         }
         meshes.push_back(mesh);
     }
