@@ -21,6 +21,10 @@ public:
     explicit ObjInitData(std::vector<ObjectInit> objInit) : mObjInit(objInit) {}
 };
 
+class ObjInitHeaderExporter : public BaseExporter {
+    void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
 class ObjInitBinaryExporter : public BaseExporter {
     void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
@@ -37,6 +41,7 @@ public:
     }
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
+            REGISTER(Header, ObjInitHeaderExporter)
             REGISTER(Binary, ObjInitBinaryExporter)
             REGISTER(Code, ObjInitCodeExporter)
         };
