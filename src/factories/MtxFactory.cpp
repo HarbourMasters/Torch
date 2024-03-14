@@ -1,0 +1,123 @@
+#include "MtxFactory.h"
+#include "spdlog/spdlog.h"
+
+#include "Companion.h"
+#include "utils/Decompressor.h"
+
+#define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
+#define COL(c) std::dec << std::setfill(' ') << std::setw(3) << c
+
+void MtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+
+    if(Companion::Instance->IsOTRMode()){
+        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return;
+    }
+
+    write << "extern Mtx " << symbol << "[];\n";
+}
+
+void MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto mtx = std::static_pointer_cast<MtxData>(raw)->mMtxs;
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
+
+    if (IS_SEGMENTED(offset)) {
+        offset = SEGMENT_OFFSET(offset);
+    }
+
+    if (Companion::Instance->IsDebug()) {
+        if (IS_SEGMENTED(offset)) {
+            offset = SEGMENT_OFFSET(offset);
+        }
+        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
+    }
+
+    write << "Mtx " << symbol << "[] = {\n";
+
+    for (int i = 0; i < mtx.size(); ++i) {
+        auto v = mtx[i];
+
+        auto x = v.ob[0];
+        auto y = v.ob[1];
+        auto z = v.ob[2];
+
+        auto flag = v.flag;
+
+        auto tc1 = v.tc[0];
+        auto tc2 = v.tc[1];
+
+        auto c1 = (uint16_t) v.cn[0];
+        auto c2 = (uint16_t) v.cn[1];
+        auto c3 = (uint16_t) v.cn[2];
+        auto c4 = (uint16_t) v.cn[3];
+
+        if(i <= mtx.size() - 1) {
+            write << fourSpaceTab;
+        }
+
+        // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
+        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
+    }
+
+    write << "};\n";
+
+    if (Companion::Instance->IsDebug()) {
+        write << "// count: " << std::to_string(mtx.size()) << " Mtxs\n";
+        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(MtxRaw) * mtx.size())) << "\n";
+    }
+
+    write << "\n";
+}
+
+void MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto mtx = std::static_pointer_cast<MtxData>(raw);
+    auto writer = LUS::BinaryWriter();
+
+    WriteHeader(writer, LUS::ResourceType::Vertex, 0);
+    writer.Write((uint32_t) mtx->mMtxs.size());
+    for(auto v : mtx->mMtxs) {
+        writer.Write(v.ob[0]);
+        writer.Write(v.ob[1]);
+        writer.Write(v.ob[2]);
+        writer.Write(v.flag);
+        writer.Write(v.tc[0]);
+        writer.Write(v.tc[1]);
+        writer.Write(v.cn[0]);
+        writer.Write(v.cn[1]);
+        writer.Write(v.cn[2]);
+        writer.Write(v.cn[3]);
+    }
+
+    writer.Finish(write);
+}
+
+std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto count = GetSafeNode<size_t>(node, "count");
+
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    LUS::BinaryReader reader(segment.data, count * sizeof(MtxRaw));
+
+    reader.SetEndianness(LUS::Endianness::Big);
+    std::vector<MtxRaw> vertices;
+
+    for(size_t i = 0; i < count; i++) {
+        auto x = reader.ReadInt32();
+        auto y = reader.ReadInt16();
+        auto z = reader.ReadInt16();
+        auto flag = reader.ReadUInt16();
+        auto tc1 = reader.ReadInt16();
+        auto tc2 = reader.ReadInt16();
+        auto cn1 = reader.ReadUByte();
+        auto cn2 = reader.ReadUByte();
+        auto cn3 = reader.ReadUByte();
+        auto cn4 = reader.ReadUByte();
+
+        vertices.push_back(MtxRaw({
+           {x, y, z}, flag, {tc1, tc2}, {cn1, cn2, cn3, cn4}
+       }));
+    }
+
+    return std::make_shared<MtxData>(vertices);
+}
