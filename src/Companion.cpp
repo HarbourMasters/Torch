@@ -134,7 +134,6 @@ void Companion::ParseEnums(std::string& header) {
             enumIndex++;
             this->gEnums[enumName][enumIndex] = line;
         }
-        
     }
 }
 
@@ -159,7 +158,14 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         return;
     }
 
+
     auto impl = factory->get();
+
+    auto exporter = impl->GetExporter(this->gConfig.exporterType);
+    if(!exporter.has_value()){
+        SPDLOG_WARN("No exporter found for {}", name);
+        return;
+    }
 
     std::optional<std::shared_ptr<IParsedData>> result;
     if(this->gConfig.modding) {
@@ -184,12 +190,6 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     }
     if(!result.has_value()){
         SPDLOG_ERROR("Failed to process {}", name);
-        return;
-    }
-
-    auto exporter = factory->get()->GetExporter(this->gConfig.exporterType);
-    if(!exporter.has_value()){
-        SPDLOG_WARN("No exporter found for {}", name);
         return;
     }
 
