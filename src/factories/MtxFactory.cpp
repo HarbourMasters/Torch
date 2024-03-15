@@ -19,7 +19,7 @@ void MtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 }
 
 void MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    auto mtx = std::static_pointer_cast<MtxData>(raw)->mMtxs;
+    auto m = std::static_pointer_cast<MtxData>(raw)->mMtxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -36,36 +36,43 @@ void MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
 
     write << "Mtx " << symbol << "[] = {\n";
 
-    for (int i = 0; i < mtx.size(); ++i) {
-        auto v = mtx[i];
+    for (int i = 0; i < m.size(); ++i) {
 
-        auto x = v.ob[0];
-        auto y = v.ob[1];
-        auto z = v.ob[2];
+        auto m1 = m[i].mtx[0][0];
+        auto m2 = m[i].mtx[0][1];
+        auto m3 = m[i].mtx[0][2];
+        auto m4 = m[i].mtx[0][3];
 
-        auto flag = v.flag;
+        auto m5 = m[i].mtx[1][0];
+        auto m6 = m[i].mtx[1][1];
+        auto m7 = m[i].mtx[1][2];
+        auto m8 = m[i].mtx[1][3];
 
-        auto tc1 = v.tc[0];
-        auto tc2 = v.tc[1];
+        auto m9 = m[i].mtx[2][0];
+        auto m10 = m[i].mtx[2][1];
+        auto m11 = m[i].mtx[2][2];
+        auto m12 = m[i].mtx[2][3];
 
-        auto c1 = (uint16_t) v.cn[0];
-        auto c2 = (uint16_t) v.cn[1];
-        auto c3 = (uint16_t) v.cn[2];
-        auto c4 = (uint16_t) v.cn[3];
+        auto m13 = m[i].mtx[3][0];
+        auto m14 = m[i].mtx[3][1];
+        auto m15 = m[i].mtx[3][2];
+        auto m16 = m[i].mtx[3][3];
 
-        if(i <= mtx.size() - 1) {
-            write << fourSpaceTab;
-        }
-
-        // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
-        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
+        // {{ m1, m2, m3,     m4 },
+        //  { m5, m6, m7,     m8 },
+        //  { m9, m10, m11,  m12 },
+        //  { m13, m14, m15, m16 }},
+        write << fourSpaceTab << "{{" << NUM(m1) << ", " << NUM(m2) << ", " << NUM(m3) << ", " << NUM(m4) << "},\n";
+        write << fourSpaceTab << " {" << NUM(m5) << ", " << NUM(m6) << ", " << NUM(m7) << ", " << NUM(m8) << "},\n";
+        write << fourSpaceTab << " {" << NUM(m9) << ", " << NUM(m10) << ", " << NUM(m11) << ", " << NUM(m12) << "},\n";
+        write << fourSpaceTab << " {" << NUM(m13) << ", " << NUM(m14) << ", " << NUM(m15) << ", " << NUM(m16) << "}},\n";
     }
 
     write << "};\n";
 
     if (Companion::Instance->IsDebug()) {
-        write << "// count: " << std::to_string(mtx.size()) << " Mtxs\n";
-        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(MtxRaw) * mtx.size())) << "\n";
+        write << "// count: " << std::to_string(m.size()) << " Mtxs\n";
+        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(MtxRaw) * m.size())) << "\n";
     }
 
     write << "\n";
@@ -77,17 +84,23 @@ void MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
     WriteHeader(writer, LUS::ResourceType::Vertex, 0);
     writer.Write((uint32_t) mtx->mMtxs.size());
-    for(auto v : mtx->mMtxs) {
-        writer.Write(v.ob[0]);
-        writer.Write(v.ob[1]);
-        writer.Write(v.ob[2]);
-        writer.Write(v.flag);
-        writer.Write(v.tc[0]);
-        writer.Write(v.tc[1]);
-        writer.Write(v.cn[0]);
-        writer.Write(v.cn[1]);
-        writer.Write(v.cn[2]);
-        writer.Write(v.cn[3]);
+    for(auto m : mtx->mMtxs) {
+        writer.Write(m.mtx[0][0]);
+        writer.Write(m.mtx[0][1]);
+        writer.Write(m.mtx[0][2]);
+        writer.Write(m.mtx[0][3]);
+        writer.Write(m.mtx[1][0]);
+        writer.Write(m.mtx[1][1]);
+        writer.Write(m.mtx[1][2]);
+        writer.Write(m.mtx[1][3]);
+        writer.Write(m.mtx[2][0]);
+        writer.Write(m.mtx[2][1]);
+        writer.Write(m.mtx[2][2]);
+        writer.Write(m.mtx[2][3]);
+        writer.Write(m.mtx[3][0]);
+        writer.Write(m.mtx[3][1]);
+        writer.Write(m.mtx[3][2]);
+        writer.Write(m.mtx[3][3]);
     }
 
     writer.Finish(write);
@@ -100,24 +113,33 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
     LUS::BinaryReader reader(segment.data, count * sizeof(MtxRaw));
 
     reader.SetEndianness(LUS::Endianness::Big);
-    std::vector<MtxRaw> vertices;
+    std::vector<MtxRaw> matrix;
 
     for(size_t i = 0; i < count; i++) {
-        auto x = reader.ReadInt32();
-        auto y = reader.ReadInt16();
-        auto z = reader.ReadInt16();
-        auto flag = reader.ReadUInt16();
-        auto tc1 = reader.ReadInt16();
-        auto tc2 = reader.ReadInt16();
-        auto cn1 = reader.ReadUByte();
-        auto cn2 = reader.ReadUByte();
-        auto cn3 = reader.ReadUByte();
-        auto cn4 = reader.ReadUByte();
+        auto m1 = reader.ReadInt32();
+        auto m2 = reader.ReadInt32();
+        auto m3 = reader.ReadInt32();
+        auto m4 = reader.ReadInt32();
+        auto m5 = reader.ReadInt32();
+        auto m6 = reader.ReadInt32();
+        auto m7 = reader.ReadInt32();
+        auto m8 = reader.ReadInt32();
+        auto m9 = reader.ReadInt32();
+        auto m10 = reader.ReadInt32();
+        auto m11 = reader.ReadInt32();
+        auto m12 = reader.ReadInt32();
+        auto m13 = reader.ReadInt32();
+        auto m14 = reader.ReadInt32();
+        auto m15 = reader.ReadInt32();
+        auto m16 = reader.ReadInt32();
 
-        vertices.push_back(MtxRaw({
-           {x, y, z}, flag, {tc1, tc2}, {cn1, cn2, cn3, cn4}
+        matrix.push_back(MtxRaw({
+           {{m1, m2, m3, m4},
+           {m5, m6, m7, m8},
+           {m9, m10, m11, m12},
+           {m13, m14, m15, m16}},
        }));
     }
 
-    return std::make_shared<MtxData>(vertices);
+    return std::make_shared<MtxData>(matrix);
 }
