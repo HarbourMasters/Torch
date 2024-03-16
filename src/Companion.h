@@ -110,6 +110,7 @@ public:
     TorchConfig& GetConfig() { return this->gConfig; }
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
+    std::optional<YAML::Node> AddAsset(YAML::Node asset);
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;

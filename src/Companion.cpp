@@ -18,6 +18,7 @@
 #include "factories/DisplayListOverrides.h"
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
+#include "factories/Vec3fFactory.h"
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
@@ -39,6 +40,7 @@
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
 #include <regex>
+#include "utils/TorchUtils.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -61,6 +63,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SEQUENCE", std::make_shared<SequenceFactory>());
     this->RegisterFactory("SAMPLE", std::make_shared<SampleFactory>());
     this->RegisterFactory("BANK", std::make_shared<BankFactory>());
+    this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
 
     // SM64 specific
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
@@ -966,4 +969,54 @@ std::string Companion::NormalizeAsset(const std::string& name) const {
 
 std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
     return Chocobo1::SHA1().addData(data).finalize().toString();
+}
+
+static std::string ConvertType(std::string type) {
+    int index;
+
+    if((index = type.find(':')) != std::string::npos) {
+        type = type.substr(index + 1);
+    }
+    type = std::regex_replace(type, std::regex(R"([^_A-Za-z0-9]*)"), "");
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+    return type;
+}
+
+std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
+    if(!asset["offset"] || !asset["type"]) {
+        return std::nullopt;
+    }
+    const auto type = GetSafeNode<std::string>(asset, "type");
+    const auto offset = GetSafeNode<uint32_t>(asset, "offset");
+    const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
+    const auto decl = this->GetNodeByAddr(offset);
+
+    if(decl.has_value()) {
+        return std::get<1>(decl.value());
+    }
+
+    auto rom = this->GetRomData();
+    auto factory = this->GetFactory(type)->get();
+
+    std::string output;
+    std::string typeId = ConvertType(type);
+    int index;
+    
+    if(symbol != "") {
+        output = symbol;
+    } else if(Decompressor::IsSegmented(offset)){
+        output = this->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(offset)) +"_" + typeId + "_" + Torch::to_hex(SEGMENT_OFFSET(offset), false));
+    } else {
+        output = this->NormalizeAsset(typeId + "_" + Torch::to_hex(offset, false));
+    }
+    asset["autogen"] = true;
+    asset["symbol"] = output;
+
+    auto result = factory->parse(rom, asset);
+
+    if(result.has_value()){
+        return std::get<1>(this->RegisterAsset(output, asset).value());
+    }
+
+    return std::nullopt;
 }

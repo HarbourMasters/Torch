@@ -9,6 +9,8 @@ public:
     float z;
 
     Vec3f(float xv = 0, float yv = 0, float zv = 0);
+    int width();
+    int precision();
     friend std::ostream& operator<< (std::ostream& stream, const Vec3f& vec);
 };
 
@@ -19,6 +21,7 @@ public:
     int16_t z;
 
     Vec3s(int16_t xv = 0, int16_t yv = 0, int16_t zv = 0);
+    int width();
     friend std::ostream& operator<< (std::ostream& stream, const Vec3s& vec);
 };
 
@@ -29,6 +32,7 @@ public:
     int32_t z;
 
     Vec3i(int32_t xv = 0, int32_t yv = 0, int32_t zv = 0);
+    int width();
     friend std::ostream& operator<< (std::ostream& stream, const Vec3i& vec);
 };
 
@@ -38,6 +42,8 @@ public:
     float z;
 
     Vec2f(float xv = 0, float zv = 0);
+    int precision();
+    int width();
     friend std::ostream& operator<< (std::ostream& stream, const Vec2f& vec);
 };
 
@@ -49,6 +55,8 @@ public:
     float w;
 
     Vec4f(float xv = 0, float yv = 0, float zv = 0, float wv = 0);
+    int precision();
+    int width();
     friend std::ostream& operator<< (std::ostream& stream, const Vec4f& vec);
 };
 
@@ -60,5 +68,6 @@ public:
     int16_t w;
 
     Vec4s(int16_t xv = 0, int16_t yv = 0, int16_t zv = 0, int16_t wv = 0);
+    int width();
     friend std::ostream& operator<< (std::ostream& stream, const Vec4s& vec);
 };
