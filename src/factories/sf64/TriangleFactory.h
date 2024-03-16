@@ -8,10 +8,8 @@ namespace SF64 {
 class TriangleData : public IParsedData {
 public:
     std::vector<Vec3s> mTris;
-    // std::vector<std::vector<Vec3f>> mMeshes;
     std::vector<YAML::Node> mMeshNodes;
 
-    // TriangleData(std::vector<Vec3s> tris, std::vector<std::vector<Vec3f>> meshes);
     TriangleData(std::vector<Vec3s> tris, std::vector<YAML::Node> meshNodes);
 };
 

@@ -11,10 +11,6 @@
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
 #define STRIP_SEGMENT(offset) (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : (offset))
 
-// SF64::TriangleData::TriangleData(std::vector<Vec3s> tris, std::vector<std::vector<Vec3f>> meshes): mTris(tris), mMeshes(meshes) {
-    
-// }
-
 SF64::TriangleData::TriangleData(std::vector<Vec3s> tris, std::vector<YAML::Node> meshNodes): mTris(tris), mMeshNodes(meshNodes) {
 }
 
@@ -62,48 +58,6 @@ void SF64::TriangleCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
     }
 
     write << "\n";
-
-    
-    // auto meshOffset = offset + triData->mTris.size() * sizeof(Vec3s);
-
-    // for(int j = 0; j < triData->mMeshes.size(); j++) {
-    //     std::string indexTag = "";
-    //     std::ostringstream offsetStr;
-    //     std::string meshSymbol;
-    //     if(triData->mMeshes.size() != 1) {
-    //         indexTag = std::to_string(j) + "_";
-    //     }
-    //     offsetStr << std::uppercase << std::hex << STRIP_SEGMENT(meshOffset);
-    //     if(!node["mesh_symbol"]) {
-    //         meshSymbol = symbol + "_mesh_" + indexTag + offsetStr.str();
-    //     } else {
-    //         meshSymbol = GetSafeNode<std::string>(node, "mesh_symbol");
-    //         if(!ReplaceOffset(meshSymbol, meshOffset)) {
-    //             meshSymbol += indexTag;
-    //         }
-    //     }
-
-    //     if (Companion::Instance->IsDebug()) {
-    //         write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    //     }
-
-    //     write << "Vec3f " << meshSymbol << "[] = {";
-    //     i = 0;
-    //     for(Vec3f vtx : triData->mMeshes[j]) {
-    //         if((i++ % 4) == 0) {
-    //             write << "\n" << fourSpaceTab;
-    //         }
-    //         write << NUM(vtx, 5) << ",   ";
-    //     }
-
-    //     write << "\n};\n";
-    //     off += triData->mMeshes[j].size() * sizeof(Vec3f);
-    //     if (Companion::Instance->IsDebug()) {
-    //         write << "// Mesh vertex count: " << triData->mMeshes[j].size() << "\n";
-    //         write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    //     }
-    //     write << "\n";
-    // }
 }
 
 void SF64::TriangleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -151,7 +105,6 @@ std::optional<std::shared_ptr<IParsedData>> SF64::TriangleFactory::parse(std::ve
                 offsetSeg << std::uppercase << std::hex << meshOffset;
                 off = offsetSeg.str();
                 meshSymbol = std::regex_replace(meshSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
-                // std::replace(meshSymbol.begin(), meshSymbol.end(), replaceOff, off);
             }
             meshNode["symbol"] = meshSymbol;
         }
@@ -163,28 +116,6 @@ std::optional<std::shared_ptr<IParsedData>> SF64::TriangleFactory::parse(std::ve
         meshNodes.push_back(meshNode);
         meshOffset += meshSize * sizeof(Vec3f);
     }
-
-
-
-
-    // YAML::Node meshNode;
-    // meshNode["offset"] = meshOffset;
-    // auto [__, meshSegment] = Decompressor::AutoDecode(meshNode, buffer, meshSize * meshCount * sizeof(Vec3f));
-    // LUS::BinaryReader meshReader(meshSegment.data, meshSegment.size);
-    // meshReader.SetEndianness(LUS::Endianness::Big);
-    // std::vector<std::vector<Vec3f>> meshes;
-    
-    // for(int j = 0; j < meshCount; j++) {
-    //     std::vector<Vec3f> mesh;
-    //     Vec3f vtx;
-    //     for(int i = 0; i < meshSize; i++) {
-    //         vtx.x = meshReader.ReadFloat();
-    //         vtx.y = meshReader.ReadFloat();
-    //         vtx.z = meshReader.ReadFloat();
-    //         mesh.push_back(vtx);
-    //     }
-    //     meshes.push_back(mesh);
-    // }
 
     return std::make_shared<SF64::TriangleData>(tris, meshNodes);
 }
