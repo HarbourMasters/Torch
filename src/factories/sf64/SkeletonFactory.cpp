@@ -8,7 +8,6 @@
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 // #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
 #define FLOAT(x, w, p) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(p) << x
-
 SF64::LimbData::LimbData(uint32_t addr, uint32_t dList, Vec3f trans, Vec3s rot, uint32_t sibling, uint32_t child, int index): mAddr(addr), mDList(dList), mTrans(trans), mRot(rot), mSibling(sibling), mChild(child), mIndex(index) {
     
 }
