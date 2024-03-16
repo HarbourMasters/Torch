@@ -33,6 +33,9 @@ void TypeBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
 }
 
 std::optional<std::shared_ptr<IParsedData>> TypeFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto [root, segment] = Decompressor::AutoDecode(node, buffer, 0x1000);
+    LUS::BinaryReader reader(segment.data, segment.size);
+    reader.SetEndianness(LUS::Endianness::Big);
 
     return std::make_shared<TypeData>();
 }

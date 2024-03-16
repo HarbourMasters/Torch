@@ -5,9 +5,9 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
-#define NUM(x) std::dec << std::setfill(' ') << std::setw(7) << x
-#define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
-
+#define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
+// #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
+#define FLOAT(x, w, p) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(p) << x
 SF64::LimbData::LimbData(uint32_t addr, uint32_t dList, Vec3f trans, Vec3s rot, uint32_t sibling, uint32_t child, int index): mAddr(addr), mDList(dList), mTrans(trans), mRot(rot), mSibling(sibling), mChild(child), mIndex(index) {
     
 }
@@ -21,6 +21,16 @@ void SF64::SkeletonHeaderExporter::Export(std::ostream &write, std::shared_ptr<I
     }
 
     write << "extern Limb* " << symbol << "[];\n";
+}
+
+int GetPrecision(float f) {
+    int prec = 0;
+
+    while(f != (int)f && prec < 8 ){
+        f *= 10;
+        prec++;
+    }
+    return prec;
 }
 
 void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -64,7 +74,8 @@ void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
                 write << "0x" << std::uppercase << std::hex << limb.mDList << ", ";
             }
         }
-        write << limb.mTrans << ", ";
+        // auto p = std::max(std::max(GetPrecision(limb.mTrans.x), GetPrecision(limb.mTrans.y)), GetPrecision(limb.mTrans.z));
+        write << FLOAT(limb.mTrans, 0, limb.mTrans.precision()) << ", ";
         write << std::dec << limb.mRot << ", ";
         write << ((limb.mSibling != 0) ? "&" : "") << limbDict[limb.mSibling] << ", ";
         write << ((limb.mChild != 0) ? "&" : "") << limbDict[limb.mChild] << ",\n";
@@ -100,7 +111,6 @@ void SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    YAML::Node limbNode;
     std::vector<SF64::LimbData> skeleton;
     std::map<std::string, std::string> limbDict;
     auto [root, segment] = Decompressor::AutoDecode(node, buffer, 0x1000);
@@ -111,9 +121,10 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
     
 
     while(limbAddr != 0) {
-        limbNode["offset"] = limbAddr;
+        YAML::Node limbNode;
         Vec3f trans;
         Vec3s rot;
+        limbNode["offset"] = limbAddr;
         DecompressedData limbDataRaw = Decompressor::AutoDecode(limbNode, buffer, 0x20);
         LUS::BinaryReader limbReader(limbDataRaw.segment.data, limbDataRaw.segment.size);
         limbReader.SetEndianness(LUS::Endianness::Big);
@@ -130,41 +141,10 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
         auto childAddr = limbReader.ReadUInt32();
 
         if(dListAddr != 0 && (SEGMENT_NUMBER(dListAddr) == SEGMENT_NUMBER(limbAddr))) {
-            const auto decl = Companion::Instance->GetNodeByAddr(dListAddr);
-
-            if(!decl.has_value()){
-                SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", dListAddr);
-
-                auto rom = Companion::Instance->GetRomData();
-                auto factory = Companion::Instance->GetFactory("GFX")->get();
-
-                std::string output;
-                YAML::Node dl;
-                uint32_t ptr = dListAddr;
-
-                if(Decompressor::IsSegmented(dListAddr)){
-                    SPDLOG_INFO("Found segmented display list at 0x{:X}", dListAddr);
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(ptr)) +"_dl_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
-                } else {
-                    SPDLOG_INFO("Found display list at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(ptr, false));
-                }
-
-                dl["type"] = "GFX";
-                dl["offset"] = ptr;
-                dl["symbol"] = output;
-                dl["autogen"] = true;
-
-                auto result = factory->parse(rom, dl);
-
-                if(!result.has_value()){
-                    continue;
-                }
-
-                Companion::Instance->RegisterAsset(output, dl);
-            } else {
-                SPDLOG_WARN("Could not find display list at 0x{:X}", dListAddr);
-            }
+            YAML::Node dListNode;
+            dListNode["type"] = "GFX";
+            dListNode["offset"] = dListAddr;
+            Companion::Instance->AddAsset(dListNode);
         }
 
         skeleton.push_back(LimbData(limbAddr, dListAddr, trans, rot, siblingAddr, childAddr, limbIndex));

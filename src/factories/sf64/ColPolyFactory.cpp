@@ -4,6 +4,7 @@
 #include "Companion.h"
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
+#include <regex>
 
 
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
@@ -78,7 +79,15 @@ void SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         off = SEGMENT_OFFSET(off);
     }
     defaultMeshSymbol << symbol << "_mesh_" << std::uppercase << std::hex << off;
-    const auto meshSymbol = GetSafeNode(node, "mesh_symbol", defaultMeshSymbol.str());
+    auto meshSymbol = GetSafeNode(node, "mesh_symbol", defaultMeshSymbol.str());
+
+    if (meshSymbol.find("OFFSET") != std::string::npos) {
+        std::ostringstream offsetSeg;
+
+        offsetSeg << std::uppercase << std::hex << meshOffset;
+        meshSymbol = std::regex_replace(meshSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
+    }
+
     if (Companion::Instance->IsDebug()) {
         write << "// 0x" << std::uppercase << std::hex << off << "\n";
     }
