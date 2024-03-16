@@ -137,6 +137,7 @@ void Companion::ParseEnums(std::string& header) {
             enumIndex++;
             this->gEnums[enumName][enumIndex] = line;
         }
+        
     }
 }
 

@@ -8,6 +8,7 @@
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 // #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
 #define FLOAT(x, w, p) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(p) << x
+
 SF64::LimbData::LimbData(uint32_t addr, uint32_t dList, Vec3f trans, Vec3s rot, uint32_t sibling, uint32_t child, int index): mAddr(addr), mDList(dList), mTrans(trans), mRot(rot), mSibling(sibling), mChild(child), mIndex(index) {
     
 }
@@ -21,16 +22,6 @@ void SF64::SkeletonHeaderExporter::Export(std::ostream &write, std::shared_ptr<I
     }
 
     write << "extern Limb* " << symbol << "[];\n";
-}
-
-int GetPrecision(float f) {
-    int prec = 0;
-
-    while(f != (int)f && prec < 8 ){
-        f *= 10;
-        prec++;
-    }
-    return prec;
 }
 
 void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -74,7 +65,6 @@ void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
                 write << "0x" << std::uppercase << std::hex << limb.mDList << ", ";
             }
         }
-        // auto p = std::max(std::max(GetPrecision(limb.mTrans.x), GetPrecision(limb.mTrans.y)), GetPrecision(limb.mTrans.z));
         write << FLOAT(limb.mTrans, 0, limb.mTrans.precision()) << ", ";
         write << std::dec << limb.mRot << ", ";
         write << ((limb.mSibling != 0) ? "&" : "") << limbDict[limb.mSibling] << ", ";
