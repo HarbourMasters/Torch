@@ -98,17 +98,41 @@ std::vector<Entry> AudioManager::parse_seq_file(std::vector<uint8_t>& buffer, ui
     return entries;
 }
 
+uint32_t parse_bcd(std::vector<uint8_t>& data){
+    uint32_t result = 0;
+    for(auto &c : data){
+        result *= 10;
+        result += c >> 4;
+        result *= 10;
+        result += c & 15;
+    }
+
+    return result;
+}
+
 CTLHeader AudioManager::parse_ctl_header(std::vector<uint8_t>& data){
     LUS::BinaryReader reader((char*) data.data(), data.size());
     reader.SetEndianness(LUS::Endianness::Big);
 
-    CTLHeader header = { reader.ReadUInt32(), reader.ReadUInt32(), reader.ReadUInt32() };
+    auto numInstruments = reader.ReadUInt32();
+    auto numDrums = reader.ReadUInt32();
+    auto shared = reader.ReadUInt32();
+    auto raw = PyUtils::slice(data, 12, 16);
+    auto date = parse_bcd(raw);
+    uint16_t year = date / 10000;
+    uint16_t month = (date / 100) % 100;
+    uint16_t day = date % 100;
+    std::ostringstream iso;
+    iso << year << "-" << std::setw(2) << std::setfill('0') << month << "-" << std::setw(2) << std::setfill('0') << day;
+    assert(shared == 0 || shared == 1);
+
+    CTLHeader header = { reader.ReadUInt32(), reader.ReadUInt32(), iso.str() };
 
     reader.Close();
     return header;
 }
 
-Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank* bank, uint32_t index) {
+Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank* bank, uint32_t index, bool hasHeaders) {
     name_table.clear();
     std::ostringstream ss;
     ss << std::hex << std::setw(2) << std::setfill('0') << index;
@@ -152,8 +176,6 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
             instrumentList.push_back(instOffset);
         }
     }
-
-//    std::sort(instrumentOffsets.begin(), instrumentOffsets.end());
 
     std::vector<Instrument> insts;
     for(auto &offset : instrumentOffsets){
@@ -208,7 +230,6 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         allInsts.emplace_back(inst);
     }
 
-
     if(needDrums){
         allInsts.emplace_back(drums);
     }
@@ -216,8 +237,8 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     std::map<uint32_t, AudioBankSample*> samples;
     std::sort(sampleOffsets.begin(), sampleOffsets.end());
     for(auto &offset : sampleOffsets){
-        auto rSample = PyUtils::slice(data, offset, offset + 20);
-        AudioBankSample* sample = parse_sample(rSample, data, bank);
+        auto rSample = PyUtils::slice(data, offset, offset + (hasHeaders ? 16 : 20));
+        AudioBankSample* sample = parse_sample(rSample, data, bank, hasHeaders);
         for(auto &tuning : tunings){
             sample->tunings.push_back(tuning.second);
         }
@@ -373,16 +394,29 @@ AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData
     return book;
 }
 
-AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank){
+AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank, bool hasHeaders){
     LUS::BinaryReader reader((char*) data.data(), data.size());
     reader.SetEndianness(LUS::Endianness::Big);
 
-    uint32_t zero = reader.ReadUInt32();
-    uint32_t addr = reader.ReadUInt32();
-    uint32_t loop = reader.ReadUInt32();
-    uint32_t book = reader.ReadUInt32();
-    uint32_t sampleSize = reader.ReadUInt32();
-    assert(zero == 0);
+    uint32_t addr;
+    uint32_t loop;
+    uint32_t book;
+    uint32_t sampleSize;
+
+    if(hasHeaders){
+        sampleSize = reader.ReadUInt32();
+        addr = reader.ReadUInt32();
+        loop = reader.ReadUInt32();
+        book = reader.ReadUInt32();
+    } else {
+        uint32_t zero = reader.ReadUInt32();
+        addr = reader.ReadUInt32();
+        loop = reader.ReadUInt32();
+        book = reader.ReadUInt32();
+        sampleSize = reader.ReadUInt32();
+        assert(zero == 0);
+    }
+
     assert(loop != 0);
     assert(book != 0);
 
@@ -415,6 +449,46 @@ std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vecto
     return entries;
 }
 
+std::vector<Entry> AudioManager::parse_sh_header(std::vector<uint8_t>& data, bool isCTL) {
+    LUS::BinaryReader reader((char*) data.data(), data.size());
+    size_t num_entries = reader.ReadUInt32();
+    uint32_t prev = 0;
+    std::vector<Entry> entries;
+
+    std::vector<uint8_t> expected(14, '\0');
+    assert(std::equal(data.begin() + 2, data.begin() + 16, expected.begin()));
+
+    for (size_t i = 0; i < num_entries; ++i) {
+        reader.Seek(16 + 16 * i, LUS::SeekOffsetType::Start);
+        uint32_t offset = reader.ReadUInt32();
+        uint32_t length = reader.ReadUInt32();
+        uint16_t magic = reader.ReadUInt16();
+
+        assert(offset == prev);
+        assert(magic == (!isCTL ? 0x0204 : 0x0203));
+
+        prev = offset + length;
+
+        if(isCTL){
+            uint8_t sampleBankIndex = reader.ReadUByte();
+            uint8_t magic2 = reader.ReadUByte();
+            uint8_t numInstruments = reader.ReadUByte();
+            uint8_t numDrums = reader.ReadUByte();
+            assert(reader.ReadUInt16() == 0);
+            assert(magic2 == 0xFF);
+            entries.push_back(Entry { offset, length, SHHeader {
+                sampleBankIndex, numInstruments, numDrums
+            }});
+        } else {
+            assert((reader.ReadUInt32() + reader.ReadUInt16()) == 0);
+            entries.push_back(Entry { offset, length });
+        }
+    }
+
+    reader.Close();
+    return entries;
+}
+
 TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& entries) {
     TBLFile tbl;
     std::unordered_map<uint32_t, std::string> cache;
@@ -436,36 +510,74 @@ TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& 
 
 void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
 
-    auto ctlOffset = data["ctl"]["offset"].as<size_t>();
-    auto ctlSize = data["ctl"]["size"].as<size_t>();
+    bool hasHeaders = false;
 
-    auto tblOffset = data["tbl"]["offset"].as<size_t>();
-    auto tblSize = data["tbl"]["size"].as<size_t>();
+    if(hasHeaders){
+        auto ctl = GetSafeNode<YAML::Node>(data, "ctl");
+        auto tbl = GetSafeNode<YAML::Node>(data, "tbl");
 
-    std::vector<Entry> tbl = parse_seq_file(buffer, tblOffset, false);
-    std::vector<Entry> ctl = parse_seq_file(buffer, ctlOffset, true);
+        auto ctlOffset = GetSafeNode<uint32_t>(ctl, "offset");
+        auto ctlSize = GetSafeNode<size_t>(ctl, "size");
 
-    SPDLOG_INFO("Raw TBL Entries: {}", tbl.size());
-    SPDLOG_INFO("Raw CTL Entries: {}", ctl.size());
+        auto tblOffset = GetSafeNode<uint32_t>(tbl, "offset");
+        auto tblSize = GetSafeNode<size_t>(tbl, "size");
 
-    std::vector<uint8_t> tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
-    std::vector<uint8_t> ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
-    this->loaded_tbl = parse_tbl(tbl_data, tbl);
+        auto tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
+        auto ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
 
-    SPDLOG_INFO("Processed TBL Entries: {}", this->loaded_tbl.tbls.size());
-    SPDLOG_INFO("Processed TBL Banks: {}", this->loaded_tbl.banks.size());
+        auto tblEntries = parse_sh_header(tbl_data, false);
+        auto ctlEntries = parse_sh_header(ctl_data, true);
 
-    auto zipped = zip(PyUtils::range(0, ctl.size()), ctl, this->loaded_tbl.tbls);
+        auto sample_banks = parse_tbl(tbl_data, tblEntries).banks;
 
-    for (const auto& item : zipped) {
-        auto [index, ctrl, sample_bank_name] = item;
-        auto sample_bank = this->loaded_tbl.map[sample_bank_name];
-        auto entry = PyUtils::slice(ctl_data, ctrl.offset, ctrl.offset + ctrl.length);
-        auto headerRaw = PyUtils::slice(entry, 0, 16);
-        auto header = parse_ctl_header(headerRaw);
-        auto bank = parse_ctl(header, PyUtils::slice(entry, 16), sample_bank, index);
-        banks[index] = bank;
-        SPDLOG_INFO("Processed Bank {}", index);
+        for(size_t idx = 0; idx < ctlEntries.size(); idx++){
+            auto header = ctlEntries[idx].header.value();
+            auto sample_bank = sample_banks[header.sampleBankIndex];
+            auto entry = PyUtils::slice(ctl_data, ctlEntries[idx].offset, ctlEntries[idx].offset + ctlEntries[idx].length);
+
+            CTLHeader ch = {
+                header.numInsts,
+                header.numDrums,
+                "0000-00-00"
+            };
+            auto bank = parse_ctl(ch, PyUtils::slice(entry, 16), sample_bank, idx, true);
+            banks[idx] = bank;
+        }
+
+    } else {
+        auto ctl = GetSafeNode<YAML::Node>(data, "ctl");
+        auto tbl = GetSafeNode<YAML::Node>(data, "tbl");
+        auto ctlOffset = ctl["offset"].as<uint32_t>();
+        auto ctlSize = ctl["size"].as<size_t>();
+
+        auto tblOffset = tbl["offset"].as<uint32_t>();
+        auto tblSize = tbl["size"].as<size_t>();
+
+        auto tblEntries = parse_seq_file(buffer, tblOffset, false);
+        auto ctlEntries = parse_seq_file(buffer, ctlOffset, true);
+
+        SPDLOG_INFO("Raw TBL Entries: {}", tbl.size());
+        SPDLOG_INFO("Raw CTL Entries: {}", ctl.size());
+
+        std::vector<uint8_t> tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
+        std::vector<uint8_t> ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
+        this->loaded_tbl = parse_tbl(tbl_data, tblEntries);
+
+        SPDLOG_INFO("Processed TBL Entries: {}", this->loaded_tbl.tbls.size());
+        SPDLOG_INFO("Processed TBL Banks: {}", this->loaded_tbl.banks.size());
+
+        auto zipped = zip(PyUtils::range(0, ctl.size()), ctlEntries, this->loaded_tbl.tbls);
+
+        for (const auto& item : zipped) {
+            auto [index, ctrl, sample_bank_name] = item;
+            auto sample_bank = this->loaded_tbl.map[sample_bank_name];
+            auto entry = PyUtils::slice(ctl_data, ctrl.offset, ctrl.offset + ctrl.length);
+            auto headerRaw = PyUtils::slice(entry, 0, 16);
+            auto header = parse_ctl_header(headerRaw);
+            auto bank = parse_ctl(header, PyUtils::slice(entry, 16), sample_bank, index, false);
+            banks[index] = bank;
+            SPDLOG_INFO("Processed Bank {}", index);
+        }
     }
 
     int32_t idx = -1;
