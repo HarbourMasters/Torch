@@ -510,29 +510,41 @@ TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& 
 
 void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
 
-    bool hasHeaders = false;
+    auto ctl = GetSafeNode<YAML::Node>(data, "ctl");
+    auto tbl = GetSafeNode<YAML::Node>(data, "tbl");
+    auto ctlOffset = ctl["offset"].as<uint32_t>();
+    auto ctlSize = ctl["size"].as<size_t>();
 
-    if(hasHeaders){
-        auto ctl = GetSafeNode<YAML::Node>(data, "ctl");
-        auto tbl = GetSafeNode<YAML::Node>(data, "tbl");
+    auto tblOffset = tbl["offset"].as<uint32_t>();
+    auto tblSize = tbl["size"].as<size_t>();
 
-        auto ctlOffset = GetSafeNode<uint32_t>(ctl, "offset");
-        auto ctlSize = GetSafeNode<size_t>(ctl, "size");
+    auto tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
+    auto ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
 
-        auto tblOffset = GetSafeNode<uint32_t>(tbl, "offset");
-        auto tblSize = GetSafeNode<size_t>(tbl, "size");
+    if(data["ctl_headers"] && data["tbl_headers"]){
+        auto ctl = GetSafeNode<YAML::Node>(data, "ctl_headers");
+        auto tbl = GetSafeNode<YAML::Node>(data, "tbl_headers");
 
-        auto tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
-        auto ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
+        auto ctlHeaderOffset = GetSafeNode<uint32_t>(ctl, "offset");
+        auto ctlHeaderSize = GetSafeNode<size_t>(ctl, "size");
 
-        auto tblEntries = parse_sh_header(tbl_data, false);
-        auto ctlEntries = parse_sh_header(ctl_data, true);
+        auto tblHeaderOffset = GetSafeNode<uint32_t>(tbl, "offset");
+        auto tblHeaderSize = GetSafeNode<size_t>(tbl, "size");
 
-        auto sample_banks = parse_tbl(tbl_data, tblEntries).banks;
+        auto tbl_header_data = PyUtils::slice(buffer, tblHeaderOffset, tblHeaderOffset + tblHeaderSize);
+        auto ctl_header_data = PyUtils::slice(buffer, ctlHeaderOffset, ctlHeaderOffset + tblHeaderSize);
+
+        auto tblEntries = parse_sh_header(tbl_header_data, false);
+        auto ctlEntries = parse_sh_header(ctl_header_data, true);
+
+        SPDLOG_INFO("Raw TBL Entries: {}", tbl.size());
+        SPDLOG_INFO("Raw CTL Entries: {}", ctl.size());
+
+        this->loaded_tbl = parse_tbl(tbl_data, tblEntries);
 
         for(size_t idx = 0; idx < ctlEntries.size(); idx++){
             auto header = ctlEntries[idx].header.value();
-            auto sample_bank = sample_banks[header.sampleBankIndex];
+            auto sample_bank = this->loaded_tbl.banks[header.sampleBankIndex];
             auto entry = PyUtils::slice(ctl_data, ctlEntries[idx].offset, ctlEntries[idx].offset + ctlEntries[idx].length);
 
             CTLHeader ch = {
@@ -545,22 +557,12 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
         }
 
     } else {
-        auto ctl = GetSafeNode<YAML::Node>(data, "ctl");
-        auto tbl = GetSafeNode<YAML::Node>(data, "tbl");
-        auto ctlOffset = ctl["offset"].as<uint32_t>();
-        auto ctlSize = ctl["size"].as<size_t>();
-
-        auto tblOffset = tbl["offset"].as<uint32_t>();
-        auto tblSize = tbl["size"].as<size_t>();
-
         auto tblEntries = parse_seq_file(buffer, tblOffset, false);
         auto ctlEntries = parse_seq_file(buffer, ctlOffset, true);
 
         SPDLOG_INFO("Raw TBL Entries: {}", tbl.size());
         SPDLOG_INFO("Raw CTL Entries: {}", ctl.size());
 
-        std::vector<uint8_t> tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
-        std::vector<uint8_t> ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
         this->loaded_tbl = parse_tbl(tbl_data, tblEntries);
 
         SPDLOG_INFO("Processed TBL Entries: {}", this->loaded_tbl.tbls.size());
