@@ -166,7 +166,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     auto impl = factory->get();
 
     auto exporter = impl->GetExporter(this->gConfig.exporterType);
-    if(!exporter.has_value() && type != "AUDIO:HEADER"){
+    if(!exporter.has_value()){
         SPDLOG_WARN("No exporter found for {}", name);
         return;
     }
