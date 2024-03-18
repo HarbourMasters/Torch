@@ -166,7 +166,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     auto impl = factory->get();
 
     auto exporter = impl->GetExporter(this->gConfig.exporterType);
-    if(!exporter.has_value()){
+    if(!exporter.has_value() && type != "AUDIO:HEADER"){
         SPDLOG_WARN("No exporter found for {}", name);
         return;
     }
@@ -652,8 +652,8 @@ void Companion::Process() {
                     this->ExtractNode(node, output, wrapper);
                 }
             } else {
-                const auto offset = assetNode["offset"].as<uint32_t>();
-                if(gCurrentFileOffset) {
+                if(gCurrentFileOffset && assetNode["offset"]) {
+                    const auto offset = assetNode["offset"].as<uint32_t>();
                     if (IS_SEGMENTED(offset) == false) {
                         assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
                     }

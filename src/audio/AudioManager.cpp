@@ -139,35 +139,32 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     std::string name = ss.str();
     uint32_t numInstruments = header.instruments;
     uint32_t numDrums = header.numDrums;
-    char* rawData = (char*) data.data();
+    LUS::BinaryReader reader(reinterpret_cast<char*>(data.data()), data.size());
+    reader.SetEndianness(LUS::Endianness::Big);
 
-    uint32_t drumBaseAddr;
-    memcpy(&drumBaseAddr, rawData, 4);
-    drumBaseAddr = BSWAP32(drumBaseAddr);
+    uint32_t drumBaseAddr = reader.ReadUInt32();
 
     std::vector<uint32_t> drumOffsets;
 
     if(numDrums != 0){
         assert(drumBaseAddr != 0);
         for (size_t i = 0; i < numDrums; ++i) {
-            uint32_t drumOffset;
-            memcpy(&drumOffset, rawData + drumBaseAddr + i * 4, 4);
-            drumOffset = BSWAP32(drumOffset);
-            assert(drumOffset != 0);
+            reader.Seek(drumBaseAddr + i * 4, LUS::SeekOffsetType::Start);
+            uint32_t drumOffset = reader.ReadUInt32();
+            // assert(drumOffset != 0);
             drumOffsets.push_back(drumOffset);
         }
     } else {
         assert(drumBaseAddr == 0);
     }
 
-    uint32_t instrumentBaseAddr = 4;
+    const uint32_t instrumentBaseAddr = 4;
     std::vector<uint32_t> instrumentOffsets;
     std::vector<uint32_t> instrumentList;
 
     for (size_t i = 0; i < numInstruments; ++i) {
-        uint32_t instOffset;
-        memcpy(&instOffset, rawData + (instrumentBaseAddr + i * 4), 4);
-        instOffset = BSWAP32(instOffset);
+        reader.Seek(instrumentBaseAddr + i * 4, LUS::SeekOffsetType::Start);
+        uint32_t instOffset = reader.ReadUInt32();
         if(instOffset == 0){
             instrumentList.push_back(NONE);
             instrumentOffsets.push_back(NONE);
@@ -256,17 +253,16 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         }
     }
 
-    std::vector<uint32_t> unusedEnvOffsets;
     if(!usedEnvOffsets.empty()){
+        std::vector<uint32_t> unusedEnvOffsets;
         size_t min = std::min_element(usedEnvOffsets.begin(), usedEnvOffsets.end()) - usedEnvOffsets.begin();
         size_t max = std::max_element(usedEnvOffsets.begin(), usedEnvOffsets.end()) - usedEnvOffsets.begin();
         for(size_t idx = min + 4; idx < max; idx += 4){
             uint32_t addr = usedEnvOffsets[idx];
             if(std::find(usedEnvOffsets.begin(), usedEnvOffsets.end(), addr) == usedEnvOffsets.end()){
                 unusedEnvOffsets.push_back(addr);
-                uint32_t stubMarker;
-                memcpy(&stubMarker, rawData + addr, 4);
-                stubMarker = BSWAP32(stubMarker);
+                reader.Seek(addr, LUS::SeekOffsetType::Start);
+                uint32_t stubMarker = reader.ReadUInt32();
                 assert(stubMarker == 0);
                 auto env = parse_envelope(addr, data);
                 envData[addr] = env;
@@ -379,8 +375,8 @@ AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData
     int32_t order = reader.ReadInt32();
     int32_t npredictors = reader.ReadInt32();
 
-    assert(order == 2);
-    assert(npredictors == 2);
+    // assert(order == 2);
+    // assert(npredictors == 2);
 
     std::vector<int16_t> table;
     std::vector<uint8_t> tableData = PyUtils::slice(bankData, addr + 8, addr + 8 + 16 * order * npredictors);
@@ -449,9 +445,14 @@ std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vecto
     return entries;
 }
 
+#define SM64 0
+#define SF64 1
+#define GAME SF64
+
 std::vector<Entry> AudioManager::parse_sh_header(std::vector<uint8_t>& data, bool isCTL) {
-    LUS::BinaryReader reader((char*) data.data(), data.size());
-    size_t num_entries = reader.ReadUInt32();
+    LUS::BinaryReader reader(reinterpret_cast<char*>(data.data()), data.size());
+    reader.SetEndianness(LUS::Endianness::Big);
+    int16_t num_entries = reader.ReadInt16();
     uint32_t prev = 0;
     std::vector<Entry> entries;
 
@@ -462,25 +463,39 @@ std::vector<Entry> AudioManager::parse_sh_header(std::vector<uint8_t>& data, boo
         reader.Seek(16 + 16 * i, LUS::SeekOffsetType::Start);
         uint32_t offset = reader.ReadUInt32();
         uint32_t length = reader.ReadUInt32();
-        uint16_t magic = reader.ReadUInt16();
+        uint8_t medium = reader.ReadUByte();
+        uint8_t cachePolicy = reader.ReadUByte();
 
+        assert(length != 0);
         assert(offset == prev);
-        assert(magic == (!isCTL ? 0x0204 : 0x0203));
-
         prev = offset + length;
 
+        if(GAME == SM64) {
+            assert(medium == 0x02);
+            assert(cachePolicy == (!isCTL ? 0x04 : 0x03));
+        } else {
+            SPDLOG_INFO("Medium: {}", medium);
+            SPDLOG_INFO("Cache Policy: {}", cachePolicy);
+        }
+
         if(isCTL){
-            uint8_t sampleBankIndex = reader.ReadUByte();
-            uint8_t magic2 = reader.ReadUByte();
-            uint8_t numInstruments = reader.ReadUByte();
-            uint8_t numDrums = reader.ReadUByte();
+            auto sampleBankIndex = reader.ReadUByte();
+            auto sampleBankIndex2 = reader.ReadUByte();
+            auto numInstruments = reader.ReadUByte();
+            auto numDrums = reader.ReadUByte();
+
+            SPDLOG_INFO("Sample Bank Index: {}", sampleBankIndex);
+            SPDLOG_INFO("Num Instruments: {}", numInstruments);
+            SPDLOG_INFO("Num Drums: {}", numDrums);
+
             assert(reader.ReadUInt16() == 0);
-            assert(magic2 == 0xFF);
+            assert(sampleBankIndex2 == 0xFF);
+
             entries.push_back(Entry { offset, length, SHHeader {
-                sampleBankIndex, numInstruments, numDrums
+                sampleBankIndex, -1, numInstruments, numDrums
             }});
         } else {
-            assert((reader.ReadUInt32() + reader.ReadUInt16()) == 0);
+            assert(reader.ReadUInt32() + reader.ReadUInt16() == 0);
             entries.push_back(Entry { offset, length });
         }
     }
@@ -521,38 +536,44 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
     auto tbl_data = PyUtils::slice(buffer, tblOffset, tblOffset + tblSize);
     auto ctl_data = PyUtils::slice(buffer, ctlOffset, ctlOffset + ctlSize);
 
-    if(data["ctl_headers"] && data["tbl_headers"]){
-        auto ctl = GetSafeNode<YAML::Node>(data, "ctl_headers");
-        auto tbl = GetSafeNode<YAML::Node>(data, "tbl_headers");
+    if(data["ctl_header"] && data["tbl_header"]){
+        auto ctl_header = GetSafeNode<YAML::Node>(data, "ctl_header");
+        auto tbl_header = GetSafeNode<YAML::Node>(data, "tbl_header");
 
-        auto ctlHeaderOffset = GetSafeNode<uint32_t>(ctl, "offset");
-        auto ctlHeaderSize = GetSafeNode<size_t>(ctl, "size");
+        auto ctlHeaderOffset = GetSafeNode<uint32_t>(ctl_header, "offset");
+        auto ctlHeaderSize = GetSafeNode<size_t>(ctl_header, "size");
 
-        auto tblHeaderOffset = GetSafeNode<uint32_t>(tbl, "offset");
-        auto tblHeaderSize = GetSafeNode<size_t>(tbl, "size");
+        auto tblHeaderOffset = GetSafeNode<uint32_t>(tbl_header, "offset");
+        auto tblHeaderSize = GetSafeNode<size_t>(tbl_header, "size");
 
+        auto ctl_header_data = PyUtils::slice(buffer, ctlHeaderOffset, ctlHeaderOffset + ctlHeaderSize);
         auto tbl_header_data = PyUtils::slice(buffer, tblHeaderOffset, tblHeaderOffset + tblHeaderSize);
-        auto ctl_header_data = PyUtils::slice(buffer, ctlHeaderOffset, ctlHeaderOffset + tblHeaderSize);
 
-        auto tblEntries = parse_sh_header(tbl_header_data, false);
         auto ctlEntries = parse_sh_header(ctl_header_data, true);
+        auto tblEntries = parse_sh_header(tbl_header_data, false);
 
-        SPDLOG_INFO("Raw TBL Entries: {}", tbl.size());
-        SPDLOG_INFO("Raw CTL Entries: {}", ctl.size());
+        SPDLOG_INFO("Raw TBL Entries: {}", tblEntries.size());
+        SPDLOG_INFO("Raw CTL Entries: {}", ctlEntries.size());
 
         this->loaded_tbl = parse_tbl(tbl_data, tblEntries);
 
         for(size_t idx = 0; idx < ctlEntries.size(); idx++){
-            auto header = ctlEntries[idx].header.value();
+            auto ctrl = ctlEntries[idx];
+            auto header = ctrl.header.value();
+            auto entry = PyUtils::slice(ctl_data, ctrl.offset, ctrl.offset + ctrl.length);
             auto sample_bank = this->loaded_tbl.banks[header.sampleBankIndex];
-            auto entry = PyUtils::slice(ctl_data, ctlEntries[idx].offset, ctlEntries[idx].offset + ctlEntries[idx].length);
 
             CTLHeader ch = {
                 header.numInsts,
                 header.numDrums,
                 "0000-00-00"
             };
-            auto bank = parse_ctl(ch, PyUtils::slice(entry, 16), sample_bank, idx, true);
+
+            if(idx == 24) {
+                continue;
+            }
+
+            auto bank = parse_ctl(ch, entry, sample_bank, idx, true);
             banks[idx] = bank;
         }
 
@@ -794,4 +815,17 @@ uint32_t AudioManager::get_index(AudioBankSample* entry) {
 
 std::map<uint32_t, Bank> AudioManager::get_banks() {
     return this->banks;
+}
+
+std::vector<AudioBankSample*> AudioManager::get_samples() {
+    std::vector<AudioBankSample*> samples;
+    for(auto &bank : this->loaded_tbl.banks){
+        for(auto &entry : bank->entries){
+            // Avoid duplicates
+            if(std::find(samples.begin(), samples.end(), entry.second) == samples.end()){
+                samples.push_back(entry.second);
+            }
+        }
+    }
+    return samples;
 }
