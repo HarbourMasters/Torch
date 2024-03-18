@@ -445,10 +445,6 @@ std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vecto
     return entries;
 }
 
-#define SM64 0
-#define SF64 1
-#define GAME SF64
-
 std::vector<Entry> AudioManager::parse_sh_header(std::vector<uint8_t>& data, bool isCTL) {
     LUS::BinaryReader reader(reinterpret_cast<char*>(data.data()), data.size());
     reader.SetEndianness(LUS::Endianness::Big);
@@ -470,13 +466,11 @@ std::vector<Entry> AudioManager::parse_sh_header(std::vector<uint8_t>& data, boo
         assert(offset == prev);
         prev = offset + length;
 
-        if(GAME == SM64) {
-            assert(medium == 0x02);
-            assert(cachePolicy == (!isCTL ? 0x04 : 0x03));
-        } else {
-            SPDLOG_INFO("Medium: {}", medium);
-            SPDLOG_INFO("Cache Policy: {}", cachePolicy);
-        }
+        // This validations are fine but for sm64 only
+        // assert(medium == 0x02);
+        // assert(cachePolicy == (!isCTL ? 0x04 : 0x03));
+        SPDLOG_INFO("Medium: {}", medium);
+        SPDLOG_INFO("Cache Policy: {}", cachePolicy);
 
         if(isCTL){
             auto sampleBankIndex = reader.ReadUByte();
@@ -557,7 +551,9 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
 
         this->loaded_tbl = parse_tbl(tbl_data, tblEntries);
 
-        for(size_t idx = 0; idx < ctlEntries.size(); idx++){
+        // This is a hack for sf64 because for the last ones it crashes
+        // We need to fix this ASAP
+        for(size_t idx = 0; idx < 23; idx++){
             auto ctrl = ctlEntries[idx];
             auto header = ctrl.header.value();
             auto entry = PyUtils::slice(ctl_data, ctrl.offset, ctrl.offset + ctrl.length);
