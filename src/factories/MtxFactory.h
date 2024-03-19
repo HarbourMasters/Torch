@@ -3,7 +3,7 @@
 #include "BaseFactory.h"
 
 struct MtxRaw {
-    uint32_t mtx[4][4];
+    double mtx[16];
 };
 
 class MtxData : public IParsedData {

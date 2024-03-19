@@ -33,49 +33,52 @@ void MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         }
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
+    
+    #define eightFourSpaceTabs fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << " "
 
-    write << "Mtx " << symbol << "[] = {\n";
-
+    /**
+     * fixedPointMatrix(D_0D008E98, 1.0, 0.0, 0.0, 0.0,
+     *                              0.0, 1.0, 0.0, 0.0,
+     *                              0.0, 0.0, 1.0, 0.0,
+     *                              0.0, 0.0, 0.0, 1.0);
+     */
     for (int i = 0; i < m.size(); ++i) {
 
-        auto m1 = m[i].mtx[0][0];
-        auto m2 = m[i].mtx[0][1];
-        auto m3 = m[i].mtx[0][2];
-        auto m4 = m[i].mtx[0][3];
+        write << "fixedPointMatrix(" << symbol << ", ";
 
-        auto m5 = m[i].mtx[1][0];
-        auto m6 = m[i].mtx[1][1];
-        auto m7 = m[i].mtx[1][2];
-        auto m8 = m[i].mtx[1][3];
+        for (int j = 0; j < 16; ++j) {
 
-        auto m9 = m[i].mtx[2][0];
-        auto m10 = m[i].mtx[2][1];
-        auto m11 = m[i].mtx[2][2];
-        auto m12 = m[i].mtx[2][3];
+            // Turn 1, 3, and 6 into 1.0, 3.0, and 6.0. Unless it has a decimal number then leave it alone.
+            if (std::abs(m[i].mtx[j] - static_cast<int>(m[i].mtx[j])) < 1e-6) {
+                write << std::fixed << std::setprecision(1) << m[i].mtx[j];
+            } else {
+                write << std::fixed << std::setprecision(6) << m[i].mtx[j];
+            }
+            
+            // Add comma for all but the last arg
+            if (j < 15) {
+                write << ", ";
+            }
 
-        auto m13 = m[i].mtx[3][0];
-        auto m14 = m[i].mtx[3][1];
-        auto m15 = m[i].mtx[3][2];
-        auto m16 = m[i].mtx[3][3];
-
-        // {{ m1, m2, m3,     m4 },
-        //  { m5, m6, m7,     m8 },
-        //  { m9, m10, m11,  m12 },
-        //  { m13, m14, m15, m16 }},
-        write << fourSpaceTab << "{{" << NUM(m1) << ", " << NUM(m2) << ", " << NUM(m3) << ", " << NUM(m4) << "},\n";
-        write << fourSpaceTab << " {" << NUM(m5) << ", " << NUM(m6) << ", " << NUM(m7) << ", " << NUM(m8) << "},\n";
-        write << fourSpaceTab << " {" << NUM(m9) << ", " << NUM(m10) << ", " << NUM(m11) << ", " << NUM(m12) << "},\n";
-        write << fourSpaceTab << " {" << NUM(m13) << ", " << NUM(m14) << ", " << NUM(m15) << ", " << NUM(m16) << "}},\n";
+            // Add closing bracket for last arg in matrix
+            if (j == 15) {
+                write << ");\n\n";
+                break;
+            }
+            
+            // Add lots of spaces for start of a new line
+            if ((j + 1) % 4 == 0) {
+                write << "\n" << eightFourSpaceTabs;
+            }
+        }
     }
-
-    write << "};\n";
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(m.size()) << " Mtxs\n";
-        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(MtxRaw) * m.size())) << "\n";
+        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(MtxRaw) * m.size())) << "\n\n";
     }
 
-    write << "\n";
+    #undef eightFourSpaceTabs
 }
 
 void MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -85,24 +88,24 @@ void MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     WriteHeader(writer, LUS::ResourceType::Vertex, 0);
     writer.Write((uint32_t) mtx->mMtxs.size());
     for(auto m : mtx->mMtxs) {
-        writer.Write(m.mtx[0][0]);
-        writer.Write(m.mtx[0][1]);
-        writer.Write(m.mtx[0][2]);
-        writer.Write(m.mtx[0][3]);
-        writer.Write(m.mtx[1][0]);
-        writer.Write(m.mtx[1][1]);
-        writer.Write(m.mtx[1][2]);
-        writer.Write(m.mtx[1][3]);
-        writer.Write(m.mtx[2][0]);
-        writer.Write(m.mtx[2][1]);
-        writer.Write(m.mtx[2][2]);
-        writer.Write(m.mtx[2][3]);
-        writer.Write(m.mtx[3][0]);
-        writer.Write(m.mtx[3][1]);
-        writer.Write(m.mtx[3][2]);
-        writer.Write(m.mtx[3][3]);
+        writer.Write(m.mtx[0]);
+        writer.Write(m.mtx[1]);
+        writer.Write(m.mtx[2]);
+        writer.Write(m.mtx[3]);
+        writer.Write(m.mtx[4]);
+        writer.Write(m.mtx[5]);
+        writer.Write(m.mtx[6]);
+        writer.Write(m.mtx[7]);
+        writer.Write(m.mtx[8]);
+        writer.Write(m.mtx[9]);
+        writer.Write(m.mtx[10]);
+        writer.Write(m.mtx[11]);
+        writer.Write(m.mtx[12]);
+        writer.Write(m.mtx[13]);
+        writer.Write(m.mtx[14]);
+        writer.Write(m.mtx[15]);
     }
-
+    std::runtime_error("Mtx not tested for otr/o2r.");
     writer.Finish(write);
 }
 
@@ -115,31 +118,74 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<MtxRaw> matrix;
 
+    #define FIXTOF(x)      ((double)((x) / 65536.0))
+
+    // Reads the inteer portion, the fractional portion, puts each together into a fixed-point value, and finally converts to float.
     for(size_t i = 0; i < count; i++) {
-        auto m1 = reader.ReadInt32();
-        auto m2 = reader.ReadInt32();
-        auto m3 = reader.ReadInt32();
-        auto m4 = reader.ReadInt32();
-        auto m5 = reader.ReadInt32();
-        auto m6 = reader.ReadInt32();
-        auto m7 = reader.ReadInt32();
-        auto m8 = reader.ReadInt32();
-        auto m9 = reader.ReadInt32();
-        auto m10 = reader.ReadInt32();
-        auto m11 = reader.ReadInt32();
-        auto m12 = reader.ReadInt32();
-        auto m13 = reader.ReadInt32();
-        auto m14 = reader.ReadInt32();
-        auto m15 = reader.ReadInt32();
-        auto m16 = reader.ReadInt32();
+        // Read the integer portion of the fixed-point value (ex. 4)
+        auto i1  = reader.ReadInt16();
+        auto i2  = reader.ReadInt16();
+        auto i3  = reader.ReadInt16();
+        auto i4  = reader.ReadInt16();
+        auto i5  = reader.ReadInt16();
+        auto i6  = reader.ReadInt16();
+        auto i7  = reader.ReadInt16();
+        auto i8  = reader.ReadInt16();
+        auto i9  = reader.ReadInt16();
+        auto i10 = reader.ReadInt16();
+        auto i11 = reader.ReadInt16();
+        auto i12 = reader.ReadInt16();
+        auto i13 = reader.ReadInt16();
+        auto i14 = reader.ReadInt16();
+        auto i15 = reader.ReadInt16();
+        auto i16 = reader.ReadInt16();
+
+        // Read the fractional portion of the fixed-point value (ex. 0.45)
+        auto f1  = reader.ReadUInt16();
+        auto f2  = reader.ReadUInt16();
+        auto f3  = reader.ReadUInt16();
+        auto f4  = reader.ReadUInt16();
+        auto f5  = reader.ReadUInt16();
+        auto f6  = reader.ReadUInt16();
+        auto f7  = reader.ReadUInt16();
+        auto f8  = reader.ReadUInt16();
+        auto f9  = reader.ReadUInt16();
+        auto f10 = reader.ReadUInt16();
+        auto f11 = reader.ReadUInt16();
+        auto f12 = reader.ReadUInt16();
+        auto f13 = reader.ReadUInt16();
+        auto f14 = reader.ReadUInt16();
+        auto f15 = reader.ReadUInt16();
+        auto f16 = reader.ReadUInt16();
+
+        // Place the integer and fractional portions together (ex 4.45) and convert to floating-point
+        auto m1  = FIXTOF( (int32_t) ( (i1 << 16) | f1 ) );
+        auto m2  = FIXTOF( (int32_t) ( (i2 << 16) | f2 ) );
+        auto m3  = FIXTOF( (int32_t) ( (i3 << 16) | f3 ) );
+        auto m4  = FIXTOF( (int32_t) ( (i4 << 16) | f4 ) );
+        auto m5  = FIXTOF( (int32_t) ( (i5 << 16) | f5 ) );
+        auto m6  = FIXTOF( (int32_t) ( (i6 << 16) | f6 ) );
+        auto m7  = FIXTOF( (int32_t) ( (i7 << 16) | f7 ) );
+        auto m8  = FIXTOF( (int32_t) ( (i8 << 16) | f8 ) );
+        auto m9  = FIXTOF( (int32_t) ( (i9 << 16) | f9 ) );
+        auto m10 = FIXTOF( (int32_t) ( (i10 << 16) | f10 ) );
+        auto m11 = FIXTOF( (int32_t) ( (i11 << 16) | f11 ) );
+        auto m12 = FIXTOF( (int32_t) ( (i12 << 16) | f12 ) );
+        auto m13 = FIXTOF( (int32_t) ( (i13 << 16) | f13 ) );
+        auto m14 = FIXTOF( (int32_t) ( (i14 << 16) | f14 ) );
+        auto m15 = FIXTOF( (int32_t) ( (i15 << 16) | f15 ) );
+        auto m16 = FIXTOF( (int32_t) ( (i16 << 16) | f16 ) );
+
 
         matrix.push_back(MtxRaw({
-           {{m1, m2, m3, m4},
-           {m5, m6, m7, m8},
-           {m9, m10, m11, m12},
-           {m13, m14, m15, m16}},
+           m1, m2, m3, m4,
+           m5, m6, m7, m8,
+           m9, m10, m11, m12,
+           m13, m14, m15, m16,
        }));
     }
+    
+    #undef FIXTOF
 
     return std::make_shared<MtxData>(matrix);
 }
