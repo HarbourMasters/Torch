@@ -65,7 +65,12 @@ void MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
 
             // Add closing bracket for last arg in matrix
             if (j == 15) {
-                write << "),\n\n";
+                write << "),\n";
+
+                // Do not add an extra \n on the last iteration.
+                if (i < m.size() - 1) {
+                    write << "\n";
+                }
                 break;
             }
             
