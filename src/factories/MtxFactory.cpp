@@ -34,17 +34,20 @@ void MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
     
-    #define eightFourSpaceTabs fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << " "
+    #define fiveFourSpaceTabs fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << "   "
 
     /**
-     * fixedPointMatrix(D_0D008E98, 1.0, 0.0, 0.0, 0.0,
-     *                              0.0, 1.0, 0.0, 0.0,
-     *                              0.0, 0.0, 1.0, 0.0,
-     *                              0.0, 0.0, 0.0, 1.0);
+     * toFixedPointMatrix(D_0D008E98, 1.0, 0.0, 0.0, 0.0,
+     *                                0.0, 1.0, 0.0, 0.0,
+     *                                0.0, 0.0, 1.0, 0.0,
+     *                                0.0, 0.0, 0.0, 1.0);
      */
+    
+    write << "Mtx " << symbol << "[] = {\n";
+
     for (int i = 0; i < m.size(); ++i) {
 
-        write << "fixedPointMatrix(" << symbol << ", ";
+        write << fourSpaceTab << "toFixedPointMatrix(";
 
         for (int j = 0; j < 16; ++j) {
 
@@ -62,23 +65,27 @@ void MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
 
             // Add closing bracket for last arg in matrix
             if (j == 15) {
-                write << ");\n\n";
+                write << "),\n\n";
                 break;
             }
             
             // Add lots of spaces for start of a new line
             if ((j + 1) % 4 == 0) {
-                write << "\n" << eightFourSpaceTabs;
+                write << "\n" << fiveFourSpaceTabs;
             }
         }
     }
 
+    write << "};\n";
+
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(m.size()) << " Mtxs\n";
-        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(MtxRaw) * m.size())) << "\n\n";
+        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(MtxRaw) * m.size())) << "\n";
     }
 
-    #undef eightFourSpaceTabs
+    write << "\n";
+
+    #undef fiveFourSpaceTabs
 }
 
 void MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
