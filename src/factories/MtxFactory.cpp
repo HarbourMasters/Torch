@@ -37,10 +37,10 @@ void MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
     #define fiveFourSpaceTabs fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << "   "
 
     /**
-     * toFixedPointMatrix(D_0D008E98, 1.0, 0.0, 0.0, 0.0,
-     *                                0.0, 1.0, 0.0, 0.0,
-     *                                0.0, 0.0, 1.0, 0.0,
-     *                                0.0, 0.0, 0.0, 1.0);
+     * toFixedPointMatrix(1.0, 0.0, 0.0, 0.0,
+     *                    0.0, 1.0, 0.0, 0.0,
+     *                    0.0, 0.0, 1.0, 0.0,
+     *                    0.0, 0.0, 0.0, 1.0);
      */
     
     write << "Mtx " << symbol << "[] = {\n";
