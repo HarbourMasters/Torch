@@ -139,32 +139,35 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     std::string name = ss.str();
     uint32_t numInstruments = header.instruments;
     uint32_t numDrums = header.numDrums;
-    LUS::BinaryReader reader(reinterpret_cast<char*>(data.data()), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    char* rawData = (char*) data.data();
 
-    uint32_t drumBaseAddr = reader.ReadUInt32();
+    uint32_t drumBaseAddr;
+    memcpy(&drumBaseAddr, rawData, 4);
+    drumBaseAddr = BSWAP32(drumBaseAddr);
 
     std::vector<uint32_t> drumOffsets;
 
     if(numDrums != 0){
         assert(drumBaseAddr != 0);
         for (size_t i = 0; i < numDrums; ++i) {
-            reader.Seek(drumBaseAddr + i * 4, LUS::SeekOffsetType::Start);
-            uint32_t drumOffset = reader.ReadUInt32();
-            // assert(drumOffset != 0);
+            uint32_t drumOffset;
+            memcpy(&drumOffset, rawData + drumBaseAddr + i * 4, 4);
+            drumOffset = BSWAP32(drumOffset);
+            assert(drumOffset != 0);
             drumOffsets.push_back(drumOffset);
         }
     } else {
         assert(drumBaseAddr == 0);
     }
 
-    const uint32_t instrumentBaseAddr = 4;
+    uint32_t instrumentBaseAddr = 4;
     std::vector<uint32_t> instrumentOffsets;
     std::vector<uint32_t> instrumentList;
 
     for (size_t i = 0; i < numInstruments; ++i) {
-        reader.Seek(instrumentBaseAddr + i * 4, LUS::SeekOffsetType::Start);
-        uint32_t instOffset = reader.ReadUInt32();
+        uint32_t instOffset;
+        memcpy(&instOffset, rawData + (instrumentBaseAddr + i * 4), 4);
+        instOffset = BSWAP32(instOffset);
         if(instOffset == 0){
             instrumentList.push_back(NONE);
             instrumentOffsets.push_back(NONE);
@@ -253,16 +256,17 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         }
     }
 
+    std::vector<uint32_t> unusedEnvOffsets;
     if(!usedEnvOffsets.empty()){
-        std::vector<uint32_t> unusedEnvOffsets;
         size_t min = std::min_element(usedEnvOffsets.begin(), usedEnvOffsets.end()) - usedEnvOffsets.begin();
         size_t max = std::max_element(usedEnvOffsets.begin(), usedEnvOffsets.end()) - usedEnvOffsets.begin();
         for(size_t idx = min + 4; idx < max; idx += 4){
             uint32_t addr = usedEnvOffsets[idx];
             if(std::find(usedEnvOffsets.begin(), usedEnvOffsets.end(), addr) == usedEnvOffsets.end()){
                 unusedEnvOffsets.push_back(addr);
-                reader.Seek(addr, LUS::SeekOffsetType::Start);
-                uint32_t stubMarker = reader.ReadUInt32();
+                uint32_t stubMarker;
+                memcpy(&stubMarker, rawData + addr, 4);
+                stubMarker = BSWAP32(stubMarker);
                 assert(stubMarker == 0);
                 auto env = parse_envelope(addr, data);
                 envData[addr] = env;
