@@ -14,6 +14,7 @@
 #include "factories/SequenceFactory.h"
 #include "factories/VtxFactory.h"
 #include "factories/MtxFactory.h"
+#include "factories/FloatFactory.h"
 #include "factories/TextureFactory.h"
 #include "factories/DisplayListFactory.h"
 #include "factories/DisplayListOverrides.h"
@@ -57,6 +58,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
     this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
     this->RegisterFactory("MTX", std::make_shared<MtxFactory>());
+    this->RegisterFactory("F32", std::make_shared<FloatFactory>());
     this->RegisterFactory("LIGHTS", std::make_shared<LightsFactory>());
     this->RegisterFactory("GFX", std::make_shared<DListFactory>());
     this->RegisterFactory("AUDIO:HEADER", std::make_shared<AudioHeaderFactory>());

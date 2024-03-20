@@ -97,7 +97,7 @@ void MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     auto mtx = std::static_pointer_cast<MtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Vertex, 0);
+    WriteHeader(writer, LUS::ResourceType::Matrix, 0);
     writer.Write((uint32_t) mtx->mMtxs.size());
     for(auto m : mtx->mMtxs) {
         writer.Write(m.mtx[0]);
