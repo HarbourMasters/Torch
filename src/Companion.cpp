@@ -48,6 +48,8 @@ namespace fs = std::filesystem;
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
 
+#define ABS(x) ((x) < 0 ? -(x) : (x))
+
 void Companion::Init(const ExportType type) {
 
     spdlog::set_level(spdlog::level::debug);
@@ -137,7 +139,7 @@ void Companion::ParseEnums(std::string& header) {
             enumIndex++;
             this->gEnums[enumName][enumIndex] = line;
         }
-        
+
     }
 }
 
@@ -210,6 +212,8 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         spdlog::set_pattern(line);
     }
 
+    std::optional<uint32_t> endptr = std::nullopt;
+
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
             if(binary == nullptr)  {
@@ -246,28 +250,27 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             file.close();
             break;
         }
-        default: {
-            exporter->get()->Export(stream, result.value(), name, node, &name);
-
-            if(this->gConfig.exporterType == ExportType::Code) {
-                if(node["pad"]){
-                    auto filename = this->gCurrentDirectory.filename().string();
-                    auto pad = GetSafeNode<uint32_t>(node, "pad");
-                    stream << "char pad_" << filename << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
-                    for(int i = 0; i < pad; i++){
-                        stream << "0x00, ";
-                    }
-                    stream << "\n};\n\n";
-                }
+        case ExportType::Code: {
+            endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
+            if (Companion::Instance->IsDebug() && endptr.has_value()) {
+                stream << "// 0x" << std::hex << std::uppercase << endptr.value() << "\n\n";
             }
-
+            break;
+        }
+        default: {
+            endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
             break;
         }
     }
 
     SPDLOG_INFO("Processed {}", name);
     if(node["offset"]) {
-        this->gWriteMap[this->gCurrentFile][type].emplace_back(node["offset"].as<uint32_t>(), stream.str());
+        WriteEntry entry = {
+            node["offset"].as<uint32_t>(),
+            stream.str(),
+            endptr
+        };
+        this->gWriteMap[this->gCurrentFile][type].push_back(entry);
     }
 }
 
@@ -699,40 +702,60 @@ void Companion::Process() {
 
             std::ostringstream stream;
 
+            std::vector<WriteEntry> entries;
+
             if(std::holds_alternative<std::string>(this->gWriteOrder)) {
                 auto sort = std::get<std::string>(this->gWriteOrder);
-                std::vector<std::pair<uint32_t, std::string>> outbuf;
-                for (const auto& [type, buffer] : this->gWriteMap[this->gCurrentFile]) {
-                    outbuf.insert(outbuf.end(), buffer.begin(), buffer.end());
+                for (const auto& [type, raw] : this->gWriteMap[this->gCurrentFile]) {
+                    entries.insert(entries.end(), raw.begin(), raw.end());
                 }
                 this->gWriteMap.clear();
 
                 if(sort == "OFFSET") {
-                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
-                        return std::get<uint32_t>(a) < std::get<uint32_t>(b);
+                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                        return a.addr < b.addr;
                     });
                 } else if(sort == "ROFFSET") {
-                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
-                        return std::get<uint32_t>(a) > std::get<uint32_t>(b);
+                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                        return a.addr > b.addr;
                     });
                 } else if(sort != "LINEAR") {
                     throw std::runtime_error("Invalid write order");
                 }
-
-                for (auto& [symbol, buffer] : outbuf) {
-                    stream << buffer;
-                }
-                outbuf.clear();
             } else {
                 for (const auto& type : std::get<std::vector<std::string>>(this->gWriteOrder)) {
-                    std::vector<std::pair<uint32_t, std::string>> outbuf = this->gWriteMap[this->gCurrentFile][type];
+                    entries = this->gWriteMap[this->gCurrentFile][type];
 
-                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
-                        return std::get<uint32_t>(a) > std::get<uint32_t>(b);
+                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                        return a.addr > b.addr;
                     });
+                }
+            }
 
-                    for (auto& [symbol, buffer] : outbuf) {
-                        stream << buffer;
+            for (size_t i = 0; i < entries.size(); i++) {
+                const auto result = entries[i];
+                stream << result.buffer;
+                if(i > 0){
+                    auto endptr = entries[i - 1].endptr;
+                    if(!endptr.has_value()){
+                        continue;
+                    }
+
+                    auto start = IS_SEGMENTED(result.addr) ? SEGMENT_OFFSET(result.addr) : result.addr;
+                    auto diff = (start - endptr.value());
+                    if(diff > 0){
+                        SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X}", endptr.value(), start, diff);
+                        SPDLOG_WARN("Creating pad of 0x{:X} bytes", diff);
+                        auto filename = this->gCurrentDirectory.filename().string();
+                        stream << "char pad_" << filename << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
+                        for(int i = 0; i < diff; i++){
+                            stream << "0x00, ";
+                        }
+                        stream << "\n};\n\n";
+                    }
+
+                    if(diff < 0) {
+                        SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X}", entries[i - 1].endptr.value(), start);
                     }
                 }
             }
@@ -1002,7 +1025,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     std::string output;
     std::string typeId = ConvertType(type);
     int index;
-    
+
     if(symbol != "") {
         output = symbol;
     } else if(Decompressor::IsSegmented(offset)){

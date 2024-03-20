@@ -1,6 +1,6 @@
 #include "DictionaryFactory.h"
 
-void SM64::DictionaryBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::DictionaryBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<DictionaryData>(raw);
 
@@ -13,6 +13,7 @@ void SM64::DictionaryBinaryExporter::Export(std::ostream &write, std::shared_ptr
         writer.Write(reinterpret_cast<char*>(value.data()), value.size());
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::DictionaryFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {

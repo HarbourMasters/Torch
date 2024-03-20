@@ -10,21 +10,22 @@
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 
 SF64::ColPolyData::ColPolyData(std::vector<SF64::CollisionPoly> polys, std::vector<Vec3s> mesh): mPolys(polys), mMesh(mesh) {
-    
+
 }
 
-void SF64::ColPolyHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::ColPolyHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern CollisionPoly " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
@@ -32,7 +33,7 @@ void SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     int i;
     if(IS_SEGMENTED(off)) {
         off = SEGMENT_OFFSET(off);
-    } 
+    }
     if (Companion::Instance->IsDebug()) {
         write << "// 0x" << std::uppercase << std::hex << off << "\n";
     }
@@ -105,15 +106,13 @@ void SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
 
     if (Companion::Instance->IsDebug()) {
         write << "// Mesh vertex count: " << colpolys->mMesh.size() << "\n";
-        write << "// 0x" << std::uppercase << std::hex << off + colpolys->mMesh.size() * sizeof(Vec3s) << "\n";
     }
 
-    write << "\n";
-
+    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + colpolys->mMesh.size() * sizeof(Vec3s);
 }
 
-void SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-
+ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

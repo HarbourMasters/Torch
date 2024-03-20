@@ -4,6 +4,7 @@
 #include "n64/Cartridge.h"
 #include <cstdint>
 #include <iostream>
+#include <any>
 #include <memory>
 #include <vector>
 #include <string>
@@ -22,6 +23,8 @@
 
 #define tab "\t"
 #define fourSpaceTab "    "
+
+typedef std::optional<uint32_t> ExportResult;
 
 enum class ExportType {
     Header,
@@ -67,7 +70,7 @@ public:
 
 class BaseExporter {
 public:
-    virtual void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) = 0;
+    virtual ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) = 0;
     static void WriteHeader(LUS::BinaryWriter& write, LUS::ResourceType resType, int32_t version);
 };
 

@@ -79,14 +79,14 @@ std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t
     return result;
 }
 
-void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     const auto searchTable = Companion::Instance->SearchTable(offset);
@@ -95,16 +95,17 @@ void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
         const auto [name, start, end, mode] = searchTable.value();
 
         if(start != offset){
-            return;
+            return std::nullopt;
         }
 
         write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << data.size() << "];\n";
     } else {
         write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
     }
+    return std::nullopt;
 }
 
-void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto texture = std::static_pointer_cast<TextureData>(raw);
     auto data = texture->mBuffer;
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -169,27 +170,23 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
             }
             write << "// 0x" << std::hex << std::uppercase << offset << "\n";
         }
-        
+
         write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << symbol  << "[] = {\n";
 
         write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
         write << "};\n";
 
+        const auto sz = data.size();
         if (Companion::Instance->IsDebug()) {
-            const auto sz = data.size();
-
             write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
-            if (IS_SEGMENTED(offset)) {
-                offset = SEGMENT_OFFSET(offset);
-            }
-            write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
         }
 
         write << "\n";
     }
+    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + data.size();
 }
 
-void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto texture = std::static_pointer_cast<TextureData>(raw);
     auto data = texture->mBuffer;
@@ -203,9 +200,10 @@ void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
     writer.Write((uint32_t) data.size());
     writer.Write((char*) data.data(), data.size());
     writer.Finish(write);
+    return std::nullopt;
 }
 
-void TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
     auto texture = std::static_pointer_cast<TextureData>(data);
     auto format = texture->mFormat;
     uint8_t* raw = new uint8_t[CalculateTextureSize(format.type, texture->mWidth, texture->mHeight) * 2];
@@ -258,6 +256,7 @@ void TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedD
     }
 
     write.write(reinterpret_cast<char*>(raw), size);
+    return std::nullopt;
 }
 
 

@@ -9,15 +9,16 @@ SF64::ScriptData::ScriptData(std::vector<uint32_t> ptrs, std::vector<uint16_t> c
 
 }
 
-void SF64::ScriptHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::ScriptHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern u16* " << symbol << "[];\n";
+    return std::nullopt;
 }
 
 std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
@@ -32,7 +33,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     return cmd.str();
 }
 
-void SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto script = std::static_pointer_cast<SF64::ScriptData>(raw);
@@ -92,14 +93,13 @@ void SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << script->mPtrs.size() << " events\n";
-        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(uint32_t) * script->mPtrs.size())) << "\n";
     }
 
-    write << "\n";
+    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sizeof(uint32_t) * script->mPtrs.size();
 }
 
-void SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-
+ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::ScriptFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
