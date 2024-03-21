@@ -153,7 +153,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         if(start == offset){
-            write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << name << "[][" << texture->mBuffer.size() << "] = {\n";
+            write << GetSafeNode<std::string>(node, "ctype", "static unsigned char") << " " << name << "[][" << texture->mBuffer.size() << "] = {\n";
         }
 
         write << tab << "{\n";
@@ -285,7 +285,23 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         width = GetSafeNode<uint32_t>(node, "width");
         height = GetSafeNode<uint32_t>(node, "height");
     }
-
+    
+    if((format == "CI4" || format == "CI8") && node["tlut"] && node["colors"]) {
+        YAML::Node tlutNode;
+        const auto tlutOffset = GetSafeNode<u_int32_t>(node, "tlut");
+        if(node["symbol"]) {
+            const auto symbol = GetSafeNode<std::string>(node, "symbol");
+            const auto tlutSymbol = GetSafeNode(node, "tlut_symbol", symbol + "_tlut");
+            tlutNode["symbol"] = tlutSymbol;
+        }
+        tlutNode["type"] = "TEXTURE";
+        tlutNode["format"] = "TLUT";
+        tlutNode["offset"] = tlutOffset;
+        if(node["tlut_ctype"]) {
+            tlutNode["ctype"] = GetSafeNode<std::string>(node, "tlut_ctype");
+        }
+        Companion::Instance->AddAsset(tlutNode);
+    }
     size = GetSafeNode<uint32_t>(node, "size", CalculateTextureSize(gTextureFormats.at(format).type, width, height));
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
     std::vector<uint8_t> result;
@@ -371,6 +387,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
             const auto imgi = png2ci(buffer.data(), buffer.size(), &width, &height);
             size = width * height * fmt.depth / 8;
             raw = new uint8_t[size];
+
             if(ci2raw_torch(raw, imgi, width, height, fmt.depth) <= 0){
                 throw std::runtime_error("Failed to convert PNG to texture");
             }
