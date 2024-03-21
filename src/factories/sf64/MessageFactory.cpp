@@ -146,6 +146,7 @@ ExportResult SF64::MessageBinaryExporter::Export(std::ostream &write, std::share
         writer.Write(m);
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

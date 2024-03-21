@@ -185,6 +185,7 @@ ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr
     output.Write(buffer.data(), buffer.size());
     output.Finish(write);
     output.Close();
+    return std::nullopt;
 }
 
 ExportResult SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {

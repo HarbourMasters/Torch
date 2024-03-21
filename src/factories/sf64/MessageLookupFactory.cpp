@@ -66,6 +66,7 @@ ExportResult SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std:
         writer.Write(m.ptr);
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::MessageLookupFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

@@ -65,6 +65,7 @@ ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::share
         writer.Write(obj.id);
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

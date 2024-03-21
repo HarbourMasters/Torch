@@ -92,7 +92,7 @@ ExportResult SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared
 
     return OffsetEntry {
         limbs[0].mAddr,
-        (IS_SEGMENTED(limbs[0].mAddr) ? SEGMENT_OFFSET(limbs[0].mAddr) : limbs[0].mAddr) + skeleton->mSkeleton.size() * 0x24 + 4
+        static_cast<uint32_t>((IS_SEGMENTED(limbs[0].mAddr) ? SEGMENT_OFFSET(limbs[0].mAddr) : limbs[0].mAddr) + skeleton->mSkeleton.size() * 0x24 + 4)
     };
 }
 

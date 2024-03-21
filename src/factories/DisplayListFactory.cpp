@@ -293,6 +293,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& raw_buffer, YAML::Node& node) {
