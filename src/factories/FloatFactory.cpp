@@ -75,7 +75,7 @@ void FloatBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     for(auto fl : f->mFloats) {
         writer.Write(fl);
     }
-    std::runtime_error("Float factory untested for otr/o2r exporter");
+    throw std::runtime_error("Float factory untested for otr/o2r exporter");
     writer.Finish(write);
 }
 

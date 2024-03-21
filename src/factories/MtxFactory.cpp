@@ -117,7 +117,7 @@ void MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
         writer.Write(m.mtx[14]);
         writer.Write(m.mtx[15]);
     }
-    std::runtime_error("Mtx not tested for otr/o2r.");
+    throw std::runtime_error("Mtx not tested for otr/o2r.");
     writer.Finish(write);
 }
 
