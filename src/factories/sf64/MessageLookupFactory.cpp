@@ -13,6 +13,7 @@ ExportResult SF64::MessageLookupHeaderExporter::Export(std::ostream &write, std:
     }
 
     write << "extern MsgLookup " << symbol << "[];\n";
+    return std::nullopt;
 }
 
 ExportResult SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
