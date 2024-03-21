@@ -36,10 +36,7 @@ ExportResult SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared
     limbDict[0] = "NULL";
     for(SF64::LimbData limb : limbs) {
         std::ostringstream limbDefaultName;
-        auto limbOffset = limb.mAddr;
-        if(IS_SEGMENTED(limbOffset)){
-            limbOffset = SEGMENT_OFFSET(limbOffset);
-        }
+        auto limbOffset = ASSET_PTR(limb.mAddr);
         limbDefaultName << symbol << "_limb_" << std::dec << limb.mIndex << "_" << std::uppercase << std::hex << limbOffset;
         limbDict[limb.mAddr] = limbDefaultName.str();
     }

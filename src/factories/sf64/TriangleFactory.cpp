@@ -9,7 +9,6 @@
 
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
-#define STRIP_SEGMENT(offset) (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : (offset))
 
 SF64::TriangleData::TriangleData(std::vector<Vec3s> tris, std::vector<YAML::Node> meshNodes): mTris(tris), mMeshNodes(meshNodes) {
 }

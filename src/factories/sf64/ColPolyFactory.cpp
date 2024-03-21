@@ -29,7 +29,7 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
-    auto off = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
+    auto off = ASSET_PTR(offset);
     int i;
 
     write << "CollisionPoly " << symbol << "[] = {";
@@ -69,10 +69,7 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     if (meshOffset != defaultMeshOffset) {
         write << "// SF64:COLPOLY alert: Gap detected between polys and mesh\n\n";
     }
-    off = meshOffset;
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    }
+    off = ASSET_PTR(meshOffset);
     defaultMeshSymbol << symbol << "_mesh_" << std::uppercase << std::hex << off;
     auto meshSymbol = GetSafeNode(node, "mesh_symbol", defaultMeshSymbol.str());
 
