@@ -33,13 +33,6 @@ ExportResult SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared
     std::sort(limbs.begin(), limbs.end(), [](SF64::LimbData a, SF64::LimbData b) {return a.mAddr < b.mAddr;});
     std::map<uint32_t, std::string> limbDict;
 
-    if (Companion::Instance->IsDebug()) {
-        int off = limbs[0].mAddr;
-        if (IS_SEGMENTED(off)) {
-            off = SEGMENT_OFFSET(off);
-        }
-        write << "// 0x" << std::hex << std::uppercase << off << "\n";
-    }
     limbDict[0] = "NULL";
     for(SF64::LimbData limb : limbs) {
         std::ostringstream limbDefaultName;
@@ -92,7 +85,7 @@ ExportResult SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared
 
     return OffsetEntry {
         limbs[0].mAddr,
-        static_cast<uint32_t>((IS_SEGMENTED(limbs[0].mAddr) ? SEGMENT_OFFSET(limbs[0].mAddr) : limbs[0].mAddr) + skeleton->mSkeleton.size() * 0x24 + 4)
+        static_cast<uint32_t>(limbs[0].mAddr + skeleton->mSkeleton.size() * 0x24 + 4)
     };
 }
 

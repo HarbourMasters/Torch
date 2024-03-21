@@ -8,18 +8,7 @@ ExportResult BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
-    if(node["ctype"]) {
-        write << node["ctype"].as<std::string>() << " " << symbol << "[] = {\n" << tab;
-    } else {
-        write << "u8 " << symbol << "[] = {\n" << tab;
-    }
+    write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[] = {\n" << tab;
 
     for (int i = 0; i < data.size(); i++) {
         if ((i % 15 == 0) && i != 0) {
@@ -34,7 +23,7 @@ ExportResult BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
         write << "// size: 0x" << std::hex << std::uppercase << data.size() << "\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + data.size();
+    return offset + data.size();
 }
 
 ExportResult BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

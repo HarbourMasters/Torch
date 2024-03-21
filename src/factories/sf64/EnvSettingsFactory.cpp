@@ -25,13 +25,7 @@ ExportResult SF64::EnvSettingsCodeExporter::Export(std::ostream &write, std::sha
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto env = std::static_pointer_cast<SF64::EnvSettingsData>(raw);
-    auto off = offset;
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    }
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
+
     write << "EnvSettings " << symbol << " = {\n";
     write << fourSpaceTab;
     write << std::dec << env->mType << ", ";
@@ -56,7 +50,7 @@ ExportResult SF64::EnvSettingsCodeExporter::Export(std::ostream &write, std::sha
     write << env->mAmbB << ",\n";
     write << "};\n";
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sizeof(EnvSettingsData);
+    return offset + sizeof(EnvSettingsData);
 }
 
 ExportResult SF64::EnvSettingsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

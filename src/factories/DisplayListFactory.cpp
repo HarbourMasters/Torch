@@ -114,13 +114,6 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     gfxd_lightsn_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
 
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
 
@@ -132,7 +125,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sz;
+    return offset + sz;
 }
 
 void DebugDisplayList(uint32_t w0, uint32_t w1){

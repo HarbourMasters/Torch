@@ -63,9 +63,6 @@ ExportResult SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr
     keyDefaultName << symbol << "_joint_key_" << std::uppercase << std::hex << keyOffset;
     auto keyName = GetSafeNode(node, "data_symbol", keyDefaultName.str());
 
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << dataOffset << "\n";
-    }
     auto dataCount = anim->mFrameData.size();
     // write << "Frame data end: 0x" << std::hex << std::uppercase << (dataOffset + sizeof(uint16_t) * dataCount) << "\n";
     // write << "JointKey start: 0x" << std::hex << std::uppercase << keyOffset << "\n";
@@ -98,7 +95,7 @@ ExportResult SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr
 
     return OffsetEntry {
         anim->mDataOffset,
-        (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + 0xC
+        offset + 0xC
     };
 }
 

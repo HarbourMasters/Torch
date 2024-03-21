@@ -40,12 +40,8 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
     auto sortedPtrs = script->mPtrs;
     std::sort(sortedPtrs.begin(), sortedPtrs.end());
     std::vector<std::string> scriptNames;
-    auto cmdOff = script->mCmdsStart;
+    auto cmdOff = IS_SEGMENTED(script->mCmdsStart) ? SEGMENT_OFFSET(script->mCmdsStart) : script->mCmdsStart;
     auto cmdIndex = 0;
-
-    if(IS_SEGMENTED(cmdOff)) {
-        cmdOff = SEGMENT_OFFSET(cmdOff);
-    }
 
     for(int i = 0; i < sortedPtrs.size(); i++) {
         std::ostringstream scriptDefaultName;
@@ -97,7 +93,7 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
 
     return OffsetEntry {
         script->mCmdsStart,
-        static_cast<uint32_t>((IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + script->mPtrs.size() * sizeof(uint32_t))
+        static_cast<uint32_t>(offset + script->mPtrs.size() * sizeof(uint32_t))
     };
 }
 

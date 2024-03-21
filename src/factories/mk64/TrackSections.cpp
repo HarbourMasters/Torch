@@ -46,7 +46,7 @@ ExportResult MK64::TrackSectionsCodeExporter::Export(std::ostream &write, std::s
     }
     write << "};\n";
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + (sizeof(MK64::TrackSections) * sections.size());
+    return offset + sections.size() * sizeof(MK64::TrackSections);
 }
 
 ExportResult MK64::TrackSectionsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

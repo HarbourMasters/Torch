@@ -162,15 +162,11 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
 
         if(end == offset){
             write << "};\n";
+            if (Companion::Instance->IsDebug()) {
+                write << "// size: 0x" << std::hex << std::uppercase << ASSET_PTR((end - start) + data.size()) << "\n";
+            }
         }
     } else {
-        if (Companion::Instance->IsDebug()) {
-            if (IS_SEGMENTED(offset)) {
-                offset = SEGMENT_OFFSET(offset);
-            }
-            write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-        }
-
         write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << symbol  << "[] = {\n";
 
         write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
@@ -181,7 +177,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
             write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
         }
     }
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + data.size();
+    return offset + data.size();
 }
 
 ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
