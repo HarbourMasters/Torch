@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <variant>
 #include <optional>
 #include <yaml-cpp/yaml.h>
 #include <strhash64/StrHash64.h>
