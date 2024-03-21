@@ -14,6 +14,7 @@ ExportResult SF64::ObjInitHeaderExporter::Export(std::ostream &write, std::share
     }
 
     write << "extern ObjectInit " << symbol << "[];\n";
+    return std::nullopt;
 }
 
 ExportResult SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

@@ -786,7 +786,7 @@ void Companion::Process() {
                         SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
                         const auto padfile = this->gCurrentDirectory.filename().string();
                         if(this->IsDebug()){
-                            stream << "// 0x" << std::hex << startptr << "\n";
+                            stream << "// 0x" << std::hex << std::uppercase << startptr << "\n";
                         }
                         stream << "char pad_" << padfile << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
                         auto gapSize = gap & ~3;
@@ -795,7 +795,7 @@ void Companion::Process() {
                         }
                         stream << "\n};\n";
                         if(this->IsDebug()){
-                            stream << "// 0x" << std::hex << end << "\n\n";
+                            stream << "// 0x" << std::hex << std::uppercase << end << "\n\n";
                         } else {
                             stream << "\n";
                         }
