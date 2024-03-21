@@ -78,23 +78,16 @@ std::optional<std::shared_ptr<IParsedData>> MK64::DrivingBehaviourFactory::parse
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<BhvRaw> behaviours;
 
-
-    int32_t count = 0;
     while(1) {
         auto w1 = reader.ReadInt16();
         auto w2 = reader.ReadInt16();
         auto id = reader.ReadInt32();
-        count += 1;
 
         behaviours.push_back( BhvRaw( {w1, w2, id} ) );
 
         // Magic number for ending of array
         if ((w1 == -1) && (w2 == -1)) {
             break;
-        }
-
-        if (count > 200) {
-            throw std::runtime_error("Infinite loop protection activated in Driving Behaviour Factory.\n Check that your offset is correct with less than 200 entries in the array.\nThe array needs to end with -1, -1, 0");
         }
     }
 
