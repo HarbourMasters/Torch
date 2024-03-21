@@ -4,18 +4,18 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 
-void SF64::MessageLookupHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::MessageLookupHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern MsgLookup " << symbol << "[];\n";
 }
 
-void SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto table = std::static_pointer_cast<MessageTable>(raw)->mTable;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -51,15 +51,10 @@ void SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_pt
     }
 
     write << "\n};\n";
-
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::hex << std::uppercase << (offset + (table.size() * sizeof(uint16_t))) << "\n";
-    }
-
-    write << "\n";
+    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + table.size() * sizeof(uint16_t);
 }
 
-void SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<MessageTable>(raw);
 

@@ -2,7 +2,7 @@
 #include "spdlog/spdlog.h"
 #include "utils/Decompressor.h"
 
-void SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto dialog = std::static_pointer_cast<DialogData>(raw);
 
@@ -15,6 +15,7 @@ void SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPa
     writer.Write((uint32_t) dialog->mText.size());
     writer.Write((char*) dialog->mText.data(), dialog->mText.size());
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

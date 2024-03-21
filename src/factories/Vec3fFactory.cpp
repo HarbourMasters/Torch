@@ -16,15 +16,16 @@ Vec3fData::Vec3fData(std::vector<Vec3f> vecs): mVecs(vecs) {
     }
 }
 
-void Vec3fHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult Vec3fHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern Vec3f " << symbol << "[];\n";
+    return std::nullopt;
 }
 
 
@@ -32,7 +33,7 @@ int GetPrecision(Vec3f v) {
     return std::max(std::max(GetPrecision(v.x), GetPrecision(v.y)), GetPrecision(v.z));
 }
 
-void Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto vecData = std::static_pointer_cast<Vec3fData>(raw);
@@ -41,7 +42,7 @@ void Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
     if(IS_SEGMENTED(off)) {
         off = SEGMENT_OFFSET(off);
-    } 
+    }
     if (Companion::Instance->IsDebug()) {
         write << "// 0x" << std::uppercase << std::hex << off << "\n";
     }
@@ -58,16 +59,16 @@ void Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     }
 
     write << "\n};\n";
+
     if (Companion::Instance->IsDebug()) {
         write << "// Count: " << vecData->mVecs.size() << " Vec3fs\n";
-        write << "// 0x" << std::uppercase << std::hex << off + vecData->mVecs.size() * sizeof(Vec3f) << "\n";
     }
-    write << "\n";
-    
+
+    return (IS_SEGMENTED(off) ? SEGMENT_OFFSET(off) : off) + vecData->mVecs.size() * sizeof(Vec3f);
 }
 
-void Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-
+ExportResult Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> Vec3fFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

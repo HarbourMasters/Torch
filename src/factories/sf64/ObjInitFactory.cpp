@@ -5,18 +5,18 @@
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 #define FLOAT(x, w) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(1) << x << "f"
 
-void SF64::ObjInitHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::ObjInitHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern ObjectInit " << symbol << "[];\n";
 }
 
-void SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto objs = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
@@ -43,13 +43,12 @@ void SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(objs.size()) << " ObjectInits\n";
-        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(ObjectInit) * objs.size())) << "\n";
     }
 
-    write << "\n";
+    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sizeof(ObjectInit) * objs.size();
 }
 
-void SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
 

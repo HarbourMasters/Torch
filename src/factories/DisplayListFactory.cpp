@@ -64,18 +64,19 @@ void GFXDSetGBIVersion(){
     }
 }
 
-void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern Gfx " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -125,18 +126,13 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
 
     write << std::string(out);
     write << "};\n";
+    const auto sz = (sizeof(uint32_t) * cmds.size());
 
     if (Companion::Instance->IsDebug()) {
-        const auto sz = (sizeof(uint32_t) * cmds.size());
-
         write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
     }
 
-    write << "\n";
+    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sz;
 }
 
 void DebugDisplayList(uint32_t w0, uint32_t w1){
@@ -181,7 +177,7 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr){
     return std::nullopt;
 }
 
-void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     auto writer = LUS::BinaryWriter();
 

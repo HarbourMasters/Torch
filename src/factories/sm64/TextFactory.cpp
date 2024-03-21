@@ -1,7 +1,7 @@
 #include "TextFactory.h"
 #include "utils/Decompressor.h"
 
-void SM64::TextBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::TextBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -9,6 +9,7 @@ void SM64::TextBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPars
     writer.Write((uint32_t) data.size());
     writer.Write((char*) data.data(), data.size());
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::TextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

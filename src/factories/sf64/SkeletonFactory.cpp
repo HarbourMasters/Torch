@@ -10,21 +10,22 @@
 #define FLOAT(x, w, p) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(p) << x
 
 SF64::LimbData::LimbData(uint32_t addr, uint32_t dList, Vec3f trans, Vec3s rot, uint32_t sibling, uint32_t child, int index): mAddr(addr), mDList(dList), mTrans(trans), mRot(rot), mSibling(sibling), mChild(child), mIndex(index) {
-    
+
 }
 
-void SF64::SkeletonHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::SkeletonHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern Limb* " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto skeleton = std::static_pointer_cast<SF64::SkeletonData>(raw);
@@ -84,20 +85,19 @@ void SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
         }
     }
     write << "\n};\n";
+
     if (Companion::Instance->IsDebug()) {
-        int sz = (skeleton->mSkeleton.size() * 0x24) + 4;
-        int off = limbs[0].mAddr;;
-        if (IS_SEGMENTED(off)) {
-            off = SEGMENT_OFFSET(off);
-        }
         write << "// Limbs: " << std::dec << skeleton->mSkeleton.size() << "\n";
-        write << "// 0x" << std::hex << std::uppercase << (off + sz) << "\n";
     }
-    write << "\n";
+
+    return OffsetEntry {
+        limbs[0].mAddr,
+        (IS_SEGMENTED(limbs[0].mAddr) ? SEGMENT_OFFSET(limbs[0].mAddr) : limbs[0].mAddr) + skeleton->mSkeleton.size() * 0x24 + 4
+    };
 }
 
-void SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-
+ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -108,7 +108,6 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
     reader.SetEndianness(LUS::Endianness::Big);
     auto limbAddr = reader.ReadUInt32();
     auto limbIndex = 0;
-    
 
     while(limbAddr != 0) {
         YAML::Node limbNode;

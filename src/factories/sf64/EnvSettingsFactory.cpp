@@ -6,28 +6,29 @@
 #include "utils/TorchUtils.h"
 
 SF64::EnvSettingsData::EnvSettingsData(int32_t type, int32_t unk_04, uint16_t bgColor, uint16_t seqId, int32_t fogR, int32_t fogG, int32_t fogB, int32_t fogN, int32_t fogF, Vec3f unk_20, int32_t lightR, int32_t lightG, int32_t lightB, int32_t ambR, int32_t ambG, int32_t ambB): mType(type), mUnk_04(unk_04), mBgColor(bgColor), mSeqId(seqId), mFogR(fogR), mFogG(fogG), mFogB(fogB), mFogN(fogN), mFogF(fogF), mUnk_20(unk_20), mLightR(lightR), mLightG(lightG), mLightB(lightB), mAmbR(ambR), mAmbG(ambG), mAmbB(ambB) {
-    
+
 }
 
-void SF64::EnvSettingsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::EnvSettingsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern EnvSettings " << symbol << ";\n";
+    return std::nullopt;
 }
 
-void SF64::EnvSettingsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::EnvSettingsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto env = std::static_pointer_cast<SF64::EnvSettingsData>(raw);
     auto off = offset;
     if(IS_SEGMENTED(off)) {
         off = SEGMENT_OFFSET(off);
-    } 
+    }
     if (Companion::Instance->IsDebug()) {
         write << "// 0x" << std::uppercase << std::hex << off << "\n";
     }
@@ -54,14 +55,12 @@ void SF64::EnvSettingsCodeExporter::Export(std::ostream &write, std::shared_ptr<
     write << env->mAmbG << ", ";
     write << env->mAmbB << ",\n";
     write << "};\n";
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off + sizeof(EnvSettingsData) << "\n";
-    }
-    write << "\n";
+
+    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sizeof(EnvSettingsData);
 }
 
-void SF64::EnvSettingsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-
+ExportResult SF64::EnvSettingsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::EnvSettingsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
