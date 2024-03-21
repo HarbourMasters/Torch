@@ -800,10 +800,11 @@ void Companion::Process() {
                             stream << "\n";
                         }
                     } else if(gap > 0x10) {
-                        stream << "\n// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << " on file " << this->gCurrentFile << "\n";
+                        stream << "\n// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
                     }
 
                     if(gap < 0) {
+                        stream << "\n// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << "\n";
                         SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X}", startptr, end);
                     }
                 }
