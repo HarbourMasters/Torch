@@ -24,7 +24,12 @@
 #define tab "\t"
 #define fourSpaceTab "    "
 
-typedef std::optional<uint32_t> ExportResult;
+struct OffsetEntry {
+    uint32_t start;
+    uint32_t end;
+};
+
+typedef std::optional<std::variant<size_t, OffsetEntry>> ExportResult;
 
 enum class ExportType {
     Header,
@@ -77,7 +82,9 @@ public:
 class BaseFactory {
 public:
     virtual std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) = 0;
-    virtual std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) = 0;
+    virtual std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) {
+        return std::nullopt;
+    }
     std::optional<std::shared_ptr<BaseExporter>> GetExporter(ExportType type) {
         auto exporters = this->GetExporters();
         if (exporters.find(type) != exporters.end()) {
@@ -85,7 +92,12 @@ public:
         }
         return std::nullopt;
     }
-    virtual bool SupportModdedAssets() = 0;
+    virtual bool SupportModdedAssets() {
+        return false;
+    }
+    virtual uint32_t GetAlignment() {
+        return 4;
+    };
 private:
     virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() = 0;
 };

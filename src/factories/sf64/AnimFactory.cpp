@@ -96,7 +96,10 @@ ExportResult SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr
     write << fourSpaceTab << anim->mFrameCount << ", " << anim->mLimbCount << ", " << dataName << ", " << keyName << ",\n";
     write << "};\n";
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + 0xC;
+    return OffsetEntry {
+        anim->mDataOffset,
+        (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + 0xC
+    };
 }
 
 ExportResult SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

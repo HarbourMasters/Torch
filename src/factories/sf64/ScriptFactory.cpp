@@ -95,7 +95,10 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
         write << "// count: " << script->mPtrs.size() << " events\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sizeof(uint32_t) * script->mPtrs.size();
+    return OffsetEntry {
+        script->mCmdsStart,
+        static_cast<uint32_t>((IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + script->mPtrs.size() * sizeof(uint32_t))
+    };
 }
 
 ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

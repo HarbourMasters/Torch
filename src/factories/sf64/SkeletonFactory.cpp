@@ -90,7 +90,10 @@ ExportResult SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared
         write << "// Limbs: " << std::dec << skeleton->mSkeleton.size() << "\n";
     }
 
-    return (IS_SEGMENTED(limbs[0].mAddr) ? SEGMENT_OFFSET(limbs[0].mAddr) : limbs[0].mAddr) + (skeleton->mSkeleton.size() * 0x24) + 4;
+    return OffsetEntry {
+        limbs[0].mAddr,
+        (IS_SEGMENTED(limbs[0].mAddr) ? SEGMENT_OFFSET(limbs[0].mAddr) : limbs[0].mAddr) + skeleton->mSkeleton.size() * 0x24 + 4
+    };
 }
 
 ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

@@ -53,6 +53,7 @@ struct VRAMEntry {
 
 struct WriteEntry {
     uint32_t addr;
+    uint32_t alignment;
     std::string buffer;
     std::optional<uint32_t> endptr;
 };
@@ -129,6 +130,7 @@ private:
     // Temporal Variables
     std::string gCurrentFile;
     std::string gFileHeader;
+    bool gEnablePadGen = false;
     uint32_t gCurrentPad = 0;
     uint32_t gCurrentFileOffset;
     uint32_t gCurrentSegmentNumber;

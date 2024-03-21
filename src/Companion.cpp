@@ -212,7 +212,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         spdlog::set_pattern(line);
     }
 
-    std::optional<uint32_t> endptr = std::nullopt;
+    ExportResult endptr = std::nullopt;
 
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
@@ -252,8 +252,8 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         }
         case ExportType::Code: {
             endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
-            if (Companion::Instance->IsDebug() && endptr.has_value()) {
-                stream << "// 0x" << std::hex << std::uppercase << endptr.value() << "\n\n";
+            if (this->IsDebug() && endptr.has_value() && endptr->index() == 0) {
+                stream << "// 0x" << std::hex << std::uppercase << std::get<0>(endptr.value()) << "\n\n";
             }
             break;
         }
@@ -264,14 +264,44 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     }
 
     SPDLOG_INFO("Processed {}", name);
+    WriteEntry entry;
     if(node["offset"]) {
-        WriteEntry entry = {
-            node["offset"].as<uint32_t>(),
-            stream.str(),
-            endptr
-        };
-        this->gWriteMap[this->gCurrentFile][type].push_back(entry);
+        auto alignment = GetSafeNode<uint32_t>(node, "alignment", impl->GetAlignment());
+        if(!endptr.has_value()) {
+            entry = {
+                node["offset"].as<uint32_t>(),
+                alignment,
+                stream.str(),
+                std::nullopt
+            };
+        } else {
+            switch (endptr->index()) {
+                case 0:
+                    entry = {
+                        node["offset"].as<uint32_t>(),
+                        alignment,
+                        stream.str(),
+                        std::get<size_t>(endptr.value())
+                    };
+                    break;
+                case 1: {
+                    const auto oentry = std::get<OffsetEntry>(endptr.value());
+                    entry = {
+                        oentry.start,
+                        alignment,
+                        stream.str(),
+                        oentry.end
+                    };
+                    break;
+                }
+                default:
+                    SPDLOG_ERROR("Invalid endptr index {}", endptr->index());
+                    SPDLOG_ERROR("Type of endptr: {}", typeid(endptr).name());
+                    throw std::runtime_error("We should never reach this point");
+            }
+        }
     }
+    this->gWriteMap[this->gCurrentFile][type].push_back(entry);
 }
 
 void Companion::ParseModdingConfig() {
@@ -358,6 +388,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         const auto offset = GetSafeNode<uint32_t>(vram, "offset");
         this->gCurrentVram = { addr, offset };
     }
+
+    this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
 }
 
 void Companion::Process() {
@@ -709,7 +741,6 @@ void Companion::Process() {
                 for (const auto& [type, raw] : this->gWriteMap[this->gCurrentFile]) {
                     entries.insert(entries.end(), raw.begin(), raw.end());
                 }
-                this->gWriteMap.clear();
 
                 if(sort == "OFFSET") {
                     std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
@@ -735,30 +766,42 @@ void Companion::Process() {
             for (size_t i = 0; i < entries.size(); i++) {
                 const auto result = entries[i];
                 stream << result.buffer;
-                if(i > 0){
-                    auto endptr = entries[i - 1].endptr;
+
+                if(i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code){
+                    auto endptr = result.endptr;
                     if(!endptr.has_value()){
                         continue;
                     }
 
-                    auto start = IS_SEGMENTED(result.addr) ? SEGMENT_OFFSET(result.addr) : result.addr;
-                    auto diff = (start - endptr.value());
-                    if(diff > 0){
-                        SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X}", endptr.value(), start, diff);
-                        SPDLOG_WARN("Creating pad of 0x{:X} bytes", diff);
-                        auto filename = this->gCurrentDirectory.filename().string();
-                        stream << "char pad_" << filename << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
-                        for(int i = 0; i < diff; i++){
+#define ASSET_PTR(x) IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : x
+
+                    uint32_t startptr = ASSET_PTR(result.endptr.value());
+                    uint32_t end = ASSET_PTR(entries[i + 1].addr);
+
+                    uint32_t alignment = entries[i + 1].alignment;
+                    int32_t gap = end - startptr;
+
+                    if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
+                        SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
+                        SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
+                        const auto padfile = this->gCurrentDirectory.filename().string();
+                        stream << "char pad_" << padfile << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
+                        auto gapSize = gap & ~3;
+                        for(size_t j = 0; j < gapSize; j++){
                             stream << "0x00, ";
                         }
                         stream << "\n};\n\n";
+                    } else if(gap > 0x10) {
+                        stream << "\n// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << " on file " << this->gCurrentFile << "\n";
                     }
 
-                    if(diff < 0) {
-                        SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X}", entries[i - 1].endptr.value(), start);
+                    if(gap < 0) {
+                        SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X}", startptr, end);
                     }
                 }
             }
+
+            this->gWriteMap.clear();
 
             std::string buffer = stream.str();
 

@@ -180,8 +180,6 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         if (Companion::Instance->IsDebug()) {
             write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
         }
-
-        write << "\n";
     }
     return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + data.size();
 }
