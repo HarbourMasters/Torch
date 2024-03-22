@@ -25,8 +25,6 @@
 #define SCALE_3_8(VAL_) ((VAL_) * 0x24)
 #define SCALE_8_3(VAL_) ((VAL_) / 0x24)
 
-unsigned short magicFiller = 0x07FE;
-
 typedef struct {
     enum {
         IMG_FORMAT_RGBA,
