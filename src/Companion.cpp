@@ -681,7 +681,7 @@ void Companion::Process() {
                     this->ExtractNode(node, output, wrapper);
                 }
             } else {
-                if(gCurrentFileOffset && assetNode["offsets"]) {
+                if(gCurrentFileOffset && assetNode["offset"]) {
                     const auto offset = assetNode["offset"].as<uint32_t>();
                     if (!IS_SEGMENTED(offset)) {
                         assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
