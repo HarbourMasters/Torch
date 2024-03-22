@@ -313,6 +313,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
             std::optional<uint32_t> segment;
 
+            if ((w0 >> 16) & G_DL_NO_PUSH) {
+                SPDLOG_INFO("Branch List Command Found");
+                processing = false;
+            }
+
             if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
                 SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", w1);
 
