@@ -25,6 +25,8 @@
 #define SCALE_3_8(VAL_) ((VAL_) * 0x24)
 #define SCALE_8_3(VAL_) ((VAL_) / 0x24)
 
+unsigned short magicFiller = 0x07FE;
+
 typedef struct {
     enum {
         IMG_FORMAT_RGBA,
@@ -509,7 +511,7 @@ rgba* png2rgba(unsigned char* png_input, int size_input, int* width, int* height
 }
 
 rgb* png2rgb(unsigned char* png_input, int size_input, int* width, int* height) {
-    rgba* img = NULL;
+    rgb* img = NULL;
     int w = 0;
     int h = 0;
     int channels = 0;
@@ -538,11 +540,6 @@ rgb* png2rgb(unsigned char* png_input, int size_input, int* width, int* height) 
                 img[idx].red = data[channels * idx];
                 img[idx].green = data[channels * idx + 1];
                 img[idx].blue = data[channels * idx + 2];
-                if (channels == 4) {
-                    img[idx].alpha = data[channels * idx + 3];
-                } else {
-                    img[idx].alpha = 0xFF;
-                }
             }
         }
         break;
