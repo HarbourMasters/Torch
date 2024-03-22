@@ -4,12 +4,15 @@
 #include <optional>
 #include <filesystem>
 #include <vector>
+#include <future>
 #include <fstream>
 #include <unordered_map>
 #include <variant>
-#include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
 #include "utils/Decompressor.h"
+#include "factories/BaseFactory.h"
+#include <mutex>
+#include "thread-pool/BS_thread_pool.hpp"
 
 class SWrapper;
 namespace fs = std::filesystem;
@@ -74,6 +77,15 @@ struct TorchConfig {
     bool modding;
 };
 
+struct AsyncExport {
+    YAML::Node node;
+    std::string name;
+    SWrapper* binary;
+    std::shared_future<ParseResult> future;
+    BaseFactory* factory;
+    BaseExporter* exporter;
+};
+
 class Companion {
 public:
     static Companion* Instance;
@@ -122,6 +134,7 @@ private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
     fs::path gCurrentDirectory;
+    BS::thread_pool gThreadPool;
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     std::shared_ptr<N64::Cartridge> gCartridge;
@@ -132,14 +145,16 @@ private:
     std::string gFileHeader;
     bool gEnablePadGen = false;
     uint32_t gCurrentPad = 0;
+    std::vector<Table> gTables;
     uint32_t gCurrentFileOffset;
     uint32_t gCurrentSegmentNumber;
     std::optional<VRAMEntry> gCurrentVram;
     CompressionType gCurrentCompressionType;
-    std::vector<Table> gTables;
+    std::mutex gMutex;
+    std::vector<AsyncExport> gParseFutures;
+    std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
-    std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
@@ -148,5 +163,6 @@ private:
     void ParseModdingConfig();
     void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
-    void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
+    void ExtractNode(YAML::Node node, std::string name, SWrapper* binary);
+    void ExportNode(AsyncExport async);
 };

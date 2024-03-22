@@ -34,9 +34,7 @@ file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
 set(USE_STANDALONE ON)
-set(VPKTOOL_BUILD_GUI OFF)
-set(VPKTOOL_BUILD_TESTS OFF)
-set(VPKTOOL_BUILD_INSTALLER OFF)
+set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 # Build
 if (USE_STANDALONE)
@@ -46,10 +44,16 @@ else()
     add_library(${PROJECT_NAME} SHARED ${SRC_DIR})
 endif()
 
-if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+# Compiler flags
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS_DEBUG "-g")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-    set(CMAKE_CXX_FLAGS "-Wno-narrowing")
+    set(CMAKE_CXX_FLAGS "-mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -Wno-narrowing -ffast-math")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+    set(CMAKE_CXX_FLAGS "-mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -Wno-narrowing -ffast-math")
 else()
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_compile_options(${PROJECT_NAME} PRIVATE

@@ -143,8 +143,7 @@ void Companion::ParseEnums(std::string& header) {
     }
 }
 
-void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary) {
-    std::ostringstream stream;
+void Companion::ExtractNode(YAML::Node node, std::string name, SWrapper* binary) {
 
     auto type = GetSafeNode<std::string>(node, "type");
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
@@ -164,7 +163,6 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         return;
     }
 
-
     auto impl = factory->get();
 
     auto exporter = impl->GetExporter(this->gConfig.exporterType);
@@ -173,48 +171,60 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         return;
     }
 
-    std::optional<std::shared_ptr<IParsedData>> result;
-    if(this->gConfig.modding) {
-        if(impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
+    std::shared_future<ParseResult> result;
 
-            auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
-            if(!fs::exists(path)) {
-                SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
-                return;
-            }
-
-            std::ifstream input(path, std::ios::binary);
-            std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
-            input.close();
-
-            result = factory->get()->parse_modding(data, node);
-        } else {
-            result = factory->get()->parse(this->gRomData, node);
+    if(this->gConfig.modding && impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
+        auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
+        if(!fs::exists(path)) {
+            SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
+            return;
         }
+
+        std::ifstream input(path, std::ios::binary);
+        std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
+        input.close();
+
+        result = this->gThreadPool.submit_task([&data, &node, factory]{
+            return factory->get()->parse_modding(data, node);
+        });
     } else {
-        result = factory->get()->parse(this->gRomData, node);
+        result = this->gThreadPool.submit_task([this, &node, factory, binary]{
+            auto out = factory->get()->parse(this->gRomData, node);
+
+            for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
+                if(snd.second) {
+                    continue;
+                }
+                std::string doutput = (this->gCurrentDirectory / fst).string();
+                std::replace(doutput.begin(), doutput.end(), '\\', '/');
+                this->gAssetDependencies[this->gCurrentFile][fst].second = true;
+                this->ExtractNode(snd.first, doutput, binary);
+                spdlog::set_pattern(regular);
+                SPDLOG_INFO("------------------------------------------------");
+                spdlog::set_pattern(line);
+            }
+            return out;
+        });
     }
+
+    this->gParseFutures.push_back(AsyncExport { node, name, binary, result, impl, exporter->get()});
+}
+
+void Companion::ExportNode(AsyncExport async){
+    auto [node, name, binary, future, impl, exporter] = async;
+
+    std::ostringstream stream;
+    auto result = future.get();
+
     if(!result.has_value()){
         SPDLOG_ERROR("Failed to process {}", name);
         return;
     }
 
-    for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
-        if(snd.second) {
-            continue;
-        }
-        std::string doutput = (this->gCurrentDirectory / fst).string();
-        std::replace(doutput.begin(), doutput.end(), '\\', '/');
-        this->gAssetDependencies[this->gCurrentFile][fst].second = true;
-        this->ExtractNode(snd.first, doutput, binary);
-        spdlog::set_pattern(regular);
-        SPDLOG_INFO("------------------------------------------------");
-        spdlog::set_pattern(line);
-    }
-
     ExportResult endptr = std::nullopt;
 
     switch (this->gConfig.exporterType) {
+
         case ExportType::Binary: {
             if(binary == nullptr)  {
                 break;
@@ -222,7 +232,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
             stream.str("");
             stream.clear();
-            exporter->get()->Export(stream, result.value(), name, node, &name);
+            exporter->Export(stream, result.value(), name, node, &name);
             auto data = stream.str();
             binary->CreateFile(name, std::vector(data.begin(), data.end()));
             break;
@@ -231,7 +241,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             stream.str("");
             stream.clear();
             std::string ogname = name;
-            exporter->get()->Export(stream, result.value(), name, node, &name);
+            exporter->Export(stream, result.value(), name, node, &name);
 
             auto data = stream.str();
             if(data.empty()) {
@@ -251,7 +261,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             break;
         }
         default: {
-            endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
+            endptr = exporter->Export(stream, result.value(), name, node, &name);
             break;
         }
     }
@@ -294,7 +304,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             }
         }
     }
-    this->gWriteMap[this->gCurrentFile][type].push_back(entry);
+    this->gWriteMap[this->gCurrentFile][GetSafeNode<std::string>(node, "type")].push_back(entry);
 }
 
 void Companion::ParseModdingConfig() {
@@ -657,7 +667,6 @@ void Companion::Process() {
                 continue;
             }
 
-
             // Parse horizontal assets
             if(assetNode["files"]){
                 auto segment = assetNode["segment"] ? assetNode["segment"].as<uint8_t>() : -1;
@@ -695,6 +704,11 @@ void Companion::Process() {
             spdlog::set_pattern(regular);
             SPDLOG_INFO("------------------------------------------------");
             spdlog::set_pattern(line);
+        }
+
+        for (size_t i = 0; i < this->gParseFutures.size(); i++) {
+            const auto async = this->gParseFutures.at(i);
+            this->ExportNode(async);
         }
 
         auto fsout = fs::path(this->gConfig.outputPath);
@@ -909,7 +923,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
     if(!node["offset"]) {
         return std::nullopt;
     }
-
+    gMutex.lock();
     this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, false);
 
     auto output = (this->gCurrentDirectory / name).string();
@@ -917,7 +931,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
 
     auto entry = std::make_tuple(output, node);
     this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = entry;
-
+    gMutex.unlock();
     return entry;
 }
 

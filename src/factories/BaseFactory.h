@@ -32,6 +32,7 @@ struct OffsetEntry {
 };
 
 typedef std::optional<std::variant<size_t, OffsetEntry>> ExportResult;
+#define ParseResult std::optional<std::shared_ptr<IParsedData>>
 
 enum class ExportType {
     Header,

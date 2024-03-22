@@ -352,7 +352,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 	    // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
         if(opcode == GBI(G_MOVEMEM)) {
 	    // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
-	    uint8_t subcommand = (w0 >> 16) & 0xFF;
+	        uint8_t subcommand = (w0 >> 16) & 0xFF;
             uint8_t index = 0;
             uint8_t offset = 0;
             bool light = false;
@@ -493,8 +493,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         gfxs.push_back(w0);
         gfxs.push_back(w1);
     }
-
-
 
     return std::make_shared<DListData>(gfxs);
 }
