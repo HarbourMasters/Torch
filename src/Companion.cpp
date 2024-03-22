@@ -25,6 +25,7 @@
 #include "factories/mk64/TrackSections.h"
 #include "factories/mk64/SpawnData.h"
 #include "factories/mk64/DrivingBehaviour.h"
+#include "factories/mk64/MkTexture.h"
 #include "spdlog/spdlog.h"
 #include "hj/sha1.h"
 
@@ -80,6 +81,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
     this->RegisterFactory("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
     this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
+    this->RegisterFactory("MK64:TEXTURE", std::make_shared<MkTextureFactory>());
 
     // SF64 specific
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
