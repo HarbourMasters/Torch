@@ -24,17 +24,6 @@ ExportResult VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    if (IS_SEGMENTED(offset)) {
-        offset = SEGMENT_OFFSET(offset);
-    }
-
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
     write << "Vtx " << symbol << "[] = {\n";
 
     for (int i = 0; i < vtx.size(); ++i) {
@@ -68,7 +57,7 @@ ExportResult VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
         write << "// count: " << std::to_string(vtx.size()) << " Vtxs\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + vtx.size() * sizeof(VtxRaw);
+    return offset + vtx.size() * sizeof(VtxRaw);
 }
 
 ExportResult VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

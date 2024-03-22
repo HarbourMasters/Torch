@@ -250,13 +250,6 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             file.close();
             break;
         }
-        case ExportType::Code: {
-            endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
-            if (this->IsDebug() && endptr.has_value() && endptr->index() == 0) {
-                stream << "// 0x" << std::hex << std::uppercase << std::get<0>(endptr.value()) << "\n\n";
-            }
-            break;
-        }
         default: {
             endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
             break;
@@ -689,7 +682,7 @@ void Companion::Process() {
             } else {
                 const auto offset = assetNode["offset"].as<uint32_t>();
                 if(gCurrentFileOffset) {
-                    if (IS_SEGMENTED(offset) == false) {
+                    if (!IS_SEGMENTED(offset)) {
                         assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
                     }
                 }
@@ -765,16 +758,18 @@ void Companion::Process() {
 
             for (size_t i = 0; i < entries.size(); i++) {
                 const auto result = entries[i];
+                const auto hasSize = result.endptr.has_value();
+                if (hasSize && this->IsDebug()) {
+                    stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.addr) << "\n";
+                }
+
                 stream << result.buffer;
 
-                if(i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code){
-                    auto endptr = result.endptr;
-                    if(!endptr.has_value()){
-                        continue;
-                    }
+                if (hasSize && this->IsDebug()) {
+                    stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.endptr.value()) << "\n\n";
+                }
 
-#define ASSET_PTR(x) IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : x
-
+                if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code){
                     uint32_t startptr = ASSET_PTR(result.endptr.value());
                     uint32_t end = ASSET_PTR(entries[i + 1].addr);
 

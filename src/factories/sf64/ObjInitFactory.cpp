@@ -22,13 +22,6 @@ ExportResult SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto objs = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
 
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
     write << "ObjectInit " << symbol << "[] = {\n";
     for(auto& obj : objs) {
         auto enumName = Companion::Instance->GetEnumFromValue("ObjectId", obj.id).value_or(std::to_string(obj.id));
@@ -46,7 +39,7 @@ ExportResult SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_
         write << "// count: " << std::to_string(objs.size()) << " ObjectInits\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sizeof(ObjectInit) * objs.size();
+    return offset + sizeof(ObjectInit) * objs.size();
 }
 
 ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

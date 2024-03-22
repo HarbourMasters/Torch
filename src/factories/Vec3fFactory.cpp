@@ -37,20 +37,11 @@ ExportResult Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto vecData = std::static_pointer_cast<Vec3fData>(raw);
-    auto off = offset;
-    int i;
-
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    }
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
+    int i = 0;
 
     write << "Vec3f " << symbol << "[] = {";
 
     int cols = 120 / (3 * vecData->mMaxWidth + 8);
-    i = 0;
     for(Vec3f v : vecData->mVecs) {
         if((i++ % cols) == 0) {
             write << "\n" << fourSpaceTab;
@@ -64,7 +55,7 @@ ExportResult Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         write << "// Count: " << vecData->mVecs.size() << " Vec3fs\n";
     }
 
-    return (IS_SEGMENTED(off) ? SEGMENT_OFFSET(off) : off) + vecData->mVecs.size() * sizeof(Vec3f);
+    return offset + vecData->mVecs.size() * sizeof(Vec3f);
 }
 
 ExportResult Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

@@ -21,6 +21,7 @@ ExportResult MK64::WaypointHeaderExporter::Export(std::ostream &write, std::shar
 ExportResult MK64::WaypointCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto waypoints = std::static_pointer_cast<WaypointData>(raw)->mWaypoints;
     auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     write << "TrackWaypoint " << symbol << "[] = {\n";
 
@@ -39,8 +40,9 @@ ExportResult MK64::WaypointCodeExporter::Export(std::ostream &write, std::shared
         // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
         write << "{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << ", " << NUM(seg) << " },\n";
     }
-    write << "};\n\n";
-    return std::nullopt;
+    write << "};\n";
+
+    return offset + waypoints.size() * sizeof(MK64::TrackWaypoint);
 }
 
 ExportResult MK64::WaypointBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

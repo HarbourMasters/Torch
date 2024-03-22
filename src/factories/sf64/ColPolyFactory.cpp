@@ -29,14 +29,8 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
-    auto off = offset;
+    auto off = ASSET_PTR(offset);
     int i;
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    }
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
 
     write << "CollisionPoly " << symbol << "[] = {";
     int width = std::log10(colpolys->mMesh.size()) + 1;
@@ -75,10 +69,7 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     if (meshOffset != defaultMeshOffset) {
         write << "// SF64:COLPOLY alert: Gap detected between polys and mesh\n\n";
     }
-    off = meshOffset;
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    }
+    off = ASSET_PTR(meshOffset);
     defaultMeshSymbol << symbol << "_mesh_" << std::uppercase << std::hex << off;
     auto meshSymbol = GetSafeNode(node, "mesh_symbol", defaultMeshSymbol.str());
 
@@ -108,7 +99,7 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
         write << "// Mesh vertex count: " << colpolys->mMesh.size() << "\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + colpolys->mMesh.size() * sizeof(Vec3s);
+    return offset + colpolys->mMesh.size() * sizeof(Vec3s);
 }
 
 ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

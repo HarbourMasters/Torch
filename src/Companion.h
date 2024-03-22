@@ -135,7 +135,7 @@ private:
     uint32_t gCurrentFileOffset;
     uint32_t gCurrentSegmentNumber;
     std::optional<VRAMEntry> gCurrentVram;
-    CompressionType gCurrentCompressionType;
+    CompressionType gCurrentCompressionType = CompressionType::None;
     std::vector<Table> gTables;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
