@@ -637,6 +637,7 @@ void Companion::Process() {
         this->gCurrentPad = 0;
         this->gCurrentVram = std::nullopt;
         this->gCurrentSegmentNumber = 0;
+        this->gCurrentCompressionType = CompressionType::None;
         this->gTables.clear();
         GFXDOverride::ClearVtx();
 
