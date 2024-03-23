@@ -8,44 +8,39 @@
 #define FLOAT(x, w) std::dec << std::setfill(' ') << (((int) x == x) ? "" : "  ") << std::setw(w - 2) << x << (((int) x == x) ? ".0f" : "f")
 
 SF64::HitboxData::HitboxData(std::vector<float> data, std::vector<int> types): mData(data), mTypes(types) {
-    
+
 }
 
-void SF64::HitboxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::HitboxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern f32 " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto hitbox = std::static_pointer_cast<SF64::HitboxData>(raw);
     auto index = 0;
     auto count = hitbox->mData[index++];
     auto hasType2 = false;
-    auto off = offset;
-    
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    } 
+
     for(int type : hitbox->mTypes) {
         if(type == 2) {
             hasType2 = true;
             break;
         }
     }
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
+
     write << "f32 " << symbol << "[] = {\n";
     write << fourSpaceTab << count << ",\n";
-    
+
     for(int i = 0; i < (int)count; i++) {
         if(hitbox->mTypes[i]  == 4) {
             write << fourSpaceTab << "HITBOX_TYPE_4,   ";
@@ -76,13 +71,11 @@ void SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
         write << "\n";
     }
     write << "};\n";
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off + sizeof(float) * index << "\n";
-    }
-    write << "\n";
+
+    return offset + sizeof(float) * index;
 }
 
-void SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto hitbox = std::static_pointer_cast<SF64::HitboxData>(raw);
     auto writer = LUS::BinaryWriter();
 
@@ -91,6 +84,7 @@ void SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPa
         writer.Write(value);
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::HitboxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

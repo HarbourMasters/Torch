@@ -64,18 +64,19 @@ void GFXDSetGBIVersion(){
     }
 }
 
-void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern Gfx " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -113,30 +114,18 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_lightsn_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
 
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
 
     write << std::string(out);
     write << "};\n";
+    const auto sz = (sizeof(uint32_t) * cmds.size());
 
     if (Companion::Instance->IsDebug()) {
-        const auto sz = (sizeof(uint32_t) * cmds.size());
-
         write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
     }
 
-    write << "\n";
+    return offset + sz;
 }
 
 void DebugDisplayList(uint32_t w0, uint32_t w1){
@@ -181,7 +170,7 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr){
     return std::nullopt;
 }
 
-void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     auto writer = LUS::BinaryWriter();
 
@@ -297,6 +286,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& raw_buffer, YAML::Node& node) {
@@ -322,6 +312,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         if(opcode == GBI(G_DL)) {
 
             std::optional<uint32_t> segment;
+
+            if ((w0 >> 16) & G_DL_NO_PUSH) {
+                SPDLOG_INFO("Branch List Command Found");
+                processing = false;
+            }
 
             if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
                 SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", w1);

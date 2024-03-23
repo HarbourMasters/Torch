@@ -13,7 +13,7 @@ SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOff
         SPDLOG_ERROR("SF64:ANIM error: Data and Key offsets overlap");
     }
     if(mJointKeys.size() != limbCount + 1) {
-        SPDLOG_ERROR("SF64:ANIM error: Joint Key count does not match Limb count");        
+        SPDLOG_ERROR("SF64:ANIM error: Joint Key count does not match Limb count");
     }
     if(frameData.size() > 0 && frameData[0] != 0){
         SPDLOG_INFO("SF64:ANIM alert: Found non-zero frame data on first frame");
@@ -23,18 +23,19 @@ SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOff
     }
 }
 
-void SF64::AnimHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::AnimHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern Animation " << symbol << ";\n";
+    return std::nullopt;
 }
 
-void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto anim = std::static_pointer_cast<SF64::AnimData>(raw);
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -62,9 +63,6 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
     keyDefaultName << symbol << "_joint_key_" << std::uppercase << std::hex << keyOffset;
     auto keyName = GetSafeNode(node, "data_symbol", keyDefaultName.str());
 
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << dataOffset << "\n";
-    }
     auto dataCount = anim->mFrameData.size();
     // write << "Frame data end: 0x" << std::hex << std::uppercase << (dataOffset + sizeof(uint16_t) * dataCount) << "\n";
     // write << "JointKey start: 0x" << std::hex << std::uppercase << keyOffset << "\n";
@@ -94,19 +92,14 @@ void SF64::AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsed
     write << "Animation " << symbol << " = {\n";
     write << fourSpaceTab << anim->mFrameCount << ", " << anim->mLimbCount << ", " << dataName << ", " << keyName << ",\n";
     write << "};\n";
-    
-    if (Companion::Instance->IsDebug()) {
-        int off = offset + 0xC;
-        if(IS_SEGMENTED(off)) {
-            off = SEGMENT_OFFSET(off);
-        }
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
 
-    write<< "\n";
+    return OffsetEntry {
+        anim->mDataOffset,
+        offset + 0xC
+    };
 }
 
-void SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto anim = std::static_pointer_cast<SF64::AnimData>(raw);
     auto writer = LUS::BinaryWriter();
 
@@ -125,6 +118,7 @@ void SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPars
         writer.Write(data);
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

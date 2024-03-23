@@ -1,6 +1,6 @@
 #include "SequenceFactory.h"
 
-void SequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     const auto sequence = std::static_pointer_cast<SequenceData>(raw);
 
@@ -13,6 +13,7 @@ void SequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsed
     writer.Write( sequence->mSize);
     writer.Write(reinterpret_cast<char*>(sequence->mBuffer.data()), sequence->mSize);
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {

@@ -20,6 +20,7 @@
 #include "factories/DisplayListOverrides.h"
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
+#include "factories/Vec3fFactory.h"
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
@@ -42,12 +43,15 @@
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
 #include <regex>
+#include "utils/TorchUtils.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
+
+#define ABS(x) ((x) < 0 ? -(x) : (x))
 
 void Companion::Init(const ExportType type) {
 
@@ -66,6 +70,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SEQUENCE", std::make_shared<SequenceFactory>());
     this->RegisterFactory("SAMPLE", std::make_shared<SampleFactory>());
     this->RegisterFactory("BANK", std::make_shared<BankFactory>());
+    this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
 
     // SM64 specific
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
@@ -140,7 +145,7 @@ void Companion::ParseEnums(std::string& header) {
             enumIndex++;
             this->gEnums[enumName][enumIndex] = line;
         }
-        
+
     }
 }
 
@@ -165,7 +170,14 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         return;
     }
 
+
     auto impl = factory->get();
+
+    auto exporter = impl->GetExporter(this->gConfig.exporterType);
+    if(!exporter.has_value()){
+        SPDLOG_WARN("No exporter found for {}", name);
+        return;
+    }
 
     std::optional<std::shared_ptr<IParsedData>> result;
     if(this->gConfig.modding) {
@@ -193,12 +205,6 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         return;
     }
 
-    auto exporter = factory->get()->GetExporter(this->gConfig.exporterType);
-    if(!exporter.has_value()){
-        SPDLOG_WARN("No exporter found for {}", name);
-        return;
-    }
-
     for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
         if(snd.second) {
             continue;
@@ -211,6 +217,8 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         SPDLOG_INFO("------------------------------------------------");
         spdlog::set_pattern(line);
     }
+
+    ExportResult endptr = std::nullopt;
 
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
@@ -249,28 +257,50 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             break;
         }
         default: {
-            exporter->get()->Export(stream, result.value(), name, node, &name);
-
-            if(this->gConfig.exporterType == ExportType::Code) {
-                if(node["pad"]){
-                    auto filename = this->gCurrentDirectory.filename().string();
-                    auto pad = GetSafeNode<uint32_t>(node, "pad");
-                    stream << "char pad_" << filename << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
-                    for(int i = 0; i < pad; i++){
-                        stream << "0x00, ";
-                    }
-                    stream << "\n};\n\n";
-                }
-            }
-
+            endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
             break;
         }
     }
 
     SPDLOG_INFO("Processed {}", name);
+    WriteEntry entry;
     if(node["offset"]) {
-        this->gWriteMap[this->gCurrentFile][type].emplace_back(node["offset"].as<uint32_t>(), stream.str());
+        auto alignment = GetSafeNode<uint32_t>(node, "alignment", impl->GetAlignment());
+        if(!endptr.has_value()) {
+            entry = {
+                node["offset"].as<uint32_t>(),
+                alignment,
+                stream.str(),
+                std::nullopt
+            };
+        } else {
+            switch (endptr->index()) {
+                case 0:
+                    entry = {
+                        node["offset"].as<uint32_t>(),
+                        alignment,
+                        stream.str(),
+                        std::get<size_t>(endptr.value())
+                    };
+                    break;
+                case 1: {
+                    const auto oentry = std::get<OffsetEntry>(endptr.value());
+                    entry = {
+                        oentry.start,
+                        alignment,
+                        stream.str(),
+                        oentry.end
+                    };
+                    break;
+                }
+                default:
+                    SPDLOG_ERROR("Invalid endptr index {}", endptr->index());
+                    SPDLOG_ERROR("Type of endptr: {}", typeid(endptr).name());
+                    throw std::runtime_error("We should never reach this point");
+            }
+        }
     }
+    this->gWriteMap[this->gCurrentFile][type].push_back(entry);
 }
 
 void Companion::ParseModdingConfig() {
@@ -357,6 +387,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         const auto offset = GetSafeNode<uint32_t>(vram, "offset");
         this->gCurrentVram = { addr, offset };
     }
+
+    this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
 }
 
 void Companion::Process() {
@@ -611,6 +643,7 @@ void Companion::Process() {
         this->gCurrentPad = 0;
         this->gCurrentVram = std::nullopt;
         this->gCurrentSegmentNumber = 0;
+        this->gCurrentCompressionType = CompressionType::None;
         this->gTables.clear();
         GFXDOverride::ClearVtx();
 
@@ -654,9 +687,9 @@ void Companion::Process() {
                     this->ExtractNode(node, output, wrapper);
                 }
             } else {
-                const auto offset = assetNode["offset"].as<uint32_t>();
-                if(gCurrentFileOffset) {
-                    if (IS_SEGMENTED(offset) == false) {
+                if(gCurrentFileOffset && assetNode["offset"]) {
+                    const auto offset = assetNode["offset"].as<uint32_t>();
+                    if (!IS_SEGMENTED(offset)) {
                         assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
                     }
                 }
@@ -701,43 +734,85 @@ void Companion::Process() {
 
             std::ostringstream stream;
 
+            std::vector<WriteEntry> entries;
+
             if(std::holds_alternative<std::string>(this->gWriteOrder)) {
                 auto sort = std::get<std::string>(this->gWriteOrder);
-                std::vector<std::pair<uint32_t, std::string>> outbuf;
-                for (const auto& [type, buffer] : this->gWriteMap[this->gCurrentFile]) {
-                    outbuf.insert(outbuf.end(), buffer.begin(), buffer.end());
+                for (const auto& [type, raw] : this->gWriteMap[this->gCurrentFile]) {
+                    entries.insert(entries.end(), raw.begin(), raw.end());
                 }
-                this->gWriteMap.clear();
 
                 if(sort == "OFFSET") {
-                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
-                        return std::get<uint32_t>(a) < std::get<uint32_t>(b);
+                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                        return a.addr < b.addr;
                     });
                 } else if(sort == "ROFFSET") {
-                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
-                        return std::get<uint32_t>(a) > std::get<uint32_t>(b);
+                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                        return a.addr > b.addr;
                     });
                 } else if(sort != "LINEAR") {
                     throw std::runtime_error("Invalid write order");
                 }
-
-                for (auto& [symbol, buffer] : outbuf) {
-                    stream << buffer;
-                }
-                outbuf.clear();
             } else {
                 for (const auto& type : std::get<std::vector<std::string>>(this->gWriteOrder)) {
-                    std::vector<std::pair<uint32_t, std::string>> outbuf = this->gWriteMap[this->gCurrentFile][type];
+                    entries = this->gWriteMap[this->gCurrentFile][type];
 
-                    std::sort(outbuf.begin(), outbuf.end(), [](const auto& a, const auto& b) {
-                        return std::get<uint32_t>(a) > std::get<uint32_t>(b);
+                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                        return a.addr > b.addr;
                     });
+                }
+            }
 
-                    for (auto& [symbol, buffer] : outbuf) {
-                        stream << buffer;
+            for (size_t i = 0; i < entries.size(); i++) {
+                const auto result = entries[i];
+                const auto hasSize = result.endptr.has_value();
+                if (hasSize && this->IsDebug()) {
+                    stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.addr) << "\n";
+                }
+
+                stream << result.buffer;
+
+                if (hasSize && this->IsDebug()) {
+                    stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.endptr.value()) << "\n\n";
+                }
+
+                if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code){
+                    uint32_t startptr = ASSET_PTR(result.endptr.value());
+                    uint32_t end = ASSET_PTR(entries[i + 1].addr);
+
+                    uint32_t alignment = entries[i + 1].alignment;
+                    int32_t gap = end - startptr;
+
+                    if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
+                        SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
+                        SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
+                        const auto padfile = this->gCurrentDirectory.filename().string();
+                        if(this->IsDebug()){
+                            stream << "// 0x" << std::hex << std::uppercase << startptr << "\n";
+                        }
+                        stream << "char pad_" << padfile << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
+                        auto gapSize = gap & ~3;
+                        for(size_t j = 0; j < gapSize; j++){
+                            stream << "0x00, ";
+                        }
+                        stream << "\n};\n";
+                        if(this->IsDebug()){
+                            stream << "// 0x" << std::hex << std::uppercase << end << "\n\n";
+                        } else {
+                            stream << "\n";
+                        }
+                    } else if(gap > 0x10) {
+                        stream << "\n// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
+                    }
+
+                    if(gap < 0) {
+                        stream << "\n// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << "\n";
+                        SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X}", startptr, end);
                     }
                 }
             }
+
+            this->gWriteMap.clear();
 
             std::string buffer = stream.str();
 
@@ -972,4 +1047,54 @@ std::string Companion::NormalizeAsset(const std::string& name) const {
 
 std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
     return Chocobo1::SHA1().addData(data).finalize().toString();
+}
+
+static std::string ConvertType(std::string type) {
+    int index;
+
+    if((index = type.find(':')) != std::string::npos) {
+        type = type.substr(index + 1);
+    }
+    type = std::regex_replace(type, std::regex(R"([^_A-Za-z0-9]*)"), "");
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+    return type;
+}
+
+std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
+    if(!asset["offset"] || !asset["type"]) {
+        return std::nullopt;
+    }
+    const auto type = GetSafeNode<std::string>(asset, "type");
+    const auto offset = GetSafeNode<uint32_t>(asset, "offset");
+    const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
+    const auto decl = this->GetNodeByAddr(offset);
+
+    if(decl.has_value()) {
+        return std::get<1>(decl.value());
+    }
+
+    auto rom = this->GetRomData();
+    auto factory = this->GetFactory(type)->get();
+
+    std::string output;
+    std::string typeId = ConvertType(type);
+    int index;
+
+    if(symbol != "") {
+        output = symbol;
+    } else if(Decompressor::IsSegmented(offset)){
+        output = this->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(offset)) +"_" + typeId + "_" + Torch::to_hex(SEGMENT_OFFSET(offset), false));
+    } else {
+        output = this->NormalizeAsset(typeId + "_" + Torch::to_hex(offset, false));
+    }
+    asset["autogen"] = true;
+    asset["symbol"] = output;
+
+    auto result = factory->parse(rom, asset);
+
+    if(result.has_value()){
+        return std::get<1>(this->RegisterAsset(output, asset).value());
+    }
+
+    return std::nullopt;
 }

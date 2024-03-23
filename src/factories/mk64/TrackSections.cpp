@@ -6,18 +6,19 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
-void MK64::TrackSectionsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult MK64::TrackSectionsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern TrackSections " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void MK64::TrackSectionsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::TrackSectionsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto sections = std::static_pointer_cast<TrackSectionsData>(raw)->mSecs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -43,15 +44,12 @@ void MK64::TrackSectionsCodeExporter::Export(std::ostream &write, std::shared_pt
         // { addr, surface, section, flags },
         write << "{" << NUM(addr) << ", " << NUM(surf) << ", " << NUM(sect) << ", " << NUM(flags) << "},\n";
     }
+    write << "};\n";
 
-    if (Companion::Instance->IsDebug()) {
-        write << fourSpaceTab << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(TrackSections) * sections.size())) << "\n";
-    }
-
-    write << "};\n\n";
+    return offset + sections.size() * sizeof(MK64::TrackSections);
 }
 
-void MK64::TrackSectionsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::TrackSectionsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto sections = std::static_pointer_cast<TrackSectionsData>(raw);
     auto writer = LUS::BinaryWriter();
 
@@ -65,6 +63,7 @@ void MK64::TrackSectionsBinaryExporter::Export(std::ostream &write, std::shared_
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::TrackSectionsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

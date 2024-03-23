@@ -1,37 +1,37 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include "BaseFactory.h"
+#include "types/Vec3D.h"
 
-// namespace GAME {
-
-class TypeData : public IParsedData {
+class Vec3fData : public IParsedData {
 public:
-    uint32_t mData;
+    std::vector<Vec3f> mVecs;
+    int mMaxWidth;
+    int mMaxPrec;
 
-    explicit TypeData(uint32_t data) {}
+    explicit Vec3fData(std::vector<Vec3f> vecs);
 };
 
-class TypeHeaderExporter : public BaseExporter {
+class Vec3fHeaderExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class TypeBinaryExporter : public BaseExporter {
+class Vec3fBinaryExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class TypeCodeExporter : public BaseExporter {
+class Vec3fCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class TypeFactory : public BaseFactory {
+class Vec3fFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Code, TypeCodeExporter)
-            REGISTER(Header, TypeHeaderExporter)
-            REGISTER(Binary, TypeBinaryExporter)
+            REGISTER(Code, Vec3fCodeExporter)
+            REGISTER(Header, Vec3fHeaderExporter)
+            REGISTER(Binary, Vec3fBinaryExporter)
         };
     }
 };
-// }

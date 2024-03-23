@@ -87,7 +87,7 @@ uint64_t RegisterOrLoadDisplayList(uint32_t ptr) {
     return 0;
 }
 
-void SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
     const auto layout = std::static_pointer_cast<GeoLayout>(data).get();
 
     auto writer = LUS::BinaryWriter();
@@ -185,10 +185,11 @@ void SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsed
     output.Write(buffer.data(), buffer.size());
     output.Finish(write);
     output.Close();
+    return std::nullopt;
 }
 
-void SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
-
+ExportResult SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

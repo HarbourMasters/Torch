@@ -49,15 +49,16 @@ std::unordered_map<std::string, std::string> ASCIITable = {
     { "CLN", ":" }, { "PIP", "| " }
 };
 
-void SF64::MessageHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::MessageHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern u16 " << symbol << "[];\n";
+    return std::nullopt;
 }
 
 void TextToStream(std::ostream& stream, int charCode) {
@@ -73,21 +74,10 @@ void TextToStream(std::ostream& stream, int charCode) {
     }
 }
 
-void SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto message = std::static_pointer_cast<MessageData>(raw)->mMessage;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
-
-    if (IS_SEGMENTED(offset)) {
-        offset = SEGMENT_OFFSET(offset);
-    }
-
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
 
     write << "// ";
     bool lastWasSpace = false;
@@ -129,13 +119,12 @@ void SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(message.size()) << " chars\n";
-        write << "// 0x" << std::hex << std::uppercase << (offset + (message.size() * sizeof(uint16_t))) << "\n";
     }
 
-    write << "\n";
+    return offset + message.size() * sizeof(uint16_t);
 }
 
-void SF64::MessageBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::MessageBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<MessageData>(raw);
 
@@ -146,6 +135,7 @@ void SF64::MessageBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
         writer.Write(m);
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
