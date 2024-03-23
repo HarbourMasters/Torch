@@ -37,9 +37,23 @@ std::unordered_map<std::string, uint8_t> gF3DExTable = {
     { "G_QUAD", 0xB5 }
 };
 
+std::unordered_map<std::string, uint8_t> gF3DEx2Table = {
+    { "G_VTX", 0x01 },
+    { "G_DL", 0xDE },
+    { "G_ENDDL", 0xDF },
+    { "G_SETTIMG", 0xFD },
+    { "G_MOVEMEM", 0xDC },
+    { "G_MV_L0", 0x86 },
+    { "G_MV_L1", 0x88 },
+    { "G_MV_LIGHT", 0xA },
+    { "G_TRI2", 0x06 },
+    { "G_QUAD", 0x07 }
+};
+
 std::unordered_map<GBIVersion, std::unordered_map<std::string, uint8_t>> gGBITable = {
     { GBIVersion::f3d, gF3DTable },
     { GBIVersion::f3dex, gF3DExTable },
+    { GBIVersion::f3dex2, gF3DEx2Table },
 };
 
 #define GBI(cmd) gGBITable[Companion::Instance->GetGBIVersion()][#cmd]
