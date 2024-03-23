@@ -171,7 +171,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
-        SPDLOG_ERROR("No factory found for {}", name);
+        throw std::runtime_error("No factory by the name '"+type+"' found for '"+name+"'");
         return;
     }
 

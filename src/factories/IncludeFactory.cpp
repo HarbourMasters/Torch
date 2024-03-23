@@ -9,7 +9,7 @@
 
 ExportResult IncludeHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    auto ctype = GetSafeNode<size_t>(node, "ctype");
+    auto ctype = GetSafeNode<std::string>(node, "ctype");
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -22,9 +22,9 @@ ExportResult IncludeHeaderExporter::Export(std::ostream &write, std::shared_ptr<
 
 ExportResult IncludeCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    const auto file = GetSafeNode<size_t>(node, "file_path");
-    const auto ctype = GetSafeNode<size_t>(node, "ctype");
-
+    const auto file = GetSafeNode<std::string>(node, "file_path");
+    const auto ctype = GetSafeNode<std::string>(node, "ctype");
+        SPDLOG_INFO("writing INC");
     write << ctype << " " << symbol << "[] = {\n";
 
     write << "#include '" << file << "'";
@@ -41,7 +41,8 @@ ExportResult IncludeBinaryExporter::Export(std::ostream &write, std::shared_ptr<
 
 std::optional<std::shared_ptr<IParsedData>> IncludeFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
 
-    const uint32_t blank = 0;
+    SPDLOG_INFO("parsing INC");
+    const uint32_t blank = 1;
 
     return std::make_shared<IncludeData>(blank);
 }
