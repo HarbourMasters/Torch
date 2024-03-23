@@ -13,6 +13,8 @@
 #include "factories/SampleFactory.h"
 #include "factories/SequenceFactory.h"
 #include "factories/VtxFactory.h"
+#include "factories/MtxFactory.h"
+#include "factories/FloatFactory.h"
 #include "factories/TextureFactory.h"
 #include "factories/DisplayListFactory.h"
 #include "factories/DisplayListOverrides.h"
@@ -23,6 +25,7 @@
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
 #include "factories/mk64/SpawnData.h"
+#include "factories/mk64/DrivingBehaviour.h"
 #include "spdlog/spdlog.h"
 #include "hj/sha1.h"
 
@@ -59,6 +62,8 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("BLOB", std::make_shared<BlobFactory>());
     this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
     this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
+    this->RegisterFactory("MTX", std::make_shared<MtxFactory>());
+    this->RegisterFactory("F32", std::make_shared<FloatFactory>());
     this->RegisterFactory("LIGHTS", std::make_shared<LightsFactory>());
     this->RegisterFactory("GFX", std::make_shared<DListFactory>());
     this->RegisterFactory("AUDIO:HEADER", std::make_shared<AudioHeaderFactory>());
@@ -79,6 +84,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:TRACK_WAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
     this->RegisterFactory("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
+    this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
 
     // SF64 specific
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());

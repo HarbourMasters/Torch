@@ -52,7 +52,11 @@ std::optional<T> GetNode(YAML::Node& node, const std::string& key) {
 template<typename T>
 T GetSafeNode(YAML::Node& node, const std::string& key) {
     if(!node[key]) {
-        throw std::runtime_error("Failed to find " + key + " in yaml");
+        if (node["symbol"]) {
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node for '" + node["symbol"].as<std::string>() + "'");
+        } else {
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node");
+        }
     }
 
     return node[key].as<T>();
