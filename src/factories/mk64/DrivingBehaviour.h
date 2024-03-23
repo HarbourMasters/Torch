@@ -18,15 +18,15 @@ namespace MK64 {
     };
 
     class DrivingBehaviourHeaderExporter : public BaseExporter {
-        void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+        ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
     };
 
     class DrivingBehaviourBinaryExporter : public BaseExporter {
-        void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+        ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
     };
 
     class DrivingBehaviourCodeExporter : public BaseExporter {
-        void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+        ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
     };
 
     class DrivingBehaviourFactory : public BaseFactory {
@@ -42,6 +42,5 @@ namespace MK64 {
                 REGISTER(Binary, DrivingBehaviourBinaryExporter)
             };
         }
-        bool SupportModdedAssets() override { return false; }
     };
 }

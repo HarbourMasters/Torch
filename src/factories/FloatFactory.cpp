@@ -7,18 +7,19 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) std::dec << std::setfill(' ') << std::setw(3) << c
 
-void FloatHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FloatHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern f32 " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void FloatCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult FloatCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto f = std::static_pointer_cast<FloatData>(raw)->mFloats;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -64,9 +65,11 @@ void FloatCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     }
 
     write << "\n";
+
+    return offset + f.size() * sizeof(float);
 }
 
-void FloatBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult FloatBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto f = std::static_pointer_cast<FloatData>(raw);
     auto writer = LUS::BinaryWriter();
 
@@ -77,6 +80,7 @@ void FloatBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     }
     throw std::runtime_error("Float factory untested for otr/o2r exporter");
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> FloatFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

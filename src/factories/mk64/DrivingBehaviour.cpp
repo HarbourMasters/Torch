@@ -7,18 +7,19 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) std::dec << std::setfill(' ') << std::setw(3) << c
 
-void MK64::DrivingBehaviourHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult MK64::DrivingBehaviourHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern DrivingBehaviour " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void MK64::DrivingBehaviourCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::DrivingBehaviourCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto bhv = std::static_pointer_cast<DrivingData>(raw);
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -54,9 +55,10 @@ void MK64::DrivingBehaviourCodeExporter::Export(std::ostream &write, std::shared
     }
 
     write << "\n";
+    return offset + bhv->mBhvs.size() * sizeof(BhvRaw);
 }
 
-void MK64::DrivingBehaviourBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::DrivingBehaviourBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto bhv = std::static_pointer_cast<DrivingData>(raw);
     auto writer = LUS::BinaryWriter();
 
@@ -69,6 +71,7 @@ void MK64::DrivingBehaviourBinaryExporter::Export(std::ostream &write, std::shar
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::DrivingBehaviourFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
