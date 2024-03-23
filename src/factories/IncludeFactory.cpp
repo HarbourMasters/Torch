@@ -22,10 +22,8 @@ ExportResult IncludeHeaderExporter::Export(std::ostream &write, std::shared_ptr<
 
 ExportResult IncludeCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto sym = GetSafeNode<size_t>(node, "symbol");
-    auto file = GetSafeNode<size_t>(node, "file_path");
-    auto ctype = GetSafeNode<size_t>(node, "ctype");
+    const auto file = GetSafeNode<size_t>(node, "file_path");
+    const auto ctype = GetSafeNode<size_t>(node, "ctype");
 
     write << ctype << " " << symbol << "[] = {\n";
 
