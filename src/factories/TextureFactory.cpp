@@ -174,8 +174,10 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
 
         const auto sz = data.size();
         if (Companion::Instance->IsDebug()) {
-            write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
+            write << "// size: 0x" << std::hex << std::uppercase << sz;
         }
+
+        write << "\n";
     }
     return offset + data.size();
 }

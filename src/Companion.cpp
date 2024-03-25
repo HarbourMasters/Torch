@@ -1,13 +1,16 @@
 #include "Companion.h"
 
-#include "storm/SWrapper.h"
 #include "utils/Decompressor.h"
+#include "utils/TorchUtils.h"
+#include "storm/SWrapper.h"
+#include "spdlog/spdlog.h"
+#include "hj/sha1.h"
 
-#include "factories/sm64/AnimationFactory.h"
-#include "factories/sm64/DialogFactory.h"
-#include "factories/sm64/DictionaryFactory.h"
-#include "factories/sm64/TextFactory.h"
-#include "factories/sm64/GeoLayoutFactory.h"
+#include <regex>
+#include <fstream>
+#include <iostream>
+#include <filesystem>
+
 #include "factories/BankFactory.h"
 #include "factories/AudioHeaderFactory.h"
 #include "factories/SampleFactory.h"
@@ -15,23 +18,26 @@
 #include "factories/VtxFactory.h"
 #include "factories/MtxFactory.h"
 #include "factories/FloatFactory.h"
+#include "factories/IncludeFactory.h"
 #include "factories/TextureFactory.h"
 #include "factories/DisplayListFactory.h"
 #include "factories/DisplayListOverrides.h"
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/Vec3fFactory.h"
+
+#include "factories/sm64/AnimationFactory.h"
+#include "factories/sm64/DialogFactory.h"
+#include "factories/sm64/DictionaryFactory.h"
+#include "factories/sm64/TextFactory.h"
+#include "factories/sm64/GeoLayoutFactory.h"
+
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
 #include "factories/mk64/SpawnData.h"
 #include "factories/mk64/DrivingBehaviour.h"
-#include "spdlog/spdlog.h"
-#include "hj/sha1.h"
 
-#include <fstream>
-#include <iostream>
-#include <filesystem>
 #include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
@@ -42,8 +48,6 @@
 #include "factories/sf64/EnvSettingsFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
-#include <regex>
-#include "utils/TorchUtils.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -64,6 +68,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
     this->RegisterFactory("MTX", std::make_shared<MtxFactory>());
     this->RegisterFactory("F32", std::make_shared<FloatFactory>());
+    this->RegisterFactory("INC", std::make_shared<IncludeFactory>());
     this->RegisterFactory("LIGHTS", std::make_shared<LightsFactory>());
     this->RegisterFactory("GFX", std::make_shared<DListFactory>());
     this->RegisterFactory("AUDIO:HEADER", std::make_shared<AudioHeaderFactory>());
@@ -166,7 +171,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
-        SPDLOG_ERROR("No factory found for {}", name);
+        throw std::runtime_error("No factory by the name '"+type+"' found for '"+name+"'");
         return;
     }
 
