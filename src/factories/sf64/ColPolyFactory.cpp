@@ -128,7 +128,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
         int16_t ny = reader.ReadInt16();
         int16_t nz = reader.ReadInt16();
         int16_t pad2 = reader.ReadInt16();
-        int16_t dist = reader.ReadInt32();
+        int32_t dist = reader.ReadInt32();
 
         polys.push_back(CollisionPoly({{v0, v1, v2}, pad1, {nx, ny, nz}, pad2, dist}));
     }
