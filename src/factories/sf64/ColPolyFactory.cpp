@@ -51,7 +51,7 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
             SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
             write << "/* ALERT: NONZERO PAD */ ";
         }
-        write << NUM(poly.dist, 6) << "}, ";
+        write << poly.dist << "}, ";
     }
 
     write << "\n};\n";
@@ -99,7 +99,7 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
         write << "// Mesh vertex count: " << colpolys->mMesh.size() << "\n";
     }
 
-    return offset + colpolys->mMesh.size() * sizeof(Vec3s);
+    return off + colpolys->mMesh.size() * sizeof(Vec3s);
 }
 
 ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
