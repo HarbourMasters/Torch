@@ -71,7 +71,16 @@ T GetSafeNode(YAML::Node& node, const std::string& key, const T& def) {
     return node[key].as<T>();
 }
 
-class IParsedData {};
+class IParsedData {
+public:
+    virtual std::optional<std::vector<uint8_t>> ToCacheBuffer() {
+        return std::nullopt;
+    }
+
+    virtual void FromCacheBuffer(std::vector<uint8_t>& buffer) {
+
+    }
+};
 
 template<typename T>
 class GenericData : public IParsedData {
@@ -103,7 +112,10 @@ public:
     }
     virtual uint32_t GetAlignment() {
         return 4;
-    };
+    }
+    virtual bool IsCacheable() {
+        return false;
+    }
 private:
     virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() = 0;
 };

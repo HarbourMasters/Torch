@@ -185,26 +185,35 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     }
 
     std::optional<std::shared_ptr<IParsedData>> result;
-    if(this->gConfig.modding) {
-        if(impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
+    if(this->gConfig.modding && impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
+        auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
+        if(!fs::exists(path)) {
+            SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
+            return;
+        }
 
-            auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
-            if(!fs::exists(path)) {
-                SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
-                return;
-            }
+        std::ifstream input(path, std::ios::binary);
+        std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
+        input.close();
 
-            std::ifstream input(path, std::ios::binary);
-            std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
-            input.close();
-
-            result = factory->get()->parse_modding(data, node);
+        result = impl->parse_modding(data, node);
+    } else if(this->gNodeIsCacheable && impl->IsCacheable()) {
+        if(this->gCacheData.contains(name)) {
+            result = std::make_shared<IParsedData>();
+            result->get()->FromCacheBuffer(this->gCacheData[name]);
         } else {
-            result = factory->get()->parse(this->gRomData, node);
+            result = impl->parse(this->gRomData, node);
+            if(result.has_value()) {
+                auto cache = result.value()->ToCacheBuffer();
+                if(cache.has_value()) {
+                    this->StoreCache(cache.value());
+                }
+            }
         }
     } else {
-        result = factory->get()->parse(this->gRomData, node);
+        result = impl->parse(this->gRomData, node);
     }
+
     if(!result.has_value()){
         SPDLOG_ERROR("Failed to process {}", name);
         return;
@@ -394,6 +403,46 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
     }
 
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
+    this->gNodeIsCacheable = GetSafeNode<bool>(node, "cacheable", true);
+}
+
+void Companion::PrepareCache(const std::string& path) {
+    std::ifstream yaml(path);
+    const std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator( yaml ), {});
+    this->gCurrentCacheHash = CalculateHash(data);
+
+    const std::string out = "torch.cache.yml";
+    YAML::Node root;
+
+    if(fs::exists(out)) {
+        root = YAML::LoadFile(out);
+    } else {
+        root = YAML::Node();
+    }
+
+    if(root[this->gCurrentCacheHash]) {
+        const auto cache = GetSafeNode<std::string>(root, this->gCurrentCacheHash);
+        if(cache == this->gCurrentCacheHash) {
+            std::ifstream file("cache/" + cache, std::ios::binary);
+            this->gCacheData[cache] = std::vector<uint8_t>(std::istreambuf_iterator( file ), {});
+            file.close();
+        } else {
+            root[path] = this->gCurrentCacheHash;
+            fs::remove("cache/" + cache);
+        }
+    } else {
+        root[path] = this->gCurrentCacheHash;
+    }
+
+    std::ofstream file(out, std::ios::binary);
+    file << root;
+    file.close();
+}
+
+void Companion::StoreCache(const std::vector<uint8_t>& value) {
+    std::ofstream file("cache/" + this->gCurrentCacheHash, std::ios::binary);
+    file.write(reinterpret_cast<const char*>(value.data()), value.size());
+    file.close();
 }
 
 void Companion::Process() {
@@ -570,6 +619,8 @@ void Companion::Process() {
         this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = yamlPath;
 
+        this->PrepareCache(yamlPath);
+
         // Set compressed file offsets and compression type
         if (auto segments = root[":config"]["segments"]) {
             if (segments.IsSequence() && segments.size() > 0) {
@@ -656,6 +707,10 @@ void Companion::Process() {
             this->ParseCurrentFileConfig(root[":config"]);
         }
 
+        if(this->gNodeIsCacheable) {
+            this->PrepareCache(yamlPath);
+        }
+
         spdlog::set_pattern(regular);
         SPDLOG_INFO("------------------------------------------------");
         spdlog::set_pattern(line);
@@ -668,7 +723,6 @@ void Companion::Process() {
             if(entryName.find(":config") != std::string::npos) {
                 continue;
             }
-
 
             // Parse horizontal assets
             if(assetNode["files"]){
@@ -1079,11 +1133,14 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     }
 
     auto rom = this->GetRomData();
-    auto factory = this->GetFactory(type)->get();
+    auto factory = this->GetFactory(type);
+
+    if(!factory.has_value()) {
+        return std::nullopt;
+    }
 
     std::string output;
     std::string typeId = ConvertType(type);
-    int index;
 
     if(symbol != "") {
         output = symbol;
@@ -1095,10 +1152,10 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     asset["autogen"] = true;
     asset["symbol"] = output;
 
-    auto result = factory->parse(rom, asset);
+    auto result = this->RegisterAsset(output, asset);
 
     if(result.has_value()){
-        return std::get<1>(this->RegisterAsset(output, asset).value());
+        return std::get<1>(result.value());
     }
 
     return std::nullopt;
