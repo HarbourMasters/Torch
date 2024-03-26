@@ -55,6 +55,8 @@ ExportResult VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(vtx.size()) << " Vtxs\n";
+    } else {
+        write << "\n";
     }
 
     return offset + vtx.size() * sizeof(VtxRaw);

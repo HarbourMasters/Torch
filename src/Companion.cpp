@@ -1079,11 +1079,14 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     }
 
     auto rom = this->GetRomData();
-    auto factory = this->GetFactory(type)->get();
+    auto factory = this->GetFactory(type);
+
+    if(!factory.has_value()) {
+        return std::nullopt;
+    }
 
     std::string output;
     std::string typeId = ConvertType(type);
-    int index;
 
     if(symbol != "") {
         output = symbol;
@@ -1095,10 +1098,11 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     asset["autogen"] = true;
     asset["symbol"] = output;
 
-    auto result = factory->parse(rom, asset);
+    auto result = this->RegisterAsset(output, asset);
 
     if(result.has_value()){
-        return std::get<1>(this->RegisterAsset(output, asset).value());
+        asset["path"] = std::get<0>(result.value());
+        return std::get<1>(result.value());
     }
 
     return std::nullopt;
