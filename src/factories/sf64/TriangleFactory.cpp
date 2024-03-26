@@ -91,10 +91,8 @@ std::optional<std::shared_ptr<IParsedData>> SF64::TriangleFactory::parse(std::ve
                 }
             } else {
                 std::ostringstream offsetSeg;
-                std::string replaceOff = "OFFSET";
-                std::string off;
+                
                 offsetSeg << std::uppercase << std::hex << meshOffset;
-                off = offsetSeg.str();
                 meshSymbol = std::regex_replace(meshSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
             }
             meshNode["symbol"] = meshSymbol;

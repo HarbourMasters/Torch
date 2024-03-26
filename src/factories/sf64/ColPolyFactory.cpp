@@ -8,8 +8,9 @@
 
 
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
+#define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
 
-SF64::ColPolyData::ColPolyData(std::vector<SF64::CollisionPoly> polys, std::vector<Vec3s> mesh): mPolys(polys), mMesh(mesh) {
+SF64::ColPolyData::ColPolyData(std::vector<SF64::CollisionPoly> polys, std::vector<YAML::Node> meshNodes): mPolys(polys), mMeshNodes(meshNodes) {
 
 }
 
@@ -29,16 +30,13 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
-    auto off = ASSET_PTR(offset);
-    int i;
+    const auto meshSize = GetSafeNode(colpolys->mMeshNodes[0], "count", 0);
 
     write << "CollisionPoly " << symbol << "[] = {";
-    int width = std::log10(colpolys->mMesh.size()) + 1;
-    // i = 0;
+    int width = std::log10(meshSize) + 1;
+
     for(SF64::CollisionPoly poly : colpolys->mPolys) {
-        // if((i++ % 2) == 0) {
-            write << "\n" << fourSpaceTab;
-        // }
+        write << "\n" << fourSpaceTab;
         write << "{ " << NUM(poly.tri, width) << ",  ";
         if (poly.unk_06 == 0) {
             write << "0,  ";
@@ -51,55 +49,19 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
             SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
             write << "/* ALERT: NONZERO PAD */ ";
         }
-        write << poly.dist << "}, ";
+        write << NUM(poly.dist, 9) << "}, ";
     }
 
     write << "\n};\n";
-
+    int endOffset = ASSET_PTR(offset) + colpolys->mPolys.size() * sizeof(SF64::CollisionPoly);
     if (Companion::Instance->IsDebug()) {
         write << "// CollisionPoly count: " << colpolys->mPolys.size() << "\n";
-        write << "// 0x" << std::uppercase << std::hex << off + colpolys->mPolys.size() * sizeof(SF64::CollisionPoly) << "\n";
+        write << "// 0x" << std::uppercase << std::hex << endOffset << "\n";
     }
 
     write << "\n";
 
-    std::ostringstream defaultMeshSymbol;
-    auto defaultMeshOffset = offset + colpolys->mPolys.size() * sizeof(SF64::CollisionPoly);
-    const auto meshOffset = GetSafeNode(node, "mesh_offset", defaultMeshOffset);
-    if (meshOffset != defaultMeshOffset) {
-        write << "// SF64:COLPOLY alert: Gap detected between polys and mesh\n\n";
-    }
-    off = ASSET_PTR(meshOffset);
-    defaultMeshSymbol << symbol << "_mesh_" << std::uppercase << std::hex << off;
-    auto meshSymbol = GetSafeNode(node, "mesh_symbol", defaultMeshSymbol.str());
-
-    if (meshSymbol.find("OFFSET") != std::string::npos) {
-        std::ostringstream offsetSeg;
-
-        offsetSeg << std::uppercase << std::hex << meshOffset;
-        meshSymbol = std::regex_replace(meshSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
-    }
-
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
-
-    write << "Vec3s " << meshSymbol << "[] = {";
-    i = 0;
-    for(Vec3s vtx : colpolys->mMesh) {
-        if((i++ % 4) == 0) {
-            write << "\n" << fourSpaceTab;
-        }
-        write << NUM(vtx, 6) << ",   ";
-    }
-
-    write << "\n};\n";
-
-    if (Companion::Instance->IsDebug()) {
-        write << "// Mesh vertex count: " << colpolys->mMesh.size() << "\n";
-    }
-
-    return off + colpolys->mMesh.size() * sizeof(Vec3s);
+    return endOffset;
 }
 
 ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -109,8 +71,9 @@ ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::share
 std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto count = GetSafeNode<uint32_t>(node, "count");
+    const auto meshCount = GetSafeNode<uint32_t>(node, "mesh_count", 1);
     std::vector<SF64::CollisionPoly> polys;
-    std::vector<Vec3s> mesh;
+    std::vector<YAML::Node> meshNodes;
     int meshSize = 0;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(SF64::CollisionPoly));
     LUS::BinaryReader reader(segment.data, segment.size);
@@ -133,21 +96,33 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
         polys.push_back(CollisionPoly({{v0, v1, v2}, pad1, {nx, ny, nz}, pad2, dist}));
     }
     meshSize++;
-    const auto meshOffset = GetSafeNode<uint32_t>(node, "mesh_offset", offset + count * sizeof(SF64::CollisionPoly));
-    YAML::Node meshNode;
-    meshNode["offset"] = meshOffset;
-    auto [__, meshSegment] = Decompressor::AutoDecode(meshNode, buffer, meshSize * sizeof(Vec3s));
-    LUS::BinaryReader meshReader(meshSegment.data, meshSegment.size);
-    meshReader.SetEndianness(LUS::Endianness::Big);
+    auto meshOffset = GetSafeNode<uint32_t>(node, "mesh_offset", offset + count * sizeof(SF64::CollisionPoly));
+    for(int j = 0; j < meshCount; j++) {
+        YAML::Node meshNode;
+        
+        if(node["mesh_symbol"]) {
+            auto meshSymbol = GetSafeNode<std::string>(node, "mesh_symbol");
+            if (meshSymbol.find("OFFSET") == std::string::npos) {
+                if(meshCount > 1) {
+                    meshSymbol += "_" + std::to_string(j);
+                }
+            } else {
+                std::ostringstream offsetSeg;
+                offsetSeg << std::uppercase << std::hex << meshOffset;
 
-    for(int i = 0; i < meshSize; i++) {
-        Vec3s vtx;
+                meshSymbol = std::regex_replace(meshSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
+            }
+            meshNode["symbol"] = meshSymbol;
+        }
+        meshNode["type"] = "VEC3S";
+        meshNode["count"] = meshSize;
+        meshNode["offset"] = meshOffset;
 
-        vtx.x = meshReader.ReadInt16();
-        vtx.y = meshReader.ReadInt16();
-        vtx.z = meshReader.ReadInt16();
-        mesh.push_back(vtx);
+        meshNode = Companion::Instance->AddAsset(meshNode).value();
+        
+        meshNodes.push_back(meshNode);
+        meshOffset += meshSize * sizeof(Vec3s);
     }
 
-    return std::make_shared<SF64::ColPolyData>(polys, mesh);
+    return std::make_shared<SF64::ColPolyData>(polys, meshNodes);
 }
