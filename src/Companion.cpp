@@ -1,34 +1,43 @@
 #include "Companion.h"
 
-#include "storm/SWrapper.h"
 #include "utils/Decompressor.h"
+#include "utils/TorchUtils.h"
+#include "storm/SWrapper.h"
+#include "spdlog/spdlog.h"
+#include "hj/sha1.h"
 
-#include "factories/sm64/AnimationFactory.h"
-#include "factories/sm64/DialogFactory.h"
-#include "factories/sm64/DictionaryFactory.h"
-#include "factories/sm64/TextFactory.h"
-#include "factories/sm64/GeoLayoutFactory.h"
+#include <regex>
+#include <fstream>
+#include <iostream>
+#include <filesystem>
+
 #include "factories/BankFactory.h"
 #include "factories/AudioHeaderFactory.h"
 #include "factories/SampleFactory.h"
 #include "factories/SequenceFactory.h"
 #include "factories/VtxFactory.h"
+#include "factories/MtxFactory.h"
+#include "factories/FloatFactory.h"
+#include "factories/IncludeFactory.h"
 #include "factories/TextureFactory.h"
 #include "factories/DisplayListFactory.h"
 #include "factories/DisplayListOverrides.h"
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/Vec3fFactory.h"
+
+#include "factories/sm64/AnimationFactory.h"
+#include "factories/sm64/DialogFactory.h"
+#include "factories/sm64/DictionaryFactory.h"
+#include "factories/sm64/TextFactory.h"
+#include "factories/sm64/GeoLayoutFactory.h"
+
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
 #include "factories/mk64/SpawnData.h"
-#include "spdlog/spdlog.h"
-#include "hj/sha1.h"
+#include "factories/mk64/DrivingBehaviour.h"
 
-#include <fstream>
-#include <iostream>
-#include <filesystem>
 #include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
@@ -39,8 +48,6 @@
 #include "factories/sf64/EnvSettingsFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
-#include <regex>
-#include "utils/TorchUtils.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -59,6 +66,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("BLOB", std::make_shared<BlobFactory>());
     this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
     this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
+    this->RegisterFactory("MTX", std::make_shared<MtxFactory>());
+    this->RegisterFactory("F32", std::make_shared<FloatFactory>());
+    this->RegisterFactory("INC", std::make_shared<IncludeFactory>());
     this->RegisterFactory("LIGHTS", std::make_shared<LightsFactory>());
     this->RegisterFactory("GFX", std::make_shared<DListFactory>());
     this->RegisterFactory("AUDIO:HEADER", std::make_shared<AudioHeaderFactory>());
@@ -79,6 +89,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:TRACK_WAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
     this->RegisterFactory("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
+    this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
 
     // SF64 specific
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
@@ -160,7 +171,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
-        SPDLOG_ERROR("No factory found for {}", name);
+        throw std::runtime_error("No factory by the name '"+type+"' found for '"+name+"'");
         return;
     }
 
@@ -248,13 +259,6 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
             std::ofstream file(dpath, std::ios::binary);
             file.write(data.c_str(), data.size());
             file.close();
-            break;
-        }
-        case ExportType::Code: {
-            endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
-            if (this->IsDebug() && endptr.has_value() && endptr->index() == 0) {
-                stream << "// 0x" << std::hex << std::uppercase << std::get<0>(endptr.value()) << "\n\n";
-            }
             break;
         }
         default: {
@@ -644,6 +648,7 @@ void Companion::Process() {
         this->gCurrentPad = 0;
         this->gCurrentVram = std::nullopt;
         this->gCurrentSegmentNumber = 0;
+        this->gCurrentCompressionType = CompressionType::None;
         this->gTables.clear();
         GFXDOverride::ClearVtx();
 
@@ -687,9 +692,9 @@ void Companion::Process() {
                     this->ExtractNode(node, output, wrapper);
                 }
             } else {
-                const auto offset = assetNode["offset"].as<uint32_t>();
-                if(gCurrentFileOffset) {
-                    if (IS_SEGMENTED(offset) == false) {
+                if(gCurrentFileOffset && assetNode["offset"]) {
+                    const auto offset = assetNode["offset"].as<uint32_t>();
+                    if (!IS_SEGMENTED(offset)) {
                         assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
                     }
                 }
@@ -765,16 +770,18 @@ void Companion::Process() {
 
             for (size_t i = 0; i < entries.size(); i++) {
                 const auto result = entries[i];
+                const auto hasSize = result.endptr.has_value();
+                if (hasSize && this->IsDebug()) {
+                    stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.addr) << "\n";
+                }
+
                 stream << result.buffer;
 
-                if(i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code){
-                    auto endptr = result.endptr;
-                    if(!endptr.has_value()){
-                        continue;
-                    }
+                if (hasSize && this->IsDebug()) {
+                    stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.endptr.value()) << "\n\n";
+                }
 
-#define ASSET_PTR(x) IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : x
-
+                if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code){
                     uint32_t startptr = ASSET_PTR(result.endptr.value());
                     uint32_t end = ASSET_PTR(entries[i + 1].addr);
 
@@ -786,7 +793,7 @@ void Companion::Process() {
                         SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
                         const auto padfile = this->gCurrentDirectory.filename().string();
                         if(this->IsDebug()){
-                            stream << "// 0x" << std::hex << startptr << "\n";
+                            stream << "// 0x" << std::hex << std::uppercase << startptr << "\n";
                         }
                         stream << "char pad_" << padfile << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
                         auto gapSize = gap & ~3;
@@ -795,15 +802,16 @@ void Companion::Process() {
                         }
                         stream << "\n};\n";
                         if(this->IsDebug()){
-                            stream << "// 0x" << std::hex << end << "\n\n";
+                            stream << "// 0x" << std::hex << std::uppercase << end << "\n\n";
                         } else {
                             stream << "\n";
                         }
                     } else if(gap > 0x10) {
-                        stream << "\n// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << " on file " << this->gCurrentFile << "\n";
+                        stream << "\n// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
                     }
 
                     if(gap < 0) {
+                        stream << "\n// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << "\n";
                         SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X}", startptr, end);
                     }
                 }
@@ -1071,11 +1079,14 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     }
 
     auto rom = this->GetRomData();
-    auto factory = this->GetFactory(type)->get();
+    auto factory = this->GetFactory(type);
+
+    if(!factory.has_value()) {
+        return std::nullopt;
+    }
 
     std::string output;
     std::string typeId = ConvertType(type);
-    int index;
 
     if(symbol != "") {
         output = symbol;
@@ -1087,10 +1098,11 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     asset["autogen"] = true;
     asset["symbol"] = output;
 
-    auto result = factory->parse(rom, asset);
+    auto result = this->RegisterAsset(output, asset);
 
     if(result.has_value()){
-        return std::get<1>(this->RegisterAsset(output, asset).value());
+        asset["path"] = std::get<0>(result.value());
+        return std::get<1>(result.value());
     }
 
     return std::nullopt;

@@ -5,5 +5,5 @@
 
 std::optional<std::shared_ptr<IParsedData>> AudioHeaderFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
     AudioManager::Instance->initialize(buffer, data);
-    return std::nullopt;
+    return std::make_shared<IParsedData>();
 }

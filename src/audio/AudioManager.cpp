@@ -655,13 +655,13 @@ void AudioManager::create_aifc(int32_t index, LUS::BinaryWriter &out) {
 }
 
 AudioBankSample AudioManager::get_aifc(int32_t index) {
-    int32_t idx = -1;
+    int32_t idx = 0;
     for(auto &sample_bank : this->loaded_tbl.banks){
         auto offsets = PyUtils::keys(sample_bank->entries);
         std::sort(offsets.begin(), offsets.end());
 
         for(auto &offset : offsets){
-            if(++idx == index){
+            if(idx++ == index){
                 return *sample_bank->entries[offset];
             }
         }

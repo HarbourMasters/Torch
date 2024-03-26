@@ -23,10 +23,6 @@ ExportResult MK64::SpawnDataCodeExporter::Export(std::ostream &write, std::share
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
     write << "ActorSpawnData " << symbol << "[] = {\n";
 
     for (int i = 0; i < spawns.size(); i++) {
@@ -45,7 +41,7 @@ ExportResult MK64::SpawnDataCodeExporter::Export(std::ostream &write, std::share
     }
     write << "};\n";
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + (sizeof(MK64::ActorSpawnData) * spawns.size());
+    return offset + spawns.size() * sizeof(MK64::ActorSpawnData);
 }
 
 ExportResult MK64::SpawnDataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

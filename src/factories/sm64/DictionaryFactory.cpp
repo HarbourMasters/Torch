@@ -1,5 +1,7 @@
 #include "DictionaryFactory.h"
 
+#include "spdlog/spdlog.h"
+
 ExportResult SM64::DictionaryBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<DictionaryData>(raw);
@@ -33,6 +35,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::DictionaryFactory::parse(std::
 
         text.push_back(0xFF);
         dictionary[key] = text;
+
+        SPDLOG_INFO("Found key: {} at offset {}", key, offset);
     }
 
     return std::make_shared<DictionaryData>(dictionary);

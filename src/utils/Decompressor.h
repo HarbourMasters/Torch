@@ -8,10 +8,10 @@
 #include <cstdint>
 
 enum class CompressionType {
+    None,
     MIO0,
     YAY0,
     YAZ0,
-    None,
 };
 
 

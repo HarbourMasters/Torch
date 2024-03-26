@@ -13,23 +13,13 @@ ExportResult SF64::MessageLookupHeaderExporter::Export(std::ostream &write, std:
     }
 
     write << "extern MsgLookup " << symbol << "[];\n";
+    return std::nullopt;
 }
 
 ExportResult SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto table = std::static_pointer_cast<MessageTable>(raw)->mTable;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
-
-    if (IS_SEGMENTED(offset)) {
-        offset = SEGMENT_OFFSET(offset);
-    }
-
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
 
     write << "// clang-format on\n";
     write << "MsgLookup " << symbol << "[] = {\n" << fourSpaceTab;
@@ -51,7 +41,7 @@ ExportResult SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::s
     }
 
     write << "\n};\n";
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + table.size() * sizeof(uint16_t);
+    return offset + table.size() * sizeof(uint16_t);
 }
 
 ExportResult SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

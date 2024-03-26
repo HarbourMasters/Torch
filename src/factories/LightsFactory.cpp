@@ -20,7 +20,7 @@ ExportResult LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;
     auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    write << "Lights1 " << symbol << " = gdSPDefLights1 (\n";
+    write << "Lights1 " << symbol << " = gdSPDefLights1(\n";
 
     // Ambient
     auto r = (int16_t) light.a.l.col[0];

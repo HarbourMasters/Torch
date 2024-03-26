@@ -21,6 +21,7 @@
 #define SEGMENT_NUMBER(x) (((uint32_t)(x) >> 24) & 0xFF)
 // I would love to use 0x01000000, but the stupid compiler takes it as 0x01
 #define IS_SEGMENTED(x) (((uint32_t)(x) > 16777216) && (SEGMENT_NUMBER(x) < 0x20))
+#define ASSET_PTR(x) (IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : (x))
 
 #define tab "\t"
 #define fourSpaceTab "    "
@@ -51,7 +52,11 @@ std::optional<T> GetNode(YAML::Node& node, const std::string& key) {
 template<typename T>
 T GetSafeNode(YAML::Node& node, const std::string& key) {
     if(!node[key]) {
-        throw std::runtime_error("Failed to find " + key + " in yaml");
+        if (node["symbol"]) {
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node for '" + node["symbol"].as<std::string>() + "'");
+        } else {
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node");
+        }
     }
 
     return node[key].as<T>();

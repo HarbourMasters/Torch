@@ -30,20 +30,14 @@ ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_p
     auto index = 0;
     auto count = hitbox->mData[index++];
     auto hasType2 = false;
-    auto off = offset;
 
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    }
     for(int type : hitbox->mTypes) {
         if(type == 2) {
             hasType2 = true;
             break;
         }
     }
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
+
     write << "f32 " << symbol << "[] = {\n";
     write << fourSpaceTab << count << ",\n";
 
@@ -78,7 +72,7 @@ ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_p
     }
     write << "};\n";
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sizeof(float) * index;
+    return offset + sizeof(float) * index;
 }
 
 ExportResult SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

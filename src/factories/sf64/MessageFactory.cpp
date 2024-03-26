@@ -79,17 +79,6 @@ ExportResult SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    if (IS_SEGMENTED(offset)) {
-        offset = SEGMENT_OFFSET(offset);
-    }
-
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
     write << "// ";
     bool lastWasSpace = false;
     for (int i = 0; i < message.size(); ++i) {
@@ -132,7 +121,7 @@ ExportResult SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_
         write << "// count: " << std::to_string(message.size()) << " chars\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + message.size() * sizeof(uint16_t);
+    return offset + message.size() * sizeof(uint16_t);
 }
 
 ExportResult SF64::MessageBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

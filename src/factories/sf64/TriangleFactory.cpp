@@ -9,7 +9,6 @@
 
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
-#define STRIP_SEGMENT(offset) (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : (offset))
 
 SF64::TriangleData::TriangleData(std::vector<Vec3s> tris, std::vector<YAML::Node> meshNodes): mTris(tris), mMeshNodes(meshNodes) {
 }
@@ -31,19 +30,11 @@ ExportResult SF64::TriangleCodeExporter::Export(std::ostream &write, std::shared
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto triData = std::static_pointer_cast<SF64::TriangleData>(raw);
     const auto meshSize = GetSafeNode(triData->mMeshNodes[0], "count", 0);
-    auto off = offset;
     auto segment = 0;
-    int i;
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    }
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << STRIP_SEGMENT(offset) << "\n";
-    }
+    int width = std::log10(meshSize) + 1;
+    int i = 0;
 
     write << "Triangle " << symbol << "[] = {";
-    int width = std::log10(meshSize) + 1;
-    i = 0;
     for(Vec3s tri : triData->mTris) {
         if((i++ % 6) == 0) {
             write << "\n" << fourSpaceTab;
@@ -57,7 +48,7 @@ ExportResult SF64::TriangleCodeExporter::Export(std::ostream &write, std::shared
         write << "// Triangle count: " << triData->mTris.size() << "\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + triData->mTris.size() * sizeof(Vec3s);
+    return offset + triData->mTris.size() * sizeof(Vec3s);
 }
 
 ExportResult SF64::TriangleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {

@@ -111,15 +111,9 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
     gfxd_tlut_callback(GFXDOverride::Palette);
-    gfxd_lightsn_callback(GFXDOverride::Light);
+    gfxd_lightsn_callback(GFXDOverride::Lights);
+    gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
-
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
@@ -130,9 +124,11 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
+    } else {
+        write << "\n";
     }
 
-    return (IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset) + sz;
+    return offset + sz;
 }
 
 void DebugDisplayList(uint32_t w0, uint32_t w1){
@@ -320,64 +316,33 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
             std::optional<uint32_t> segment;
 
-            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
-                SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", w1);
-
-                auto rom = Companion::Instance->GetRomData();
-                auto factory = Companion::Instance->GetFactory("GFX")->get();
-
-                std::string output;
-                YAML::Node dl;
-                uint32_t ptr = w1;
-
-                if(Decompressor::IsSegmented(w1)){
-                    SPDLOG_INFO("Found segmented display list at 0x{:X}", w1);
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(ptr)) +"_dl_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
-                } else {
-                    SPDLOG_INFO("Found display list at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(ptr, false));
-                }
-
-                dl["type"] = "GFX";
-                dl["offset"] = ptr;
-                dl["symbol"] = output;
-                dl["autogen"] = true;
-
-                auto result = factory->parse(rom, dl);
-
-                if(!result.has_value()){
-                    continue;
-                }
-
-                Companion::Instance->RegisterAsset(output, dl);
-            } else {
-                SPDLOG_WARN("Could not find display list at 0x{:X}", w1);
+            if ((w0 >> 16) & G_DL_NO_PUSH) {
+                SPDLOG_INFO("Branch List Command Found");
+                processing = false;
             }
+
+            YAML::Node gfx;
+            gfx["type"] = "GFX";
+            gfx["offset"] = w1;
+            Companion::Instance->AddAsset(gfx);
         }
 
 	    // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
 	    // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
         if(opcode == GBI(G_MOVEMEM)) {
 	    // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
-	    uint8_t subcommand = (w0 >> 16) & 0xFF;
+	        uint8_t subcommand = (w0 >> 16) & 0xFF;
             uint8_t index = 0;
             uint8_t offset = 0;
             bool light = false;
 
             switch (Companion::Instance->GetGBIVersion()) {
-                case GBIVersion::f3d:
-                    index = C0(16, 8);
-
-                    if(index == GBI(G_MV_L0) || index == GBI(G_MV_L1)) {
-                        light = true;
-                    }
-
-                    break;
 	           // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
 	           // Otherwise mk64 will break.
+               // PD: Mega, this works for sm64 too, why you didn't implement it? >:(
+               // PD: Im jk, <3
+               case GBIVersion::f3d:
                case GBIVersion::f3dex:
-                    offset = w1;
-
                     /*
                      * Only generate lights on the second gsSPLight.
                      * gsSPSetLights1(name) outputs three macros:
@@ -399,34 +364,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     break;
             }
 
-            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value() && light){
-                SPDLOG_INFO("Addr to Lights1 command at 0x{:X} not in yaml, autogenerating it", w1);
-                auto rom = Companion::Instance->GetRomData();
-                auto factory = Companion::Instance->GetFactory("LIGHTS")->get();
-
-                std::string output;
-                YAML::Node light;
-                uint32_t ptr = w1;
-
-                if(Decompressor::IsSegmented(w1)){
-                    SPDLOG_INFO("Found segmented lights at 0x{:X}", w1);
-                    ptr = w1;
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
-                } else {
-                    SPDLOG_INFO("Found lights at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("lights1_" + Torch::to_hex(w1, false));
-                }
-
-                light["type"] = "lights";
-                light["offset"] = ptr;
-                light["symbol"] = output;
-                light["autogen"] = true;
-                auto result = factory->parse(rom, light);
-                if(result.has_value()){
-                    Companion::Instance->RegisterAsset(output, light);
-                }
-            } else {
-                SPDLOG_WARN("Could not find lights at 0x{:X}", w1);
+            if(light){
+                YAML::Node lnode;
+                lnode["type"] = "LIGHTS";
+                lnode["offset"] = w1;
+                Companion::Instance->AddAsset(lnode);
             }
         }
 
@@ -464,33 +406,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                         GFXDOverride::RegisterVTXOverlap(w1, search.value());
                     }
                 } else {
-                    SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating it", w1);
-
-                    auto ptr = w1;
-                    auto rom = Companion::Instance->GetRomData();
-                    auto factory = Companion::Instance->GetFactory("VTX")->get();
-
-                    std::string output;
                     YAML::Node vtx;
-
-                    if(Decompressor::IsSegmented(w1)){
-                        SPDLOG_INFO("Creating segmented vtx from 0x{:X}", ptr);
-                        ptr = w1;
-                        output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
-                    } else {
-                        SPDLOG_INFO("Creating vtx from 0x{:X}", ptr);
-                        output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
-                    }
-
                     vtx["type"] = "VTX";
-                    vtx["offset"] = ptr;
+                    vtx["offset"] = w1;
                     vtx["count"] = nvtx;
-                    vtx["symbol"] = output;
-                    vtx["autogen"] = true;
-                    auto result = factory->parse(rom, vtx);
-                    if(result.has_value()){
-                        Companion::Instance->RegisterAsset(output, vtx);
-                    }
+                    Companion::Instance->AddAsset(vtx);
                 }
             } else {
                 SPDLOG_WARN("Found vtx at 0x{:X}", w1);

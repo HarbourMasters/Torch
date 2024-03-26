@@ -23,10 +23,6 @@ ExportResult MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::share
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
     write << "CourseVtx " << symbol << "[] = {\n";
 
     for (int i = 0; i < vtx.size(); ++i) {
@@ -51,13 +47,9 @@ ExportResult MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::share
         // {{{ x, y, z }, { tc1, tc2 }, { c1, c2, c3, c4 }}}
         write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
     }
+    write << "};\n";
 
-    if (Companion::Instance->IsDebug()) {
-        write << fourSpaceTab << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(CourseVtx) * vtx.size())) << "\n";
-    }
-
-    write << "};\n\n";
-    return std::nullopt;
+    return offset + vtx.size() * sizeof(CourseVtx);
 }
 
 ExportResult MK64::CourseVtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
