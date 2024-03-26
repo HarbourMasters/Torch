@@ -25,6 +25,7 @@
 #include "factories/BlobFactory.h"
 #include "factories/LightsFactory.h"
 #include "factories/Vec3fFactory.h"
+#include "factories/Vec3sFactory.h"
 
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/DialogFactory.h"
@@ -76,6 +77,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SAMPLE", std::make_shared<SampleFactory>());
     this->RegisterFactory("BANK", std::make_shared<BankFactory>());
     this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
+    this->RegisterFactory("VEC3S", std::make_shared<Vec3sFactory>());
 
     // SM64 specific
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
@@ -1074,13 +1076,13 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
     const auto decl = this->GetNodeByAddr(offset);
 
+
     if(decl.has_value()) {
         return std::get<1>(decl.value());
     }
 
     auto rom = this->GetRomData();
     auto factory = this->GetFactory(type);
-
     if(!factory.has_value()) {
         return std::nullopt;
     }
@@ -1102,6 +1104,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
 
     if(result.has_value()){
         asset["path"] = std::get<0>(result.value());
+
         return std::get<1>(result.value());
     }
 

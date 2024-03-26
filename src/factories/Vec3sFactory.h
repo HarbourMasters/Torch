@@ -1,47 +1,36 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include "BaseFactory.h"
 #include "types/Vec3D.h"
 
-namespace SF64 {
-
-struct CollisionPoly {
-    Vec3s tri;
-    int16_t unk_06;
-    Vec3s norm;
-    int16_t unk_0E;
-    int32_t dist;
-};
-
-class ColPolyData : public IParsedData {
+class Vec3sData : public IParsedData {
 public:
-    std::vector<CollisionPoly> mPolys;
-    std::vector<YAML::Node> mMeshNodes;
+    std::vector<Vec3s> mVecs;
+    int mMaxWidth;
 
-    ColPolyData(std::vector<CollisionPoly> polys, std::vector<YAML::Node> meshNodes);
+    explicit Vec3sData(std::vector<Vec3s> vecs);
 };
 
-class ColPolyHeaderExporter : public BaseExporter {
+class Vec3sHeaderExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class ColPolyBinaryExporter : public BaseExporter {
+class Vec3sBinaryExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class ColPolyCodeExporter : public BaseExporter {
+class Vec3sCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class ColPolyFactory : public BaseFactory {
+class Vec3sFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Code, ColPolyCodeExporter)
-            REGISTER(Header, ColPolyHeaderExporter)
-            REGISTER(Binary, ColPolyBinaryExporter)
+            REGISTER(Code, Vec3sCodeExporter)
+            REGISTER(Header, Vec3sHeaderExporter)
+            REGISTER(Binary, Vec3sBinaryExporter)
         };
     }
 };
-}

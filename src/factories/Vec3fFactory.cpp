@@ -65,7 +65,7 @@ ExportResult Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 std::optional<std::shared_ptr<IParsedData>> Vec3fFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     std::vector<Vec3f> vecs;
     const auto count = GetSafeNode<int>(node, "count");
-    auto [root, segment] = Decompressor::AutoDecode(node, buffer, 0x1000);
+    auto [root, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(Vec3f));
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
 

@@ -3,6 +3,7 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <iomanip>
+#include <regex>
 
 extern "C" {
 #include "n64graphics/n64graphics.h"
@@ -286,15 +287,18 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     
     if((format == "CI4" || format == "CI8") && node["tlut"] && node["colors"]) {
         YAML::Node tlutNode;
-        const auto tlutOffset = GetSafeNode<u_int32_t>(node, "tlut");
+        const auto tlutOffset = GetSafeNode<uint32_t>(node, "tlut");
         if(node["symbol"]) {
             const auto symbol = GetSafeNode<std::string>(node, "symbol");
             const auto tlutSymbol = GetSafeNode(node, "tlut_symbol", symbol + "_tlut");
-            tlutNode["symbol"] = tlutSymbol;
+            std::ostringstream offsetSeg;
+            offsetSeg << std::uppercase << std::hex << tlutOffset;
+            tlutNode["symbol"] = std::regex_replace(tlutSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
         }
         tlutNode["type"] = "TEXTURE";
         tlutNode["format"] = "TLUT";
         tlutNode["offset"] = tlutOffset;
+        tlutNode["colors"] = GetSafeNode<uint32_t>(node, "colors");
         if(node["tlut_ctype"]) {
             tlutNode["ctype"] = GetSafeNode<std::string>(node, "tlut_ctype");
         }
