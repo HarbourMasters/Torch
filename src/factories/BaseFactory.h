@@ -116,6 +116,9 @@ public:
     virtual bool IsCacheable() {
         return false;
     }
+    virtual std::optional<std::shared_ptr<IParsedData>> CreateDataPointer() {
+        return std::nullopt;
+    }
 private:
     virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() = 0;
 };

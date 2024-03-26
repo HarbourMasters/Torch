@@ -198,15 +198,15 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
         result = impl->parse_modding(data, node);
     } else if(this->gNodeIsCacheable && impl->IsCacheable()) {
-        if(this->gCacheData.contains(name)) {
-            result = std::make_shared<IParsedData>();
-            result->get()->FromCacheBuffer(this->gCacheData[name]);
+        if(this->gCacheData.contains(this->gCurrentCacheHash)) {
+            result = impl->CreateDataPointer();
+            result->get()->FromCacheBuffer(this->GetCache(name));
         } else {
             result = impl->parse(this->gRomData, node);
             if(result.has_value()) {
                 auto cache = result.value()->ToCacheBuffer();
                 if(cache.has_value()) {
-                    this->StoreCache(cache.value());
+                    this->StoreCache(name, cache.value());
                 }
             }
         }
@@ -406,43 +406,66 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
     this->gNodeIsCacheable = GetSafeNode<bool>(node, "cacheable", true);
 }
 
+void Companion::ParseCache() {
+    const std::string out = "torch.cache.yml";
+
+    if(fs::exists(out)) {
+        this->gCacheNode = YAML::LoadFile(out);
+    } else {
+        this->gCacheNode = YAML::Node();
+    }
+}
+
 void Companion::PrepareCache(const std::string& path) {
     std::ifstream yaml(path);
+    bool hasChanges = false;
     const std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator( yaml ), {});
     this->gCurrentCacheHash = CalculateHash(data);
 
-    const std::string out = "torch.cache.yml";
-    YAML::Node root;
-
-    if(fs::exists(out)) {
-        root = YAML::LoadFile(out);
-    } else {
-        root = YAML::Node();
-    }
-
-    if(root[this->gCurrentCacheHash]) {
-        const auto cache = GetSafeNode<std::string>(root, this->gCurrentCacheHash);
+    if(this->gCacheNode[path]) {
+        const auto cache = GetSafeNode<std::string>(this->gCacheNode, path);
         if(cache == this->gCurrentCacheHash) {
-            std::ifstream file("cache/" + cache, std::ios::binary);
-            this->gCacheData[cache] = std::vector<uint8_t>(std::istreambuf_iterator( file ), {});
-            file.close();
+            const auto tdir = "tcache/" + cache;
+            if(!fs::exists(tdir)) {
+                fs::create_directories(tdir);
+            } else {
+                for(auto& entry : fs::directory_iterator("tcache/" + cache)) {
+                    std::ifstream file(entry.path(), std::ios::binary);
+                    std::vector<uint8_t> buffer = std::vector<uint8_t>(std::istreambuf_iterator(file), {});
+                    file.close();
+                    std::string cpath = entry.path().filename().string();
+                    std::replace(cpath.begin(), cpath.end(), '+', '/');
+                    this->gCacheData[cache][cpath] = buffer;
+                }
+            }
         } else {
-            root[path] = this->gCurrentCacheHash;
+            hasChanges = true;
+            this->gCacheNode[path] = this->gCurrentCacheHash;
             fs::remove("cache/" + cache);
         }
     } else {
-        root[path] = this->gCurrentCacheHash;
+        this->gCacheNode[path] = this->gCurrentCacheHash;
     }
 
-    std::ofstream file(out, std::ios::binary);
-    file << root;
+    if(hasChanges) {
+        std::ofstream file("torch.cache.yml", std::ios::binary);
+        file << this->gCacheNode;
+        file.close();
+    }
+}
+
+void Companion::StoreCache(const std::string path, const std::vector<uint8_t>& value) {
+    std::string outpath = path;
+    std::replace(outpath.begin(), outpath.end(), '/', '+');
+    std::ofstream file("tcache/" + this->gCurrentCacheHash + "/" + outpath, std::ios::binary);
+    file.write(reinterpret_cast<const char*>(value.data()), value.size());
     file.close();
 }
 
-void Companion::StoreCache(const std::vector<uint8_t>& value) {
-    std::ofstream file("cache/" + this->gCurrentCacheHash, std::ios::binary);
-    file.write(reinterpret_cast<const char*>(value.data()), value.size());
-    file.close();
+std::vector<uint8_t>& Companion::GetCache(const std::string path) {
+    std::string outpath = path;
+    std::replace(outpath.begin(), outpath.end(), '+', '/');
+    return this->gCacheData[this->gCurrentCacheHash][outpath];
 }
 
 void Companion::Process() {
@@ -584,6 +607,8 @@ void Companion::Process() {
             throw std::runtime_error("Invalid logging level, please use TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL or OFF");
         }
     }
+
+    this->ParseCache();
 
     SPDLOG_INFO("------------------------------------------------");
     spdlog::set_pattern(line);
@@ -843,8 +868,8 @@ void Companion::Process() {
                     int32_t gap = end - startptr;
 
                     if(gap < 0) {
-                        stream << "\n// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << "\n";
-                        SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X}", startptr, end);
+                        stream << "\n// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
+                        SPDLOG_ERROR("Overlap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
                     } else if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
                         SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
                         SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
