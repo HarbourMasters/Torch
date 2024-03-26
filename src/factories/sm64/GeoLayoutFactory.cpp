@@ -133,9 +133,11 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(cmdCount) << " GeoLayout\n";
+    } else {
+        write << "\n";
     }
 
-    return offset + size;
+    return std::nullopt;
 }
 
 ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
