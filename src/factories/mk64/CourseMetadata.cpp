@@ -7,7 +7,7 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
-void MK64::CourseMetadataHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult MK64::CourseMetadataHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     // const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
 
     // if(Companion::Instance->IsOTRMode()){
@@ -18,7 +18,7 @@ void MK64::CourseMetadataHeaderExporter::Export(std::ostream &write, std::shared
     // write << "extern CourseMetadata " << symbol << "[];\n";
 }
 
-void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto metadata = std::static_pointer_cast<MetadataData>(raw)->mMetadata;
 
     if (metadata.empty()) {
@@ -32,7 +32,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     });
 
     std::ofstream file;
-    auto outDir = GetSafeNode<std::string>(node, "out_directory");
+    auto outDir = GetSafeNode<std::string>(node, "out_directory") + "/";
 
     file.open(outDir+"gCourseNames.inc.c");
     if (file.is_open()) {
@@ -256,7 +256,7 @@ void MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_p
     }
 }
 
-void MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     //auto metadata = std::static_pointer_cast<MetadataData>(raw)->mMetadata;
     //auto writer = LUS::BinaryWriter();
 
