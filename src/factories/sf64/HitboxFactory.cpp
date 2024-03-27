@@ -18,7 +18,7 @@ static int GetPrecision(float f) {
     return p;
 }
 
-static std::ostream& FormatFloat(std::ostream& out, const float x, int w) {
+static void FormatFloat(std::ostream& out, const float x, int w) {
     if(x == (int) x) {
         out << std::dec << std::fixed << std::setprecision(0) << std::setfill(' ') << std::setw(w - 2) << x << ".0f";
     } else {
