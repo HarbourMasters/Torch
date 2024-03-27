@@ -5,7 +5,26 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
-#define FLOAT(x, w) std::dec << std::setfill(' ') << (((int) x == x) ? "" : "  ") << std::setw(w - 2) << x << (((int) x == x) ? ".0f" : "f")
+static int GetPrecision(float f) {
+    int p = 0;
+    int shift = 1;
+    float approx = std::round(f);
+
+    while(f != approx && p < 12 ){
+        shift *= 10;
+        p++;
+        approx = std::round(f * shift) / shift;
+    }
+    return p;
+}
+
+static std::ostream& FormatFloat(std::ostream& out, const float x, int w) {
+    if(x == (int) x) {
+        out << std::dec << std::fixed << std::setprecision(0) << std::setfill(' ') << std::setw(w - 2) << x << ".0f";
+    } else {
+        out << std::dec << std::fixed << std::setprecision(GetPrecision(x)) << std::setfill(' ') << std::setw(w) << x << "f";
+    }
+}
 
 SF64::HitboxData::HitboxData(std::vector<float> data, std::vector<int> types): mData(data), mTypes(types) {
 
@@ -53,20 +72,21 @@ ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_p
             index++;
             for(int j = 0; j < 3; j++) {
                 auto tempf = hitbox->mData[index++];
-                write << FLOAT(tempf, 6) << ", ";
+                FormatFloat(write, tempf, 6);
+                write << ", ";
             }
-            write << fourSpaceTab;
         } else {
             write << " /* HITBOX_TYPE_1 */ ";
         }
         if(hasType2 && hitbox->mTypes[i] != 2) {
-            for(int j = 0; j < 8; j++) {
+            for(int j = 0; j < 7; j++) {
                 write << fourSpaceTab;
             }
         }
         for(int j = 0; j < 6; j++) {
             auto tempf = hitbox->mData[index++];
-            write << FLOAT(tempf, 7) << ", ";
+            FormatFloat(write, tempf, 7);
+            write << ", ";
         }
         write << "\n";
     }
