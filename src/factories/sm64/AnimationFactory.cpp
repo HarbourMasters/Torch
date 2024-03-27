@@ -1,7 +1,7 @@
 #include "AnimationFactory.h"
 #include "spdlog/spdlog.h"
 
-void SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     const auto anim = std::static_pointer_cast<AnimationData>(raw);
 
@@ -25,6 +25,7 @@ void SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

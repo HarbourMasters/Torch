@@ -21,6 +21,10 @@
 #define G_FILLWIDERECT 0x38
 #define G_MOVEMEM_OTR_HASH 0x42
 
+// DL FLAGS
+#define G_DL_PUSH 0x00
+#define G_DL_NO_PUSH 0x01
+
 /* GFX Effects */
 #define G_SETGRAYSCALE 0x39
 #define G_EXTRAGEOMETRYMODE 0x3a

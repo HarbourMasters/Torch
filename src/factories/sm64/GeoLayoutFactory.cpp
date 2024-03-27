@@ -6,88 +6,141 @@
 #include "geo/GeoUtils.h"
 #include "utils/TorchUtils.h"
 
-uint64_t RegisterOrLoadGeoLayout(uint32_t ptr) {
-
-    auto dec = Companion::Instance->GetNodeByAddr(Torch::translate(ptr));
-    if(dec.has_value()){
-        uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
-        SPDLOG_INFO("Found Geo Layout: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
-        return hash;
+uint64_t RegisterAutoGen(uint32_t ptr, std::string type) {
+    if(!Companion::Instance->IsOTRMode()) {
+        return ptr;
     }
 
-    SPDLOG_INFO("Addr to Geo Layout at 0x{:X} not in yaml, autogenerating it", ptr);
-    auto addr = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(ptr));
-    if(!addr.has_value()) {
-        SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(ptr));
-        return 0;
-    }
+    YAML::Node node;
+    node["type"] = type;
+    node["offset"] = ptr;
+    const auto result = Companion::Instance->AddAsset(node);
 
-    auto rom = Companion::Instance->GetRomData();
-    auto factory = Companion::Instance->GetFactory("SM64:GEO_LAYOUT")->get();
-    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(ptr)) +"_geo_" + Torch::to_hex(ptr, false));
-    YAML::Node dl;
-    dl["type"] = "SM64:GEO_LAYOUT";
-    dl["offset"] = ptr;
-    dl["symbol"] = output;
-    auto result = factory->parse(rom, dl);
-
-    if(!result.has_value()){
-        return 0;
-    }
-
-    auto ndec = Companion::Instance->RegisterAsset(output, dl);
-
-    if(ndec.has_value()){
-        uint64_t hash = CRC64(std::get<0>(ndec.value()).c_str());
-        SPDLOG_INFO("Found Geo Layout: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(ndec.value()));
+    if(result.has_value()){
+        auto path = GetSafeNode<std::string>(node, "path");
+        uint64_t hash = CRC64(path.c_str());
+        SPDLOG_INFO("Found {}: 0x{:X} Hash: 0x{:X} Path: {}", type, ptr, hash, path);
         return hash;
     }
 
     return 0;
 }
 
-uint64_t RegisterOrLoadDisplayList(uint32_t ptr) {
+ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+    const auto cmds = std::static_pointer_cast<GeoLayout>(data)->commands;
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
+    size_t size = 0;
+    uint32_t indentCount = 1;
+    uint32_t cmdCount = 0;
 
-    auto dec = Companion::Instance->GetNodeByAddr(Torch::translate(ptr));
-    if(dec.has_value()){
-        uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
-        SPDLOG_INFO("Found Display List: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
-        return hash;
+    write << "GeoLayout " << symbol << "[] = {\n";
+
+    for(auto& [opcode, arguments] : cmds) {
+        bool commaFlag = false;
+
+        for (uint32_t i = 0; i < indentCount; ++i) {
+            write << fourSpaceTab;
+        }
+
+        if (opcode == GeoOpcode::CloseNode) {
+            --indentCount;
+        } else if (opcode == GeoOpcode::OpenNode) {
+            ++indentCount;
+        }
+
+        write << opcode << "(";
+        for(auto& args : arguments) {
+            if (commaFlag) {
+                write << ", ";
+            } else {
+                commaFlag = true;
+            }
+
+            switch(static_cast<GeoArgumentType>(args.index())) {
+                case GeoArgumentType::U8: {
+                    write << static_cast<uint32_t>(std::get<uint8_t>(args));
+                    break;
+                }
+                case GeoArgumentType::S8: {
+                    write << static_cast<uint32_t>(std::get<int8_t>(args));
+                    break;
+                }
+                case GeoArgumentType::U16: {
+                    write << std::get<uint16_t>(args);
+                    break;
+                }
+                case GeoArgumentType::S16: {
+                    write << std::get<int16_t>(args);
+                    break;
+                }
+                case GeoArgumentType::U32: {
+                    write << "0x" << std::hex << std::get<uint32_t>(args);
+                    break;
+                }
+                case GeoArgumentType::S32: {
+                    write << std::get<int32_t>(args);
+                    break;
+                }
+                case GeoArgumentType::U64: {
+                    write << "0x" << std::hex << std::get<uint64_t>(args);
+                    break;
+                }
+                case GeoArgumentType::VEC2F: {
+                    const auto [x, y] = std::get<Vec2f>(args);
+                    write << x << ", " << y;
+                    break;
+                }
+                case GeoArgumentType::VEC3F: {
+                    const auto [x, y, z] = std::get<Vec3f>(args);
+                    write << x << ", " << y << ", " << z;
+                    break;
+                }
+                case GeoArgumentType::VEC3S: {
+                    const auto [x, y, z] = std::get<Vec3s>(args);
+                    write << x << ", " << y << ", " << z;
+                    break;
+                }
+                case GeoArgumentType::VEC3I: {
+                    const auto [x, y, z] = std::get<Vec3i>(args);
+                    write << x << ", " << y << ", " << z;
+                    break;
+                }
+                case GeoArgumentType::VEC4F: {
+                    const auto [x, y, z, w] = std::get<Vec4f>(args);
+                    write << x << ", " << y << ", " << z << ", " << w;
+                    break;
+                }
+                case GeoArgumentType::VEC4S: {
+                    const auto [x, y, z, w] = std::get<Vec4s>(args);
+                    write << x << ", " << y << ", " << z << ", " << w;
+                    break;
+                }
+                case GeoArgumentType::STRING: {
+                    write << std::get<std::string>(args);
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        }
+        write << "),\n";
+        ++cmdCount;
     }
 
-    SPDLOG_INFO("Addr to Display List at 0x{:X} not in yaml, autogenerating it", ptr);
-    auto addr = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(ptr));
-    if(!addr.has_value()) {
-        SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}", SEGMENT_NUMBER(ptr));
-        return 0;
+    write << "};\n";
+
+    if (Companion::Instance->IsDebug()) {
+        write << "// count: " << std::to_string(cmdCount) << " GeoLayout\n";
+    } else {
+        write << "\n";
     }
 
-    auto rom = Companion::Instance->GetRomData();
-    auto factory = Companion::Instance->GetFactory("GFX")->get();
-    std::string output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(ptr)) +"_dl_" + Torch::to_hex(ptr, false));
-    YAML::Node dl;
-    dl["type"] = "GFX";
-    dl["mio0"] = addr.value();
-    dl["offset"] = SEGMENT_OFFSET(ptr);
-    dl["symbol"] = output;
-    auto result = factory->parse(rom, dl);
-
-    if(!result.has_value()){
-        return 0;
-    }
-
-    auto ndec = Companion::Instance->RegisterAsset(output, dl);
-
-    if(ndec.has_value()){
-        uint64_t hash = CRC64(std::get<0>(ndec.value()).c_str());
-        SPDLOG_INFO("Found Display List: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(ndec.value()));
-        return hash;
-    }
-
-    return 0;
+    return std::nullopt;
 }
 
-void SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
     const auto layout = std::static_pointer_cast<GeoLayout>(data).get();
 
     auto writer = LUS::BinaryWriter();
@@ -96,63 +149,63 @@ void SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsed
         writer.Write(static_cast<uint8_t>(opcode));
 
         for(auto& args : arguments) {
-            switch(args.index()) {
-                case 0: {
+            switch(static_cast<GeoArgumentType>(args.index())) {
+                case GeoArgumentType::U8: {
                     writer.Write(std::get<uint8_t>(args));
                     break;
                 }
-                case 1: {
+                case GeoArgumentType::S8: {
                     writer.Write(std::get<int8_t>(args));
                     break;
                 }
-                case 2: {
+                case GeoArgumentType::U16: {
                     writer.Write(std::get<uint16_t>(args));
                     break;
                 }
-                case 3: {
+                case GeoArgumentType::S16: {
                     writer.Write(std::get<int16_t>(args));
                     break;
                 }
-                case 4: {
+                case GeoArgumentType::U32: {
                     writer.Write(std::get<uint32_t>(args));
                     break;
                 }
-                case 5: {
+                case GeoArgumentType::S32: {
                     writer.Write(std::get<int32_t>(args));
                     break;
                 }
-                case 6: {
+                case GeoArgumentType::U64: {
                     writer.Write(std::get<uint64_t>(args));
                     break;
                 }
-                case 7: {
+                case GeoArgumentType::VEC2F: {
                     const auto [x, y] = std::get<Vec2f>(args);
                     writer.Write(x);
                     writer.Write(y);
                     break;
                 }
-                case 8: {
+                case GeoArgumentType::VEC3F: {
                     const auto [x, y, z] = std::get<Vec3f>(args);
                     writer.Write(x);
                     writer.Write(y);
                     writer.Write(z);
                     break;
                 }
-                case 9: {
+                case GeoArgumentType::VEC3S: {
                     const auto [x, y, z] = std::get<Vec3s>(args);
                     writer.Write(x);
                     writer.Write(y);
                     writer.Write(z);
                     break;
                 }
-                case 10: {
+                case GeoArgumentType::VEC3I: {
                     const auto [x, y, z] = std::get<Vec3i>(args);
                     writer.Write(x);
                     writer.Write(y);
                     writer.Write(z);
                     break;
                 }
-                case 11: {
+                case GeoArgumentType::VEC4F: {
                     const auto [x, y, z, w] = std::get<Vec4f>(args);
                     writer.Write(x);
                     writer.Write(y);
@@ -160,7 +213,7 @@ void SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsed
                     writer.Write(w);
                     break;
                 }
-                case 12: {
+                case GeoArgumentType::VEC4S: {
                     const auto [x, y, z, w] = std::get<Vec4s>(args);
                     writer.Write(x);
                     writer.Write(y);
@@ -185,15 +238,17 @@ void SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsed
     output.Write(buffer.data(), buffer.size());
     output.Finish(write);
     output.Close();
+    return std::nullopt;
 }
 
-void SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
-
+ExportResult SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    const size_t offset = Torch::translate(GetSafeNode<uint32_t>(node, "offset"));
-    auto cmd = buffer.data() + offset;
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    auto cmd = segment.data;
+
     bool processing = true;
     std::vector<GeoCommand> commands;
 
@@ -206,9 +261,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
         switch(opcode){
             case GeoOpcode::BranchAndLink: {
-                uint32_t ptr = cur_geo_cmd_u32(0x04);
-                arguments.emplace_back(ptr);
-                arguments.emplace_back(RegisterOrLoadGeoLayout(ptr));
+                auto ptr = cur_geo_cmd_u32(0x04);
+                arguments.emplace_back(RegisterAutoGen(ptr, "SM64:GEO_LAYOUT"));
 
                 cmd += 0x08 << CMD_SIZE_SHIFT;
                 break;
@@ -222,7 +276,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 auto ptr = cur_geo_cmd_u32(0x04);
 
                 arguments.emplace_back(jmp);
-                arguments.emplace_back(RegisterOrLoadGeoLayout(ptr));
+                arguments.emplace_back(RegisterAutoGen(ptr, "SM64:GEO_LAYOUT"));
 
                 cmd += 0x08 << CMD_SIZE_SHIFT;
                 break;
@@ -349,7 +403,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 Vec3s translation = {};
                 Vec3s rotation = {};
                 auto params = cur_geo_cmd_u8(0x01);
-                auto cmd_pos = reinterpret_cast<int16_t *>(&cmd[0x04]);
+                auto cmd_pos = reinterpret_cast<int16_t *>(cmd);
 
                 arguments.emplace_back(params);
 
@@ -370,7 +424,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                         break;
                     case 3:
                         arguments.emplace_back(cmd_pos[1]);
-                        cmd_pos += 2 << CMD_SIZE_SHIFT;
+                        cmd_pos += 0x04 << CMD_SIZE_SHIFT;
                         break;
                     default: {
                         break;
@@ -379,7 +433,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 if (params & 0x80) {
                     auto ptr = BSWAP32(*reinterpret_cast<uint32_t*>(&cmd_pos[0]));
-                    arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
+                    arguments.emplace_back(RegisterAutoGen(ptr, "GFX"));
                     cmd_pos += 2 << CMD_SIZE_SHIFT;
                 }
 
@@ -400,7 +454,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 if (params & 0x80) {
                     auto ptr = BSWAP32(*reinterpret_cast<uint32_t*>(&cmd_pos[0]));
-                    arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
+                    arguments.emplace_back(RegisterAutoGen(ptr, "GFX"));
                     cmd_pos += 2 << CMD_SIZE_SHIFT;
                 }
 
@@ -415,7 +469,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 auto cmd_pos = reinterpret_cast<int16_t*>(cmd);
 
                 arguments.emplace_back(layer);
-                arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
+                arguments.emplace_back(RegisterAutoGen(ptr, "GFX"));
 
                 read_vec3s(translation, &cmd_pos[1]);
                 arguments.emplace_back(translation);
@@ -429,14 +483,14 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 auto params = cur_geo_cmd_u8(0x01);
                 auto cmd_pos = reinterpret_cast<int16_t*>(cmd);
 
-                read_vec3s(translation, &cmd_pos[1]);
+                cmd_pos = read_vec3s(translation, &cmd_pos[1]);
 
                 arguments.emplace_back(params);
                 arguments.emplace_back(translation);
 
                 if (params & 0x80) {
                     auto ptr = BSWAP32(*reinterpret_cast<uint32_t*>(&cmd_pos[0]));
-                    arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
+                    arguments.emplace_back(RegisterAutoGen(ptr, "GFX"));
                     cmd_pos += 0x02 << CMD_SIZE_SHIFT;
                 }
 
@@ -448,7 +502,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 auto ptr = cur_geo_cmd_u32(0x04);
 
                 arguments.emplace_back(layer);
-                arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
+                arguments.emplace_back(RegisterAutoGen(ptr, "GFX"));
 
                 cmd += 0x08 << CMD_SIZE_SHIFT;
                 break;
@@ -526,7 +580,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 if (params & 0x80) {
                     auto ptr = cur_geo_cmd_u32(0x08);
-                    arguments.emplace_back(RegisterOrLoadDisplayList(ptr));
+                    arguments.emplace_back(RegisterAutoGen(ptr, "GFX"));
                     cmd += 0x04 << CMD_SIZE_SHIFT;
                 }
 
@@ -550,8 +604,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 break;
             }
             default: {
-                SPDLOG_ERROR("Unknown geo command {}", opcode);
-                throw std::runtime_error("Unknown geo command");
+                SPDLOG_ERROR("Unknown geo command '{}'", opcode);
+                throw std::runtime_error("Unknown geo command " + std::to_string(static_cast<uint8_t>(opcode)));
             }
         }
 

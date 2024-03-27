@@ -3,11 +3,14 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <iomanip>
+#include <regex>
 
 extern "C" {
 #include "n64graphics/n64graphics.h"
 #include "BaseFactory.h"
 }
+
+bool isTable = false;
 
 static const std::unordered_map <std::string, TextureFormat> gTextureFormats = {
     { "RGBA16", { TextureType::RGBA16bpp, 16 } },
@@ -77,23 +80,33 @@ std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t
     return result;
 }
 
-void TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    auto symbol = GetSafeNode(node, "symbol", entryName);
+ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
-    if(node["ctype"]) {
-        write << "extern " << node["ctype"].as<std::string>() << " " << symbol << "[];\n";
+    const auto searchTable = Companion::Instance->SearchTable(offset);
+
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode] = searchTable.value();
+
+        if(start != offset){
+            return std::nullopt;
+        }
+
+        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << data.size() << "];\n";
     } else {
-        write << "extern u8 " << symbol << "[];\n";
+        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
     }
+    return std::nullopt;
 }
 
-void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto texture = std::static_pointer_cast<TextureData>(raw);
     auto data = texture->mBuffer;
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -131,39 +144,46 @@ void TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
 
     file.close();
 
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
+    const auto searchTable = Companion::Instance->SearchTable(offset);
 
-    if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) {
-        write << "u8 " << symbol << "[] = {\n";
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode] = searchTable.value();
+
+        if(mode != TableMode::Append){
+            throw std::runtime_error("Reference mode is not supported for now");
+        }
+
+        if(start == offset){
+            write << GetSafeNode<std::string>(node, "ctype", "static unsigned char") << " " << name << "[][" << texture->mBuffer.size() << "] = {\n";
+        }
+
+        write << tab << "{\n";
+        write << tab << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+        write << tab << "},\n";
+
+        if(end == offset){
+            write << "};\n";
+            if (Companion::Instance->IsDebug()) {
+                write << "// size: 0x" << std::hex << std::uppercase << ASSET_PTR((end - start) + data.size()) << "\n";
+            }
+        }
     } else {
-        if(node["ctype"]) {
-            write << node["ctype"].as<std::string>() << " " << symbol << "[] = {\n";
-        } else {
-            write << "static const u8 " << symbol << "[] = {\n";
-        }
-    }
-    write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << (*replacement) << ".inc.c\"\n";
-    write << "};\n";
+        write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << symbol  << "[] = {\n";
 
-    if (Companion::Instance->IsDebug()) {
+        write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+        write << "};\n";
+
         const auto sz = data.size();
-
-        write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
+        if (Companion::Instance->IsDebug()) {
+            write << "// size: 0x" << std::hex << std::uppercase << sz;
         }
-        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
-    }
 
-    write << "\n";
+        write << "\n";
+    }
+    return offset + data.size();
 }
 
-void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto texture = std::static_pointer_cast<TextureData>(raw);
     auto data = texture->mBuffer;
@@ -177,9 +197,10 @@ void TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedD
     writer.Write((uint32_t) data.size());
     writer.Write((char*) data.data(), data.size());
     writer.Finish(write);
+    return std::nullopt;
 }
 
-void TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
     auto texture = std::static_pointer_cast<TextureData>(data);
     auto format = texture->mFormat;
     uint8_t* raw = new uint8_t[CalculateTextureSize(format.type, texture->mWidth, texture->mHeight) * 2];
@@ -232,6 +253,7 @@ void TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedD
     }
 
     write.write(reinterpret_cast<char*>(raw), size);
+    return std::nullopt;
 }
 
 
@@ -262,7 +284,26 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         width = GetSafeNode<uint32_t>(node, "width");
         height = GetSafeNode<uint32_t>(node, "height");
     }
-
+    
+    if((format == "CI4" || format == "CI8") && node["tlut"] && node["colors"]) {
+        YAML::Node tlutNode;
+        const auto tlutOffset = GetSafeNode<uint32_t>(node, "tlut");
+        if(node["symbol"]) {
+            const auto symbol = GetSafeNode<std::string>(node, "symbol");
+            const auto tlutSymbol = GetSafeNode(node, "tlut_symbol", symbol + "_tlut");
+            std::ostringstream offsetSeg;
+            offsetSeg << std::uppercase << std::hex << tlutOffset;
+            tlutNode["symbol"] = std::regex_replace(tlutSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
+        }
+        tlutNode["type"] = "TEXTURE";
+        tlutNode["format"] = "TLUT";
+        tlutNode["offset"] = tlutOffset;
+        tlutNode["colors"] = GetSafeNode<uint32_t>(node, "colors");
+        if(node["tlut_ctype"]) {
+            tlutNode["ctype"] = GetSafeNode<std::string>(node, "tlut_ctype");
+        }
+        Companion::Instance->AddAsset(tlutNode);
+    }
     size = GetSafeNode<uint32_t>(node, "size", CalculateTextureSize(gTextureFormats.at(format).type, width, height));
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
     std::vector<uint8_t> result;
@@ -348,6 +389,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
             const auto imgi = png2ci(buffer.data(), buffer.size(), &width, &height);
             size = width * height * fmt.depth / 8;
             raw = new uint8_t[size];
+
             if(ci2raw_torch(raw, imgi, width, height, fmt.depth) <= 0){
                 throw std::runtime_error("Failed to convert PNG to texture");
             }

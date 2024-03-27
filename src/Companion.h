@@ -28,10 +28,34 @@ enum class GBIMinorVersion {
     SM64
 };
 
+enum class TableMode {
+    Reference,
+    Append
+};
+
 struct SegmentConfig {
     std::unordered_map<uint32_t, uint32_t> global;
     std::unordered_map<uint32_t, uint32_t> local;
     std::unordered_map<uint32_t, uint32_t> temporal;
+};
+
+struct Table {
+    std::string name;
+    uint32_t start;
+    uint32_t end;
+    TableMode mode;
+};
+
+struct VRAMEntry {
+    uint32_t addr;
+    uint32_t offset;
+};
+
+struct WriteEntry {
+    uint32_t addr;
+    uint32_t alignment;
+    std::string buffer;
+    std::optional<uint32_t> endptr;
 };
 
 struct GBIConfig {
@@ -73,6 +97,7 @@ public:
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
     std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
+    std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
 
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
@@ -83,6 +108,8 @@ public:
     std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
+    std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
+    std::optional<Table> SearchTable(uint32_t addr);
 
     static std::string CalculateHash(const std::vector<uint8_t>& data);
     static void Pack(const std::string& folder, const std::string& output);
@@ -91,6 +118,7 @@ public:
     TorchConfig& GetConfig() { return this->gConfig; }
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
+    std::optional<YAML::Node> AddAsset(YAML::Node asset);
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
@@ -99,23 +127,28 @@ private:
     std::filesystem::path gRomPath;
     std::shared_ptr<N64::Cartridge> gCartridge;
     std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
+    std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
 
     // Temporal Variables
     std::string gCurrentFile;
     std::string gFileHeader;
+    bool gEnablePadGen = false;
     uint32_t gCurrentPad = 0;
+    uint32_t gCurrentFileOffset;
+    uint32_t gCurrentSegmentNumber;
+    std::optional<VRAMEntry> gCurrentVram;
+    CompressionType gCurrentCompressionType = CompressionType::None;
+    std::vector<Table> gTables;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
+    std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
-    std::unordered_map<std::string, std::map<std::string, std::vector<std::pair<uint32_t, std::string>>>> gWriteMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
-    uint32_t gCurrentFileOffset;
-    uint32_t gCurrentSegmentNumber;
-    CompressionType gCurrentCompressionType;
 
-    void ParseCurrentFileConfig(YAML::Node node);
+    void ParseEnums(std::string& file);
     void ParseModdingConfig();
+    void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
     void ProcessTables(YAML::Node& rom);

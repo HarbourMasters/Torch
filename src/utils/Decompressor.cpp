@@ -49,7 +49,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         case CompressionType::MIO0:
         {
             auto fileOffset = TranslateAddr(offset, true);
-            offset = IS_SEGMENTED(offset) ? SEGMENT_OFFSET(offset) : offset;
+            offset = ASSET_PTR(offset);
 
             auto decoded = Decode(buffer, fileOffset, CompressionType::MIO0);
             auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
@@ -89,6 +89,16 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
         }
 
         return segment.value() + (!baseAddress ? SEGMENT_OFFSET(addr) : 0);
+    }
+
+    const auto vramEntry = Companion::Instance->GetCurrentVRAM();
+
+    if(vramEntry.has_value()){
+        const auto vram = vramEntry.value();
+
+        if(addr >= vram.addr){
+            return vram.offset + (addr - vram.addr);
+        }
     }
 
     return addr;

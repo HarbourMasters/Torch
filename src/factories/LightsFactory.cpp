@@ -4,22 +4,23 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 
-void LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
-    write << "extern Lights " << symbol << ";\n";
+    write << "extern Lights1 " << symbol << ";\n";
+    return std::nullopt;
 }
 
-void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;
     auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    write << "Lights1 " << symbol << " = gdSPDefLights1 (\n";
+    write << "Lights1 " << symbol << " = gdSPDefLights1(\n";
 
     // Ambient
     auto r = (int16_t) light.a.l.col[0];
@@ -44,9 +45,10 @@ void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     write << r2 << ", " << g2 << ", " << b2 << ", " << x << ", " << y << ", " << z << "\n";
 
     write << ");\n\n";
+    return std::nullopt;
 }
 
-void LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;
     auto writer = LUS::BinaryWriter();
     auto size = sizeof(light.l) / sizeof(LightRaw);
@@ -65,6 +67,7 @@ void LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDa
     }
     writer.Finish(write);
     writer.Close();
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

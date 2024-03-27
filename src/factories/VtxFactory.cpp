@@ -7,32 +7,22 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) std::dec << std::setfill(' ') << std::setw(3) << c
 
-void VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        return std::nullopt;
     }
 
     write << "extern Vtx " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
-
-    if (IS_SEGMENTED(offset)) {
-        offset = SEGMENT_OFFSET(offset);
-    }
-
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
 
     write << "Vtx " << symbol << "[] = {\n";
 
@@ -65,13 +55,14 @@ void VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> r
 
     if (Companion::Instance->IsDebug()) {
         write << "// count: " << std::to_string(vtx.size()) << " Vtxs\n";
-        write << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(VtxRaw) * vtx.size())) << "\n";
+    } else {
+        write << "\n";
     }
 
-    write << "\n";
+    return offset + vtx.size() * sizeof(VtxRaw);
 }
 
-void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<VtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
@@ -91,6 +82,7 @@ void VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {

@@ -11,6 +11,7 @@ enum class ResourceType {
     DisplayList = 0x4F444C54,  // ODLT
     Vertex = 0x4F565458,       // OVTX
     Matrix = 0x4F4D5458,       // OMTX
+    Float = 0x4F464C54,        // OFLT
     Array = 0x4F415252,        // OARR
     Blob = 0x4F424C42,         // OBLB
     Texture = 0x4F544558,      // OTEX
@@ -31,5 +32,15 @@ enum class ResourceType {
     Waypoints = 0x57505453,    // WPTS
     Metadata  = 0x4D444154,    // MDAT
     SpawnData = 0x53444154,    // SDAT
+    DrivingBehaviour = 0x44424856, // DBHV
+
+    // SF64
+    AnimData = 0x414E494D,     // ANIM
+    Message = 0x4D53474C,      // MSG
+    MessageTable = 0x4D534754, // MSGT
+    Skeleton = 0x534B454C,     // SKEL
+    Script = 0x53435250,       // SCRP
+    Hitbox = 0x48544258,       // HTBX
+    ObjectInit = 0x4F42494E,   // OBIN
 };
 } // namespace LUS

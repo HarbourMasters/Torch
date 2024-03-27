@@ -3,23 +3,12 @@
 #include "utils/Decompressor.h"
 #include <iomanip>
 
-void BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
-
-    if(node["ctype"]) {
-        write << node["ctype"].as<std::string>() << " " << symbol << "[] = {\n" << tab;
-    } else {
-        write << "u8 " << symbol << "[] = {\n" << tab;
-    }
+    write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[] = {\n" << tab;
 
     for (int i = 0; i < data.size(); i++) {
         if ((i % 15 == 0) && i != 0) {
@@ -31,19 +20,13 @@ void BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> 
     write << "\n};\n";
 
     if (Companion::Instance->IsDebug()) {
-        const auto sz = data.size();
-
-        write << "// size: 0x" << std::hex << std::uppercase << sz << "\n";
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
+        write << "// size: 0x" << std::hex << std::uppercase << data.size() << "\n";
     }
 
-    write << "\n";
+    return offset + data.size();
 }
 
-void BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -51,6 +34,7 @@ void BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     writer.Write((uint32_t) data.size());
     writer.Write((char*) data.data(), data.size());
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> BlobFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
