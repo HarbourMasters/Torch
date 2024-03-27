@@ -38,18 +38,16 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     for(SF64::CollisionPoly poly : colpolys->mPolys) {
         write << "\n" << fourSpaceTab;
         write << "{ " << NUM(poly.tri, width) << ",  ";
-        if (poly.unk_06 == 0) {
-            write << "0,  ";
-        } else {
-            SPDLOG_INFO("SF64:COLPOLY alert: Nonzero value of unk_06");
-            write << "/* ALERT: NONZERO */ " << poly.unk_06 << ",  ";
+        if (poly.unk_06 != 0) {
+            SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
+            write << "/* ALERT: NONZERO PAD */ ";
         }
-        write << NUM(poly.norm, 6) << ",  ";
+        write << "{" << NUM(poly.norm, 6) << ",  ";
         if(poly.unk_0E != 0) {
             SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
             write << "/* ALERT: NONZERO PAD */ ";
         }
-        write << NUM(poly.dist, 9) << "}, ";
+        write << NUM(poly.dist, 9) << "} }, ";
     }
 
     write << "\n};\n";
