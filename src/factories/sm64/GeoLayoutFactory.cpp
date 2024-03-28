@@ -59,61 +59,75 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
 
             switch(static_cast<GeoArgumentType>(args.index())) {
                 case GeoArgumentType::U8: {
-                    write << static_cast<uint32_t>(std::get<uint8_t>(args));
+                    write << std::hex << "0x" << static_cast<uint32_t>(std::get<uint8_t>(args));
                     break;
                 }
                 case GeoArgumentType::S8: {
-                    write << static_cast<uint32_t>(std::get<int8_t>(args));
+                    write << std::hex << "0x" << static_cast<uint32_t>(std::get<int8_t>(args));
                     break;
                 }
                 case GeoArgumentType::U16: {
-                    write << std::get<uint16_t>(args);
+                    write << std::hex << "0x" << std::get<uint16_t>(args);
                     break;
                 }
                 case GeoArgumentType::S16: {
-                    write << std::get<int16_t>(args);
+                    write << std::dec << std::get<int16_t>(args);
                     break;
                 }
                 case GeoArgumentType::U32: {
-                    write << "0x" << std::hex << std::get<uint32_t>(args);
+                    write << std::hex << "0x" << std::get<uint32_t>(args);
                     break;
                 }
                 case GeoArgumentType::S32: {
-                    write << std::get<int32_t>(args);
+                    write << std::dec << std::get<int32_t>(args);
                     break;
                 }
                 case GeoArgumentType::U64: {
-                    write << "0x" << std::hex << std::get<uint64_t>(args);
+                    // write << std::hex << "0x" << std::get<uint64_t>(args);
+                    uint32_t ptr = std::get<uint64_t>(args);
+                    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+                    std::string symbol = "NULL";
+
+                    if (dec.has_value()) {
+                        auto node = std::get<1>(dec.value());
+                        symbol = GetSafeNode<std::string>(node, "symbol");
+                        write << symbol;
+                    } else if (ptr == 0) {
+                        write << symbol;
+                    } else {
+                        SPDLOG_WARN("Cannot find node for ptr 0x{:X}", ptr);
+                        write << std::hex << "0x" << ptr;
+                    }
                     break;
                 }
                 case GeoArgumentType::VEC2F: {
                     const auto [x, y] = std::get<Vec2f>(args);
-                    write << x << ", " << y;
+                    write << std::dec << x << ", " << y;
                     break;
                 }
                 case GeoArgumentType::VEC3F: {
                     const auto [x, y, z] = std::get<Vec3f>(args);
-                    write << x << ", " << y << ", " << z;
+                    write << std::dec << x << ", " << y << ", " << z;
                     break;
                 }
                 case GeoArgumentType::VEC3S: {
                     const auto [x, y, z] = std::get<Vec3s>(args);
-                    write << x << ", " << y << ", " << z;
+                    write << std::dec <<  x << ", " << y << ", " << z;
                     break;
                 }
                 case GeoArgumentType::VEC3I: {
                     const auto [x, y, z] = std::get<Vec3i>(args);
-                    write << x << ", " << y << ", " << z;
+                    write << std::dec <<  x << ", " << y << ", " << z;
                     break;
                 }
                 case GeoArgumentType::VEC4F: {
                     const auto [x, y, z, w] = std::get<Vec4f>(args);
-                    write << x << ", " << y << ", " << z << ", " << w;
+                    write << std::dec << x << ", " << y << ", " << z << ", " << w;
                     break;
                 }
                 case GeoArgumentType::VEC4S: {
                     const auto [x, y, z, w] = std::get<Vec4s>(args);
-                    write << x << ", " << y << ", " << z << ", " << w;
+                    write << std::dec <<  x << ", " << y << ", " << z << ", " << w;
                     break;
                 }
                 case GeoArgumentType::STRING: {
@@ -282,6 +296,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 break;
             }
             case GeoOpcode::Return:
+                processing = false;
             case GeoOpcode::OpenNode:
             case GeoOpcode::CloseNode: {
                 cmd += 0x04 << CMD_SIZE_SHIFT;
@@ -390,10 +405,10 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 auto ptr = cur_geo_cmd_u32(0x10);
                 auto type = cur_geo_cmd_s16(0x02);
 
+                arguments.emplace_back(type);
                 arguments.emplace_back(pos);
                 arguments.emplace_back(focus);
                 arguments.emplace_back(ptr);
-                arguments.emplace_back(type);
 
                 cmd += 0x14 << CMD_SIZE_SHIFT;
                 break;
@@ -469,10 +484,11 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 auto cmd_pos = reinterpret_cast<int16_t*>(cmd);
 
                 arguments.emplace_back(layer);
-                arguments.emplace_back(RegisterAutoGen(ptr, "GFX"));
 
                 read_vec3s(translation, &cmd_pos[1]);
                 arguments.emplace_back(translation);
+
+                arguments.emplace_back(RegisterAutoGen(ptr, "GFX"));
 
                 cmd += 0x0C << CMD_SIZE_SHIFT;
                 break;
