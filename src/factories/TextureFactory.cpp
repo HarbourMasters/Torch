@@ -258,11 +258,13 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
 
 
 std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
     uint32_t width;
     uint32_t height;
     uint32_t size;
-    auto offset = GetSafeNode<uint32_t>(node, "offset");
+
+    std::transform(format.begin(), format.end(), format.begin(), ::toupper);
 
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
