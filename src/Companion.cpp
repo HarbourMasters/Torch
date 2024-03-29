@@ -430,12 +430,22 @@ void Companion::PrepareCache(const std::string& path) {
                 fs::create_directories(tdir);
             } else {
                 for(auto& entry : fs::directory_iterator("tcache/" + cache)) {
-                    std::ifstream file(entry.path(), std::ios::binary);
-                    std::vector<uint8_t> buffer = std::vector<uint8_t>(std::istreambuf_iterator(file), {});
-                    file.close();
-                    std::string cpath = entry.path().filename().string();
-                    std::replace(cpath.begin(), cpath.end(), '+', '/');
-                    this->gCacheData[cache][cpath] = buffer;
+                    const auto ext = entry.path().extension().string();
+
+                    if(ext == ".data") {
+                        std::ifstream file(entry.path(), std::ios::binary);
+                        std::vector<uint8_t> buffer = std::vector<uint8_t>(std::istreambuf_iterator(file), {});
+                        file.close();
+                        std::string cpath = entry.path().filename().string();
+                        std::replace(cpath.begin(), cpath.end(), '+', '/');
+                        this->gCacheData[cache][cpath] = buffer;
+                    } else if(ext == ".yaml") {
+                        std::ifstream file(entry.path(), std::ios::binary);
+                        YAML::Node dependencies = YAML::LoadFile(entry.path().string());
+                        for(auto dep = dependencies.begin(); dep != dependencies.end(); ++dep) {
+                            this->gAssetDependencies[this->gCurrentFile][dep->first.as<std::string>()] = std::make_pair(dep->second.as<YAML::Node>(), false);
+                        }
+                    }
                 }
             }
         } else {
@@ -457,7 +467,20 @@ void Companion::PrepareCache(const std::string& path) {
 void Companion::StoreCache(const std::string path, const std::vector<uint8_t>& value) {
     std::string outpath = path;
     std::replace(outpath.begin(), outpath.end(), '/', '+');
-    std::ofstream file("tcache/" + this->gCurrentCacheHash + "/" + outpath, std::ios::binary);
+
+
+    YAML::Node dependencies = YAML::Node();
+
+    // Dump asset dependencies
+    for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
+        dependencies[fst] = snd.first;
+    }
+
+    std::ofstream deps("tcache/" + this->gCurrentCacheHash + "/" + outpath + "-deps.yaml", std::ios::binary);
+    deps << dependencies;
+    deps.close();
+
+    std::ofstream file("tcache/" + this->gCurrentCacheHash + "/" + outpath + ".data", std::ios::binary);
     file.write(reinterpret_cast<const char*>(value.data()), value.size());
     file.close();
 }
@@ -1006,6 +1029,8 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
 
     auto entry = std::make_tuple(output, node);
     this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = entry;
+
+
 
     return entry;
 }
