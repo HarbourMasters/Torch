@@ -81,12 +81,16 @@ public:
 
 class BaseExporter {
 public:
+    virtual ~BaseExporter() = default;
+
     virtual ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) = 0;
     static void WriteHeader(LUS::BinaryWriter& write, LUS::ResourceType resType, int32_t version);
 };
 
 class BaseFactory {
 public:
+    virtual ~BaseFactory() = default;
+
     virtual std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) = 0;
     virtual std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) {
         return std::nullopt;

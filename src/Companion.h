@@ -97,6 +97,7 @@ public:
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
+    std::optional<uint32_t> GetValueFromEnum(const std::string& key, const std::string& value);
 
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
@@ -137,9 +138,10 @@ private:
     std::optional<VRAMEntry> gCurrentVram;
     CompressionType gCurrentCompressionType = CompressionType::None;
     std::vector<Table> gTables;
+    std::vector<std::string> gDependencies;
+    std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
-    std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;

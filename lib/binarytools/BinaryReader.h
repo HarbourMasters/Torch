@@ -1,10 +1,10 @@
 #pragma once
 
 #include <string>
-#include <memory>
 #include <vector>
 #include "endianness.h"
 #include "Stream.h"
+
 
 class BinaryReader;
 

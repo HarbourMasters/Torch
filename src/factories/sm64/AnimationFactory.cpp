@@ -1,5 +1,9 @@
 #include "AnimationFactory.h"
+
+#include <utils/Decompressor.h>
 #include "spdlog/spdlog.h"
+
+#define ANIM_INDEX_COUNT(boneCount) ((boneCount) + 1) * 2 * 6
 
 ExportResult SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
@@ -29,11 +33,7 @@ ExportResult SM64::AnimationBinaryExporter::Export(std::ostream &write, std::sha
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto headerNode = GetSafeNode<YAML::Node>(node, "header");
-    auto valuesNode = GetSafeNode<YAML::Node>(node, "values");
-    auto indexNode = GetSafeNode<YAML::Node>(node, "indices");
-
-	LUS::BinaryReader header(reinterpret_cast<char *>(buffer.data()) + GetSafeNode<uint32_t>(headerNode, "offset"), GetSafeNode<uint32_t>(headerNode, "size"));
+    auto header = Decompressor::AutoDecode(node, buffer).GetReader();
 	header.SetEndianness(LUS::Endianness::Big);
 
 	auto flags = header.ReadInt16();
@@ -42,24 +42,25 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
 	auto loopStart = header.ReadInt16();
 	auto loopEnd = header.ReadInt16();
 	auto unusedBoneCount = header.ReadInt16();
-    header.ReadUInt32();
-    header.ReadUInt32();
+    auto valuesAddr = header.ReadUInt32();
+    auto indicesAddr = header.ReadUInt32();
 	auto length = header.ReadUInt32();
 
-    LUS::BinaryReader indices(reinterpret_cast<char*>(buffer.data()) + GetSafeNode<uint32_t>(indexNode, "offset"), GetSafeNode<uint32_t>(indexNode, "size"));
-    indices.SetEndianness(LUS::Endianness::Big);
-    size_t indexLength = GetSafeNode<uint32_t>(indexNode, "size") / sizeof(int16_t);
-    std::vector<int16_t> indicesData;
-    for (size_t i = 0; i < indexLength; i++) {
-        indicesData.push_back(indices.ReadInt16());
+    auto values = Decompressor::AutoDecodeByOffset(valuesAddr, indicesAddr - valuesAddr, buffer).GetReader();
+    values.SetEndianness(LUS::Endianness::Big);
+
+    std::vector<uint16_t> valuesData;
+    for (size_t i = 0; i < values.GetLength() / sizeof(uint16_t); i++) {
+        valuesData.push_back(values.ReadUInt16());
     }
 
-    LUS::BinaryReader values(reinterpret_cast<char*>(buffer.data()) + GetSafeNode<uint32_t>(valuesNode, "offset"), GetSafeNode<uint32_t>(valuesNode, "size"));
-	values.SetEndianness(LUS::Endianness::Big);
-	size_t entries = GetSafeNode<uint32_t>(valuesNode, "size") / sizeof(uint16_t);
-    std::vector<uint16_t> valuesData;
-    for (size_t i = 0; i < entries; i++) {
-        valuesData.push_back(values.ReadUInt16());
+    auto indicesCount = ANIM_INDEX_COUNT(unusedBoneCount);
+    auto indices = Decompressor::AutoDecodeByOffset(indicesAddr, indicesCount * sizeof(int16_t), buffer).GetReader();
+    indices.SetEndianness(LUS::Endianness::Big);
+
+    std::vector<int16_t> indicesData;
+    for (size_t i = 0; i < indicesCount; i++) {
+        indicesData.push_back(indices.ReadInt16());
     }
 
     SPDLOG_INFO("Flags: {}", flags);

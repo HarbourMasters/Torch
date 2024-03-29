@@ -32,6 +32,7 @@
 #include "factories/sm64/DictionaryFactory.h"
 #include "factories/sm64/TextFactory.h"
 #include "factories/sm64/GeoLayoutFactory.h"
+#include "factories/sm64/CollisionFactory.h"
 
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
@@ -85,6 +86,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
     this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
     this->RegisterFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
+    this->RegisterFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactory>());
 
     // MK64 specific
     this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
@@ -393,6 +395,14 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         const auto addr = GetSafeNode<uint32_t>(vram, "addr");
         const auto offset = GetSafeNode<uint32_t>(vram, "offset");
         this->gCurrentVram = { addr, offset };
+    }
+
+    if(node["dependencies"]) {
+        auto deps = node["dependencies"];
+        for(auto dep = deps.begin(); dep != deps.end(); ++dep) {
+            this->gDependencies
+            this->gFileHeader += line->as<std::string>() + "\n";
+        }
     }
 
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
@@ -990,6 +1000,21 @@ std::optional<std::string> Companion::GetEnumFromValue(const std::string& key, i
 
     return this->gEnums[key][id];
 }
+
+std::optional<uint32_t> Companion::GetValueFromEnum(const std::string& key, const std::string& value) {
+    if(!this->gEnums.contains(key)){
+        return std::nullopt;
+    }
+
+    for(auto& [id, name] : this->gEnums[key]){
+        if(name == value){
+            return id;
+        }
+    }
+
+    return std::nullopt;
+}
+
 
 std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uint8_t segment) const {
 
