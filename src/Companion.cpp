@@ -418,13 +418,14 @@ std::string ExportTypeToString(ExportType type) {
 
 bool Companion::NodeHasChanges(const std::string& path) {
 
-    if(this->gConfig.exporterType == ExportType::Modding) {
+    if(this->gConfig.modding) {
         return true;
     }
 
     std::ifstream yaml(path);
     const std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator( yaml ), {});
     this->gCurrentHash = CalculateHash(data);
+    bool needsInit = true;
 
     if(this->gHashNode[path]) {
         auto entry = GetSafeNode<YAML::Node>(this->gHashNode, path);
@@ -432,17 +433,22 @@ bool Companion::NodeHasChanges(const std::string& path) {
         auto modes = GetSafeNode<YAML::Node>(entry, "extracted");
         auto extracted = GetSafeNode<bool>(modes, ExportTypeToString(this->gConfig.exporterType));
 
-        if(hash == this->gCurrentHash && extracted) {
-            SPDLOG_INFO("Skipping {} as it has not changed", path);
-            return false;
+        if(hash == this->gCurrentHash) {
+            needsInit = false;
+            if(extracted) {
+                SPDLOG_INFO("Skipping {} as it has not changed", path);
+                return false;
+            }
         }
     }
 
-    this->gHashNode[path] = YAML::Node();
-    this->gHashNode[path]["hash"] = this->gCurrentHash;
-    this->gHashNode[path]["extracted"] = YAML::Node();
-    for(size_t m = 0; m < static_cast<size_t>(ExportType::Modding); m++) {
-        this->gHashNode[path]["extracted"][ExportTypeToString(static_cast<ExportType>(m))] = false;
+    if(needsInit) {
+        this->gHashNode[path] = YAML::Node();
+        this->gHashNode[path]["hash"] = this->gCurrentHash;
+        this->gHashNode[path]["extracted"] = YAML::Node();
+        for(size_t m = 0; m <= static_cast<size_t>(ExportType::Modding); m++) {
+            this->gHashNode[path]["extracted"][ExportTypeToString(static_cast<ExportType>(m))] = false;
+        }
     }
 
     return true;
