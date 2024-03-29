@@ -16,6 +16,7 @@ ExportResult MK64::CourseMetadataHeaderExporter::Export(std::ostream &write, std
     // }
 
     // write << "extern CourseMetadata " << symbol << "[];\n";
+    return std::nullopt;
 }
 
 ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -254,6 +255,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         }
         file.close();
     }
+    return std::nullopt;
 }
 
 ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -265,13 +267,14 @@ ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std
     // WriteHeader(writer, LUS::ResourceType::Metadata, 0);
     // writer.Write((uint32_t) metadata.size());
     //writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto dir = GetSafeNode<std::string>(node, "input_directory");
  
     auto m = Companion::Instance->GetCourseMetadata();
-
+    SPDLOG_INFO("RUNNING");
     std::vector<CourseMetadata> yamlData;
     for (const auto &yamls : m[dir]) {
         
@@ -294,7 +297,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
 
         data.D_800DCBB4 =           GetSafeNode<std::string>(metadata, "D_800DCBB4");
         data.steeringSensitivity =  GetSafeNode<uint32_t>(metadata, "cpu_steering_sensitivity");
-
+        SPDLOG_INFO("BEFORE");
         for (const auto& bombKart : GetSafeNode<YAML::Node>(metadata, "bomb_kart_spawns")) {
             data.bombKartSpawns.push_back(BombKartSpawns({
                 bombKart[0].as<uint16_t>(),
@@ -322,7 +325,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D0096B8")) {
             data.D_0D0096B8.push_back(value.as<std::string>());
         }
-
+        SPDLOG_INFO("MIDDLE");
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009808")) {
             data.D_0D009808.push_back(value.as<std::string>());
         }
@@ -334,19 +337,20 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         for (const auto& str : GetSafeNode<YAML::Node>(metadata, "path_table_unknown")) {
             data.pathTableUnknown.push_back(str.as<std::string>());
         }
-
+        SPDLOG_INFO("BEFORE COLOUR");
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "sky_colors")) {
-            data.skyColors.push_back(value.as<int16_t>());
+            data.skyColors.push_back(value.as<uint16_t>());
         }
-
+        SPDLOG_INFO("BEFORE COLOUR2");
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "sky_colors2")) {
-            data.skyColors2.push_back(value.as<int16_t>());
+            data.skyColors2.push_back(value.as<uint16_t>());
         }
 
         yamlData.push_back(CourseMetadata(
             {data}
         ));
     }
+    SPDLOG_INFO("END RUNNING");
 
     return std::make_shared<MetadataData>(yamlData);
 }
