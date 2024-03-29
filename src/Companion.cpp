@@ -199,19 +199,6 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         input.close();
 
         result = impl->parse_modding(data, node);
-    } else if(this->gNodeIsCacheable && impl->IsCacheable()) {
-        if(this->gCacheData.contains(this->gCurrentCacheHash)) {
-            result = impl->CreateDataPointer();
-            result->get()->FromCacheBuffer(this->GetCache(name));
-        } else {
-            result = impl->parse(this->gRomData, node);
-            if(result.has_value()) {
-                auto cache = result.value()->ToCacheBuffer();
-                if(cache.has_value()) {
-                    this->StoreCache(name, cache.value());
-                }
-            }
-        }
     } else {
         result = impl->parse(this->gRomData, node);
     }
@@ -405,92 +392,60 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
     }
 
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
-    this->gNodeIsCacheable = GetSafeNode<bool>(node, "cacheable", true);
+    this->gNodeForceProcessing = GetSafeNode<bool>(node, "force", false);
 }
 
-void Companion::ParseCache() {
-    const std::string out = "torch.cache.yml";
+void Companion::ParseHash() {
+    const std::string out = "torch.hash.yml";
 
     if(fs::exists(out)) {
-        this->gCacheNode = YAML::LoadFile(out);
+        this->gHashNode = YAML::LoadFile(out);
     } else {
-        this->gCacheNode = YAML::Node();
+        this->gHashNode = YAML::Node();
     }
 }
 
-void Companion::PrepareCache(const std::string& path) {
+std::string ExportTypeToString(ExportType type) {
+    switch (type) {
+        case ExportType::Binary: return "Binary";
+        case ExportType::Header: return "Header";
+        case ExportType::Code: return "Code";
+        case ExportType::Modding: return "Modding";
+        default:
+            throw std::runtime_error("Invalid ExportType");
+    }
+}
+
+bool Companion::NodeHasChanges(const std::string& path) {
+
+    if(this->gConfig.exporterType == ExportType::Modding) {
+        return true;
+    }
+
     std::ifstream yaml(path);
-    bool hasChanges = false;
     const std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator( yaml ), {});
-    this->gCurrentCacheHash = CalculateHash(data);
+    this->gCurrentHash = CalculateHash(data);
 
-    if(this->gCacheNode[path]) {
-        const auto cache = GetSafeNode<std::string>(this->gCacheNode, path);
-        if(cache == this->gCurrentCacheHash) {
-            const auto tdir = "tcache/" + cache;
-            if(!fs::exists(tdir)) {
-                fs::create_directories(tdir);
-            } else {
-                for(auto& entry : fs::directory_iterator("tcache/" + cache)) {
-                    const auto ext = entry.path().extension().string();
+    if(this->gHashNode[path]) {
+        auto entry = GetSafeNode<YAML::Node>(this->gHashNode, path);
+        const auto hash = GetSafeNode<std::string>(entry, "hash");
+        auto modes = GetSafeNode<YAML::Node>(entry, "extracted");
+        auto extracted = GetSafeNode<bool>(modes, ExportTypeToString(this->gConfig.exporterType));
 
-                    if(ext == ".data") {
-                        std::ifstream file(entry.path(), std::ios::binary);
-                        std::vector<uint8_t> buffer = std::vector<uint8_t>(std::istreambuf_iterator(file), {});
-                        file.close();
-                        std::string cpath = entry.path().filename().string();
-                        std::replace(cpath.begin(), cpath.end(), '+', '/');
-                        this->gCacheData[cache][cpath] = buffer;
-                    } else if(ext == ".yaml") {
-                        std::ifstream file(entry.path(), std::ios::binary);
-                        YAML::Node dependencies = YAML::LoadFile(entry.path().string());
-                        for(auto dep = dependencies.begin(); dep != dependencies.end(); ++dep) {
-                            this->gAssetDependencies[this->gCurrentFile][dep->first.as<std::string>()] = std::make_pair(dep->second.as<YAML::Node>(), false);
-                        }
-                    }
-                }
-            }
-        } else {
-            hasChanges = true;
-            this->gCacheNode[path] = this->gCurrentCacheHash;
-            fs::remove("cache/" + cache);
+        if(hash == this->gCurrentHash && extracted) {
+            SPDLOG_INFO("Skipping {} as it has not changed", path);
+            return false;
         }
-    } else {
-        this->gCacheNode[path] = this->gCurrentCacheHash;
     }
 
-    if(hasChanges) {
-        std::ofstream file("torch.cache.yml", std::ios::binary);
-        file << this->gCacheNode;
-        file.close();
-    }
-}
-
-void Companion::StoreCache(const std::string path, const std::vector<uint8_t>& value) {
-    std::string outpath = path;
-    std::replace(outpath.begin(), outpath.end(), '/', '+');
-
-
-    YAML::Node dependencies = YAML::Node();
-
-    // Dump asset dependencies
-    for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
-        dependencies[fst] = snd.first;
+    this->gHashNode[path] = YAML::Node();
+    this->gHashNode[path]["hash"] = this->gCurrentHash;
+    this->gHashNode[path]["extracted"] = YAML::Node();
+    for(size_t m = 0; m < static_cast<size_t>(ExportType::Modding); m++) {
+        this->gHashNode[path]["extracted"][ExportTypeToString(static_cast<ExportType>(m))] = false;
     }
 
-    std::ofstream deps("tcache/" + this->gCurrentCacheHash + "/" + outpath + "-deps.yaml", std::ios::binary);
-    deps << dependencies;
-    deps.close();
-
-    std::ofstream file("tcache/" + this->gCurrentCacheHash + "/" + outpath + ".data", std::ios::binary);
-    file.write(reinterpret_cast<const char*>(value.data()), value.size());
-    file.close();
-}
-
-std::vector<uint8_t>& Companion::GetCache(const std::string path) {
-    std::string outpath = path;
-    std::replace(outpath.begin(), outpath.end(), '+', '/');
-    return this->gCacheData[this->gCurrentCacheHash][outpath];
+    return true;
 }
 
 void Companion::Process() {
@@ -633,7 +588,7 @@ void Companion::Process() {
         }
     }
 
-    this->ParseCache();
+    this->ParseHash();
 
     SPDLOG_INFO("------------------------------------------------");
     spdlog::set_pattern(line);
@@ -668,8 +623,6 @@ void Companion::Process() {
         YAML::Node root = YAML::LoadFile(yamlPath);
         this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
         this->gCurrentFile = yamlPath;
-
-        this->PrepareCache(yamlPath);
 
         // Set compressed file offsets and compression type
         if (auto segments = root[":config"]["segments"]) {
@@ -757,8 +710,8 @@ void Companion::Process() {
             this->ParseCurrentFileConfig(root[":config"]);
         }
 
-        if(this->gNodeIsCacheable) {
-            this->PrepareCache(yamlPath);
+        if(!this->NodeHasChanges(yamlPath) && !this->gNodeForceProcessing) {
+            continue;
         }
 
         spdlog::set_pattern(regular);
@@ -953,6 +906,7 @@ void Companion::Process() {
             }
 
             file.close();
+            this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
         }
     }
 
@@ -962,6 +916,12 @@ void Companion::Process() {
         vWriter.Close();
         wrapper->Close();
     }
+
+    // Write entries hash
+    std::ofstream file("torch.hash.yml", std::ios::binary);
+    file << this->gHashNode;
+    file.close();
+
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     auto level = spdlog::get_level();
     spdlog::set_level(spdlog::level::info);
