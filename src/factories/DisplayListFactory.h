@@ -10,16 +10,6 @@ public:
 
     DListData() {}
     DListData(std::vector<uint32_t> gfxs) : mGfxs(gfxs) {}
-
-    std::optional<std::vector<uint8_t>> ToCacheBuffer() override {
-        std::vector<uint8_t> buffer;
-        buffer.insert(buffer.end(), reinterpret_cast<uint8_t *>(mGfxs.data()), reinterpret_cast<uint8_t *>(mGfxs.data()) + mGfxs.size() * sizeof(uint32_t));
-        return buffer;
-    }
-
-    void FromCacheBuffer(std::vector<uint8_t>& buffer) override {
-        mGfxs = std::vector(reinterpret_cast<uint32_t *>(buffer.data()), reinterpret_cast<uint32_t *>(buffer.data()) + buffer.size() / sizeof(uint32_t));
-    }
 };
 
 class DListHeaderExporter : public BaseExporter {
@@ -46,11 +36,5 @@ public:
     }
     uint32_t GetAlignment() override {
         return 8;
-    }
-    bool IsCacheable() override {
-        return true;
-    }
-    virtual std::optional<std::shared_ptr<IParsedData>> CreateDataPointer() {
-        return std::make_shared<DListData>();
     }
 };

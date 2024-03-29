@@ -86,7 +86,7 @@ public:
 
     void Init(ExportType type);
 
-    void PrepareCache(const std::string& string);
+    bool NodeHasChanges(const std::string& string);
 
     void Process();
 
@@ -125,11 +125,11 @@ private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
     fs::path gCurrentDirectory;
-    std::string gCurrentCacheHash;
+    std::string gCurrentHash;
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
-    bool gNodeIsCacheable;
-    YAML::Node gCacheNode;
+    bool gNodeForceProcessing = false;
+    YAML::Node gHashNode;
     std::shared_ptr<N64::Cartridge> gCartridge;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
 
@@ -146,19 +146,14 @@ private:
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
-    std::unordered_map<std::string, std::unordered_map<std::string, std::vector<uint8_t>>> gCacheData;
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
     void ParseEnums(std::string& file);
-    void ParseCache();
+    void ParseHash();
     void ParseModdingConfig();
     void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
-
-    void StoreCache(std::string path, const std::vector<uint8_t>& value);
-    std::vector<uint8_t>& GetCache(std::string path);
-
     void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
 };
