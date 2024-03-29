@@ -912,8 +912,9 @@ void Companion::Process() {
             }
 
             file.close();
-            this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
         }
+
+        this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
     }
 
     if(wrapper != nullptr) {
