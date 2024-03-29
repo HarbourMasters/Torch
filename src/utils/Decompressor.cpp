@@ -60,10 +60,8 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         }
         case CompressionType::YAY0:
             throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
-            break;
         case CompressionType::YAZ0:
             throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
-            break;
         case CompressionType::None:
         {
             auto fileOffset = TranslateAddr(offset);
