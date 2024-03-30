@@ -32,8 +32,8 @@ namespace MK64 {
         std::vector<std::string> D_0D009808;
         std::vector<std::string> pathTable;
         std::vector<std::string> pathTableUnknown;
-        std::vector<int16_t> skyColors;
-        std::vector<int16_t> skyColors2;
+        std::vector<uint16_t> skyColors;
+        std::vector<uint16_t> skyColors2;
     };
 
     class MetadataData : public IParsedData {

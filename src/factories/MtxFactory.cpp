@@ -15,7 +15,7 @@ ExportResult MtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPar
         return std::nullopt;
     }
 
-    write << "extern Mtx " << symbol << "[];\n";
+    write << "extern Mtx " << symbol << ";\n";
     return std::nullopt;
 }
 
@@ -44,7 +44,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
      *                    0.0, 0.0, 0.0, 1.0);
      */
     
-    write << "Mtx " << symbol << "[] = {\n";
+    write << "Mtx " << symbol << " = {\n";
 
     for (int i = 0; i < m.size(); ++i) {
 
