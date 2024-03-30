@@ -38,6 +38,7 @@
 #include "factories/mk64/TrackSections.h"
 #include "factories/mk64/SpawnData.h"
 #include "factories/mk64/DrivingBehaviour.h"
+#include "factories/mk64/ItemCurve.h"
 #include "factories/mk64/CourseMetadata.h"
 
 #include "factories/sf64/ColPolyFactory.h"
@@ -93,6 +94,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
     this->RegisterFactory("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
     this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
+    this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
     this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
 
     // SF64 specific
@@ -1017,7 +1019,7 @@ CompressionType Companion::GetCompressionType(std::vector<uint8_t>& buffer, cons
 
 std::optional<Table> Companion::SearchTable(uint32_t addr){
     for(auto& table : this->gTables){
-        if(addr >= table.start || addr <= table.end){
+        if(addr >= table.start && addr <= table.end){
             return table;
         }
     }
