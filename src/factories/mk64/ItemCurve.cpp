@@ -65,13 +65,13 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
         write << "\n" << fourSpaceTab << "},\n";
 
         if(end == offset){
-            write << "};\n";
+            write << "};\n\n";
         }
 
     } else {
 
-        write << "const u8 " << symbol << "[][100] = {";
-
+        write << "const u8 " << symbol << "[][100] = {\n";
+        write << fourSpaceTab << "{";
 
         for (size_t i = 0; i < items.size(); ++i) {
             uint8_t value = items[i];
@@ -82,7 +82,8 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
                 write << ItemStrings[value] << ", ";
             }
         }
-        write << "\n};\n";
+        write << "\n" << fourSpaceTab << "},\n";
+        write << "};\n\n";
     }
 
     return offset + items.size() * sizeof(uint8_t);
