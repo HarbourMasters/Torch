@@ -49,7 +49,7 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
         const auto [name, start, end, mode] = searchTable.value();
 
         if(start == offset){
-            write << GetSafeNode<std::string>(node, "ctype", "static unsigned char") << " " << name << "[][" << items.size() << "] = {\n";
+            write << GetSafeNode<std::string>(node, "ctype", "const u8") << " " << name << "[][" << items.size() << "] = {\n";
         }
 
         write << fourSpaceTab << "{";
