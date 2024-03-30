@@ -70,7 +70,7 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
 
     } else {
 
-        write << "u8 " << symbol << "[] = {";
+        write << "u8 " << symbol << "[][100] = {";
 
 
         for (size_t i = 0; i < items.size(); ++i) {
