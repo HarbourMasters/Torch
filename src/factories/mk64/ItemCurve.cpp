@@ -15,7 +15,7 @@ ExportResult MK64::ItemCurveHeaderExporter::Export(std::ostream &write, std::sha
         return std::nullopt;
     }
 
-    write << "extern u8 " << symbol << "[];\n";
+    write << "extern u8 " << symbol << "[][100];\n";
     return std::nullopt;
 }
 
@@ -49,7 +49,7 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
         const auto [name, start, end, mode] = searchTable.value();
 
         if(start == offset){
-            write << GetSafeNode<std::string>(node, "ctype", "const u8") << " " << name << "[][" << items.size() << "] = {\n";
+            write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << items.size() << "] = {\n";
         }
 
         write << fourSpaceTab << "{";
@@ -70,7 +70,7 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
 
     } else {
 
-        write << "const u8 " << symbol << "[][100] = {\n";
+        write << "u8 " << symbol << "[][100] = {\n";
         write << fourSpaceTab << "{";
 
         for (size_t i = 0; i < items.size(); ++i) {
