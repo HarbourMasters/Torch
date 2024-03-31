@@ -84,6 +84,7 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
+    size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -99,7 +100,7 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
             return std::nullopt;
         }
 
-        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << data.size() << "];\n";
+        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << (data.size() / byteSize) << "];\n";
     } else {
         write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
     }
@@ -154,7 +155,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         if(start == offset){
-            write << GetSafeNode<std::string>(node, "ctype", "static unsigned char") << " " << name << "[][" << texture->mBuffer.size() << "] = {\n";
+            write << GetSafeNode<std::string>(node, "ctype", "static unsigned char") << " " << name << "[][" << (texture->mBuffer.size() / byteSize) << "] = {\n";
         }
 
         write << tab << "{\n";
