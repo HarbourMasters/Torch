@@ -168,11 +168,7 @@ void Companion::ParseEnums(std::string& header) {
     }
 }
 
-void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary) {
-    std::ostringstream stream;
-
-    this->gCurrentWrapper = binary;
-
+std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::string& name) {
     auto type = GetSafeNode<std::string>(node, "type");
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
@@ -188,16 +184,14 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
         throw std::runtime_error("No factory by the name '"+type+"' found for '"+name+"'");
-        return;
     }
-
 
     auto impl = factory->get();
 
     auto exporter = impl->GetExporter(this->gConfig.exporterType);
     if(!exporter.has_value()){
         SPDLOG_WARN("No exporter found for {}", name);
-        return;
+        return std::nullopt;
     }
 
     std::optional<std::shared_ptr<IParsedData>> result;
@@ -205,7 +199,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
         if(!fs::exists(path)) {
             SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
-            return;
+            return std::nullopt;
         }
 
         std::ifstream input(path, std::ios::binary);
@@ -219,7 +213,7 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
 
     if(!result.has_value()){
         SPDLOG_ERROR("Failed to process {}", name);
-        return;
+        return std::nullopt;
     }
 
     for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
@@ -229,95 +223,18 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
         std::string doutput = (this->gCurrentDirectory / fst).string();
         std::replace(doutput.begin(), doutput.end(), '\\', '/');
         this->gAssetDependencies[this->gCurrentFile][fst].second = true;
-        this->ExtractNode(snd.first, doutput, binary);
+        this->ParseNode(snd.first, doutput);
         spdlog::set_pattern(regular);
         SPDLOG_INFO("------------------------------------------------");
         spdlog::set_pattern(line);
     }
 
-    ExportResult endptr = std::nullopt;
-
-    switch (this->gConfig.exporterType) {
-        case ExportType::Binary: {
-            if(binary == nullptr)  {
-                break;
-            }
-
-            stream.str("");
-            stream.clear();
-            exporter->get()->Export(stream, result.value(), name, node, &name);
-            auto data = stream.str();
-            binary->CreateFile(name, std::vector(data.begin(), data.end()));
-            break;
-        }
-        case ExportType::Modding: {
-            stream.str("");
-            stream.clear();
-            std::string ogname = name;
-            exporter->get()->Export(stream, result.value(), name, node, &name);
-
-            auto data = stream.str();
-            if(data.empty()) {
-                break;
-            }
-
-            std::string dpath = Instance->GetOutputPath() + "/" + name;
-            if(!exists(fs::path(dpath).parent_path())){
-                create_directories(fs::path(dpath).parent_path());
-            }
-
-            this->gModdedAssetPaths[ogname] = name;
-
-            std::ofstream file(dpath, std::ios::binary);
-            file.write(data.c_str(), data.size());
-            file.close();
-            break;
-        }
-        default: {
-            endptr = exporter->get()->Export(stream, result.value(), name, node, &name);
-            break;
-        }
-    }
 
     SPDLOG_INFO("Processed {}", name);
-    WriteEntry entry;
-    if(node["offset"]) {
-        auto alignment = GetSafeNode<uint32_t>(node, "alignment", impl->GetAlignment());
-        if(!endptr.has_value()) {
-            entry = {
-                node["offset"].as<uint32_t>(),
-                alignment,
-                stream.str(),
-                std::nullopt
-            };
-        } else {
-            switch (endptr->index()) {
-                case 0:
-                    entry = {
-                        node["offset"].as<uint32_t>(),
-                        alignment,
-                        stream.str(),
-                        std::get<size_t>(endptr.value())
-                    };
-                    break;
-                case 1: {
-                    const auto oentry = std::get<OffsetEntry>(endptr.value());
-                    entry = {
-                        oentry.start,
-                        alignment,
-                        stream.str(),
-                        oentry.end
-                    };
-                    break;
-                }
-                default:
-                    SPDLOG_ERROR("Invalid endptr index {}", endptr->index());
-                    SPDLOG_ERROR("Type of endptr: {}", typeid(endptr).name());
-                    throw std::runtime_error("We should never reach this point");
-            }
-        }
-    }
-    this->gWriteMap[this->gCurrentFile][type].push_back(entry);
+
+    return ParseResultData {
+        name, type, node, result
+    };
 }
 
 void Companion::ParseModdingConfig() {
@@ -668,6 +585,7 @@ void Companion::Process() {
 
     AudioManager::Instance = new AudioManager();
     auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
+    this->gCurrentWrapper = wrapper;
 
     auto vWriter = LUS::BinaryWriter();
     vWriter.SetEndianness(LUS::Endianness::Big);
@@ -811,7 +729,7 @@ void Companion::Process() {
                     auto output = (this->gCurrentDirectory / entryName / childName).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
                     this->gConfig.segment.temporal.clear();
-                    this->ExtractNode(node, output, wrapper);
+                    this->ParseNode(node, output);
                 }
             } else {
                 if(gCurrentFileOffset && assetNode["offset"]) {
@@ -823,12 +741,98 @@ void Companion::Process() {
                 std::string output = (this->gCurrentDirectory / entryName).string();
                 std::replace(output.begin(), output.end(), '\\', '/');
                 this->gConfig.segment.temporal.clear();
-                this->ExtractNode(assetNode, output, wrapper);
+                this->ParseNode(assetNode, output);
             }
 
             spdlog::set_pattern(regular);
             SPDLOG_INFO("------------------------------------------------");
             spdlog::set_pattern(line);
+        }
+
+        for(auto& result : this->gParseResults[this->gCurrentFile]){
+            std::ostringstream stream;
+            ExportResult endptr = std::nullopt;
+            WriteEntry wEntry;
+
+            auto data = result.data.value();
+            const auto impl = this->GetFactory(result.type)->get();
+            const auto exporter = impl->GetExporter(this->gConfig.exporterType)->get();
+
+            switch (this->gConfig.exporterType) {
+                case ExportType::Binary: {
+                    stream.str("");
+                    stream.clear();
+                    exporter->Export(stream, data, result.name, result.node, &result.name);
+                    auto data = stream.str();;
+                    break;
+                }
+                case ExportType::Modding: {
+                    stream.str("");
+                    stream.clear();
+                    std::string ogname = result.name;
+                    exporter->Export(stream, data, result.name, result.node, &result.name);
+
+                    auto data = stream.str();
+                    if(data.empty()) {
+                        break;
+                    }
+
+                    std::string dpath = Instance->GetOutputPath() + "/" + result.name;
+                    if(!exists(fs::path(dpath).parent_path())){
+                        create_directories(fs::path(dpath).parent_path());
+                    }
+
+                    this->gModdedAssetPaths[ogname] = result.name;
+
+                    std::ofstream file(dpath, std::ios::binary);
+                    file.write(data.c_str(), data.size());
+                    file.close();
+                    break;
+                }
+                default: {
+                    endptr = exporter->Export(stream, data, result.name, result.node, &result.name);
+                    break;
+                }
+            }
+
+            if(result.node["offset"]) {
+                auto alignment = GetSafeNode<uint32_t>(result.node, "alignment", impl->GetAlignment());
+                if(!endptr.has_value()) {
+                    wEntry = {
+                        result.node["offset"].as<uint32_t>(),
+                        alignment,
+                        stream.str(),
+                        std::nullopt
+                    };
+                } else {
+                    switch (endptr->index()) {
+                        case 0:
+                            wEntry = {
+                                result.node["offset"].as<uint32_t>(),
+                                alignment,
+                                stream.str(),
+                                std::get<size_t>(endptr.value())
+                            };
+                            break;
+                        case 1: {
+                            const auto oentry = std::get<OffsetEntry>(endptr.value());
+                            wEntry = {
+                                oentry.start,
+                                alignment,
+                                stream.str(),
+                                oentry.end
+                            };
+                            break;
+                        }
+                        default:
+                            SPDLOG_ERROR("Invalid endptr index {}", endptr->index());
+                            SPDLOG_ERROR("Type of endptr: {}", typeid(endptr).name());
+                            throw std::runtime_error("We should never reach this point");
+                    }
+                }
+            }
+
+            this->gWriteMap[this->gCurrentFile][result.type].push_back(wEntry);
         }
 
         auto fsout = fs::path(this->gConfig.outputPath);
