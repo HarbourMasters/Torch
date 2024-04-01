@@ -11,6 +11,42 @@
 #define GET_MAG(num) ((uint32_t)((abs(int(num)) > 1) ? std::log10(abs(int(num))) : 1))
 #define GET_MAG_U(num) ((uint32_t)((num > 1) ? std::log10(num) : 1))
 
+std::unordered_map<std::string, ArrayType> arrayTypeMap = {
+    { "u8", ArrayType::u8 },
+    { "s8", ArrayType::s8 },
+    { "u16", ArrayType::u16 },
+    { "s16", ArrayType::s16 },
+    { "u32", ArrayType::u32 },
+    { "s32", ArrayType::s32 },
+    { "u64", ArrayType::u64 },
+    { "f32", ArrayType::f32 },
+    { "f64", ArrayType::f64 },
+    { "Vec2f", ArrayType::Vec2f },
+    { "Vec3f", ArrayType::Vec3f },
+    { "Vec3s", ArrayType::Vec3s },
+    { "Vec3i", ArrayType::Vec3i },
+    { "Vec4f", ArrayType::Vec4f },
+    { "Vec4s", ArrayType::Vec4s },
+};
+
+std::unordered_map<ArrayType, size_t> typeSizeMap = {
+    { ArrayType::u8, 1 },
+    { ArrayType::s8, 1 },
+    { ArrayType::u16, 2 },
+    { ArrayType::s16, 2 },
+    { ArrayType::u32, 4 },
+    { ArrayType::s32, 4 },
+    { ArrayType::u64, 8 },
+    { ArrayType::f32, 4 },
+    { ArrayType::f64, 8 },
+    { ArrayType::Vec2f, 8 },
+    { ArrayType::Vec3f, 12 },
+    { ArrayType::Vec3s, 6 },
+    { ArrayType::Vec3i, 12 },
+    { ArrayType::Vec4f, 16 },
+    { ArrayType::Vec4s, 8 },
+};
+
 static int GetPrecision(float f) {
     int p = 0;
     int shift = 1;
