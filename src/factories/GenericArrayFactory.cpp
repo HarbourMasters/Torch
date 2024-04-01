@@ -96,7 +96,7 @@ GenericArray::GenericArray(std::vector<ArrayDatum> data) : mData(std::move(data)
 
 ExportResult ArrayHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    const auto type = GetSafeNode<std::string>(node, "type");
+    const auto type = GetSafeNode<std::string>(node, "array_type");
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -109,7 +109,7 @@ ExportResult ArrayHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
 
 ExportResult ArrayCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    const auto type = GetSafeNode<std::string>(node, "type");
+    const auto type = GetSafeNode<std::string>(node, "array_type");
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto array = std::static_pointer_cast<GenericArray>(raw);
 
@@ -196,7 +196,7 @@ ExportResult ArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 std::optional<std::shared_ptr<IParsedData>> GenericArrayFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     std::vector<ArrayDatum> data;
     const auto count = GetSafeNode<uint32_t>(node, "count");
-    const auto type = GetSafeNode<std::string>(node, "type");
+    const auto type = GetSafeNode<std::string>(node, "array_type");
 
     if (arrayTypeMap.find(type) == arrayTypeMap.end()) {
         SPDLOG_ERROR("Unknown Generic Array type '{}'", type);
