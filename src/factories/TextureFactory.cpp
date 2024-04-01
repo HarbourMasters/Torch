@@ -83,7 +83,9 @@ std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t
 ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
+    auto texture = std::static_pointer_cast<TextureData>(raw);
+    size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
+    auto data = texture->mBuffer;
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -99,7 +101,7 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
             return std::nullopt;
         }
 
-        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << data.size() << "];\n";
+        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << (data.size() / byteSize) << "];\n";
     } else {
         write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
     }
@@ -154,7 +156,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         if(start == offset){
-            write << GetSafeNode<std::string>(node, "ctype", "static unsigned char") << " " << name << "[][" << texture->mBuffer.size() << "] = {\n";
+            write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << (texture->mBuffer.size() / byteSize) << "] = {\n";
         }
 
         write << tab << "{\n";
@@ -168,7 +170,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
             }
         }
     } else {
-        write << GetSafeNode<std::string>(node, "ctype", "static const u8") << " " << symbol  << "[] = {\n";
+        write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol  << "[] = {\n";
 
         write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
         write << "};\n";
@@ -263,6 +265,8 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     uint32_t height;
     uint32_t size;
     auto offset = GetSafeNode<uint32_t>(node, "offset");
+
+    std::transform(format.begin(), format.end(), format.begin(), ::toupper);
 
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
