@@ -8,8 +8,9 @@
 #include <cstdlib>
 
 #define FORMAT_INT(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
-#define GET_MAG(num) ((uint32_t)((abs(int(num)) > 1) ? std::log10(abs(int(num))) : 1))
-#define GET_MAG_U(num) ((uint32_t)((num > 1) ? std::log10(num) : 1))
+#define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
+#define GET_MAG(num) ((uint32_t)((abs(int(num)) > 1) ? std::log10(abs(int(num))) + 1 : 1))
+#define GET_MAG_U(num) ((uint32_t)((num > 1) ? std::log10(num) + 1 : 1))
 
 std::unordered_map<std::string, ArrayType> arrayTypeMap = {
     { "u8", ArrayType::u8 },
@@ -80,7 +81,8 @@ static int GetPrecision(float f) {
 
 GenericArray::GenericArray(std::vector<ArrayDatum> data) : mData(std::move(data)) {
     mMaxWidth = 1;
-    for (auto &datum : data) {
+    mMaxPrec = 1;
+    for (auto &datum : mData) {
         switch (static_cast<ArrayType>(datum.index())) {
             case ArrayType::u8: {
                 mMaxWidth = std::max(mMaxWidth, GET_MAG_U(std::get<uint32_t>(datum)));
@@ -113,19 +115,23 @@ GenericArray::GenericArray(std::vector<ArrayDatum> data) : mData(std::move(data)
             case ArrayType::f32: {
                 auto floatNum = std::get<float>(datum);
                 mMaxWidth = std::max(mMaxWidth, GET_MAG(floatNum) + 1 + GetPrecision(floatNum));
+                mMaxPrec = std::max(mMaxPrec, (uint32_t)GetPrecision(floatNum));
                 break;
             }
             case ArrayType::f64: {
                 auto doubleNum = std::get<double>(datum);
                 mMaxWidth = std::max(mMaxWidth, GET_MAG(doubleNum) + 1 + GetPrecision(doubleNum));
+                mMaxPrec = std::max(mMaxPrec, (uint32_t)GetPrecision(doubleNum));
                 break;
             }
             case ArrayType::Vec2f: {
                 mMaxWidth = std::max(mMaxWidth, (uint32_t)std::get<Vec2f>(datum).width());
+                mMaxPrec = std::max(mMaxPrec, (uint32_t)std::get<Vec2f>(datum).precision());
                 break;
             }
             case ArrayType::Vec3f: {
                 mMaxWidth = std::max(mMaxWidth, (uint32_t)std::get<Vec3f>(datum).width());
+                mMaxPrec = std::max(mMaxPrec, (uint32_t)std::get<Vec3f>(datum).precision());
                 break;
             }
             case ArrayType::Vec3s: {
@@ -138,6 +144,7 @@ GenericArray::GenericArray(std::vector<ArrayDatum> data) : mData(std::move(data)
             }
             case ArrayType::Vec4f: {
                 mMaxWidth = std::max(mMaxWidth,(uint32_t)std::get<Vec4f>(datum).width());
+                mMaxPrec = std::max(mMaxPrec, (uint32_t)std::get<Vec4f>(datum).precision());
                 break;
             }
             case ArrayType::Vec4s: {
@@ -208,16 +215,16 @@ ExportResult ArrayCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
                 write << FORMAT_INT(std::get<uint64_t>(datum), array->mMaxWidth) << ", ";
                 break;
             case ArrayType::f32:
-                write << FORMAT_INT(std::get<float>(datum), array->mMaxWidth) << ", ";
+                write << FORMAT_FLOAT(std::get<float>(datum), array->mMaxWidth, array->mMaxPrec) << ", ";
                 break;
             case ArrayType::f64:
-                write << FORMAT_INT(std::get<double>(datum), array->mMaxWidth) << ", ";
+                write << FORMAT_FLOAT(std::get<double>(datum), array->mMaxWidth, array->mMaxPrec) << ", ";
                 break;
             case ArrayType::Vec2f:
-                write << FORMAT_INT(std::get<Vec2f>(datum), array->mMaxWidth) << ", ";
+                write << FORMAT_FLOAT(std::get<Vec2f>(datum), array->mMaxWidth, array->mMaxPrec) << ", ";
                 break;
             case ArrayType::Vec3f:
-                write << FORMAT_INT(std::get<Vec3f>(datum), array->mMaxWidth) << ", ";
+                write << FORMAT_FLOAT(std::get<Vec3f>(datum), array->mMaxWidth, array->mMaxPrec) << ", ";
                 break;
             case ArrayType::Vec3s:
                 write << FORMAT_INT(std::get<Vec3s>(datum), array->mMaxWidth) << ", ";
@@ -226,7 +233,7 @@ ExportResult ArrayCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
                 write << FORMAT_INT(std::get<Vec3i>(datum), array->mMaxWidth) << ", ";
                 break;
             case ArrayType::Vec4f:
-                write << FORMAT_INT(std::get<Vec4f>(datum), array->mMaxWidth) << ", ";
+                write << FORMAT_FLOAT(std::get<Vec4f>(datum), array->mMaxWidth, array->mMaxPrec) << ", ";
                 break;
             case ArrayType::Vec4s:
                 write << FORMAT_INT(std::get<Vec4s>(datum), array->mMaxWidth) << ", ";

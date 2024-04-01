@@ -14,6 +14,7 @@ enum class ArrayType {
 class GenericArray : public IParsedData {
 public:
     uint32_t mMaxWidth;
+    uint32_t mMaxPrec;
     std::vector<ArrayDatum> mData;
 
     explicit GenericArray(std::vector<ArrayDatum> data);
