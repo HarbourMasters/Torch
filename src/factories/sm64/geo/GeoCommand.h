@@ -157,10 +157,10 @@ inline std::ostream& operator<<(std::ostream& out, const GeoOpcode& opcode) {
     (cmd[CMD_PROCESS_OFFSET(offset)])
 
 #define cur_geo_cmd_s16(offset) \
-    BSWAP16((*(int16_t *) &cmd[CMD_PROCESS_OFFSET(offset)]))
+    (int16_t)BSWAP16((*(int16_t *) &cmd[CMD_PROCESS_OFFSET(offset)]))
 
 #define cur_geo_cmd_s32(offset) \
-    BSWAP32((*(s32 *) &cmd[CMD_PROCESS_OFFSET(offset)]))
+    (s32)BSWAP32((*(s32 *) &cmd[CMD_PROCESS_OFFSET(offset)]))
 
 #define cur_geo_cmd_u32(offset) \
     (uint32_t) BSWAP32((*(uint32_t *) &cmd[CMD_PROCESS_OFFSET(offset)]))

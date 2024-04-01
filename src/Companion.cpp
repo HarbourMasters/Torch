@@ -15,6 +15,7 @@
 #include "factories/AudioHeaderFactory.h"
 #include "factories/SampleFactory.h"
 #include "factories/SequenceFactory.h"
+#include "factories/GenericArrayFactory.h"
 #include "factories/VtxFactory.h"
 #include "factories/MtxFactory.h"
 #include "factories/FloatFactory.h"
@@ -78,6 +79,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("BANK", std::make_shared<BankFactory>());
     this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
     this->RegisterFactory("VEC3S", std::make_shared<Vec3sFactory>());
+    this->RegisterFactory("ARRAY", std::make_shared<GenericArrayFactory>());
 
     // SM64 specific
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
