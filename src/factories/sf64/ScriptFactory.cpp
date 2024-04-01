@@ -27,8 +27,20 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     std::ostringstream cmd;
 
     auto enumName = Companion::Instance->GetEnumFromValue("EventOpcode", opcode).value_or("/* EVOP_UNK */ " + std::to_string(opcode));
-
-    cmd << "EVENT_CMD(" << enumName << ", " << std::right << std::setw(3) << std::dec << arg1 << ", " << std::setw(5) << std::dec << s2 << ")";
+    
+    switch (opcode) {
+        case 120: {
+            auto rcidName = Companion::Instance->GetEnumFromValue("RadioCharacterId", arg1).value_or("/* RCID_UNK */ " + std::to_string(arg1));
+            cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << std::setw(5) << s2 << ")";
+        } break;
+        case 127:
+            cmd << "EVENT_STOP_SCRIPT()";
+            break;
+        default:
+            cmd << "EVENT_CMD(" << enumName << ", " << std::right << std::setw(3) << std::dec << arg1 << ", " << std::setw(5) << std::dec << s2 << ")";
+            break;
+    }
+    
 
     return cmd.str();
 }
