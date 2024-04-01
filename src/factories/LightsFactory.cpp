@@ -62,9 +62,9 @@ ExportResult LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
 
         write << fourSpaceTab << "gdSPDefLights1(\n";
 
-        write << fourSpaceTab;
+        write << fourSpaceTab << fourSpaceTab;
         write << r << ", " << g << ", " << b << ",\n";
-        write << fourSpaceTab;
+        write << fourSpaceTab << fourSpaceTab;
         write << r2 << ", " << g2 << ", " << b2 << ", " << x << ", " << y << ", " << z << "\n";
 
         write << fourSpaceTab << "),\n";
