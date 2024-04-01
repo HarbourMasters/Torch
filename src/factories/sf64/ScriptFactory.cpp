@@ -27,17 +27,51 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     std::ostringstream cmd;
 
     auto enumName = Companion::Instance->GetEnumFromValue("EventOpcode", opcode).value_or("/* EVOP_UNK */ " + std::to_string(opcode));
-    
+
     switch (opcode) {
+        case 0:
+        case 1: {
+            auto f1 = (arg1 >> 8) & 1;
+            auto f2 = (arg1 >> 7) & 1;
+            auto f3 = arg1 & 0x7F;
+            cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << s2 << ", " << (f1 ? "true" : "false") << ", " << (f2 ? "true" : "false")  << ")";
+        } break;
+        case 24:
+            cmd << "EVENT_SET_ROTATE()";
+            break;
+        case 25:
+            cmd << "EVENT_STOP_ROTATE()";
+            break;
+        case 96: 
+            if(s2 >= 100) {
+                cmd << "EVENT_BRANCH(EVC_100 + " << std::dec << (s2 - 100) << ", " << std::dec <<  arg1 << ")";
+            } else {
+                auto condition = Companion::Instance->GetEnumFromValue("EventCondition", s2).value_or("/* EVC_UNK */ " + std::to_string(s2));
+                cmd << "EVENT_BRANCH(" << condition << ", " << std::dec <<  arg1 << ")";
+            }
+            break;
+        case 104:
+            cmd << "EVENT_INIT_ACTOR(" << std::dec << arg1 << ", " << s2 << ")";
+            break;
         case 120: {
             auto rcidName = Companion::Instance->GetEnumFromValue("RadioCharacterId", arg1).value_or("/* RCID_UNK */ " + std::to_string(arg1));
             cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << std::setw(5) << s2 << ")";
         } break;
+        case 124: {
+            auto color = Companion::Instance->GetEnumFromValue("TexLineColor", s2).value_or("/* TXLC_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_MAKE_TEXLINE(" << color << ")";
+        } break;
+        case 125:
+            cmd << "EVENT_STOP_TEXLINE()";
+            break;
+        case 126:
+            cmd << "EVENT_LOOP(" << std::dec << arg1 << ", " << s2 << ")";
+            break;
         case 127:
             cmd << "EVENT_STOP_SCRIPT()";
             break;
         default:
-            cmd << "EVENT_CMD(" << enumName << ", " << std::right << std::setw(3) << std::dec << arg1 << ", " << std::setw(5) << std::dec << s2 << ")";
+            cmd << "EVENT_CMD(" << enumName << ", " << std::dec << arg1 << ", " << s2 << ")";
             break;
     }
     
@@ -66,9 +100,9 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
 
         auto cmdCount = script->mSizeMap[sortedPtrs[i]] / 2;
         for(int j = 0; j < cmdCount; j++, cmdIndex+=2) {
-            if((j % 3) == 0) {
-                write << "\n" << fourSpaceTab;
-            }
+            // if((j % 3) == 0) {
+            write << "\n" << fourSpaceTab << "/* " << std::setfill(' ') << std::setw(2) << std::dec << j << " */ ";
+            // }
             write << MakeScriptCmd(script->mCmds[cmdIndex], script->mCmds[cmdIndex + 1])  << ", ";
         }
         scriptNames.push_back(scriptDefaultName.str());
