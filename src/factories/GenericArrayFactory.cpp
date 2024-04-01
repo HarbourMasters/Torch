@@ -47,6 +47,24 @@ std::unordered_map<ArrayType, size_t> typeSizeMap = {
     { ArrayType::Vec4s, 8 },
 };
 
+std::unordered_map<ArrayType, size_t> structCountMap = {
+    { ArrayType::u8, 1 },
+    { ArrayType::s8, 1 },
+    { ArrayType::u16, 1 },
+    { ArrayType::s16, 1 },
+    { ArrayType::u32, 1 },
+    { ArrayType::s32, 1 },
+    { ArrayType::u64, 1 },
+    { ArrayType::f32, 1 },
+    { ArrayType::f64, 1 },
+    { ArrayType::Vec2f, 2 },
+    { ArrayType::Vec3f, 3 },
+    { ArrayType::Vec3s, 3 },
+    { ArrayType::Vec3i, 3 },
+    { ArrayType::Vec4f, 4 },
+    { ArrayType::Vec4s, 4 },
+};
+
 static int GetPrecision(float f) {
     int p = 0;
     int shift = 1;
@@ -161,7 +179,7 @@ ExportResult ArrayCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
 
     write << type << " " << symbol << "[] = {";
 
-    int columnCount = 120 / (array->mMaxWidth + 8);
+    int columnCount = 120 / (structCountMap.at(arrayType) * array->mMaxWidth + 8);
     int i = 0;
     for (auto &datum : array->mData) {
         if ((i++ % columnCount) == 0) {
