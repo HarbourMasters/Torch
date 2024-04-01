@@ -83,7 +83,8 @@ std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t
 ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto data = std::static_pointer_cast<TextureData>(raw)->mBuffer;
+    auto texture = std::static_pointer_cast<TextureData>(raw);
+    auto data = texture->mBuffer;
     size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
 
     if(Companion::Instance->IsOTRMode()){
@@ -287,7 +288,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         width = GetSafeNode<uint32_t>(node, "width");
         height = GetSafeNode<uint32_t>(node, "height");
     }
-    
+
     if((format == "CI4" || format == "CI8") && node["tlut"] && node["colors"]) {
         YAML::Node tlutNode;
         const auto tlutOffset = GetSafeNode<uint32_t>(node, "tlut");
