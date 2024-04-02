@@ -9,13 +9,28 @@
 
 ExportResult VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
-    write << "extern Vtx " << symbol << "[];\n";
+    const auto searchTable = Companion::Instance->SearchTable(offset);
+
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode] = searchTable.value();
+
+        if(start != offset){
+            return std::nullopt;
+        }
+
+        write << "extern Vtx" << name << "[][" << vtx.size() << "];\n";
+    } else {
+        write << "extern Vtx " << symbol << "[];\n";
+    }
+
     return std::nullopt;
 }
 
@@ -23,40 +38,83 @@ ExportResult VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
     auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
+    const auto searchTable = Companion::Instance->SearchTable(offset);
 
-    write << "Vtx " << symbol << "[] = {\n";
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode] = searchTable.value();
+        
 
-    for (int i = 0; i < vtx.size(); ++i) {
-        auto v = vtx[i];
-
-        auto x = v.ob[0];
-        auto y = v.ob[1];
-        auto z = v.ob[2];
-
-        auto flag = v.flag;
-
-        auto tc1 = v.tc[0];
-        auto tc2 = v.tc[1];
-
-        auto c1 = (uint16_t) v.cn[0];
-        auto c2 = (uint16_t) v.cn[1];
-        auto c3 = (uint16_t) v.cn[2];
-        auto c4 = (uint16_t) v.cn[3];
-
-        if(i <= vtx.size() - 1) {
-            write << fourSpaceTab;
+        if(start == offset){
+            write << "Vtx " << name << "[][" << vtx.size() << "] = {\n";
         }
 
-        // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
-        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
-    }
+        write << fourSpaceTab << "{";
 
-    write << "};\n";
+        for (int i = 0; i < vtx.size(); ++i) {
+            auto v = vtx[i];
 
-    if (Companion::Instance->IsDebug()) {
-        write << "// count: " << std::to_string(vtx.size()) << " Vtxs\n";
+            auto x = v.ob[0];
+            auto y = v.ob[1];
+            auto z = v.ob[2];
+
+            auto flag = v.flag;
+
+            auto tc1 = v.tc[0];
+            auto tc2 = v.tc[1];
+
+            auto c1 = (uint16_t) v.cn[0];
+            auto c2 = (uint16_t) v.cn[1];
+            auto c3 = (uint16_t) v.cn[2];
+            auto c4 = (uint16_t) v.cn[3];
+
+            if(i <= vtx.size() - 1) {
+                write << "\n" << fourSpaceTab;
+            }
+
+            // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
+            write << fourSpaceTab << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},";
+        }
+        write << "\n" << fourSpaceTab << "},\n";
+
+        if(end == offset){
+            write << "};\n\n";
+        }
     } else {
-        write << "\n";
+
+        write << "Vtx " << symbol << "[] = {\n";
+
+        for (int i = 0; i < vtx.size(); ++i) {
+            auto v = vtx[i];
+
+            auto x = v.ob[0];
+            auto y = v.ob[1];
+            auto z = v.ob[2];
+
+            auto flag = v.flag;
+
+            auto tc1 = v.tc[0];
+            auto tc2 = v.tc[1];
+
+            auto c1 = (uint16_t) v.cn[0];
+            auto c2 = (uint16_t) v.cn[1];
+            auto c3 = (uint16_t) v.cn[2];
+            auto c4 = (uint16_t) v.cn[3];
+
+            if(i <= vtx.size() - 1) {
+                write << fourSpaceTab;
+            }
+
+            // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
+            write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << flag << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
+        }
+
+        write << "};\n";
+
+        if (Companion::Instance->IsDebug()) {
+            write << "// count: " << std::to_string(vtx.size()) << " Vtxs\n";
+        } else {
+            write << "\n";
+        }
     }
 
     return offset + vtx.size() * sizeof(VtxRaw);

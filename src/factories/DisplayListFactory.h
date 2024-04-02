@@ -8,7 +8,8 @@ class DListData : public IParsedData {
 public:
     std::vector<uint32_t> mGfxs;
 
-    explicit DListData(std::vector<uint32_t> gfxs) : mGfxs(gfxs) {}
+    DListData() {}
+    DListData(std::vector<uint32_t> gfxs) : mGfxs(gfxs) {}
 };
 
 class DListHeaderExporter : public BaseExporter {
@@ -35,5 +36,5 @@ public:
     }
     uint32_t GetAlignment() override {
         return 8;
-    };
+    }
 };

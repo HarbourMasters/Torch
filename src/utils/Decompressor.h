@@ -6,6 +6,7 @@
 #include <yaml-cpp/yaml.h>
 #include <optional>
 #include <cstdint>
+#include "BinaryReader.h"
 
 enum class CompressionType {
     None,
@@ -23,12 +24,17 @@ struct DataChunk {
 struct DecompressedData {
     DataChunk* root;
     DataChunk segment;
+
+    LUS::BinaryReader GetReader() {
+        return LUS::BinaryReader(reinterpret_cast<char*>(segment.data), segment.size);
+    }
 };
 
 class Decompressor {
 public:
     static DataChunk* Decode(const std::vector<uint8_t>& buffer, uint32_t offset, CompressionType type);
     static DecompressedData AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer, std::optional<size_t> size = std::nullopt);
+    static DecompressedData AutoDecode(uint32_t offset, std::optional<size_t> size, std::vector<uint8_t>& buffer);
     static uint32_t TranslateAddr(uint32_t addr, bool baseAddress = false);
     static bool IsSegmented(uint32_t addr);
 

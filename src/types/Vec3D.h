@@ -2,7 +2,7 @@
 
 #include "../factories/BaseFactory.h"
 
-class Vec3f : public IParsedData {
+class Vec3f {
 public:
     float x;
     float y;
@@ -14,7 +14,7 @@ public:
     friend std::ostream& operator<< (std::ostream& stream, const Vec3f& vec);
 };
 
-class Vec3s : public IParsedData {
+class Vec3s {
 public:
     int16_t x;
     int16_t y;
@@ -25,7 +25,7 @@ public:
     friend std::ostream& operator<< (std::ostream& stream, const Vec3s& vec);
 };
 
-class Vec3i : public IParsedData {
+class Vec3i {
 public:
     int32_t x;
     int32_t y;
@@ -36,7 +36,7 @@ public:
     friend std::ostream& operator<< (std::ostream& stream, const Vec3i& vec);
 };
 
-class Vec2f : public IParsedData {
+class Vec2f {
 public:
     float x;
     float z;
@@ -47,7 +47,7 @@ public:
     friend std::ostream& operator<< (std::ostream& stream, const Vec2f& vec);
 };
 
-class Vec4f : public IParsedData {
+class Vec4f {
 public:
     float x;
     float y;
@@ -60,7 +60,7 @@ public:
     friend std::ostream& operator<< (std::ostream& stream, const Vec4f& vec);
 };
 
-class Vec4s : public IParsedData {
+class Vec4s {
 public:
     int16_t x;
     int16_t y;

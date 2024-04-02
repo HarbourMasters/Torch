@@ -85,6 +85,9 @@ public:
     }
 
     void Init(ExportType type);
+
+    bool NodeHasChanges(const std::string& string);
+
     void Process();
 
     bool IsOTRMode() const { return this->gConfig.otrMode; }
@@ -123,8 +126,11 @@ private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
     fs::path gCurrentDirectory;
+    std::string gCurrentHash;
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
+    bool gNodeForceProcessing = false;
+    YAML::Node gHashNode;
     std::shared_ptr<N64::Cartridge> gCartridge;
     std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
@@ -147,6 +153,7 @@ private:
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
     void ParseEnums(std::string& file);
+    void ParseHash();
     void ParseModdingConfig();
     void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);

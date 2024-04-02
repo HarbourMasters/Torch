@@ -84,8 +84,8 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto texture = std::static_pointer_cast<TextureData>(raw);
-    size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
     auto data = texture->mBuffer;
+    size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -260,11 +260,11 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
 
 
 std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
     uint32_t width;
     uint32_t height;
     uint32_t size;
-    auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     std::transform(format.begin(), format.end(), format.begin(), ::toupper);
 
@@ -288,7 +288,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         width = GetSafeNode<uint32_t>(node, "width");
         height = GetSafeNode<uint32_t>(node, "height");
     }
-    
+
     if((format == "CI4" || format == "CI8") && node["tlut"] && node["colors"]) {
         YAML::Node tlutNode;
         const auto tlutOffset = GetSafeNode<uint32_t>(node, "tlut");

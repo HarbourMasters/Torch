@@ -20,7 +20,7 @@
 #define SEGMENT_OFFSET(a) ((uint32_t)(a) & 0x00FFFFFF)
 #define SEGMENT_NUMBER(x) (((uint32_t)(x) >> 24) & 0xFF)
 // I would love to use 0x01000000, but the stupid compiler takes it as 0x01
-#define IS_SEGMENTED(x) (((uint32_t)(x) > 16777216) && (SEGMENT_NUMBER(x) < 0x20))
+#define IS_SEGMENTED(x) ((SEGMENT_NUMBER(x) > 0) && (SEGMENT_NUMBER(x) < 0x20))
 #define ASSET_PTR(x) (IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : (x))
 
 #define tab "\t"
@@ -37,7 +37,7 @@ enum class ExportType {
     Header,
     Code,
     Binary,
-    Modding,
+    Modding
 };
 
 template<typename T>
@@ -71,7 +71,7 @@ T GetSafeNode(YAML::Node& node, const std::string& key, const T& def) {
     return node[key].as<T>();
 }
 
-class IParsedData {};
+class IParsedData{};
 
 template<typename T>
 class GenericData : public IParsedData {
@@ -103,7 +103,10 @@ public:
     }
     virtual uint32_t GetAlignment() {
         return 4;
-    };
+    }
+    virtual std::optional<std::shared_ptr<IParsedData>> CreateDataPointer() {
+        return std::nullopt;
+    }
 private:
     virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() = 0;
 };

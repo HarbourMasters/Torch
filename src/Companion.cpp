@@ -15,6 +15,7 @@
 #include "factories/AudioHeaderFactory.h"
 #include "factories/SampleFactory.h"
 #include "factories/SequenceFactory.h"
+#include "factories/GenericArrayFactory.h"
 #include "factories/VtxFactory.h"
 #include "factories/MtxFactory.h"
 #include "factories/FloatFactory.h"
@@ -28,6 +29,7 @@
 #include "factories/Vec3sFactory.h"
 
 #include "factories/sm64/AnimationFactory.h"
+#include "factories/sm64/CollisionFactory.h"
 #include "factories/sm64/DialogFactory.h"
 #include "factories/sm64/DictionaryFactory.h"
 #include "factories/sm64/TextFactory.h"
@@ -80,12 +82,14 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("BANK", std::make_shared<BankFactory>());
     this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
     this->RegisterFactory("VEC3S", std::make_shared<Vec3sFactory>());
+    this->RegisterFactory("ARRAY", std::make_shared<GenericArrayFactory>());
 
     // SM64 specific
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
     this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
+    this->RegisterFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactory>());
     this->RegisterFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
 
     // MK64 specific
@@ -191,26 +195,22 @@ void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binar
     }
 
     std::optional<std::shared_ptr<IParsedData>> result;
-    if(this->gConfig.modding) {
-        if(impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
-
-            auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
-            if(!fs::exists(path)) {
-                SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
-                return;
-            }
-
-            std::ifstream input(path, std::ios::binary);
-            std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
-            input.close();
-
-            result = factory->get()->parse_modding(data, node);
-        } else {
-            result = factory->get()->parse(this->gRomData, node);
+    if(this->gConfig.modding && impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
+        auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
+        if(!fs::exists(path)) {
+            SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
+            return;
         }
+
+        std::ifstream input(path, std::ios::binary);
+        std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
+        input.close();
+
+        result = impl->parse_modding(data, node);
     } else {
-        result = factory->get()->parse(this->gRomData, node);
+        result = impl->parse(this->gRomData, node);
     }
+
     if(!result.has_value()){
         SPDLOG_ERROR("Failed to process {}", name);
         return;
@@ -400,6 +400,66 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
     }
 
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
+    this->gNodeForceProcessing = GetSafeNode<bool>(node, "force", false);
+}
+
+void Companion::ParseHash() {
+    const std::string out = "torch.hash.yml";
+
+    if(fs::exists(out)) {
+        this->gHashNode = YAML::LoadFile(out);
+    } else {
+        this->gHashNode = YAML::Node();
+    }
+}
+
+std::string ExportTypeToString(ExportType type) {
+    switch (type) {
+        case ExportType::Binary: return "Binary";
+        case ExportType::Header: return "Header";
+        case ExportType::Code: return "Code";
+        case ExportType::Modding: return "Modding";
+        default:
+            throw std::runtime_error("Invalid ExportType");
+    }
+}
+
+bool Companion::NodeHasChanges(const std::string& path) {
+
+    if(this->gConfig.modding) {
+        return true;
+    }
+
+    std::ifstream yaml(path);
+    const std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator( yaml ), {});
+    this->gCurrentHash = CalculateHash(data);
+    bool needsInit = true;
+
+    if(this->gHashNode[path]) {
+        auto entry = GetSafeNode<YAML::Node>(this->gHashNode, path);
+        const auto hash = GetSafeNode<std::string>(entry, "hash");
+        auto modes = GetSafeNode<YAML::Node>(entry, "extracted");
+        auto extracted = GetSafeNode<bool>(modes, ExportTypeToString(this->gConfig.exporterType));
+
+        if(hash == this->gCurrentHash) {
+            needsInit = false;
+            if(extracted) {
+                SPDLOG_INFO("Skipping {} as it has not changed", path);
+                return false;
+            }
+        }
+    }
+
+    if(needsInit) {
+        this->gHashNode[path] = YAML::Node();
+        this->gHashNode[path]["hash"] = this->gCurrentHash;
+        this->gHashNode[path]["extracted"] = YAML::Node();
+        for(size_t m = 0; m <= static_cast<size_t>(ExportType::Modding); m++) {
+            this->gHashNode[path]["extracted"][ExportTypeToString(static_cast<ExportType>(m))] = false;
+        }
+    }
+
+    return true;
 }
 
 void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot) {
@@ -584,6 +644,8 @@ void Companion::Process() {
         }
     }
 
+    this->ParseHash();
+
     SPDLOG_INFO("------------------------------------------------");
     spdlog::set_pattern(line);
 
@@ -704,6 +766,10 @@ void Companion::Process() {
             this->ParseCurrentFileConfig(root[":config"]);
         }
 
+        if(!this->NodeHasChanges(yamlPath) && !this->gNodeForceProcessing) {
+            continue;
+        }
+
         spdlog::set_pattern(regular);
         SPDLOG_INFO("------------------------------------------------");
         spdlog::set_pattern(line);
@@ -716,7 +782,6 @@ void Companion::Process() {
             if(entryName.find(":config") != std::string::npos) {
                 continue;
             }
-
 
             // Parse horizontal assets
             if(assetNode["files"]){
@@ -898,6 +963,8 @@ void Companion::Process() {
 
             file.close();
         }
+
+        this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
     }
 
     if(wrapper != nullptr) {
@@ -906,6 +973,12 @@ void Companion::Process() {
         vWriter.Close();
         wrapper->Close();
     }
+
+    // Write entries hash
+    std::ofstream file("torch.hash.yml", std::ios::binary);
+    file << this->gHashNode;
+    file.close();
+
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     auto level = spdlog::get_level();
     spdlog::set_level(spdlog::level::info);
@@ -975,6 +1048,8 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
 
     auto entry = std::make_tuple(output, node);
     this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = entry;
+
+
 
     return entry;
 }
@@ -1127,6 +1202,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
 
     auto rom = this->GetRomData();
     auto factory = this->GetFactory(type);
+
     if(!factory.has_value()) {
         return std::nullopt;
     }
