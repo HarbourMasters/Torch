@@ -29,6 +29,7 @@
 #include "factories/Vec3sFactory.h"
 
 #include "factories/sm64/AnimationFactory.h"
+#include "factories/sm64/CollisionFactory.h"
 #include "factories/sm64/DialogFactory.h"
 #include "factories/sm64/DictionaryFactory.h"
 #include "factories/sm64/TextFactory.h"
@@ -86,6 +87,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
     this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
+    this->RegisterFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactory>());
     this->RegisterFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
 
     // MK64 specific
