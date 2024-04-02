@@ -303,8 +303,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
     auto processing = true;
 
     while (processing){
-        auto w0 = BSWAP32(reader.ReadUInt32());
-        auto w1 = BSWAP32(reader.ReadUInt32());
+        auto w0 = reader.ReadUInt32();
+        auto w1 = reader.ReadUInt32();
 
         uint8_t opcode = w0 >> 24;
 
