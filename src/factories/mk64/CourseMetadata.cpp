@@ -279,6 +279,9 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
     for (const auto &yamls : m[dir]) {
         
         if (!yamls["course"]) {
+            for (auto &node : yamls) {
+                std::cout << node << std::endl;
+            }
             throw std::runtime_error("Course yaml missing root label of course\nEx. course:");
         }
 

@@ -36,6 +36,17 @@ public:
     friend std::ostream& operator<< (std::ostream& stream, const Vec3i& vec);
 };
 
+class Vec3iu {
+public:
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
+
+    Vec3iu(uint32_t xv = 0, uint32_t yv = 0, uint32_t zv = 0);
+    int width();
+    friend std::ostream& operator<< (std::ostream& stream, const Vec3iu& vec);
+};
+
 class Vec2f {
 public:
     float x;

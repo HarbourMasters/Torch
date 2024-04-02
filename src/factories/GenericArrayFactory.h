@@ -5,10 +5,10 @@
 #include <variant>
 #include <types/Vec3D.h>
 
-typedef std::variant<uint8_t, int8_t, uint16_t, int16_t, uint32_t, int32_t, uint64_t, float, double, Vec2f, Vec3f, Vec3s, Vec3i, Vec4f, Vec4s> ArrayDatum;
+typedef std::variant<uint8_t, int8_t, uint16_t, int16_t, uint32_t, int32_t, uint64_t, float, double, Vec2f, Vec3f, Vec3s, Vec3i, Vec3iu, Vec4f, Vec4s> ArrayDatum;
 
 enum class ArrayType {
-    u8, s8, u16, s16, u32, s32, u64, f32, f64, Vec2f, Vec3f, Vec3s, Vec3i, Vec4f, Vec4s,
+    u8, s8, u16, s16, u32, s32, u64, f32, f64, Vec2f, Vec3f, Vec3s, Vec3i, Vec3iu, Vec4f, Vec4s,
 };
 
 class GenericArray : public IParsedData {
