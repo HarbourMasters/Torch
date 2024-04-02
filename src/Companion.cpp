@@ -494,9 +494,12 @@ void Companion::ProcessTables(YAML::Node& rom) {
 
     // Write yaml data to console
     if (this->IsDebug()) {
+        SPDLOG_INFO("------ Metadata ouptut ------");
         for (auto &node : gCourseMetadata[dirs[0]]) {
             std::cout << node << std::endl;
+            SPDLOG_INFO("------------");
         }
+        SPDLOG_INFO("------ Metadata end ------");
     }
 }
 
