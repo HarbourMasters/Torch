@@ -1,6 +1,6 @@
 #include "AnimationFactory.h"
 #include "spdlog/spdlog.h"
-#include <Decompressor.h>
+#include "utils/Decompressor.h"
 
 #define ANIMINDEX_COUNT(boneCount) (sizeof(boneCount) + 1) * 6 * sizeof(uint16_t)
 
