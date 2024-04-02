@@ -5,8 +5,6 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
-#include <cstdlib>
-
 #define FORMAT_INT(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
 #define GET_MAG(num) ((uint32_t)((abs(int(num)) > 1) ? std::log10(abs(int(num))) + 1 : 1))
