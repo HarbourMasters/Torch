@@ -316,6 +316,24 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         result = alloc_ia8_text_from_i1(reinterpret_cast<uint16_t*>(segment.data), 8, 16);
     } else {
         result = std::vector(segment.data, segment.data + segment.size);
+
+        size_t byteSize = std::max(1, (int) (fmt.depth / 8));
+
+        if(byteSize == sizeof(uint16_t)){
+            std::vector<uint16_t> temp;
+            for(int i = 0; i < result.size(); i+=2){
+                temp.push_back(BSWAP16(*(uint16_t*) &result[i]));
+            }
+            result = std::vector<uint8_t>((uint8_t*) temp.data(), (uint8_t*) temp.data() + temp.size() * sizeof(uint16_t));
+        } else if(byteSize == sizeof(uint32_t)){
+            std::vector<uint16_t> temp;
+            for(int i = 0; i < result.size(); i+=4){
+                temp.push_back(BSWAP32(*(uint32_t*) &result[i]));
+            }
+            result = std::vector<uint8_t>((uint8_t*) temp.data(), (uint8_t*) temp.data() + temp.size() * sizeof(uint32_t));
+        } else {
+            result = std::vector(segment.data, segment.data + segment.size);
+        }
     }
 
     SPDLOG_INFO("Texture: {}", format);
