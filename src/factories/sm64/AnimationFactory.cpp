@@ -34,18 +34,18 @@ ExportResult SM64::AnimationBinaryExporter::Export(std::ostream &write, std::sha
 std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = node["offset"];
 
-	LUS::BinaryReader header = Decompressor::AutoDecode(node, buffer).GetReader();
-	header.SetEndianness(LUS::Endianness::Big);
+    LUS::BinaryReader header = Decompressor::AutoDecode(node, buffer).GetReader();
+    header.SetEndianness(LUS::Endianness::Big);
 
-	auto flags = header.ReadInt16();
-	auto animYTransDivisor = header.ReadInt16();
-	auto startFrame = header.ReadInt16();
-	auto loopStart = header.ReadInt16();
-	auto loopEnd = header.ReadInt16();
-	auto unusedBoneCount = header.ReadInt16();
+    auto flags = header.ReadInt16();
+    auto animYTransDivisor = header.ReadInt16();
+    auto startFrame = header.ReadInt16();
+    auto loopStart = header.ReadInt16();
+    auto loopEnd = header.ReadInt16();
+    auto unusedBoneCount = header.ReadInt16();
     auto valuesAddr = header.ReadUInt32();
     auto indexAddr = header.ReadUInt32();
-	auto length = header.ReadUInt32();
+    auto length = header.ReadUInt32();
 
     size_t indexLength = ANIMINDEX_COUNT(unusedBoneCount);
     LUS::BinaryReader indices = Decompressor::AutoDecode(indexAddr, indexLength * sizeof(uint16_t), buffer).GetReader();
@@ -55,9 +55,9 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
         indicesData.push_back(indices.ReadInt16());
     }
 
-	size_t valuesSize = (indexAddr - valuesAddr);
+    size_t valuesSize = (indexAddr - valuesAddr);
     LUS::BinaryReader values = Decompressor::AutoDecode(valuesAddr, valuesSize, buffer).GetReader();
-	values.SetEndianness(LUS::Endianness::Big);
+    values.SetEndianness(LUS::Endianness::Big);
     std::vector<uint16_t> valuesData;
     for (size_t i = 0; i < valuesSize / sizeof(uint16_t); i++) {
         valuesData.push_back(values.ReadUInt16());
