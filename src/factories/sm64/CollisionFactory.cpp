@@ -229,6 +229,12 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
         count += 6;
     }
 
+    write << fourSpaceTab;
+    write << "COL_END()";
+    ++count;
+
+    write << "};\n";
+
     if (Companion::Instance->IsDebug()) {
         write << "// size: 0x" << std::hex << std::uppercase << "" << "\n";
     }
