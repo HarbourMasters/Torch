@@ -830,13 +830,16 @@ void Companion::Process() {
                 }
 
                 if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code){
-                    uint32_t startptr = ASSET_PTR(result.endptr.value());
-                    uint32_t end = ASSET_PTR(entries[i + 1].addr);
+                    int32_t startptr = ASSET_PTR(result.endptr.value());
+                    int32_t end = ASSET_PTR(entries[i + 1].addr);
 
                     uint32_t alignment = entries[i + 1].alignment;
                     int32_t gap = end - startptr;
 
-                    if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
+                    if(gap < 0) {
+                        stream << "// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << std::abs(gap) << "\n";
+                        SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
+                    } else if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
                         SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
                         SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
                         const auto padfile = this->gCurrentDirectory.filename().string();
@@ -855,12 +858,7 @@ void Companion::Process() {
                             stream << "\n";
                         }
                     } else if(gap > 0x10) {
-                        stream << "\n// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
-                    }
-
-                    if(gap < 0) {
-                        stream << "\n// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << "\n";
-                        SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X}", startptr, end);
+                        stream << "// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
                     }
                 }
             }

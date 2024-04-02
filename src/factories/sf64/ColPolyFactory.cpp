@@ -38,22 +38,20 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     for(SF64::CollisionPoly poly : colpolys->mPolys) {
         write << "\n" << fourSpaceTab;
         write << "{ " << NUM(poly.tri, width) << ",  ";
-        if (poly.unk_06 == 0) {
-            write << "0,  ";
-        } else {
-            SPDLOG_INFO("SF64:COLPOLY alert: Nonzero value of unk_06");
-            write << "/* ALERT: NONZERO */ " << poly.unk_06 << ",  ";
+        if (poly.unk_06 != 0) {
+            SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
+            write << "/* ALERT: NONZERO PAD */ ";
         }
-        write << NUM(poly.norm, 6) << ",  ";
+        write << "{" << NUM(poly.norm, 6) << ",  ";
         if(poly.unk_0E != 0) {
             SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
             write << "/* ALERT: NONZERO PAD */ ";
         }
-        write << NUM(poly.dist, 9) << "}, ";
+        write << NUM(poly.dist, 9) << "} }, ";
     }
 
     write << "\n};\n";
-    int endOffset = ASSET_PTR(offset) + colpolys->mPolys.size() * sizeof(SF64::CollisionPoly);
+    uint32_t endOffset = ASSET_PTR(offset) + colpolys->mPolys.size() * sizeof(SF64::CollisionPoly);
     if (Companion::Instance->IsDebug()) {
         write << "// CollisionPoly count: " << colpolys->mPolys.size() << "\n";
         write << "// 0x" << std::uppercase << std::hex << endOffset << "\n";
@@ -99,7 +97,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
     auto meshOffset = GetSafeNode<uint32_t>(node, "mesh_offset", offset + count * sizeof(SF64::CollisionPoly));
     for(int j = 0; j < meshCount; j++) {
         YAML::Node meshNode;
-        
+
         if(node["mesh_symbol"]) {
             auto meshSymbol = GetSafeNode<std::string>(node, "mesh_symbol");
             if (meshSymbol.find("OFFSET") == std::string::npos) {
@@ -119,7 +117,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
         meshNode["offset"] = meshOffset;
 
         meshNode = Companion::Instance->AddAsset(meshNode).value();
-        
+
         meshNodes.push_back(meshNode);
         meshOffset += meshSize * sizeof(Vec3s);
     }
