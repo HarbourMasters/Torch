@@ -2,7 +2,7 @@
 #include "Companion.h"
 #include "spdlog/spdlog.h"
 
-#define FORMAT_HEX(x) std::hex << x << std::dec
+#define FORMAT_HEX(x) std::hex << "0x" << std::uppercase << x << std::nouppercase << std::dec
 
 std::unordered_map<int16_t, SpecialPresetTypes> specialPresetMap = {
     { 0x00, SpecialPresetTypes::SPTYPE_YROT_NO_PARAMS },
@@ -220,6 +220,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
     }
     for (auto &envRegionBox : collision->mEnvRegionBoxes) {
         write << fourSpaceTab;
+        write << "COL_WATER_BOX(";
         write << envRegionBox.id << ", ";
         write << envRegionBox.x1 << ", ";
         write << envRegionBox.z1 << ", ";
@@ -412,9 +413,11 @@ std::optional<std::shared_ptr<IParsedData>> SM64::CollisionFactory::parse(std::v
                 switch (type) {
                     case SpecialPresetTypes::SPTYPE_YROT_NO_PARAMS:
                         extraParams.emplace_back(reader.ReadInt16());
+                        break;
                     case SpecialPresetTypes::SPTYPE_PARAMS_AND_YROT:
                         extraParams.emplace_back(reader.ReadInt16());
                         extraParams.emplace_back(reader.ReadInt16());
+                        break;
                     case SpecialPresetTypes::SPTYPE_UNKNOWN:
                         extraParams.emplace_back(reader.ReadInt16());
                         extraParams.emplace_back(reader.ReadInt16());
