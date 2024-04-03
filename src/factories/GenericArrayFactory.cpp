@@ -83,11 +83,11 @@ GenericArray::GenericArray(std::vector<ArrayDatum> data) : mData(std::move(data)
     for (auto &datum : mData) {
         switch (static_cast<ArrayType>(datum.index())) {
             case ArrayType::u8: {
-                mMaxWidth = std::max(mMaxWidth, GET_MAG_U(std::get<uint32_t>(datum)));
+                mMaxWidth = std::max(mMaxWidth, GET_MAG_U((uint32_t)std::get<uint8_t>(datum)));
                 break;
             }
             case ArrayType::s8: {
-                mMaxWidth = std::max(mMaxWidth, GET_MAG(std::get<int32_t>(datum)));
+                mMaxWidth = std::max(mMaxWidth, GET_MAG((int32_t)std::get<int8_t>(datum)));
                 break;
             }
             case ArrayType::u16: {
@@ -192,10 +192,10 @@ ExportResult ArrayCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         }
         switch (static_cast<ArrayType>(datum.index())) {
             case ArrayType::u8:
-                write << FORMAT_INT(std::get<uint8_t>(datum), array->mMaxWidth) << ", ";
+                write << FORMAT_INT((uint32_t)std::get<uint8_t>(datum), array->mMaxWidth) << ", ";
                 break;
             case ArrayType::s8:
-                write << FORMAT_INT(std::get<int8_t>(datum), array->mMaxWidth) << ", ";
+                write << FORMAT_INT((int32_t)std::get<int8_t>(datum), array->mMaxWidth) << ", ";
                 break;
             case ArrayType::u16:
                 write << FORMAT_INT(std::get<uint16_t>(datum), array->mMaxWidth) << ", ";
@@ -249,6 +249,105 @@ ExportResult ArrayCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
 }
 
 ExportResult ArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    const auto type = GetSafeNode<std::string>(node, "array_type");
+    auto array = std::static_pointer_cast<GenericArray>(raw);
+
+    if (arrayTypeMap.find(type) == arrayTypeMap.end()) {
+        SPDLOG_ERROR("Unknown Generic Array type '{}'", type);
+        throw std::runtime_error("Unknown Generic Array type " + type);
+    }
+
+    ArrayType arrayType = arrayTypeMap.at(type);
+
+    WriteHeader(writer, LUS::ResourceType::Blob, 0);
+    writer.Write((uint32_t) array->mData.size());
+
+    for (auto &datum : array->mData) {
+        switch (static_cast<ArrayType>(datum.index())) {
+            case ArrayType::u8: {
+                writer.Write(std::get<uint8_t>(datum));
+                break;
+            }
+            case ArrayType::s8: {
+                writer.Write(std::get<int8_t>(datum));
+                break;
+            }
+            case ArrayType::u16: {
+                writer.Write(std::get<uint16_t>(datum));
+                break;
+            }
+            case ArrayType::s16: {
+                writer.Write(std::get<int16_t>(datum));
+                break;
+            }
+            case ArrayType::u32: {
+                writer.Write(std::get<uint32_t>(datum));
+                break;
+            }
+            case ArrayType::s32: {
+                writer.Write(std::get<int32_t>(datum));
+                break;
+            }
+            case ArrayType::u64: {
+                writer.Write(std::get<uint64_t>(datum));
+                break;
+            }
+            case ArrayType::f32: {
+                writer.Write(std::get<float>(datum));
+                break;
+            }
+            case ArrayType::f64: {
+                writer.Write(std::get<double>(datum));
+                break;
+            }
+            case ArrayType::Vec2f: {
+                auto [x, y] = std::get<Vec2f>(datum);
+                writer.Write(x);
+                writer.Write(y);
+                break;
+            }
+            case ArrayType::Vec3f: {
+                auto [x, y, z] = std::get<Vec3f>(datum);
+                writer.Write(x);
+                writer.Write(y);
+                writer.Write(z);
+                break;
+            }
+            case ArrayType::Vec3s: {
+                auto [x, y, z] = std::get<Vec3s>(datum);
+                writer.Write(x);
+                writer.Write(y);
+                writer.Write(z);
+                break;
+            }
+            case ArrayType::Vec3i: {
+                auto [x, y, z] = std::get<Vec3i>(datum);
+                writer.Write(x);
+                writer.Write(y);
+                writer.Write(z);
+                break;
+            }
+            case ArrayType::Vec4f: {
+                auto [x, y, z, w] = std::get<Vec4f>(datum);
+                writer.Write(x);
+                writer.Write(y);
+                writer.Write(z);
+                writer.Write(w);
+                break;
+            }
+            case ArrayType::Vec4s: {
+                auto [x, y, z, w] = std::get<Vec4s>(datum);
+                writer.Write(x);
+                writer.Write(y);
+                writer.Write(z);
+                writer.Write(w);
+                break;
+            }
+        }
+    }
+
+    writer.Finish(write);
     return std::nullopt;
 }
 
