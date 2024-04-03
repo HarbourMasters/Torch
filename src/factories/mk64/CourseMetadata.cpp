@@ -39,6 +39,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     if (file.is_open()) {
        // file << "char *gCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
+            if (m.name == "null") { continue; }
             // Remove debug line once proven that sort worked right (start at id 0 and go up)
             SPDLOG_INFO("Processing Course Id: "+std::to_string(m.id));
             file << '"' << m.name << "\", ";
@@ -49,10 +50,11 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         throw std::runtime_error("Course metadata output folder is likely bad or the file is in-use");
     }
 
-    file.open(outDir+"gDebugCourseNames.inc.c");
+    file.open(outDir+"gCourseDebugNames.inc.c");
     if (file.is_open()) {
        // file << "char *gDebugCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
+            if (m.name == "null") { continue; }
             file << '"' << m.debugName << "\", ";
         }
         //file << "\n};\n\n";
@@ -63,6 +65,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     if (file.is_open()) {
         //file << "char *gCupSelectionByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
+            if (m.cup == "null") { continue; }
             file << m.cup << ", ";
         }
        // file << "\n};\n\n";
@@ -73,29 +76,48 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     if (file.is_open()) {
         //file << "const u8 gPerCupIndexByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
+            if (m.cupIndex == -1) { continue; }
             file << m.cupIndex << ", ";
         }
         //file << "\n};\n\n";
         file.close();
     }
 
-    file.open(outDir+"gWaypointWidth.inc.c");
+    file.open(outDir+"sCourseLengths.inc.c");
     if (file.is_open()) {
-       // file << "f32 gWaypointWidth[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
-            file << m.waypointWidth << ", ";
+            if (m.courseLength == "null") { continue; }
+            file << '"' << m.courseLength << "\", ";
         }
-       // file << "\n};\n\n";
         file.close();
     }
 
-    file.open(outDir+"gWaypointWidth2.inc.c");
+    file.open(outDir+"gKartAIBehaviourLUT.inc.c");
     if (file.is_open()) {
-        file << "f32 gWaypointWidth2[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
-            file << m.waypointWidth2 << ", ";
+            file << m.kartAIBehaviourLUT << ", ";
         }
-        file << "\n};\n\n";
+        file << 0; // @WARNING TRAILING ZERO IN ARRAY
+        file.close();
+    }
+
+    file.open(outDir+"gKartAICourseMaximumSeparation.inc.c");
+    if (file.is_open()) {
+        // file << "f32 gWaypointWidth[] = {\n" << fourSpaceTab;
+        for (const auto& m : metadata) {
+            file << m.kartAIMaximumSeparation << ", ";
+        }
+        // file << "\n};\n\n";
+        file.close();
+    }
+
+    file.open(outDir+"gKartAICourseMinimumSeparation.inc.c");
+    if (file.is_open()) {
+        // file << "f32 gWaypointWidth2[] = {\n" << fourSpaceTab;
+        for (const auto& m : metadata) {
+            file << m.kartAIMinimumSeparation << ", ";
+        }
+        // file << "\n};\n\n";
         file.close();
     }
 
@@ -110,20 +132,23 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     }
 
     file.open(outDir+"gCPUSteeringSensitivity.inc.c");
+
+    // @WARNING THIS FILE HAS A TRAILING ZERO
     if (file.is_open()) {
         //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << m.steeringSensitivity << ", ";
         }
+        file << 0;
         //file << "\n};\n\n";
         file.close();
     }
 
-    file.open(outDir+"gCourseBombKartSpawns.inc.c");
+    file.open(outDir+"gBombKartSpawns.inc.c");
     if (file.is_open()) {
         //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
-            file << "// " << m.name << "\n";
+            file << "{ // " << m.name << "\n";
             for (const auto& bombKart : m.bombKartSpawns) {
                 file << "{ ";
                 file << bombKart.waypointIndex << ", ";
@@ -135,6 +160,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
                 file << bombKart.unk14;
                 file << " },\n";
             }
+            file << "},\n";
         }
         file.close();
     }
@@ -293,10 +319,12 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         data.name =                 GetSafeNode<std::string>(metadata, "name");
         data.debugName =            GetSafeNode<std::string>(metadata, "debug_name");
         data.cup =                  GetSafeNode<std::string>(metadata, "cup");
-        data.cupIndex =             GetSafeNode<uint32_t>(metadata, "cup_index");
+        data.cupIndex =             GetSafeNode<int32_t>(metadata, "cup_index");
+        data.courseLength =         GetSafeNode<std::string>(metadata, "course_length");
 
-        data.waypointWidth =        GetSafeNode<std::string>(metadata, "waypoint_width");
-        data.waypointWidth2 =       GetSafeNode<std::string>(metadata, "waypoint_width2");
+        data.kartAIBehaviourLUT =        GetSafeNode<std::string>(metadata, "kart_ai_behaviour_ptr");
+        data.kartAIMaximumSeparation =        GetSafeNode<std::string>(metadata, "kart_ai_maximum_separation");
+        data.kartAIMinimumSeparation =       GetSafeNode<std::string>(metadata, "kart_ai_minimum_separation");
 
         data.D_800DCBB4 =           GetSafeNode<std::string>(metadata, "D_800DCBB4");
         data.steeringSensitivity =  GetSafeNode<uint32_t>(metadata, "cpu_steering_sensitivity");
@@ -305,7 +333,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
             data.bombKartSpawns.push_back(BombKartSpawns({
                 bombKart[0].as<uint16_t>(),
                 bombKart[1].as<uint16_t>(),
-                bombKart[2].as<float>(),
+                bombKart[2].as<std::string>(), // Parse as string because floating-point outputs incorrect values.
                 bombKart[3].as<float>(),
                 bombKart[4].as<float>(),
                 bombKart[5].as<float>(),

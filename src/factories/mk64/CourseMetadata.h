@@ -7,7 +7,7 @@ namespace MK64 {
     struct BombKartSpawns {
         uint16_t waypointIndex;
         uint16_t startingState;
-        float unk_04;
+        std::string unk_04;
         float x;
         float z;
         float unk10;
@@ -19,9 +19,11 @@ namespace MK64 {
         std::string name;
         std::string debugName;
         std::string cup;
-        uint32_t cupIndex;
-        std::string waypointWidth;
-        std::string waypointWidth2;
+        int32_t cupIndex;
+        std::string courseLength;
+        std::string kartAIBehaviourLUT;
+        std::string kartAIMaximumSeparation;
+        std::string kartAIMinimumSeparation;
         std::string D_800DCBB4;
         uint32_t steeringSensitivity;
         std::vector<BombKartSpawns> bombKartSpawns;

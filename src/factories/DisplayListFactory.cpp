@@ -313,24 +313,27 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         }
 
         if(opcode == GBI(G_DL)) {
+            if (SEGMENT_NUMBER(node["offset"].as<uint32_t>()) == SEGMENT_NUMBER(w1)) {
 
-            std::optional<uint32_t> segment;
+                std::optional<uint32_t> segment;
 
-            if ((w0 >> 16) & G_DL_NO_PUSH) {
-                SPDLOG_INFO("Branch List Command Found");
-                processing = false;
+                if ((w0 >> 16) & G_DL_NO_PUSH) {
+                    SPDLOG_INFO("Branch List Command Found");
+                    processing = false;
+                }
+
+                YAML::Node gfx;
+                gfx["type"] = "GFX";
+                gfx["offset"] = w1;
+
+                Companion::Instance->AddAsset(gfx);
             }
-
-            YAML::Node gfx;
-            gfx["type"] = "GFX";
-            gfx["offset"] = w1;
-            Companion::Instance->AddAsset(gfx);
         }
 
 	    // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
 	    // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
         if(opcode == GBI(G_MOVEMEM)) {
-	    // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
+	        // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
 	        uint8_t subcommand = (w0 >> 16) & 0xFF;
             uint8_t index = 0;
             uint8_t offset = 0;
