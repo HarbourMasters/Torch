@@ -5,6 +5,8 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
+#include "storm/SWrapper.h"
+
 SF64::ScriptData::ScriptData(std::vector<uint32_t> ptrs, std::vector<uint16_t> cmds, std::map<uint32_t, int> sizeMap, uint32_t ptrsStart, uint32_t cmdsStart): mPtrs(ptrs), mCmds(cmds), mSizeMap(sizeMap), mPtrsStart(ptrsStart), mCmdsStart(cmdsStart) {
 
 }
@@ -138,6 +140,54 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
 }
 
 ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto scriptWriter = LUS::BinaryWriter();
+    auto script = std::static_pointer_cast<SF64::ScriptData>(raw);
+    auto sortedPtrs = script->mPtrs;
+    std::sort(sortedPtrs.begin(), sortedPtrs.end());
+    uint32_t ptrCount = 0;
+    uint32_t cmdIndex = 0;
+    std::unordered_map<uint32_t, uint64_t> ptrMap;
+
+    // Export Commands and Populate Hashes Map
+    for (auto ptr : sortedPtrs) {
+        auto wrapper = Companion::Instance->GetCurrentWrapper();
+        std::ostringstream stream;
+        stream.str("");
+        stream.clear();
+
+        auto cmdWriter = LUS::BinaryWriter();
+        WriteHeader(cmdWriter, LUS::ResourceType::ScriptCmd, 0);
+
+        auto cmdCount = script->mSizeMap.at(ptr) / 2;
+        cmdWriter.Write((uint32_t) cmdCount);
+
+        // Writing in pairs for readability
+        for (uint32_t i = 0; i < cmdCount; ++i) {
+            cmdWriter.Write(script->mCmds.at(cmdIndex++));
+            cmdWriter.Write(script->mCmds.at(cmdIndex++));
+        }
+
+        cmdWriter.Finish(stream);
+
+        auto data = stream.str();
+        wrapper->CreateFile(entryName + "_cmd_" + std::to_string(ptrCount), std::vector(data.begin(), data.end()));
+
+        std::ostringstream cmdName;
+        cmdName << symbol << "_cmd_" << std::dec << ptrCount;
+        ptrMap[ptr] = CRC64(cmdName.str().c_str());
+        ptrCount++;
+    }
+
+    // Export Script
+    WriteHeader(scriptWriter, LUS::ResourceType::Script, 0);
+    scriptWriter.Write((uint32_t) script->mPtrs.size());
+    for (auto &ptr : script->mPtrs) {
+        scriptWriter.Write(ptrMap.at(ptr));
+    }
+
+    scriptWriter.Finish(write);
+
     return std::nullopt;
 }
 

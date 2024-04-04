@@ -52,6 +52,20 @@ ExportResult SF64::TriangleCodeExporter::Export(std::ostream &write, std::shared
 }
 
 ExportResult SF64::TriangleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto triData = std::static_pointer_cast<TriangleData>(raw);
+
+    WriteHeader(writer, LUS::ResourceType::Vec3s, 0);
+    writer.Write((uint32_t) triData->mTris.size());
+
+    for(Vec3s tri : triData->mTris) {
+        auto [x, y, z] = tri;
+        writer.Write(x);
+        writer.Write(y);
+        writer.Write(z);
+    }
+
+    writer.Finish(write);
     return std::nullopt;
 }
 
