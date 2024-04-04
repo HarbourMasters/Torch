@@ -25,6 +25,9 @@ ExportResult SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_
     write << "ObjectInit " << symbol << "[] = {\n";
     for(auto& obj : objs) {
         auto enumName = Companion::Instance->GetEnumFromValue("ObjectId", obj.id).value_or(std::to_string(obj.id));
+        if(obj.id >= 1000) {
+            enumName = "ACTOR_EVENT_ID + " + std::to_string(obj.id - 1000);
+        }
         write << fourSpaceTab << "{ ";
         write << FLOAT(obj.zPos1, 8) << ", ";
         write << NUM(obj.zPos2, 7) << ", ";

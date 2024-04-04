@@ -55,10 +55,27 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 104:
             cmd << "EVENT_INIT_ACTOR(" << std::dec << arg1 << ", " << s2 << ")";
             break;
+        case 113:
+            cmd << "EVENT_ADD_TO_GROUP(" << std::dec << s2 << ", " << arg1 << ")";
+            break;
+        case 116: {
+            auto itemtype = Companion::Instance->GetEnumFromValue("ItemDrop", s2).value_or("/* DROP_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_DROP_ITEM(" << itemtype << ")";
+        } break;
+        case 118: 
+            cmd << "EVENT_SET_REVERB(" << std::dec << s2 << ")";
+            break;
+        case 119: {
+            auto groundtype = Companion::Instance->GetEnumFromValue("GroundType", s2).value_or("/* GROUNDTYPE_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_SET_GROUND(" << groundtype << ")";
+        } break;
         case 120: {
             auto rcidName = Companion::Instance->GetEnumFromValue("RadioCharacterId", arg1).value_or("/* RCID_UNK */ " + std::to_string(arg1));
             cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << std::setw(5) << s2 << ")";
         } break;
+        case 122: 
+            cmd << "EVENT_STOP_BGM()";
+            break;
         case 124: {
             auto color = Companion::Instance->GetEnumFromValue("TexLineColor", s2).value_or("/* TXLC_UNK */ " + std::to_string(s2));
             cmd << "EVENT_MAKE_TEXLINE(" << color << ")";
@@ -77,7 +94,6 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             break;
     }
     
-
     return cmd.str();
 }
 
@@ -93,7 +109,7 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
 
     for(int i = 0; i < sortedPtrs.size(); i++) {
         std::ostringstream scriptDefaultName;
-        scriptDefaultName << symbol << "_cmds_" << std::uppercase << std::hex << cmdOff;
+        scriptDefaultName << symbol << "_script_" << std::dec << i << "_" << std::uppercase << std::hex << cmdOff;
 
         if (Companion::Instance->IsDebug()) {
             write << "// 0x" << std::hex << std::uppercase << cmdOff << "\n";
@@ -130,7 +146,7 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
     write << "\n};\n";
 
     if (Companion::Instance->IsDebug()) {
-        write << "// count: " << script->mPtrs.size() << " events\n";
+        write << "// count: " << std::dec << script->mPtrs.size() << " events\n";
     }
 
     return OffsetEntry {
