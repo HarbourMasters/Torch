@@ -59,6 +59,20 @@ ExportResult Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
 }
 
 ExportResult Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto vecData = std::static_pointer_cast<Vec3fData>(raw);
+
+    WriteHeader(writer, LUS::ResourceType::Vec3f, 0);
+    writer.Write((uint32_t) vecData->mVecs.size());
+
+    for(Vec3f v : vecData->mVecs) {
+        auto [x, y, z] = v;
+        writer.Write(x);
+        writer.Write(y);
+        writer.Write(z);
+    }
+    
+    writer.Finish(write);
     return std::nullopt;
 }
 

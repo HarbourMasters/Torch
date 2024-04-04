@@ -54,6 +54,31 @@ ExportResult SF64::EnvSettingsCodeExporter::Export(std::ostream &write, std::sha
 }
 
 ExportResult SF64::EnvSettingsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto envSettings = std::static_pointer_cast<SF64::EnvSettingsData>(raw);
+
+    WriteHeader(writer, LUS::ResourceType::EnvSettings, 0);
+
+    writer.Write(envSettings->mType);
+    writer.Write(envSettings->mUnk_04);
+    writer.Write(envSettings->mBgColor);
+    writer.Write(envSettings->mSeqId);
+    writer.Write(envSettings->mFogR);
+    writer.Write(envSettings->mFogG);
+    writer.Write(envSettings->mFogB);
+    writer.Write(envSettings->mFogN);
+    writer.Write(envSettings->mFogF);
+    writer.Write(envSettings->mUnk_20.x);
+    writer.Write(envSettings->mUnk_20.y);
+    writer.Write(envSettings->mUnk_20.z);
+    writer.Write(envSettings->mLightR);
+    writer.Write(envSettings->mLightG);
+    writer.Write(envSettings->mLightB);
+    writer.Write(envSettings->mAmbR);
+    writer.Write(envSettings->mAmbG);
+    writer.Write(envSettings->mAmbB);
+
+    writer.Finish(write);
     return std::nullopt;
 }
 
