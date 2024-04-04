@@ -31,10 +31,11 @@ ExportResult SF64::EnvSettingsCodeExporter::Export(std::ostream &write, std::sha
     write << std::dec << env->mType << ", ";
     write << env->mUnk_04 << ", ";
     write << env->mBgColor << ", ";
-    if(env->mSeqId < 0x8000) {
-        write << env->mSeqId << ", ";
+    if (env->mSeqId == 0xFFFF) {
+        write << "SEQ_ID_NONE, ";
     } else {
-        write << env->mSeqId - 0x8000 << " | 0x8000, ";
+        auto seqId = Companion::Instance->GetEnumFromValue("BgmSeqIds", env->mSeqId & 0xFF).value_or("/* SEQ_ID_UNK */ " + std::to_string(env->mSeqId));
+        write << seqId << ((env->mSeqId < 0x8000) ? "" : " | SEQ_FLAG") << ", ";
     }
     write << env->mFogR << ", ";
     write << env->mFogG << ", ";
