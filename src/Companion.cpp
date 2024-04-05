@@ -1233,3 +1233,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
 
     return std::nullopt;
 }
+
+void Companion::AddTlutTextureMap(std::string index, std::shared_ptr<TextureData> entry) {
+    this->TlutTextureMap[index] = entry;
+}

@@ -25,6 +25,8 @@
 #define SCALE_3_8(VAL_) ((VAL_) * 0x24)
 #define SCALE_8_3(VAL_) ((VAL_) / 0x24)
 
+unsigned short magicFiller = 0x07FE;
+
 typedef struct {
     enum {
         IMG_FORMAT_RGBA,
@@ -125,8 +127,8 @@ ia* raw2ia(const uint8_t* raw, int width, int height, int depth) {
     return img;
 }
 
-ci* raw2ci_torch(const uint8_t* raw, int width, int height, int depth) {
-    ci* img = NULL;
+ci *raw2ci_torch(const uint8_t* raw, int width, int height, int depth) {
+    ci *img = NULL;
     int img_size;
 
     img_size = width * height * sizeof(*img);
@@ -308,6 +310,79 @@ int ia2raw(uint8_t* raw, const ia* img, int width, int height, int depth) {
     return size;
 }
 
+
+/**
+ * Check 2 rgba structs for equality. 0 if unequal, 1 if equal
+**/
+int comp_rgba(const rgba left, const rgba right) {
+   if ((left.red != right.red) || (left.green != right.green) || (left.blue != right.blue) || (left.alpha != right.alpha)) {
+      return 0;
+   } else {
+      return 1;
+   }
+}
+
+/**
+ * Check if a given rgba (comp) is in a given palette (pal, represented as an array of rgba structs)
+ * If found, return the index in pal it was found out
+ * Otherwise, return -1
+**/
+int get_color_index(const rgba comp, const rgba *pal, int mask_value, int pal_size) {
+   int pal_idx;
+   // The starting values used here are super specific to MK64, they're not really portable to anything else
+   if (mask_value == 0) {
+      pal_idx = 0;
+   } else {
+      pal_idx = 0xC0;
+   }
+   for (; pal_idx < pal_size; pal_idx++) {
+      if (comp_rgba(comp, pal[pal_idx]) == 1) return pal_idx;
+   }
+   ERROR("Could not find a color in the palette\n");
+   ERROR("comp: %x%x%x%x\n", comp.red, comp.green, comp.blue, comp.alpha);
+   return -1;
+}
+
+/**
+ * Takes an image (img, an array of rgba structs) and a palette (pal, also an array of rgba structs)
+ * Sets the values of rawci (8 bit color index array) to the appropriate index in pal that each entry in img can be found at
+ * If a value in img is not found in pal, return 0, indicating an error
+ * Returns 1 if all values in img are found somewhere in pal
+**/
+int imgpal2rawci(uint8_t *rawci, const rgba *img, const rgba *pal, const uint8_t *wheel_mask, int raw_size, int ci_depth, int img_size, int pal_size) {
+   int img_idx;
+   int pal_idx;
+   int mask_value;
+   memset(rawci, 0, raw_size);
+
+   for (img_idx = 0; img_idx < img_size; img_idx++) {
+      if (wheel_mask != NULL) {
+         mask_value = wheel_mask[img_idx];
+      } else {
+         mask_value = 0;
+      }
+      pal_idx = get_color_index(img[img_idx], pal, mask_value, pal_size);
+      if (pal_idx != -1) {
+         switch (ci_depth) {
+            case 8:
+                  rawci[img_idx] = pal_idx;
+               break;
+            case 4:
+            {
+               int byte_idx = img_idx / 2;
+               int nibble = 1 - (img_idx % 2);
+               uint8_t mask = 0xF << (4 * (1 - nibble));
+               rawci[byte_idx] = (rawci[byte_idx] & mask) | (pal_idx << (4 * nibble));
+               break;
+            }
+         }
+      } else {
+         return 0;
+      }
+   }
+   return 1;
+}
+
 int i2raw(uint8_t* raw, const ia* img, int width, int height, int depth) {
     int size = width * height * depth / 8;
     INFO("Converting I%d %dx%d to raw\n", depth, width, height);
@@ -338,7 +413,7 @@ int i2raw(uint8_t* raw, const ia* img, int width, int height, int depth) {
     return size;
 }
 
-int ci2raw_torch(uint8_t* raw, const ci* img, int width, int height, int depth) {
+int ci2raw_torch(uint8_t *raw, const ci *img, int width, int height, int depth) {
     int size = width * height * depth / 8;
     INFO("Converting I%d %dx%d to raw\n", depth, width, height);
 
@@ -420,7 +495,7 @@ int ia2png(unsigned char** png_output, int* size_output, const ia* img, int widt
     return ret;
 }
 
-int ci2png(unsigned char** png_output, int* size_output, const ci* img, int width, int height) {
+int ci2png(unsigned char **png_output, int *size_output, const ci *img, int width, int height) {
     int ret = 0;
 
     // convert to format stb_image_write expects
@@ -743,4 +818,36 @@ const char* n64graphics_get_read_version(void) {
 
 const char* n64graphics_get_write_version(void) {
     return "stb_image_write 1.09";
+}
+
+/**
+ * Converts binary ci8 + palette to a single .png
+ */
+int convert_raw_to_ci8(unsigned char **png_output, int *size_output, uint8_t *texture, uint8_t *palette, int format, int width, int height, int depth) {
+FILE *pal_fp;
+               uint8_t *pal;
+               uint8_t *raw_fmt;
+               rgba *imgr;
+               ia   *imgi;
+               int pal_size;
+               int res;
+
+               raw_fmt = ci2raw(texture, palette, width, height, depth);
+               switch (format) {
+                  case IMG_FORMAT_RGBA:
+                     INFO("Converting raw to RGBA16\n");
+                     imgr = raw2rgba(raw_fmt, width, height, depth);
+                     res = rgba2png(png_output, size_output, imgr, width, height);
+                     break;
+                  case IMG_FORMAT_IA:
+                     INFO("Converting raw to IA16\n");
+                     imgi = raw2ia(raw_fmt, width, height, depth);
+                     //res = ia2png(name, imgi, width, height);
+                     break;
+                  default:
+                     //ERROR("Unsupported palette format: %s\n", format2str(&config.pal_format));
+                     return EXIT_FAILURE;
+               }
+               free(raw_fmt);
+               free(pal);
 }

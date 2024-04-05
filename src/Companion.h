@@ -10,6 +10,7 @@
 #include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
 #include "utils/Decompressor.h"
+#include "factories/TextureFactory.h"
 
 class SWrapper;
 namespace fs = std::filesystem;
@@ -112,6 +113,8 @@ public:
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
+    std::unordered_map<std::string, std::shared_ptr<TextureData>> GetTlutTextureMap() { return this->TlutTextureMap; };
+    void AddTlutTextureMap(std::string index, std::shared_ptr<TextureData> entry);
     std::optional<Table> SearchTable(uint32_t addr);
 
     static std::string CalculateHash(const std::vector<uint8_t>& data);
@@ -151,6 +154,7 @@ private:
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
+    std::unordered_map<std::string, std::shared_ptr<TextureData>> TlutTextureMap;
 
     void ParseEnums(std::string& file);
     void ParseHash();

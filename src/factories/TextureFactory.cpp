@@ -235,9 +235,16 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
         }
         case TextureType::Palette8bpp:
         case TextureType::Palette4bpp: {
-            ci* imgi = raw2ci_torch(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
-            if(ci2png(&raw, &size, imgi, texture->mWidth, texture->mHeight)) {
-                throw std::runtime_error("Failed to convert texture to PNG");
+            auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");            
+            auto tlutTextureMap = Companion::Instance->GetTlutTextureMap();
+            auto palettePtr = tlutTextureMap[tlut];
+
+            if (palettePtr) {
+                convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palettePtr->mBuffer.data(), 0, texture->mWidth, texture->mHeight, palettePtr->mFormat.depth);
+
+            } else {
+                auto symbol = GetSafeNode<std::string>(node, "symbol");
+                throw std::runtime_error("Could not convert ci8 '"+symbol+"' the tlut symbol name is probably wrong for tlut_symbol node");
             }
             break;
         }
@@ -262,6 +269,7 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
 std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
+    auto symbol = GetSafeNode<std::string>(node, "symbol");
     uint32_t width;
     uint32_t height;
     uint32_t size;
@@ -292,13 +300,10 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
     if((format == "CI4" || format == "CI8") && node["tlut"] && node["colors"]) {
         YAML::Node tlutNode;
         const auto tlutOffset = GetSafeNode<uint32_t>(node, "tlut");
-        if(node["symbol"]) {
-            const auto symbol = GetSafeNode<std::string>(node, "symbol");
-            const auto tlutSymbol = GetSafeNode(node, "tlut_symbol", symbol + "_tlut");
-            std::ostringstream offsetSeg;
-            offsetSeg << std::uppercase << std::hex << tlutOffset;
-            tlutNode["symbol"] = std::regex_replace(tlutSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
-        }
+        const auto tlutSymbol = GetSafeNode(node, "tlut_symbol", symbol + "_tlut");
+        std::ostringstream offsetSeg;
+        offsetSeg << std::uppercase << std::hex << tlutOffset;
+        tlutNode["symbol"] = std::regex_replace(tlutSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
         tlutNode["type"] = "TEXTURE";
         tlutNode["format"] = "TLUT";
         tlutNode["offset"] = tlutOffset;
@@ -325,11 +330,21 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         SPDLOG_INFO("Width: {}", width);
         SPDLOG_INFO("Height: {}", height);
     }
-    SPDLOG_INFO("Size: {}", size);
+    SPDLOG_INFO("Size: {}", size); 
     SPDLOG_INFO("Offset: 0x{:X}", offset);
 
     if(result.size() == 0){
         return std::nullopt;
+    }
+
+        if(result.size() == 0){
+        return std::nullopt;
+    }
+
+    if (fmt.type == TextureType::TLUT) {
+        auto textureData = std::make_shared<TextureData>(fmt, width, height, result);
+        Companion::Instance->AddTlutTextureMap(symbol, textureData);
+        return textureData;
     }
 
     return std::make_shared<TextureData>(fmt, width, height, result);
@@ -389,14 +404,31 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
         }
         case TextureType::Palette8bpp:
         case TextureType::Palette4bpp: {
-            SPDLOG_WARN("Converting PNG to CI texture is kind of broken, use at your own risk!");
-            const auto imgi = png2ci(buffer.data(), buffer.size(), &width, &height);
-            size = width * height * fmt.depth / 8;
-            raw = new uint8_t[size];
+            // This implementation is not correct.
+            // The process should be:
+            // png2rgba --> imgpal2rawci
 
-            if(ci2raw_torch(raw, imgi, width, height, fmt.depth) <= 0){
-                throw std::runtime_error("Failed to convert PNG to texture");
-            }
+            // todo: Add wheel palette input
+            // Implement so that it works.
+
+            // auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");            
+            // auto tlutTextureMap = Companion::Instance->GetTlutTextureMap();
+            // auto palettePtr = tlutTextureMap[tlut];
+
+            // if (palettePtr) {
+
+            //     auto imgi = png2rgba(buffer.data(), buffer.size(), &width, &height);
+            //     auto pal = png2rgba(palettePtr->mBuffer.data(), (palettePtr->mWidth * palettePtr->mWidth * palettePtr->mFormat.depth * 2), &width, &height);
+
+            //     size = width * height * fmt.depth / 8;
+            //     raw = new uint8_t[size];
+
+            //     if(imgpal2rawci(raw, imgi, pal, 0, 0, width, height, fmt.depth) <= 0){
+            //         throw std::runtime_error("Failed to convert PNG to texture");
+            //     }
+            // } else {
+
+            // }
             break;
         }
         case TextureType::Grayscale8bpp:
