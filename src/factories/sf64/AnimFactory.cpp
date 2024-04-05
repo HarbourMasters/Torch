@@ -8,7 +8,7 @@
 #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
 #define VEC_SIZE(vec) ((vec).size() * sizeof((vec)[0]))
 
-SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<int16_t> frameData, uint32_t keyOffset, std::vector<SF64::JointKey> jointKeys): mFrameCount(frameCount), mLimbCount(limbCount), mDataOffset(dataOffset), mFrameData(std::move(frameData)), mKeyOffset(keyOffset), mJointKeys(std::move(jointKeys)) {
+SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<uint16_t> frameData, uint32_t keyOffset, std::vector<SF64::JointKey> jointKeys): mFrameCount(frameCount), mLimbCount(limbCount), mDataOffset(dataOffset), mFrameData(std::move(frameData)), mKeyOffset(keyOffset), mJointKeys(std::move(jointKeys)) {
     if((mDataOffset + VEC_SIZE(mFrameData) > mKeyOffset) && (mKeyOffset + VEC_SIZE(mJointKeys) > mDataOffset)) {
         SPDLOG_ERROR("SF64:ANIM error: Data and Key offsets overlap");
     }
@@ -125,7 +125,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
     YAML::Node dataNode;
     YAML::Node keyNode;
     std::vector<SF64::JointKey> jointKeys;
-    std::vector<int16_t> frameData;
+    std::vector<uint16_t> frameData;
     auto dataCount = 1;
     auto maxIndex = 0;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0xC);
@@ -173,7 +173,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
     dataReader.SetEndianness(LUS::Endianness::Big);
 
     for(int i = 0; i < dataCount; i++) {
-        frameData.push_back(dataReader.ReadInt16());
+        frameData.push_back(dataReader.ReadUInt16());
     }
 
     return std::make_shared<SF64::AnimData>(frameCount, limbCount, dataOffset, frameData, keyOffset, jointKeys);
