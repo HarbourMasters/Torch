@@ -174,7 +174,7 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
         wrapper->CreateFile(entryName + "_cmd_" + std::to_string(ptrCount), std::vector(data.begin(), data.end()));
 
         std::ostringstream cmdName;
-        cmdName << symbol << "_cmd_" << std::dec << ptrCount;
+        cmdName << entryName << "_cmd_" << std::dec << ptrCount;
         ptrMap[ptr] = CRC64(cmdName.str().c_str());
         ptrCount++;
     }

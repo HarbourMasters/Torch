@@ -98,7 +98,7 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
     // Populate map of limbs with hashes
     for (auto &limb : limbs) {
         std::ostringstream limbDefaultName;
-        limbDefaultName << symbol << "_limb_" << std::dec << limb.mIndex;
+        limbDefaultName << entryName << "_limb_" << std::dec << limb.mIndex;
         limbDict[limb.mAddr] = CRC64(limbDefaultName.str().c_str());
     }
 
