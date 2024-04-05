@@ -14,10 +14,10 @@ public:
     int16_t mLimbCount;
     uint32_t mDataOffset;
     uint32_t mKeyOffset;
-    std::vector<int16_t> mFrameData;
+    std::vector<uint16_t> mFrameData;
     std::vector<JointKey> mJointKeys;
 
-    AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<int16_t> frameData, uint32_t keyOffset, std::vector<JointKey> jointKeys);
+    AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOffset, std::vector<uint16_t> frameData, uint32_t keyOffset, std::vector<JointKey> jointKeys);
 };
 
 class AnimHeaderExporter : public BaseExporter {
