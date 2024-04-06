@@ -20,9 +20,9 @@ static const std::unordered_map <std::string, TextureFormat> gTextureFormats = {
     { "I4",     { TextureType::Grayscale4bpp, 4 } },
     { "I8",     { TextureType::Grayscale8bpp, 8 } },
     { "IA1",    { TextureType::GrayscaleAlpha1bpp, 1 } },
-	{ "IA4",    { TextureType::GrayscaleAlpha4bpp, 4 } },
-	{ "IA8",    { TextureType::GrayscaleAlpha8bpp, 8 } },
-	{ "IA16",   { TextureType::GrayscaleAlpha16bpp, 16 } },
+    { "IA4",    { TextureType::GrayscaleAlpha4bpp, 4 } },
+    { "IA8",    { TextureType::GrayscaleAlpha8bpp, 8 } },
+    { "IA16",   { TextureType::GrayscaleAlpha16bpp, 16 } },
     { "TLUT",   { TextureType::TLUT, 16 } },
 };
 
@@ -283,11 +283,11 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         return std::nullopt;
     }
 
-	if(!gTextureFormats.contains(format)) {
-		return std::nullopt;
-	}
+    if(!gTextureFormats.contains(format)) {
+        return std::nullopt;
+    }
 
-	TextureFormat fmt = gTextureFormats.at(format);
+    TextureFormat fmt = gTextureFormats.at(format);
 
     if(fmt.type == TextureType::TLUT){
         width = GetSafeNode<uint32_t>(node, "colors");
@@ -364,11 +364,11 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
         return std::nullopt;
     }
 
-	if(!gTextureFormats.contains(format)) {
-		return std::nullopt;
-	}
+    if(!gTextureFormats.contains(format)) {
+        return std::nullopt;
+    }
 
-	TextureFormat fmt = gTextureFormats.at(format);
+    TextureFormat fmt = gTextureFormats.at(format);
     if(fmt.type == TextureType::TLUT){
         width = GetSafeNode<uint32_t>(node, "colors");
         height = 1;
