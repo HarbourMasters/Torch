@@ -235,18 +235,21 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
         }
         case TextureType::Palette8bpp:
         case TextureType::Palette4bpp: {
-            auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");            
-            auto tlutTextureMap = Companion::Instance->GetTlutTextureMap();
-            auto palettePtr = tlutTextureMap[tlut];
+            // This check needed until sf64 has tluts fixed.
+            if (node["tlut_symbol"]) {
+                auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");            
+                auto tlutTextureMap = Companion::Instance->GetTlutTextureMap();
+                auto palettePtr = tlutTextureMap[tlut];
 
-            if (palettePtr) {
-                convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palettePtr->mBuffer.data(), 0, texture->mWidth, texture->mHeight, palettePtr->mFormat.depth);
+                if (palettePtr) {
+                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palettePtr->mBuffer.data(), 0, texture->mWidth, texture->mHeight, palettePtr->mFormat.depth);
 
-            } else {
-                auto symbol = GetSafeNode<std::string>(node, "symbol");
-                throw std::runtime_error("Could not convert ci8 '"+symbol+"' the tlut symbol name is probably wrong for tlut_symbol node");
+                } else {
+                    auto symbol = GetSafeNode<std::string>(node, "symbol");
+                    throw std::runtime_error("Could not convert ci8 '"+symbol+"' the tlut symbol name is probably wrong for tlut_symbol node");
+                }
+                break;
             }
-            break;
         }
         case TextureType::Grayscale8bpp:
         case TextureType::Grayscale4bpp: {
