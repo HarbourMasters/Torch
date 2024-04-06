@@ -93,7 +93,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
 
     #undef fiveFourSpaceTabs
 
-    return offset + m.size() * sizeof(MtxRaw);
+    return offset + sizeof(MtxRaw);
 }
 
 ExportResult MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
