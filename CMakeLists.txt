@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.5)
 project(torch)
 include(FetchContent)
 
@@ -34,9 +34,7 @@ file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
 set(USE_STANDALONE ON)
-set(VPKTOOL_BUILD_GUI OFF)
-set(VPKTOOL_BUILD_TESTS OFF)
-set(VPKTOOL_BUILD_INSTALLER OFF)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
 # Build
 if (USE_STANDALONE)
