@@ -45,10 +45,6 @@ namespace MK64 {
         explicit MetadataData(std::vector<CourseMetadata> metadata) : mMetadata(metadata) {}
     };
 
-    class CourseMetadataHeaderExporter : public BaseExporter {
-        ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
-    };
-
     class CourseMetadataBinaryExporter : public BaseExporter {
         ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
     };
@@ -66,7 +62,6 @@ namespace MK64 {
         inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
             return {
                 REGISTER(Code, CourseMetadataCodeExporter)
-                REGISTER(Header, CourseMetadataHeaderExporter)
                 REGISTER(Binary, CourseMetadataBinaryExporter)
             };
         }

@@ -7,18 +7,6 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
-ExportResult MK64::CourseMetadataHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    // const auto symbol = node["symbol"] ? node["symbol"].as<std::string>() : entryName;
-
-    // if(Companion::Instance->IsOTRMode()){
-    //     write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-    //     return;
-    // }
-
-    // write << "extern CourseMetadata " << symbol << "[];\n";
-    return std::nullopt;
-}
-
 ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto metadata = std::static_pointer_cast<MetadataData>(raw)->mMetadata;
 
