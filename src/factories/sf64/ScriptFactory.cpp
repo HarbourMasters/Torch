@@ -8,6 +8,10 @@
 
 #include "storm/SWrapper.h"
 
+#define CLAMP_MAX(val, max) (((val) < (max)) ? (val) : (max))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define VALUE_TO_ENUM(val, enumname, fallback) (Companion::Instance->GetEnumFromValue(enumname, val).value_or("/*" + std::string(fallback) + " */ " + std::to_string(val)));
+
 SF64::ScriptData::ScriptData(std::vector<uint32_t> ptrs, std::vector<uint16_t> cmds, std::map<uint32_t, int> sizeMap, uint32_t ptrsStart, uint32_t cmdsStart): mPtrs(ptrs), mCmds(cmds), mSizeMap(sizeMap), mPtrsStart(ptrsStart), mCmdsStart(cmdsStart) {
 
 }
@@ -30,20 +34,21 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     std::ostringstream cmd;
     std::ostringstream comment;
 
-    auto enumName = Companion::Instance->GetEnumFromValue("EventOpcode", opcode).value_or("/* EVOP_UNK */ " + std::to_string(opcode));
+    
 
     switch (opcode) {
         case 0:
         case 1: {
             auto f3 = arg1 & 0x7F;
-            auto zm = (arg1 >> 7) & 3;
-            auto zmode = Companion::Instance->GetEnumFromValue("EventModeZ", zm).value_or("/* EVOP_UNK */ " + std::to_string(zm));
+            // auto zm = (arg1 >> 7) & 3;
+            // auto zmode = Companion::Instance->GetEnumFromValue("EventModeZ", zm).value_or("/* EVOP_UNK */ " + std::to_string(zm));
+            auto zmode = VALUE_TO_ENUM((arg1 >> 7) & 3, "EventModeZ", "EVOP_UNK");
             
-            cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2 << "),";
+            cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2;
             comment << " // wait " << s2 << " frames";
         } break;
         case 2:
-            cmd << "EVENT_SET_BASE_ZVEL(" << std::dec << s2 << "),";
+            cmd << "EVENT_SET_BASE_ZVEL(" << std::dec << s2;
             break;
         case 9:
         case 10:
@@ -55,97 +60,108 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 19:
         case 20:
         case 21: {
-            auto rotcmd = enumName.replace(0, 4, "EVENT");
-            cmd << rotcmd << "(" << std::dec << s2 << ", " << std::fixed << std::setprecision(1) <<  arg1 / 10.0f << "),";
+            auto rotcmd = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
+            cmd << rotcmd.replace(0, 4, "EVENT") << "(" << std::dec << s2 << ", " << std::fixed << std::setprecision(1) <<  arg1 / 10.0f;
             if(opcode < 16 && arg1 != 0) {
                 comment << " // wait " << 10 * s2 / arg1 << " frames";
             }
         } break;
         case 24:
-            cmd << "EVENT_SET_ROTATE(),";
+            cmd << "EVENT_SET_ROTATE(";
             break;
         case 25:
-            cmd << "EVENT_STOP_ROTATE(),";
+            cmd << "EVENT_STOP_ROTATE(";
             break;
         case 56:
-            cmd << "EVENT_SET_CALL(" << std::dec << s2 << ", " << arg1 << "),";
+            cmd << "EVENT_SET_CALL(" << std::dec << s2 << ", " << arg1;
             break;
         case 57:
-            cmd << "EVENT_RESTORE_TEAM(" << std::dec << s2 << "),";
+            cmd << "EVENT_RESTORE_TEAM(" << std::dec << s2;
             break;
-        case 58: {
-            auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
-            cmd << "EVENT_PLAY_SFX(" << sfxIndex << "),";
-        } break;
+        case 58: 
         case 59: {
-            auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
-            cmd << "EVENT_STOP_SFX(" << sfxIndex << "),";
+            // auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
+            auto sfxIndex = VALUE_TO_ENUM(s2, "EventSfx", "EVSFX_UNK");
+            cmd << "EVENT_" << ((opcode == 58) ? "PLAY" : "STOP") << "_SFX(" << sfxIndex;
         } break;
+        // case 59: {
+        //     auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
+        //     cmd << "EVENT_STOP_SFX(" << sfxIndex;
+        // } break;
         case 96: 
-            if(s2 == 0) {
-                cmd << "EVENT_CLEAR_TRIGGER(" << std::dec << arg1 << "),";
-            } else if(s2 >= 100) {
-                auto condition = Companion::Instance->GetEnumFromValue("EventCondition", 100).value_or("/* EVC_UNK */ " + std::to_string(s2));
-                cmd << "EVENT_SET_TRIGGER(" << condition << " + " << std::dec << (s2 - 100) << ", " << std::dec <<  arg1 << "),";
-            } else {
-                auto condition = Companion::Instance->GetEnumFromValue("EventCondition", s2).value_or("/* EVC_UNK */ " + std::to_string(s2));
-                cmd << "EVENT_SET_TRIGGER(" << condition << ", " << std::dec <<  arg1 << "),";
+            cmd << ((s2 == 0) ? "EVENT_CLEAR_TRIGGER(" : "EVENT_SET_TRIGGER(");
+            if(s2 != 0) {
+                auto condition = VALUE_TO_ENUM(MIN(s2, 100), "EventCondition", "EVC_UNK");
+                cmd << condition << ((s2 < 100) ? "" : " + " + std::to_string(s2 - 100)) << ", ";
             }
+            cmd << ((arg1 < 200) ? "" : "EVENT_AI_CHANGE + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
             break;
         case 104: {
-            auto actorinfo = Companion::Instance->GetEnumFromValue("EventActorInfo", s2).value_or("/* EINFO_UNK */ " + std::to_string(s2));
-            cmd << "EVENT_INIT_ACTOR(" << actorinfo << ", " << std::dec << arg1 << "),";
+            // auto actorinfo = Companion::Instance->GetEnumFromValue("EventActorInfo", s2).value_or("/* EINFO_UNK */ " + std::to_string(s2));
+            auto actorInfo = VALUE_TO_ENUM(s2, "EventActorInfo", "EINFO_UNK");
+            cmd << "EVENT_INIT_ACTOR(" << actorInfo << ", " << std::dec << arg1;
         } break;
         case 112:{
-            auto actiontype = Companion::Instance->GetEnumFromValue("EventAction", s2).value_or("/* EVACT_UNK */ " + std::to_string(s2));
-            cmd << "EVENT_SET_ACTION(" << actiontype << "),";
+            // auto actiontype = Companion::Instance->GetEnumFromValue("EventAction", s2).value_or("/* EVACT_UNK */ " + std::to_string(s2));
+            auto actiontype = VALUE_TO_ENUM(s2, "EventAction", "EVACT_UNK");
+            cmd << "EVENT_SET_ACTION(" << actiontype;
             if((s2 == 14 || s2 == 15)) {
                 comment << " // wait 1 frame";
             }
         } break;
         case 113:
-            cmd << "EVENT_ADD_TO_GROUP(" << std::dec << s2 << ", " << arg1 << "),";
+            cmd << "EVENT_ADD_TO_GROUP(" << std::dec << s2 << ", " << arg1;
             break;
         case 116: {
-            auto itemtype = Companion::Instance->GetEnumFromValue("ItemDrop", s2).value_or("/* DROP_UNK */ " + std::to_string(s2));
-            cmd << "EVENT_DROP_ITEM(" << itemtype << "),";
+            // auto itemtype = Companion::Instance->GetEnumFromValue("ItemDrop", s2).value_or("/* DROP_UNK */ " + std::to_string(s2));
+            auto itemType = VALUE_TO_ENUM(s2, "ItemDrop", "DROP_UNK");
+            cmd << "EVENT_DROP_ITEM(" << itemType;
         } break;
         case 118: 
-            cmd << "EVENT_SET_REVERB(" << std::dec << s2 << "),";
+            cmd << "EVENT_SET_REVERB(" << std::dec << s2;
             break;
         case 119: {
-            auto groundtype = Companion::Instance->GetEnumFromValue("GroundType", s2).value_or("/* GROUNDTYPE_UNK */ " + std::to_string(s2));
-            cmd << "EVENT_SET_GROUND(" << groundtype << "),";
+            // auto groundtype = Companion::Instance->GetEnumFromValue("GroundType", s2).value_or("/* GROUNDTYPE_UNK */ " + std::to_string(s2));
+            auto groundtype = VALUE_TO_ENUM(s2, "GroundType", "GROUNDTYPE_UNK");
+            cmd << "EVENT_SET_GROUND(" << groundtype;
         } break;
         case 120: {
-            auto rcidName = Companion::Instance->GetEnumFromValue("RadioCharacterId", arg1).value_or("/* RCID_UNK */ " + std::to_string(arg1));
-            cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << std::setw(5) << s2 << "),";
+            // auto rcidName = Companion::Instance->GetEnumFromValue("RadioCharacterId", arg1).value_or("/* RCID_UNK */ " + std::to_string(arg1));
+            auto rcidName = VALUE_TO_ENUM(arg1, "RadioCharacterId", "RCID_UNK");
+            cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << s2;
         } break;
         case 122: 
-            cmd << "EVENT_STOP_BGM(),";
+            cmd << "EVENT_STOP_BGM(";
             break;
         case 124: {
-            auto color = Companion::Instance->GetEnumFromValue("TexLineColor", s2).value_or("/* TXLC_UNK */ " + std::to_string(s2));
-            cmd << "EVENT_MAKE_TEXLINE(" << color << "),";
+            // auto color = Companion::Instance->GetEnumFromValue("TexLineColor", s2).value_or("/* TXLC_UNK */ " + std::to_string(s2));
+            auto color = VALUE_TO_ENUM(s2, "TexLineColor", "TXLC_UNK");
+            cmd << "EVENT_MAKE_TEXLINE(" << color;
         } break;
         case 125:
-            cmd << "EVENT_STOP_TEXLINE(),";
+            cmd << "EVENT_STOP_TEXLINE(";
             break;
-        case 126:
-            cmd << "EVENT_LOOP(" << std::dec << arg1 << ", " << s2 << "),";
+        case 126: 
+            cmd << ((s2 == 0) ? "EVENT_GOTO(" : "EVENT_LOOP(");
+            if(s2 != 0) {
+                cmd << std::dec << s2 << ", ";
+            }
+            cmd << ((arg1 < 200) ? "" : "EVENT_AI_CHANGE + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
             break;
         case 127:
-            cmd << "EVENT_STOP_SCRIPT(),";
+            cmd << "EVENT_STOP_SCRIPT(";
             comment << "// wait";
             break;
-        default:
-            cmd << "EVENT_CMD(" << enumName << ", " << std::dec << arg1 << ", " << s2 << "),";
+        default: {
+            // auto opcodeName = Companion::Instance->GetEnumFromValue("EventOpcode", opcode).value_or("/* EVOP_UNK */ " + std::to_string(opcode));
+            auto opcodeName = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
+            cmd << "EVENT_CMD(" << opcodeName << ", " << std::dec << arg1 << ", " << s2;
             if(opcode >= 40 && opcode <= 48) {
                 comment << " // wait";
             }
-            break;
+        } break;
     }
-    cmd << comment.str();
+    cmd << "), " << comment.str();
     return cmd.str();
 }
 
