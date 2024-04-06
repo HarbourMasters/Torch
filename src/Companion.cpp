@@ -120,7 +120,7 @@ void Companion::ParseEnums(std::string& header) {
     std::ifstream file(header);
 
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file");
+        throw std::runtime_error("Failed to open header files for enums node in config");
     }
 
     std::regex enumRegex(R"(enum\s+(\w+)\s*(?:\s*:\s*(\w+))?[\s\n\r]*\{)");

@@ -56,7 +56,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
             if (std::abs(m[i].mtx[j] - static_cast<int>(m[i].mtx[j])) < 1e-6) {
                 write << std::fixed << std::setprecision(1) << m[i].mtx[j];
             } else {
-                write << std::fixed << std::setprecision(6) << m[i].mtx[j];
+                write << std::fixed << std::setprecision(7) << m[i].mtx[j];
             }
             
             // Add comma for all but the last arg
