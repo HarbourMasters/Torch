@@ -1182,6 +1182,12 @@ std::string Companion::NormalizeAsset(const std::string& name) const {
     return path;
 }
 
+std::string Companion::RelativePath(const std::string& path) const {
+    std::string doutput = (this->gCurrentDirectory / path).string();
+    std::replace(doutput.begin(), doutput.end(), '\\', '/');
+    return doutput;
+}
+
 std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
     return Chocobo1::SHA1().addData(data).finalize().toString();
 }

@@ -120,6 +120,7 @@ public:
     static std::string CalculateHash(const std::vector<uint8_t>& data);
     static void Pack(const std::string& folder, const std::string& output);
     std::string NormalizeAsset(const std::string& name) const;
+    std::string RelativePath(const std::string& path) const;
 
     TorchConfig& GetConfig() { return this->gConfig; }
     SWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
