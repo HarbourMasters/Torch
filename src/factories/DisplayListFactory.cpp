@@ -313,32 +313,35 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         }
 
         if(opcode == GBI(G_DL)) {
+            if (SEGMENT_NUMBER(node["offset"].as<uint32_t>()) == SEGMENT_NUMBER(w1)) {
 
-            std::optional<uint32_t> segment;
+                std::optional<uint32_t> segment;
 
-            if ((w0 >> 16) & G_DL_NO_PUSH) {
-                SPDLOG_INFO("Branch List Command Found");
-                processing = false;
+                if ((w0 >> 16) & G_DL_NO_PUSH) {
+                    SPDLOG_INFO("Branch List Command Found");
+                    processing = false;
+                }
+
+                YAML::Node gfx;
+                gfx["type"] = "GFX";
+                gfx["offset"] = w1;
+
+                Companion::Instance->AddAsset(gfx);
             }
-
-            YAML::Node gfx;
-            gfx["type"] = "GFX";
-            gfx["offset"] = w1;
-            Companion::Instance->AddAsset(gfx);
         }
 
-	    // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
-	    // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
+        // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
+        // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
         if(opcode == GBI(G_MOVEMEM)) {
-	    // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
-	        uint8_t subcommand = (w0 >> 16) & 0xFF;
+            // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
+            uint8_t subcommand = (w0 >> 16) & 0xFF;
             uint8_t index = 0;
             uint8_t offset = 0;
             bool light = false;
 
             switch (Companion::Instance->GetGBIVersion()) {
-	           // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
-	           // Otherwise mk64 will break.
+               // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
+               // Otherwise mk64 will break.
                // PD: Mega, this works for sm64 too, why you didn't implement it? >:(
                // PD: Im jk, <3
                case GBIVersion::f3d:
@@ -347,9 +350,9 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                      * Only generate lights on the second gsSPLight.
                      * gsSPSetLights1(name) outputs three macros:
                      *
-	                 * gsSPNumLights(NUMLIGHTS_1)
-	                 * gsSPLight(&name.l[0], G_MV_L0)
-	                 * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
+                     * gsSPNumLights(NUMLIGHTS_1)
+                     * gsSPLight(&name.l[0], G_MV_L0)
+                     * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
                     */
                     if (subcommand == GBI(G_MV_L1)) {
                         light = true;

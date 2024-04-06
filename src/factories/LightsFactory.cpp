@@ -22,7 +22,7 @@ ExportResult LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<I
             return std::nullopt;
         }
 
-        write << "extern Lights1" << name << "[];\n";
+        write << "extern Lights1 " << name << "[];\n";
     } else {
         write << "extern Lights1 " << symbol << ";\n";
     }

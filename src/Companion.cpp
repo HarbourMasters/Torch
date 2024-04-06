@@ -40,6 +40,8 @@
 #include "factories/mk64/TrackSections.h"
 #include "factories/mk64/SpawnData.h"
 #include "factories/mk64/DrivingBehaviour.h"
+#include "factories/mk64/ItemCurve.h"
+#include "factories/mk64/CourseMetadata.h"
 
 #include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
@@ -96,6 +98,8 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
     this->RegisterFactory("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
     this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
+    this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
+    this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
 
     // SF64 specific
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
@@ -116,7 +120,7 @@ void Companion::ParseEnums(std::string& header) {
     std::ifstream file(header);
 
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file");
+        throw std::runtime_error("Failed to open header files for enums node in config");
     }
 
     std::regex enumRegex(R"(enum\s+(\w+)\s*(?:\s*:\s*(\w+))?[\s\n\r]*\{)");
@@ -460,6 +464,47 @@ bool Companion::NodeHasChanges(const std::string& path) {
     return true;
 }
 
+void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot) {
+    for (const auto &entry : std::filesystem::directory_iterator(dirPath)) {
+        if (entry.is_directory()) {
+            // Skip the root directory if specified
+            if (skipRoot && entry.path() == dirPath) {
+                continue;
+            }
+
+            // Recursive call for subdirectories
+            LoadYAMLRecursively(entry.path(), result, false);
+        } else if (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml") {
+            // Load YAML file and add it to the result vector
+            result.push_back(YAML::LoadFile(entry.path().string()));
+        }
+    }
+}
+
+/**
+ * Config yaml requires tables: [assets/courses]
+ * Activate the factory using a normal asset yaml with type, input_directory, and output_directory nodes.
+ */
+void Companion::ProcessTables(YAML::Node& rom) {
+    auto dirs = rom["metadata"].as<std::vector<std::string>>();
+
+    for (const auto &dir : dirs) {
+        std::vector<YAML::Node> configNodes;
+        LoadYAMLRecursively(dir, configNodes, true);
+        gCourseMetadata[dir] = configNodes;
+    }
+
+    // Write yaml data to console
+    if (this->IsDebug()) {
+        SPDLOG_INFO("------ Metadata ouptut ------");
+        for (auto &node : gCourseMetadata[dirs[0]]) {
+            std::cout << node << std::endl;
+            SPDLOG_INFO("------------");
+        }
+        SPDLOG_INFO("------ Metadata end ------");
+    }
+}
+
 void Companion::Process() {
 
     if(!fs::exists("config.yml")) {
@@ -489,6 +534,10 @@ void Companion::Process() {
     if(!cfg) {
         SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
         return;
+    }
+
+    if (rom["metadata"]) {
+        ProcessTables(rom);
     }
 
     if(rom["segments"]) {
@@ -1048,7 +1097,7 @@ CompressionType Companion::GetCompressionType(std::vector<uint8_t>& buffer, cons
 
 std::optional<Table> Companion::SearchTable(uint32_t addr){
     for(auto& table : this->gTables){
-        if(addr >= table.start || addr <= table.end){
+        if(addr >= table.start && addr <= table.end){
             return table;
         }
     }
@@ -1185,4 +1234,8 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     }
 
     return std::nullopt;
+}
+
+void Companion::AddTlutTextureMap(std::string index, std::shared_ptr<TextureData> entry) {
+    this->TlutTextureMap[index] = entry;
 }

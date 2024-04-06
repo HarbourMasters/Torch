@@ -15,7 +15,7 @@ ExportResult MtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPar
         return std::nullopt;
     }
 
-    write << "extern Mtx " << symbol << "[];\n";
+    write << "extern Mtx " << symbol << ";\n";
     return std::nullopt;
 }
 
@@ -44,7 +44,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
      *                    0.0, 0.0, 0.0, 1.0);
      */
     
-    write << "Mtx " << symbol << "[] = {\n";
+    write << "Mtx " << symbol << " = {\n";
 
     for (int i = 0; i < m.size(); ++i) {
 
@@ -53,10 +53,16 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
         for (int j = 0; j < 16; ++j) {
 
             // Turn 1, 3, and 6 into 1.0, 3.0, and 6.0. Unless it has a decimal number then leave it alone.
+                SPDLOG_INFO(m[i].mtx[j]);
             if (std::abs(m[i].mtx[j] - static_cast<int>(m[i].mtx[j])) < 1e-6) {
                 write << std::fixed << std::setprecision(1) << m[i].mtx[j];
             } else {
-                write << std::fixed << std::setprecision(6) << m[i].mtx[j];
+                // Stupid hack to get matching precision so this value outputs 0.0000153 instead.
+                if (std::fabs(m[i].mtx[j] - 0.000015) < 0.000001) {
+                    write << std::fixed << std::setprecision(7) << m[i].mtx[j];
+                } else {
+                    write << std::fixed << std::setprecision(6) << m[i].mtx[j];
+                }
             }
             
             // Add comma for all but the last arg
@@ -93,7 +99,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
 
     #undef fiveFourSpaceTabs
 
-    return offset + m.size() * sizeof(MtxRaw);
+    return offset + sizeof(MtxRaw);
 }
 
 ExportResult MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -134,7 +140,7 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<MtxRaw> matrix;
 
-    #define FIXTOF(x)      ((double)((x) / 65536.0))
+    #define FIXTOF(x)      ((float)((x) / 65536.0f))
 
     // Reads the inteer portion, the fractional portion, puts each together into a fixed-point value, and finally converts to float.
     for(size_t i = 0; i < count; i++) {
