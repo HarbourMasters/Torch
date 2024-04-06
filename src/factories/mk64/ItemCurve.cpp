@@ -19,29 +19,11 @@ ExportResult MK64::ItemCurveHeaderExporter::Export(std::ostream &write, std::sha
     return std::nullopt;
 }
 
-static const std::vector<std::string> ItemStrings = {
-    "ITEM_NONE", 
-    "ITEM_BANANA",
-    "ITEM_BANANA_BUNCH",
-    "ITEM_GREEN_SHELL",
-    "ITEM_TRIPLE_GREEN_SHELL",
-    "ITEM_RED_SHELL",
-    "ITEM_TRIPLE_RED_SHELL",
-    "ITEM_BLUE_SPINY_SHELL",
-    "ITEM_THUNDERBOLT",
-    "ITEM_FAKE_ITEM_BOX",
-    "ITEM_STAR",
-    "ITEM_BOO",
-    "ITEM_MUSHROOM",
-    "ITEM_DOUBLE_MUSHROOM",
-    "ITEM_TRIPLE_MUSHROOM",
-    "ITEM_SUPER_MUSHROOM",
-};
-
 ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto items = std::static_pointer_cast<ItemCurveData>(raw)->mItems;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
+
 
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
@@ -55,11 +37,12 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
         write << fourSpaceTab << "{";
         for (size_t i = 0; i < items.size(); ++i) {
             uint8_t value = items[i];
+            auto enumName = Companion::Instance->GetEnumFromValue("ITEMS", value).value_or(std::to_string(value));
 
             if (i % 10 == 0) {
-                write << "\n" << fourSpaceTab << fourSpaceTab << ItemStrings[value] << ", ";
+                write << "\n" << fourSpaceTab << fourSpaceTab << enumName << ", ";
             } else {
-                write << ItemStrings[value] << ", ";
+                write << enumName << ", ";
             }
         }
         write << "\n" << fourSpaceTab << "},\n";
@@ -75,11 +58,12 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
 
         for (size_t i = 0; i < items.size(); ++i) {
             uint8_t value = items[i];
+            auto enumName = Companion::Instance->GetEnumFromValue("ITEMS", value).value_or(std::to_string(value));
 
             if (i % 10 == 0) {
-                write << "\n" << fourSpaceTab << ItemStrings[value] << ", ";
+                write << "\n" << fourSpaceTab << enumName << ", ";
             } else {
-                write << ItemStrings[value] << ", ";
+                write << enumName << ", ";
             }
         }
         write << "\n" << fourSpaceTab << "},\n";
