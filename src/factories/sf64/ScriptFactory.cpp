@@ -4,6 +4,9 @@
 #include "Companion.h"
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
+#include "regex.h"
+
+#include "storm/SWrapper.h"
 
 SF64::ScriptData::ScriptData(std::vector<uint32_t> ptrs, std::vector<uint16_t> cmds, std::map<uint32_t, int> sizeMap, uint32_t ptrsStart, uint32_t cmdsStart): mPtrs(ptrs), mCmds(cmds), mSizeMap(sizeMap), mPtrsStart(ptrsStart), mCmdsStart(cmdsStart) {
 
@@ -25,57 +28,124 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     auto opcode = (s1 & 0xFE00) >> 9;
     auto arg1 = s1 & 0x1FF;
     std::ostringstream cmd;
+    std::ostringstream comment;
 
     auto enumName = Companion::Instance->GetEnumFromValue("EventOpcode", opcode).value_or("/* EVOP_UNK */ " + std::to_string(opcode));
 
     switch (opcode) {
         case 0:
         case 1: {
-            auto f1 = (arg1 >> 8) & 1;
-            auto f2 = (arg1 >> 7) & 1;
             auto f3 = arg1 & 0x7F;
-            cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << s2 << ", " << (f1 ? "true" : "false") << ", " << (f2 ? "true" : "false")  << ")";
+            auto zm = (arg1 >> 7) & 3;
+            auto zmode = Companion::Instance->GetEnumFromValue("EventModeZ", zm).value_or("/* EVOP_UNK */ " + std::to_string(zm));
+            
+            cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2 << "),";
+            comment << " // wait " << s2 << " frames";
+        } break;
+        case 2:
+            cmd << "EVENT_SET_BASE_ZVEL(" << std::dec << s2 << "),";
+            break;
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        case 16:
+        case 17:
+        case 18:
+        case 19:
+        case 20:
+        case 21: {
+            auto rotcmd = enumName.replace(0, 4, "EVENT");
+            cmd << rotcmd << "(" << std::dec << s2 << ", " << std::fixed << std::setprecision(1) <<  arg1 / 10.0f << "),";
+            if(opcode < 16 && arg1 != 0) {
+                comment << " // wait " << 10 * s2 / arg1 << " frames";
+            }
         } break;
         case 24:
-            cmd << "EVENT_SET_ROTATE()";
+            cmd << "EVENT_SET_ROTATE(),";
             break;
         case 25:
-            cmd << "EVENT_STOP_ROTATE()";
+            cmd << "EVENT_STOP_ROTATE(),";
             break;
+        case 56:
+            cmd << "EVENT_SET_CALL(" << std::dec << s2 << ", " << arg1 << "),";
+            break;
+        case 57:
+            cmd << "EVENT_RESTORE_TEAM(" << std::dec << s2 << "),";
+            break;
+        case 58: {
+            auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_PLAY_SFX(" << sfxIndex << "),";
+        } break;
+        case 59: {
+            auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_STOP_SFX(" << sfxIndex << "),";
+        } break;
         case 96: 
-            if(s2 >= 100) {
-                cmd << "EVENT_BRANCH(EVC_100 + " << std::dec << (s2 - 100) << ", " << std::dec <<  arg1 << ")";
+            if(s2 == 0) {
+                cmd << "EVENT_CLEAR_TRIGGER(" << std::dec << arg1 << "),";
+            } else if(s2 >= 100) {
+                auto condition = Companion::Instance->GetEnumFromValue("EventCondition", 100).value_or("/* EVC_UNK */ " + std::to_string(s2));
+                cmd << "EVENT_SET_TRIGGER(" << condition << " + " << std::dec << (s2 - 100) << ", " << std::dec <<  arg1 << "),";
             } else {
                 auto condition = Companion::Instance->GetEnumFromValue("EventCondition", s2).value_or("/* EVC_UNK */ " + std::to_string(s2));
-                cmd << "EVENT_BRANCH(" << condition << ", " << std::dec <<  arg1 << ")";
+                cmd << "EVENT_SET_TRIGGER(" << condition << ", " << std::dec <<  arg1 << "),";
             }
             break;
-        case 104:
-            cmd << "EVENT_INIT_ACTOR(" << std::dec << arg1 << ", " << s2 << ")";
+        case 104: {
+            auto actorinfo = Companion::Instance->GetEnumFromValue("EventActorInfo", s2).value_or("/* EINFO_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_INIT_ACTOR(" << actorinfo << ", " << std::dec << arg1 << "),";
+        } break;
+        case 112:{
+            auto actiontype = Companion::Instance->GetEnumFromValue("EventAction", s2).value_or("/* EVACT_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_SET_ACTION(" << actiontype << "),";
+            if((s2 == 14 || s2 == 15)) {
+                comment << " // wait 1 frame";
+            }
+        } break;
+        case 113:
+            cmd << "EVENT_ADD_TO_GROUP(" << std::dec << s2 << ", " << arg1 << "),";
             break;
+        case 116: {
+            auto itemtype = Companion::Instance->GetEnumFromValue("ItemDrop", s2).value_or("/* DROP_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_DROP_ITEM(" << itemtype << "),";
+        } break;
+        case 118: 
+            cmd << "EVENT_SET_REVERB(" << std::dec << s2 << "),";
+            break;
+        case 119: {
+            auto groundtype = Companion::Instance->GetEnumFromValue("GroundType", s2).value_or("/* GROUNDTYPE_UNK */ " + std::to_string(s2));
+            cmd << "EVENT_SET_GROUND(" << groundtype << "),";
+        } break;
         case 120: {
             auto rcidName = Companion::Instance->GetEnumFromValue("RadioCharacterId", arg1).value_or("/* RCID_UNK */ " + std::to_string(arg1));
-            cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << std::setw(5) << s2 << ")";
+            cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << std::setw(5) << s2 << "),";
         } break;
+        case 122: 
+            cmd << "EVENT_STOP_BGM(),";
+            break;
         case 124: {
             auto color = Companion::Instance->GetEnumFromValue("TexLineColor", s2).value_or("/* TXLC_UNK */ " + std::to_string(s2));
-            cmd << "EVENT_MAKE_TEXLINE(" << color << ")";
+            cmd << "EVENT_MAKE_TEXLINE(" << color << "),";
         } break;
         case 125:
-            cmd << "EVENT_STOP_TEXLINE()";
+            cmd << "EVENT_STOP_TEXLINE(),";
             break;
         case 126:
-            cmd << "EVENT_LOOP(" << std::dec << arg1 << ", " << s2 << ")";
+            cmd << "EVENT_LOOP(" << std::dec << arg1 << ", " << s2 << "),";
             break;
         case 127:
-            cmd << "EVENT_STOP_SCRIPT()";
+            cmd << "EVENT_STOP_SCRIPT(),";
+            comment << "// wait";
             break;
         default:
-            cmd << "EVENT_CMD(" << enumName << ", " << std::dec << arg1 << ", " << s2 << ")";
+            cmd << "EVENT_CMD(" << enumName << ", " << std::dec << arg1 << ", " << s2 << "),";
+            if(opcode >= 40 && opcode <= 48) {
+                comment << " // wait";
+            }
             break;
     }
-    
-
+    cmd << comment.str();
     return cmd.str();
 }
 
@@ -85,27 +155,30 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
     auto script = std::static_pointer_cast<SF64::ScriptData>(raw);
     auto sortedPtrs = script->mPtrs;
     std::sort(sortedPtrs.begin(), sortedPtrs.end());
-    std::vector<std::string> scriptNames;
     auto cmdOff = ASSET_PTR(script->mCmdsStart);
     auto cmdIndex = 0;
+    std::map<uint32_t, std::string> scriptNames;
 
     for(int i = 0; i < sortedPtrs.size(); i++) {
         std::ostringstream scriptDefaultName;
-        scriptDefaultName << symbol << "_cmds_" << std::uppercase << std::hex << cmdOff;
+        auto scriptIndex = std::find(script->mPtrs.begin(), script->mPtrs.end(), sortedPtrs[i]) - script->mPtrs.begin();
 
+        scriptDefaultName << symbol << "_script_" << std::dec << scriptIndex << "_" << std::uppercase << std::hex << cmdOff;
+        auto scriptName = GetSafeNode(node, "script_symbol", scriptDefaultName.str());
+        scriptNames[sortedPtrs[i]] = scriptName;
         if (Companion::Instance->IsDebug()) {
             write << "// 0x" << std::hex << std::uppercase << cmdOff << "\n";
         }
-        write << "u16 " << scriptDefaultName.str() << "[] = {";
+        write << "u16 " << scriptName << "[] = {";
 
         auto cmdCount = script->mSizeMap[sortedPtrs[i]] / 2;
         for(int j = 0; j < cmdCount; j++, cmdIndex+=2) {
             // if((j % 3) == 0) {
-            write << "\n" << fourSpaceTab << "/* " << std::setfill(' ') << std::setw(2) << std::dec << j << " */ ";
+            write  << "\n" << fourSpaceTab << "/* " << std::setfill(' ') << std::setw(2) << std::dec << j << " */ ";
             // }
-            write << MakeScriptCmd(script->mCmds[cmdIndex], script->mCmds[cmdIndex + 1])  << ", ";
+            write << MakeScriptCmd(script->mCmds[cmdIndex], script->mCmds[cmdIndex + 1]);
         }
-        scriptNames.push_back(scriptDefaultName.str());
+        
         write << "\n};\n";
 
         cmdOff += 4 * cmdCount;
@@ -113,22 +186,21 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
             write << "// count: " << cmdCount << " commands\n";
             write << "// 0x" << std::hex << std::uppercase << cmdOff << "\n";
         }
-
         write << "\n";
     }
 
     write << "// 0x" << std::hex << std::uppercase << ASSET_PTR(offset) << "\n";
     write << "u16* " << symbol << "[] = {";
     for(int i = 0; i < script->mPtrs.size(); i++) {
-        if((i % 5) == 0) {
+        if((i % 4) == 0) {
             write << "\n" << fourSpaceTab;
         }
-        write << scriptNames[i] << ", ";
+        write << scriptNames[script->mPtrs[i]] << ", ";
     }
     write << "\n};\n";
 
     if (Companion::Instance->IsDebug()) {
-        write << "// count: " << script->mPtrs.size() << " events\n";
+        write << "// count: " << std::dec << script->mPtrs.size() << " events\n";
     }
 
     return OffsetEntry {
@@ -138,6 +210,54 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
 }
 
 ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto scriptWriter = LUS::BinaryWriter();
+    auto script = std::static_pointer_cast<SF64::ScriptData>(raw);
+    auto sortedPtrs = script->mPtrs;
+    std::sort(sortedPtrs.begin(), sortedPtrs.end());
+    uint32_t ptrCount = 0;
+    uint32_t cmdIndex = 0;
+    std::unordered_map<uint32_t, uint64_t> ptrMap;
+
+    // Export Commands and Populate Hashes Map
+    for (auto ptr : sortedPtrs) {
+        auto wrapper = Companion::Instance->GetCurrentWrapper();
+        std::ostringstream stream;
+        stream.str("");
+        stream.clear();
+
+        auto cmdWriter = LUS::BinaryWriter();
+        WriteHeader(cmdWriter, LUS::ResourceType::ScriptCmd, 0);
+
+        auto cmdCount = script->mSizeMap.at(ptr) / 2;
+        cmdWriter.Write((uint32_t) cmdCount);
+
+        // Writing in pairs for readability
+        for (uint32_t i = 0; i < cmdCount; ++i) {
+            cmdWriter.Write(script->mCmds.at(cmdIndex++));
+            cmdWriter.Write(script->mCmds.at(cmdIndex++));
+        }
+
+        cmdWriter.Finish(stream);
+
+        auto data = stream.str();
+        wrapper->CreateFile(entryName + "_cmd_" + std::to_string(ptrCount), std::vector(data.begin(), data.end()));
+
+        std::ostringstream cmdName;
+        cmdName << entryName << "_cmd_" << std::dec << ptrCount;
+        ptrMap[ptr] = CRC64(cmdName.str().c_str());
+        ptrCount++;
+    }
+
+    // Export Script
+    WriteHeader(scriptWriter, LUS::ResourceType::Script, 0);
+    scriptWriter.Write((uint32_t) script->mPtrs.size());
+    for (auto &ptr : script->mPtrs) {
+        scriptWriter.Write(ptrMap.at(ptr));
+    }
+
+    scriptWriter.Finish(write);
+
     return std::nullopt;
 }
 

@@ -5,6 +5,8 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
+#include "storm/SWrapper.h"
+
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 // #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
 #define FLOAT(x, w, p) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(p) << x
@@ -31,7 +33,7 @@ ExportResult SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared
     auto skeleton = std::static_pointer_cast<SF64::SkeletonData>(raw);
     auto limbs = skeleton->mSkeleton;
     std::sort(limbs.begin(), limbs.end(), [](SF64::LimbData a, SF64::LimbData b) {return a.mAddr < b.mAddr;});
-    std::map<uint32_t, std::string> limbDict;
+    std::unordered_map<uint32_t, std::string> limbDict;
 
     limbDict[0] = "NULL";
     for(SF64::LimbData limb : limbs) {
@@ -87,12 +89,72 @@ ExportResult SF64::SkeletonCodeExporter::Export(std::ostream &write, std::shared
 }
 
 ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto skeletonWriter = LUS::BinaryWriter();
+    auto skeleton = std::static_pointer_cast<SF64::SkeletonData>(raw);
+    auto limbs = skeleton->mSkeleton;
+    std::unordered_map<uint32_t, uint64_t> limbDict;
+
+    // Populate map of limbs with hashes
+    for (auto &limb : limbs) {
+        std::ostringstream limbDefaultName;
+        limbDefaultName << entryName << "_limb_" << std::dec << limb.mIndex;
+        limbDict[limb.mAddr] = CRC64(limbDefaultName.str().c_str());
+    }
+
+    // Export Each Limb
+    for (auto &limb : limbs) {
+        auto wrapper = Companion::Instance->GetCurrentWrapper();
+        std::ostringstream stream;
+        stream.str("");
+        stream.clear();
+
+        auto limbWriter = LUS::BinaryWriter();
+        WriteHeader(limbWriter, LUS::ResourceType::Limb, 0);
+        uint64_t hash = 0;
+        if (limb.mDList != 0) {
+            auto dec = Companion::Instance->GetNodeByAddr(limb.mDList);
+            if (dec.has_value()){
+                hash = CRC64(std::get<0>(dec.value()).c_str());
+                SPDLOG_INFO("Found display list: 0x{:X} Hash: 0x{:X} Path: {}", limb.mDList, hash, std::get<0>(dec.value()));
+            } else {
+                SPDLOG_WARN("Could not find dlist at 0x{:X}", limb.mDList);
+            }
+        }
+        limbWriter.Write(hash);
+        auto [transX, transY, transZ] = limb.mTrans;
+        limbWriter.Write(transX);
+        limbWriter.Write(transY);
+        limbWriter.Write(transZ);
+        auto [rotX, rotY, rotZ] = limb.mRot;
+        limbWriter.Write(rotX);
+        limbWriter.Write(rotY);
+        limbWriter.Write(rotZ);
+        uint64_t sibling = (limb.mSibling != 0) ? limbDict.at(limb.mSibling) : 0;
+        limbWriter.Write(sibling);
+        uint64_t child = (limb.mChild != 0) ? limbDict.at(limb.mChild) : 0;
+        limbWriter.Write(child);
+        limbWriter.Finish(stream);
+
+        auto data = stream.str();
+        wrapper->CreateFile(entryName + "_limb_" + std::to_string(limb.mIndex), std::vector(data.begin(), data.end()));
+    }
+
+    // Export Skeleton
+    WriteHeader(skeletonWriter, LUS::ResourceType::Skeleton, 0);
+    skeletonWriter.Write((uint32_t) limbs.size());
+    for (auto &limb : limbs) {
+        skeletonWriter.Write(limbDict.at(limb.mAddr));
+    }
+
+    skeletonWriter.Finish(write);
+    
+    
     return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     std::vector<SF64::LimbData> skeleton;
-    std::map<std::string, std::string> limbDict;
     auto [root, segment] = Decompressor::AutoDecode(node, buffer, 0x1000);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);

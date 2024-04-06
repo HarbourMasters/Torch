@@ -167,6 +167,8 @@ void Companion::ParseEnums(std::string& header) {
 void Companion::ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary) {
     std::ostringstream stream;
 
+    this->gCurrentWrapper = binary;
+
     auto type = GetSafeNode<std::string>(node, "type");
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 

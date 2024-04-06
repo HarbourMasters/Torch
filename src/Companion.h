@@ -122,6 +122,7 @@ public:
     std::string NormalizeAsset(const std::string& name) const;
 
     TorchConfig& GetConfig() { return this->gConfig; }
+    SWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
@@ -137,6 +138,7 @@ private:
     std::shared_ptr<N64::Cartridge> gCartridge;
     std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
+    SWrapper* gCurrentWrapper;
 
     // Temporal Variables
     std::string gCurrentFile;

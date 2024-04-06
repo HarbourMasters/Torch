@@ -13,7 +13,7 @@ SWrapper::SWrapper(const std::string& path) {
         fs::remove(path);
     }
 
-    if(!SFileCreateArchive(path.c_str(), MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_ARCHIVE_V2, 4096, &this->hMpq)){
+    if(!SFileCreateArchive(path.c_str(), MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_ARCHIVE_V2, 8 * 1024, &this->hMpq)){
         SPDLOG_ERROR("Failed to create archive {} with error code {}", path, GetLastError());
         return;
     }

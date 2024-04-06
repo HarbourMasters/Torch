@@ -63,6 +63,30 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
 }
 
 ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
+
+    WriteHeader(writer, LUS::ResourceType::ColPoly, 0);
+
+    writer.Write((uint32_t) colpolys->mPolys.size());
+
+    for(auto &poly : colpolys->mPolys) {
+        writer.Write(poly.tri.x);
+        writer.Write(poly.tri.y);
+        writer.Write(poly.tri.z);
+        if (poly.unk_06 != 0) {
+            SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
+        }
+        writer.Write(poly.norm.x);
+        writer.Write(poly.norm.y);
+        writer.Write(poly.norm.z);
+        if (poly.unk_0E != 0) {
+            SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
+        }
+        writer.Write(poly.dist);
+    }
+
+    writer.Finish(write);
     return std::nullopt;
 }
 
