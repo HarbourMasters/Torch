@@ -100,8 +100,11 @@ ExportResult SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared
     auto writer = LUS::BinaryWriter();
 
     WriteHeader(writer, LUS::ResourceType::Hitbox, 0);
-    for (float value : hitbox->mData) {
-        writer.Write(value);
+
+    auto count = hitbox->mData.size();
+    writer.Write((uint32_t) count);
+    for(size_t i = 0; i < hitbox->mData.size(); i++) {
+        writer.Write(hitbox->mData[i]);
     }
     writer.Finish(write);
     return std::nullopt;

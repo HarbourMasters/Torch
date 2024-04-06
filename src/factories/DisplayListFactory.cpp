@@ -233,14 +233,15 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
             if(overlap.has_value()){
                 auto ovnode = std::get<1>(overlap.value());
-                uint64_t hash = CRC64(std::get<0>(overlap.value()).c_str());
-                SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(overlap.value()));
+                auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
+                uint64_t hash = CRC64(path.c_str());
+                SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, path);
 
                 auto offset = GetSafeNode<uint32_t>(ovnode, "offset");
                 auto count = GetSafeNode<uint32_t>(ovnode, "count");
                 auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
 
-                Gfx value = gsSPVertexOTR(diff, nvtx, ((didx >> 1) - nvtx));
+                Gfx value = gsSPVertexOTR(diff, nvtx, didx);
 
                 SPDLOG_INFO("gsSPVertexOTR({}, {}, {})", diff, nvtx, didx);
 
