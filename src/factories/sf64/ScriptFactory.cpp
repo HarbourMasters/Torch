@@ -72,12 +72,20 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 25:
             cmd << "EVENT_STOP_ROTATE(";
             break;
+        case 44: 
+            cmd << "EVENT_CHASE_TARGET(" << std::dec << arg1 << ", " << s2;
+            break;
+        case 45: {
+            auto teamId = VALUE_TO_ENUM(arg1, "TeamId", "TEAMID_UNK");
+            cmd << "EVENT_SET_TARGET(" << teamId << ", " << std::dec << s2;
+        } break;
         case 56:
             cmd << "EVENT_SET_CALL(" << std::dec << s2 << ", " << arg1;
             break;
-        case 57:
-            cmd << "EVENT_RESTORE_TEAM(" << std::dec << s2;
-            break;
+        case 57: {
+            auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
+            cmd << "EVENT_RESTORE_TEAM(" << teamId;
+         } break;
         case 58: 
         case 59: {
             // auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
@@ -100,6 +108,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             // auto actorinfo = Companion::Instance->GetEnumFromValue("EventActorInfo", s2).value_or("/* EINFO_UNK */ " + std::to_string(s2));
             auto actorInfo = VALUE_TO_ENUM(s2, "EventActorInfo", "EINFO_UNK");
             cmd << "EVENT_INIT_ACTOR(" << actorInfo << ", " << std::dec << arg1;
+        } break;
+        case 105: {
+            auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
+            cmd << "EVENT_SET_TEAM_ID(" << teamId;
         } break;
         case 112:{
             // auto actiontype = Companion::Instance->GetEnumFromValue("EventAction", s2).value_or("/* EVACT_UNK */ " + std::to_string(s2));
@@ -129,6 +141,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             // auto rcidName = Companion::Instance->GetEnumFromValue("RadioCharacterId", arg1).value_or("/* RCID_UNK */ " + std::to_string(arg1));
             auto rcidName = VALUE_TO_ENUM(arg1, "RadioCharacterId", "RCID_UNK");
             cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << s2;
+        } break;
+        case 121: {
+            auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
+            cmd << "EVENT_DAMAGE_TEAM(" << teamId << ", " << std::dec << arg1;
         } break;
         case 122: 
             cmd << "EVENT_STOP_BGM(";
