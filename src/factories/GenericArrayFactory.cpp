@@ -270,7 +270,7 @@ ExportResult ArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
     ArrayType arrayType = arrayTypeMap.at(type);
 
-    WriteHeader(writer, LUS::ResourceType::Blob, 0);
+    WriteHeader(writer, LUS::ResourceType::GenericArray, 0);
     
     writer.Write(static_cast<uint32_t>(arrayType));
     writer.Write((uint32_t) array->mData.size());
