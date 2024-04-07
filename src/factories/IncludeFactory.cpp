@@ -27,7 +27,7 @@ ExportResult IncludeCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         SPDLOG_INFO("writing INC");
     write << ctype << " " << symbol << "[] = {\n";
 
-    write << fourSpaceTab << "#include '" << file << "'\n";
+    write << fourSpaceTab << "#include \"" << file << "\"\n";
 
     write << "};\n\n";
 

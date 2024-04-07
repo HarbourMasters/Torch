@@ -24,6 +24,7 @@ std::unordered_map<std::string, ArrayType> arrayTypeMap = {
     { "Vec3f", ArrayType::Vec3f },
     { "Vec3s", ArrayType::Vec3s },
     { "Vec3i", ArrayType::Vec3i },
+    { "Vec3iu", ArrayType::Vec3iu },
     { "Vec4f", ArrayType::Vec4f },
     { "Vec4s", ArrayType::Vec4s },
 };
@@ -42,6 +43,7 @@ std::unordered_map<ArrayType, size_t> typeSizeMap = {
     { ArrayType::Vec3f, 12 },
     { ArrayType::Vec3s, 6 },
     { ArrayType::Vec3i, 12 },
+    { ArrayType::Vec3iu, 12 },
     { ArrayType::Vec4f, 16 },
     { ArrayType::Vec4s, 8 },
 };
@@ -60,6 +62,7 @@ std::unordered_map<ArrayType, size_t> structCountMap = {
     { ArrayType::Vec3f, 3 },
     { ArrayType::Vec3s, 3 },
     { ArrayType::Vec3i, 3 },
+    { ArrayType::Vec3iu, 3 },
     { ArrayType::Vec4f, 4 },
     { ArrayType::Vec4s, 4 },
 };
@@ -138,6 +141,10 @@ GenericArray::GenericArray(std::vector<ArrayDatum> data) : mData(std::move(data)
             }
             case ArrayType::Vec3i: {
                 mMaxWidth = std::max(mMaxWidth, (uint32_t)std::get<Vec3i>(datum).width());
+                break;
+            }
+            case ArrayType::Vec3iu: {
+                mMaxWidth = std::max(mMaxWidth, (uint32_t)std::get<Vec3iu>(datum).width());
                 break;
             }
             case ArrayType::Vec4f: {
@@ -230,6 +237,9 @@ ExportResult ArrayCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
             case ArrayType::Vec3i:
                 write << FORMAT_INT(std::get<Vec3i>(datum), array->mMaxWidth) << ", ";
                 break;
+            case ArrayType::Vec3iu:
+                write << FORMAT_INT(std::get<Vec3iu>(datum), array->mMaxWidth) << ", ";
+                break;
             case ArrayType::Vec4f:
                 write << FORMAT_FLOAT(std::get<Vec4f>(datum), array->mMaxWidth, array->mMaxPrec) << ", ";
                 break;
@@ -260,7 +270,9 @@ ExportResult ArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
     ArrayType arrayType = arrayTypeMap.at(type);
 
-    WriteHeader(writer, LUS::ResourceType::Blob, 0);
+    WriteHeader(writer, LUS::ResourceType::GenericArray, 0);
+    
+    writer.Write(static_cast<uint32_t>(arrayType));
     writer.Write((uint32_t) array->mData.size());
 
     for (auto &datum : array->mData) {
@@ -372,12 +384,13 @@ std::optional<std::shared_ptr<IParsedData>> GenericArrayFactory::parse(std::vect
     for (int i = 0; i < count; i++) {
         switch (arrayType) {
             case ArrayType::u8: {
-                auto x = reader.ReadUByte();
+                uint8_t x = reader.ReadUByte();
                 data.emplace_back(x);
+                SPDLOG_INFO("HERE");
                 break;
             }
             case ArrayType::s8: {
-                auto x = reader.ReadInt8();
+                int8_t x = reader.ReadInt8();
                 data.emplace_back(x);
                 break;
             }
@@ -445,6 +458,14 @@ std::optional<std::shared_ptr<IParsedData>> GenericArrayFactory::parse(std::vect
                 auto vz = reader.ReadInt32();
 
                 data.emplace_back(Vec3i(vx, vy, vz));
+                break;
+            }
+            case ArrayType::Vec3iu: {
+                auto vx = reader.ReadUInt32();
+                auto vy = reader.ReadUInt32();
+                auto vz = reader.ReadUInt32();
+
+                data.emplace_back(Vec3iu(vx, vy, vz));
                 break;
             }
             case ArrayType::Vec4f: {

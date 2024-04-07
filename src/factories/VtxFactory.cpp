@@ -26,7 +26,7 @@ ExportResult VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPar
             return std::nullopt;
         }
 
-        write << "extern Vtx" << name << "[][" << vtx.size() << "];\n";
+        write << "extern Vtx " << name << "[][" << vtx.size() << "];\n";
     } else {
         write << "extern Vtx " << symbol << "[];\n";
     }

@@ -37,9 +37,23 @@ std::unordered_map<std::string, uint8_t> gF3DExTable = {
     { "G_QUAD", 0xB5 }
 };
 
+std::unordered_map<std::string, uint8_t> gF3DEx2Table = {
+    { "G_VTX", 0x01 },
+    { "G_DL", 0xDE },
+    { "G_ENDDL", 0xDF },
+    { "G_SETTIMG", 0xFD },
+    { "G_MOVEMEM", 0xDC },
+    { "G_MV_L0", 0x86 },
+    { "G_MV_L1", 0x88 },
+    { "G_MV_LIGHT", 0xA },
+    { "G_TRI2", 0x06 },
+    { "G_QUAD", 0x07 }
+};
+
 std::unordered_map<GBIVersion, std::unordered_map<std::string, uint8_t>> gGBITable = {
     { GBIVersion::f3d, gF3DTable },
     { GBIVersion::f3dex, gF3DExTable },
+    { GBIVersion::f3dex2, gF3DEx2Table },
 };
 
 #define GBI(cmd) gGBITable[Companion::Instance->GetGBIVersion()][#cmd]
@@ -313,32 +327,35 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         }
 
         if(opcode == GBI(G_DL)) {
+            if (SEGMENT_NUMBER(node["offset"].as<uint32_t>()) == SEGMENT_NUMBER(w1)) {
 
-            std::optional<uint32_t> segment;
+                std::optional<uint32_t> segment;
 
-            if ((w0 >> 16) & G_DL_NO_PUSH) {
-                SPDLOG_INFO("Branch List Command Found");
-                processing = false;
+                if ((w0 >> 16) & G_DL_NO_PUSH) {
+                    SPDLOG_INFO("Branch List Command Found");
+                    processing = false;
+                }
+
+                YAML::Node gfx;
+                gfx["type"] = "GFX";
+                gfx["offset"] = w1;
+
+                Companion::Instance->AddAsset(gfx);
             }
-
-            YAML::Node gfx;
-            gfx["type"] = "GFX";
-            gfx["offset"] = w1;
-            Companion::Instance->AddAsset(gfx);
         }
 
-	    // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
-	    // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
+        // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
+        // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
         if(opcode == GBI(G_MOVEMEM)) {
-	    // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
-	        uint8_t subcommand = (w0 >> 16) & 0xFF;
+            // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
+            uint8_t subcommand = (w0 >> 16) & 0xFF;
             uint8_t index = 0;
             uint8_t offset = 0;
             bool light = false;
 
             switch (Companion::Instance->GetGBIVersion()) {
-	           // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
-	           // Otherwise mk64 will break.
+               // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
+               // Otherwise mk64 will break.
                // PD: Mega, this works for sm64 too, why you didn't implement it? >:(
                // PD: Im jk, <3
                case GBIVersion::f3d:
@@ -347,9 +364,9 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                      * Only generate lights on the second gsSPLight.
                      * gsSPSetLights1(name) outputs three macros:
                      *
-	                 * gsSPNumLights(NUMLIGHTS_1)
-	                 * gsSPLight(&name.l[0], G_MV_L0)
-	                 * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
+                     * gsSPNumLights(NUMLIGHTS_1)
+                     * gsSPLight(&name.l[0], G_MV_L0)
+                     * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
                     */
                     if (subcommand == GBI(G_MV_L1)) {
                         light = true;

@@ -10,6 +10,7 @@
 #include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
 #include "utils/Decompressor.h"
+#include "factories/TextureFactory.h"
 
 class SWrapper;
 namespace fs = std::filesystem;
@@ -99,6 +100,7 @@ public:
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
+    std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
 
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
@@ -111,6 +113,8 @@ public:
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
+    std::unordered_map<std::string, std::shared_ptr<TextureData>> GetTlutTextureMap() { return this->TlutTextureMap; };
+    void AddTlutTextureMap(std::string index, std::shared_ptr<TextureData> entry);
     std::optional<Table> SearchTable(uint32_t addr);
 
     static std::string CalculateHash(const std::vector<uint8_t>& data);
@@ -132,6 +136,7 @@ private:
     bool gNodeForceProcessing = false;
     YAML::Node gHashNode;
     std::shared_ptr<N64::Cartridge> gCartridge;
+    std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
     SWrapper* gCurrentWrapper;
 
@@ -151,6 +156,7 @@ private:
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
+    std::unordered_map<std::string, std::shared_ptr<TextureData>> TlutTextureMap;
 
     void ParseEnums(std::string& file);
     void ParseHash();
@@ -158,4 +164,6 @@ private:
     void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
+    void ProcessTables(YAML::Node& rom);
+    void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
 };

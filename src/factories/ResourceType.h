@@ -21,6 +21,7 @@ enum class ResourceType {
     Lights = 0x46669697,       // LGTS
     Vec3f = 0x56433346,        // VC3F
     Vec3s = 0x56433353,        // VC3S
+    GenericArray = 0x47415252, // GARR
 
     // SM64
     Anim = 0x414E494D,         // ANIM
