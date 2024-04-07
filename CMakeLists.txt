@@ -34,7 +34,6 @@ file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
 set(USE_STANDALONE ON)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
 # Build
 if (USE_STANDALONE)
@@ -62,6 +61,7 @@ else()
                 /W3;
                 /MD
             >
+            /STACK:16777216
             /permissive-;
             /MP;
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
@@ -79,6 +79,7 @@ else()
                 /Gy;
                 /MD
             >
+            /STACK:16777216
             /permissive-;
             /MP;
             /w;
@@ -97,21 +98,20 @@ else()
                 /INCREMENTAL:NO;
                 /FORCE:MULTIPLE
             >
+            /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
             /SUBSYSTEM:CONSOLE
         )
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /STACK:8777216
-            >
             $<$<CONFIG:Release>:
                 /OPT:REF;
                 /OPT:ICF;
                 /INCREMENTAL:NO;
                 /FORCE:MULTIPLE
             >
+            /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
             /SUBSYSTEM:CONSOLE
