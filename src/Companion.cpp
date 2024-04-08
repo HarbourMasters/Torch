@@ -415,6 +415,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                 auto externalFileName = externalFile.as<std::string>();
                 if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
+                } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
+                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
                 }
                 auto localCurrentDirectory = std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
 
