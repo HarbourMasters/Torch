@@ -34,6 +34,8 @@
 #include "factories/sm64/DictionaryFactory.h"
 #include "factories/sm64/TextFactory.h"
 #include "factories/sm64/GeoLayoutFactory.h"
+#include "factories/sm64/MovtexFactory.h"
+#include "factories/sm64/MovtexQuadFactory.h"
 
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
@@ -89,6 +91,8 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
     this->RegisterFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactory>());
     this->RegisterFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
+    this->RegisterFactory("SM64:MOVTEX_QUAD", std::make_shared<SM64::MovtexQuadFactory>());
+    this->RegisterFactory("SM64:MOVTEX", std::make_shared<SM64::MovtexFactory>());
 
     // MK64 specific
     this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
