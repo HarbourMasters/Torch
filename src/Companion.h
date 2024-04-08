@@ -131,6 +131,7 @@ private:
     YAML::Node gModdingConfig;
     fs::path gCurrentDirectory;
     std::string gCurrentHash;
+    std::string gAssetPath;
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     bool gNodeForceProcessing = false;

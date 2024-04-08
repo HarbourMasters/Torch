@@ -413,6 +413,11 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                     throw std::runtime_error("Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n  - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
                 auto externalFileName = externalFile.as<std::string>();
+                if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
+                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
+                }
+                auto localCurrentDirectory = std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
+
                 if (!this->gAddrMap.contains(externalFileName)) {
                     // Skim file to populate with nodes
                     YAML::Node root = YAML::LoadFile(externalFileName);
@@ -434,6 +439,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                     }
                     for(auto asset = root.begin(); asset != root.end(); ++asset){
                         auto node = asset->second;
+                        auto entryName = asset->first.as<std::string>();
 
                         // Parse horizontal assets
                         if(node["files"]){
@@ -441,8 +447,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                             const auto files = node["files"];
                             for (const auto& file : files) {
                                 auto assetNode = file.as<YAML::Node>();
-                                // Output can be filled in on actual pass of file
-                                std::string output = "";
+                                auto childName = assetNode["name"].as<std::string>();
+                                auto output = (localCurrentDirectory / entryName / childName).string();
+                                std::replace(output.begin(), output.end(), '\\', '/');
 
                                 if(!assetNode["offset"]) {
                                     continue;
@@ -455,8 +462,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                                 this->gAddrMap[externalFileName][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
                             }
                         } else {
-                            // Output can be filled in on actual pass of file
-                            std::string output = "";
+                            auto output = (localCurrentDirectory / entryName).string();
+                            std::replace(output.begin(), output.end(), '\\', '/');
 
                             if(!node["offset"])  {
                                 continue;
@@ -621,7 +628,7 @@ void Companion::Process() {
             this->gConfig.segment.global[i + 1] = segments[i];
         }
     }
-    auto path = rom["path"].as<std::string>();
+    this->gAssetPath = rom["path"].as<std::string>();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
@@ -735,7 +742,7 @@ void Companion::Process() {
     SPDLOG_INFO("Version: {}", this->gCartridge->GetVersion());
     SPDLOG_INFO("Country: [{}]", this->gCartridge->GetCountryCode());
     SPDLOG_INFO("Hash: {}", this->gCartridge->GetHash());
-    SPDLOG_INFO("Assets: {}", path);
+    SPDLOG_INFO("Assets: {}", this->gAssetPath);
 
     AudioManager::Instance = new AudioManager();
     auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
@@ -745,7 +752,7 @@ void Companion::Process() {
     vWriter.Write(static_cast<uint8_t>(LUS::Endianness::Big));
     vWriter.Write(this->gCartridge->GetCRC());
 
-    for (const auto & entry : fs::recursive_directory_iterator(path)){
+    for (const auto & entry : fs::recursive_directory_iterator(this->gAssetPath)){
         if(entry.is_directory())  {
             continue;
         }
@@ -757,7 +764,7 @@ void Companion::Process() {
         }
 
         YAML::Node root = YAML::LoadFile(yamlPath);
-        this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
+        this->gCurrentDirectory = relative(entry.path(), this->gAssetPath).replace_extension("");
         this->gCurrentFile = yamlPath;
 
         // Set compressed file offsets and compression type
