@@ -235,13 +235,18 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 auto ovnode = std::get<1>(overlap.value());
                 auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
                 uint64_t hash = CRC64(path.c_str());
+
+                if(hash == 0) {
+                    throw std::runtime_error("Vtx hash is 0 for " + std::get<0>(overlap.value()));
+                }
+
                 SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, path);
 
                 auto offset = GetSafeNode<uint32_t>(ovnode, "offset");
                 auto count = GetSafeNode<uint32_t>(ovnode, "count");
                 auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
 
-                Gfx value = gsSPVertexOTR(diff, nvtx, didx);
+                Gfx value = gsSPVertexOTR(diff / sizeof(Vtx_t), nvtx, didx);
 
                 SPDLOG_INFO("gsSPVertexOTR({}, {}, {})", diff, nvtx, didx);
 
@@ -261,6 +266,10 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
             if(dec.has_value()){
                 uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
+                if(hash == 0) {
+                    throw std::runtime_error("Vtx hash is 0 for " + std::get<0>(dec.value()));
+                }
+
                 SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
 
                 // TODO: Find a better way to do this because its going to break on other games
@@ -350,6 +359,11 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
             if(dec.has_value()){
                 uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
+
+                if(hash == 0){
+                    throw std::runtime_error("Texture hash is 0 for " + std::get<0>(dec.value()));
+                }
+
                 SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
