@@ -96,13 +96,18 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         //     auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
         //     cmd << "EVENT_STOP_SFX(" << sfxIndex;
         // } break;
-        case 96: 
-            cmd << ((s2 == 0) ? "EVENT_CLEAR_TRIGGER(" : "EVENT_SET_TRIGGER(");
-            if(s2 != 0) {
-                auto condition = VALUE_TO_ENUM(MIN(s2, 100), "EventCondition", "EVC_UNK");
-                cmd << condition << ((s2 < 100) ? "" : " + " + std::to_string(s2 - 100)) << ", ";
+        case 96:
+            if(s2 == 0) {
+                cmd << "EVENT_CLEAR_TRIGGER(" << std::dec << arg1;
+            } else {
+                if (s2 >= 100) {
+                    cmd << "EVENT_SET_Z_TRIGGER(" << std::dec << s2 * 10 << ", ";
+                } else {
+                    auto condition = VALUE_TO_ENUM(s2, "EventCondition", "EVC_UNK");
+                    cmd << condition << ", ";
+                }
+                cmd << ((arg1 < 200) ? "" : "EVENT_AI_CHANGE + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
             }
-            cmd << ((arg1 < 200) ? "" : "EVENT_AI_CHANGE + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
             break;
         case 104: {
             // auto actorinfo = Companion::Instance->GetEnumFromValue("EventActorInfo", s2).value_or("/* EINFO_UNK */ " + std::to_string(s2));
