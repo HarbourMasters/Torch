@@ -150,6 +150,7 @@ private:
     std::optional<VRAMEntry> gCurrentVram;
     CompressionType gCurrentCompressionType = CompressionType::None;
     std::vector<Table> gTables;
+    std::vector<std::string> gCurrentExternalFiles;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
     std::unordered_map<std::string, std::string> gModdedAssetPaths;

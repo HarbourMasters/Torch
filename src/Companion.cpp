@@ -401,6 +401,81 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         this->gCurrentVram = { addr, offset };
     }
 
+    if (node["external_files"]) {
+        auto externalFiles = node["external_files"];
+        if (externalFiles.IsSequence() && externalFiles.size()) {
+            for(size_t i = 0; i < externalFiles.size(); i++) {
+                auto externalFile = externalFiles[i];
+                if (externalFile.size() == 0) {
+                    this->gCurrentExternalFiles.push_back(externalFile.as<std::string>());
+                } else {
+                    SPDLOG_INFO("External File size {}", externalFile.size());
+                    throw std::runtime_error("Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n  - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
+                }
+                auto externalFileName = externalFile.as<std::string>();
+                if (!this->gAddrMap.contains(externalFileName)) {
+                    // Skim file to populate with nodes
+                    YAML::Node root = YAML::LoadFile(externalFileName);
+                    uint32_t localSegmentNumber = 0;
+                    if (root[":config"]) {
+                        YAML::Node node = root[":config"];
+                        if(node["segments"]) {
+                            auto segments = node["segments"];
+
+                            // Set local variables for segmented data
+                            if (segments.IsSequence() && segments.size()) {
+                                if (segments[0].IsSequence() && segments[0].size() == 2) {
+                                    localSegmentNumber = segments[0][0].as<uint32_t>();
+                                } else {
+                                    throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                                }
+                            }
+                        }
+                    }
+                    for(auto asset = root.begin(); asset != root.end(); ++asset){
+                        auto node = asset->second;
+
+                        // Parse horizontal assets
+                        if(node["files"]){
+                            auto segment = node["segment"] ? node["segment"].as<uint8_t>() : -1;
+                            const auto files = node["files"];
+                            for (const auto& file : files) {
+                                auto assetNode = file.as<YAML::Node>();
+                                // Output can be filled in on actual pass of file
+                                std::string output = "";
+
+                                if(!assetNode["offset"]) {
+                                    continue;
+                                }
+
+                                if(segment != -1 || localSegmentNumber) {
+                                    assetNode["offset"] = (segment << 24) | assetNode["offset"].as<uint32_t>();
+                                }
+
+                                this->gAddrMap[externalFileName][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
+                            }
+                        } else {
+                            // Output can be filled in on actual pass of file
+                            std::string output = "";
+
+                            if(!node["offset"])  {
+                                continue;
+                            }
+
+                            if(localSegmentNumber) {
+                                if (IS_SEGMENTED(node["offset"].as<uint32_t>()) == false) {
+                                    node["offset"] = (localSegmentNumber << 24) | node["offset"].as<uint32_t>();
+                                }
+                            }
+
+                            this->gAddrMap[externalFileName][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
     this->gNodeForceProcessing = GetSafeNode<bool>(node, "force", false);
 }
@@ -765,6 +840,7 @@ void Companion::Process() {
         this->gCurrentSegmentNumber = 0;
         this->gCurrentCompressionType = CompressionType::None;
         this->gTables.clear();
+        this->gCurrentExternalFiles.clear();
         GFXDOverride::ClearVtx();
 
         if(root[":config"]) {
@@ -1142,6 +1218,17 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(cons
     }
 
     if(!this->gAddrMap[this->gCurrentFile].contains(addr)){
+        for (auto &file : this->gCurrentExternalFiles) {
+            if (!this->gAddrMap.contains(file)) {
+                SPDLOG_INFO("External File {} Not Found.", file);
+                continue;
+            }
+
+            if (!this->gAddrMap[file].contains(addr)) {
+                continue;
+            }
+            return this->gAddrMap[file][addr];
+        }
         return std::nullopt;
     }
 
