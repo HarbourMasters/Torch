@@ -28,6 +28,9 @@ enum class ResourceType {
     SDialog = 0x53444C47,      // SDLG
     Dictionary = 0x44494354,   // DICT
     GeoLayout = 0x47454F20,    // GEO
+    Collision = 0x434F4C20,    // COL
+    Movtex = 0x4D4F5654,       // MOVT
+    MovtexQuad = 0x4D4F5651,   // MOVQ
 
     // MK64
     CourseVertex = 0x43565458, // CVTX

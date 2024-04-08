@@ -259,7 +259,6 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
     const auto collision = std::static_pointer_cast<Collision>(data).get();
 
     auto writer = LUS::BinaryWriter();
-    writer.SetEndianness(LUS::Endianness::Big);
 
     writer.Write((int16_t)COL_INIT());
 
@@ -340,7 +339,7 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
     writer.Close();
 
     LUS::BinaryWriter output = LUS::BinaryWriter();
-    WriteHeader(output, LUS::ResourceType::Blob, 0);
+    WriteHeader(output, LUS::ResourceType::Collision, 0);
 
     output.Write(static_cast<uint32_t>(buffer.size()));
     output.Write(buffer.data(), buffer.size());
