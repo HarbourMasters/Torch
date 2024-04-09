@@ -246,7 +246,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 auto count = GetSafeNode<uint32_t>(ovnode, "count");
                 auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
 
-                Gfx value = gsSPVertexOTR(diff / sizeof(Vtx_t), nvtx, didx);
+                Gfx value = gsSPVertexOTR(diff, nvtx, didx);
 
                 SPDLOG_INFO("gsSPVertexOTR({}, {}, {})", diff, nvtx, didx);
 
