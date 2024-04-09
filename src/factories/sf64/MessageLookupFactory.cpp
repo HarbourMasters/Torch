@@ -8,7 +8,7 @@ ExportResult SF64::MessageLookupHeaderExporter::Export(std::ostream &write, std:
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -50,10 +50,20 @@ ExportResult SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std:
 
     WriteHeader(writer, LUS::ResourceType::MessageTable, 0);
 
-    writer.Write(static_cast<uint32_t>(data->mTable.size()));
+    const auto count = data->mTable.size();
+    SPDLOG_INFO("Message Count: {}", count);
+    writer.Write(static_cast<uint32_t>(count));
     for(auto m : data->mTable) {
         writer.Write(m.id);
-        writer.Write(m.ptr);
+        auto dec = Companion::Instance->GetNodeByAddr(m.ptr);
+        if(dec.has_value()){
+            std::string path = std::get<0>(dec.value());
+            SPDLOG_INFO("Message ID: {} Ptr: {:X} Path: {}", m.id, m.ptr, path);
+            writer.Write(CRC64(path.c_str()));
+        } else {
+            writer.Write((uint64_t) 0);
+            SPDLOG_WARN("Failed to find message ID: {} Ptr: {:X}", m.id, m.ptr);
+        }
     }
     writer.Finish(write);
     return std::nullopt;

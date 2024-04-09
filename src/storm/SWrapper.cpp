@@ -43,33 +43,28 @@ bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
     time(&theTime);
 #endif
 
-    char* raw = (char*) data.data();
+    char* raw = data.data();
     size_t size = data.size();
 
     if(size == 0){
         SPDLOG_ERROR("File at path {} is empty", path);
-        std::cout << "File empty: " << path << std::endl;
         return false;
     }
 
     if(size >> 32){
-        SPDLOG_ERROR("File at path {} is too large with size {}", path, size);
-        return false;
+        throw std::runtime_error("File at path " + path + " is too large with size " + std::to_string(size));
     }
 
     if(!SFileCreateFile(this->hMpq, path.c_str(), theTime, size, 0, MPQ_FILE_COMPRESS, &hFile)){
-        SPDLOG_ERROR("Failed to create file at path {} with error {}", path, GetLastError());
-        return false;
+        throw std::runtime_error("Failed to create file at path " + path + " with error " + std::to_string(GetLastError()));
     }
 
     if(!SFileWriteFile(hFile, (void*) raw, size, MPQ_COMPRESSION_ZLIB)){
-        SPDLOG_ERROR("Failed to write file at path {} with error {}", path, GetLastError());
-        return false;
+        throw std::runtime_error("Failed to write file at path " + path + " with error " + std::to_string(GetLastError()));
     }
 
     if(!SFileCloseFile(hFile)){
-        SPDLOG_ERROR("Failed to close file at path {} with error {}", path, GetLastError());
-        return false;
+        throw std::runtime_error("Failed to close file at path " + path + " with error " + std::to_string(GetLastError()));
     }
 
     return true;

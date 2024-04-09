@@ -12,7 +12,7 @@ ExportResult IncludeHeaderExporter::Export(std::ostream &write, std::shared_ptr<
     auto ctype = GetSafeNode<std::string>(node, "ctype");
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 

@@ -53,7 +53,7 @@ ExportResult SF64::MessageHeaderExporter::Export(std::ostream &write, std::share
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -130,9 +130,10 @@ ExportResult SF64::MessageBinaryExporter::Export(std::ostream &write, std::share
 
     WriteHeader(writer, LUS::ResourceType::Message, 0);
 
-    writer.Write(static_cast<uint32_t>(data->mMessage.size()));
-    for(auto m : data->mMessage) {
-        writer.Write(m);
+    auto count = data->mMessage.size();
+    writer.Write(static_cast<uint32_t>(count));
+    for(size_t i = 0; i < count; i++) {
+        writer.Write((uint16_t) data->mMessage[i]);
     }
     writer.Finish(write);
     return std::nullopt;
@@ -145,12 +146,12 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vec
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
 
-    uint16_t c = reader.ReadUInt16();
-    while(c != END_CODE){
+    bool processing = true;
+    while(processing){
+        uint16_t c = reader.ReadUInt16();
         message.push_back(c);
-        c = reader.ReadUInt16();
+        processing = c != END_CODE;
     }
-    message.push_back(END_CODE);
 
     return std::make_shared<MessageData>(message);
 }

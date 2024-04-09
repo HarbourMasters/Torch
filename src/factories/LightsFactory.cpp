@@ -8,7 +8,7 @@ ExportResult LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<I
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -37,7 +37,7 @@ ExportResult LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
 
     if(searchTable.has_value()){
         const auto [name, start, end, mode] = searchTable.value();
-        
+
 
         if(start == offset){
             write << "Lights1 " << name << "[] = {\n";

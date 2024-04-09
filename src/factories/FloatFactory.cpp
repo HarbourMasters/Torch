@@ -11,7 +11,7 @@ ExportResult FloatHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -41,7 +41,7 @@ ExportResult FloatCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
      * f32 sym[] = {
      *    0.1, 0.2, 0.3,
      * };
-     * 
+     *
     */
     for (int i = 0; i < f.size(); ++i) {
 

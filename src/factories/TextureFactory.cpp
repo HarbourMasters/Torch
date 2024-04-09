@@ -11,6 +11,7 @@ extern "C" {
 }
 
 bool isTable = false;
+std::vector<std::string> tableEntries;
 
 static const std::unordered_map <std::string, TextureFormat> gTextureFormats = {
     { "RGBA16", { TextureType::RGBA16bpp, 16 } },
@@ -83,28 +84,41 @@ std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t
 ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    auto format = GetSafeNode<std::string>(node, "format");
     auto texture = std::static_pointer_cast<TextureData>(raw);
     auto data = texture->mBuffer;
+    auto isOTR = Companion::Instance->IsOTRMode();
     size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
-
-    if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return std::nullopt;
-    }
 
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
         const auto [name, start, end, mode] = searchTable.value();
 
-        if(start != offset){
-            return std::nullopt;
-        }
+        if(isOTR){
+            write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
 
-        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << (data.size() / byteSize) << "];\n";
+            tableEntries.push_back(symbol);
+
+            if(end == offset){
+                write << "static const char* " << name << "[] = {\n";
+                for(auto& entry : tableEntries){
+                    write << tab << entry << ",\n";
+                }
+                write << "};\n\n";
+                tableEntries.clear();
+            }
+        } else {
+            write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << (data.size() / byteSize) << "];\n";
+        }
     } else {
-        write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
+        if(isOTR){
+            write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        } else {
+            write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
+        }
     }
+
     return std::nullopt;
 }
 
@@ -191,6 +205,10 @@ ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     auto data = texture->mBuffer;
 
     WriteHeader(writer, LUS::ResourceType::Texture, 0);
+
+    if(texture->mFormat.type == TextureType::TLUT) {
+        texture->mFormat.type = TextureType::RGBA16bpp;
+    }
 
     writer.Write((uint32_t) texture->mFormat.type);
     writer.Write(texture->mWidth);
