@@ -11,7 +11,7 @@ ExportResult MtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPar
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -34,7 +34,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
         }
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
-    
+
     #define fiveFourSpaceTabs fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << fourSpaceTab << "   "
 
     /**
@@ -43,7 +43,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
      *                    0.0, 0.0, 1.0, 0.0,
      *                    0.0, 0.0, 0.0, 1.0);
      */
-    
+
     write << "Mtx " << symbol << " = {\n";
 
     for (int i = 0; i < m.size(); ++i) {
@@ -64,7 +64,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
                     write << std::fixed << std::setprecision(6) << m[i].mtx[j];
                 }
             }
-            
+
             // Add comma for all but the last arg
             if (j < 15) {
                 write << ", ";
@@ -80,7 +80,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
                 }
                 break;
             }
-            
+
             // Add lots of spaces for start of a new line
             if ((j + 1) % 4 == 0) {
                 write << "\n" << fiveFourSpaceTabs;
@@ -206,7 +206,7 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
            m13, m14, m15, m16,
        }));
     }
-    
+
     #undef FIXTOF
 
     return std::make_shared<MtxData>(matrix);

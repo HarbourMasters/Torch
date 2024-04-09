@@ -20,7 +20,7 @@ ExportResult Vec3fHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -71,7 +71,7 @@ ExportResult Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
         writer.Write(y);
         writer.Write(z);
     }
-    
+
     writer.Finish(write);
     return std::nullopt;
 }

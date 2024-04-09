@@ -973,7 +973,9 @@ void Companion::Process() {
             file.close();
         }
 
-        this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
+        if(this->gConfig.exporterType != ExportType::Binary) {
+            this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
+        }
     }
 
     if(wrapper != nullptr) {

@@ -247,7 +247,7 @@ ExportResult SM64::CollisionHeaderExporter::Export(std::ostream &write, std::sha
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 

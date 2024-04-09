@@ -82,7 +82,7 @@ ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -188,13 +188,14 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr){
 }
 
 ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    const auto gbi = Companion::Instance->GetGBIVersion();
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     auto writer = LUS::BinaryWriter();
 
     WriteHeader(writer, LUS::ResourceType::DisplayList, 0);
 
     while (writer.GetBaseAddress() % 8 != 0)
-        writer.Write(static_cast<uint8_t>(0xFF));
+        writer.Write(static_cast<int8_t>(0xFF));
 
     auto bhash = CRC64((*replacement).c_str());
     writer.Write(static_cast<uint32_t>((G_MARKER << 24)));
@@ -208,9 +209,53 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
         uint8_t opcode = w0 >> 24;
 
         if(opcode == GBI(G_VTX)) {
-            auto nvtx = (C0(0, 16)) / sizeof(Vtx);
-            auto didx = C0(16, 4);
+            size_t nvtx;
+            size_t didx;
+
+            switch (gbi) {
+                case GBIVersion::f3dex2:
+                    nvtx = C0(12, 8);
+                    didx = C0(1, 7) - C0(12, 8);
+                    break;
+                case GBIVersion::f3dex:
+                case GBIVersion::f3dexb:
+                    nvtx = C0(10, 6);
+                    didx = C0(17, 7);
+                    break;
+                default:
+                    nvtx = (C0(0, 16)) / sizeof(Vtx_t);
+                    didx = C0(16, 4);
+                    break;
+            }
+
             auto ptr = w1;
+            auto overlap = GFXDOverride::GetVtxOverlap(ptr);
+
+            if(overlap.has_value()){
+                auto ovnode = std::get<1>(overlap.value());
+                uint64_t hash = CRC64(std::get<0>(overlap.value()).c_str());
+                SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(overlap.value()));
+
+                auto offset = GetSafeNode<uint32_t>(ovnode, "offset");
+                auto count = GetSafeNode<uint32_t>(ovnode, "count");
+                auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
+
+                Gfx value = gsSPVertexOTR(diff, nvtx, ((didx >> 1) - nvtx));
+
+                SPDLOG_INFO("gsSPVertexOTR({}, {}, {})", diff, nvtx, didx);
+
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+
+                writer.Write(w0);
+                writer.Write(w1);
+
+                w0 = hash >> 32;
+                w1 = hash & 0xFFFFFFFF;
+            } else {
+                SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
+            }
+
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             if(dec.has_value()){
@@ -260,9 +305,23 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
+            uint8_t index = 0;
+            uint8_t offset = 0;
+
+            switch (gbi) {
+                case GBIVersion::f3d:
+                    index = C0(0, 8);
+                    offset = 0;
+                    break;
+                default:
+                    index = C0(0, 8);
+                    offset = C0(8, 8) * 8;
+                    break;
+            }
+
             w0 &= 0x00FFFFFF;
             w0 += G_MOVEMEM_OTR_HASH << 24;
-            w1 = 0;
+            w1 = _SHIFTL(index, 24, 8) | _SHIFTL(offset, 16, 8);
 
             writer.Write(w0);
             writer.Write(w1);
