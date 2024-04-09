@@ -477,7 +477,7 @@ void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML
             }
 
             // Recursive call for subdirectories
-            LoadYAMLRecursively(entry.path(), result, false);
+            LoadYAMLRecursively(entry.path().string(), result, false);
         } else if (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml") {
             // Load YAML file and add it to the result vector
             result.push_back(YAML::LoadFile(entry.path().string()));
