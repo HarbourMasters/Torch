@@ -260,7 +260,7 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
                 auto palettePtr = tlutTextureMap[tlut];
 
                 if (palettePtr) {
-                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palettePtr->mBuffer.data(), 0, texture->mWidth, texture->mHeight, palettePtr->mFormat.depth);
+                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palettePtr->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palettePtr->mFormat.depth);
 
                 } else {
                     auto symbol = GetSafeNode<std::string>(node, "symbol");

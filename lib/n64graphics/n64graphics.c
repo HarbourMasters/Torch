@@ -823,31 +823,29 @@ const char* n64graphics_get_write_version(void) {
 /**
  * Converts binary ci8 + palette to a single .png
  */
-int convert_raw_to_ci8(unsigned char **png_output, int *size_output, uint8_t *texture, uint8_t *palette, int format, int width, int height, int depth) {
-FILE *pal_fp;
-               uint8_t *pal;
-               uint8_t *raw_fmt;
-               rgba *imgr;
-               ia   *imgi;
-               int pal_size;
-               int res;
+int convert_raw_to_ci8(unsigned char **png_output, int *size_output, uint8_t *texture, uint8_t *palette, int format, int width, int height, int depth, int pal_depth) {
+    uint8_t *raw_fmt;
+    rgba *imgr;
+    ia   *imgi;
+    int res;
 
-               raw_fmt = ci2raw(texture, palette, width, height, depth);
-               switch (format) {
-                  case IMG_FORMAT_RGBA:
-                     INFO("Converting raw to RGBA16\n");
-                     imgr = raw2rgba(raw_fmt, width, height, depth);
-                     res = rgba2png(png_output, size_output, imgr, width, height);
-                     break;
-                  case IMG_FORMAT_IA:
-                     INFO("Converting raw to IA16\n");
-                     imgi = raw2ia(raw_fmt, width, height, depth);
-                     //res = ia2png(name, imgi, width, height);
-                     break;
-                  default:
-                     //ERROR("Unsupported palette format: %s\n", format2str(&config.pal_format));
-                     return EXIT_FAILURE;
-               }
-               free(raw_fmt);
-               free(pal);
+    raw_fmt = ci2raw(texture, palette, width, height, depth);
+    switch (format) {
+        case IMG_FORMAT_RGBA:
+            INFO("Converting raw to RGBA%d\n", pal_depth);
+            imgr = raw2rgba(raw_fmt, width, height, pal_depth);
+            res = rgba2png(png_output, size_output, imgr, width, height);
+            free(imgr);
+            break;
+        case IMG_FORMAT_IA:
+            INFO("Converting raw to IA%d\n", pal_depth);
+            imgi = raw2ia(raw_fmt, width, height, pal_depth);
+            //res = ia2png(name, imgi, width, height);
+            free(imgi);
+            break;
+        default:
+            //ERROR("Unsupported palette format: %s\n", format2str(&config.pal_format));
+            return EXIT_FAILURE;
+    }
+    free(raw_fmt);
 }

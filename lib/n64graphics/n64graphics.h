@@ -53,7 +53,7 @@ ia *raw2i(const uint8_t *raw, int width, int height, int depth);
 // N64 raw CI4/CI8 -> intermediate CI
 ci *raw2ci_torch(const uint8_t* raw, int width, int height, int depth);
 
-int convert_raw_to_ci8(unsigned char **png_output, int *size_output, uint8_t *texture, uint8_t *palette, int format, int width, int height, int depth);
+int convert_raw_to_ci8(unsigned char **png_output, int *size_output, uint8_t *texture, uint8_t *palette, int format, int width, int height, int depth, int pal_depth);
 
 int imgpal2rawci(uint8_t *rawci, const rgba *img, const rgba *pal, const uint8_t *wheel_mask, int raw_size, int ci_depth, int img_size, int pal_size);
 
