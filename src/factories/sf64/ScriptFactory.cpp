@@ -277,7 +277,6 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
 
     // Export Script
     WriteHeader(scriptWriter, LUS::ResourceType::Script, 0);
-    scriptWriter.Write((uint32_t) script->mPtrs.size());
     auto count = script->mPtrs.size();
     scriptWriter.Write((uint32_t) count);
     for (size_t i = 0; i < script->mPtrs.size(); i++) {
