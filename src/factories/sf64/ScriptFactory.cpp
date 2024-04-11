@@ -101,10 +101,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
                 cmd << "EVENT_CLEAR_TRIGGER(" << std::dec << arg1;
             } else {
                 if (s2 >= 100) {
-                    cmd << "EVENT_SET_Z_TRIGGER(" << std::dec << s2 * 10 << ", ";
+                    cmd << "EVENT_SET_Z_TRIGGER(" << std::dec << (s2 - 100) * 10 << ", ";
                 } else {
                     auto condition = VALUE_TO_ENUM(s2, "EventCondition", "EVC_UNK");
-                    cmd << condition << ", ";
+                    cmd << "EVENT_SET_TRIGGER(" << condition << ", ";
                 }
                 cmd << ((arg1 < 200) ? "" : "EVENT_AI_CHANGE + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
             }
