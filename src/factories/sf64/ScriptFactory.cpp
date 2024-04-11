@@ -251,8 +251,6 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
     for (auto ptr : sortedPtrs) {
         auto wrapper = Companion::Instance->GetCurrentWrapper();
         std::ostringstream stream;
-        stream.str("");
-        stream.clear();
 
         auto cmdWriter = LUS::BinaryWriter();
         WriteHeader(cmdWriter, LUS::ResourceType::ScriptCmd, 0);
@@ -280,8 +278,10 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
     // Export Script
     WriteHeader(scriptWriter, LUS::ResourceType::Script, 0);
     scriptWriter.Write((uint32_t) script->mPtrs.size());
-    for (auto &ptr : script->mPtrs) {
-        scriptWriter.Write(ptrMap.at(ptr));
+    auto count = script->mPtrs.size();
+    scriptWriter.Write((uint32_t) count);
+    for (size_t i = 0; i < script->mPtrs.size(); i++) {
+        scriptWriter.Write(ptrMap.at(script->mPtrs.at(i)));
     }
 
     scriptWriter.Finish(write);
