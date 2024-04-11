@@ -34,14 +34,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     std::ostringstream cmd;
     std::ostringstream comment;
 
-    
-
     switch (opcode) {
         case 0:
         case 1: {
             auto f3 = arg1 & 0x7F;
-            // auto zm = (arg1 >> 7) & 3;
-            // auto zmode = Companion::Instance->GetEnumFromValue("EventModeZ", zm).value_or("/* EVOP_UNK */ " + std::to_string(zm));
             auto zmode = VALUE_TO_ENUM((arg1 >> 7) & 3, "EventModeZ", "EVOP_UNK");
             
             cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2;
@@ -88,14 +84,9 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
          } break;
         case 58: 
         case 59: {
-            // auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
             auto sfxIndex = VALUE_TO_ENUM(s2, "EventSfx", "EVSFX_UNK");
             cmd << "EVENT_" << ((opcode == 58) ? "PLAY" : "STOP") << "_SFX(" << sfxIndex;
         } break;
-        // case 59: {
-        //     auto sfxIndex = Companion::Instance->GetEnumFromValue("EventSfx", s2).value_or("/* EVSFX_UNK */ " + std::to_string(s2));
-        //     cmd << "EVENT_STOP_SFX(" << sfxIndex;
-        // } break;
         case 96:
             if(s2 == 0) {
                 cmd << "EVENT_CLEAR_TRIGGER(" << std::dec << arg1;
