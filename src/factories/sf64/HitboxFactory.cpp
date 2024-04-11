@@ -34,7 +34,7 @@ ExportResult SF64::HitboxHeaderExporter::Export(std::ostream &write, std::shared
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -100,8 +100,11 @@ ExportResult SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared
     auto writer = LUS::BinaryWriter();
 
     WriteHeader(writer, LUS::ResourceType::Hitbox, 0);
-    for (float value : hitbox->mData) {
-        writer.Write(value);
+
+    auto count = hitbox->mData.size();
+    writer.Write((uint32_t) count);
+    for(size_t i = 0; i < hitbox->mData.size(); i++) {
+        writer.Write(hitbox->mData[i]);
     }
     writer.Finish(write);
     return std::nullopt;

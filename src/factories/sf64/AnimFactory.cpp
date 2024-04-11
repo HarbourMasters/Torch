@@ -27,7 +27,7 @@ ExportResult SF64::AnimHeaderExporter::Export(std::ostream &write, std::shared_p
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -106,16 +106,20 @@ ExportResult SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_p
     WriteHeader(writer, LUS::ResourceType::AnimData, 0);
     writer.Write(anim->mFrameCount);
     writer.Write(anim->mLimbCount);
-    writer.Write((uint32_t) anim->mFrameData.size());
-    writer.Write((uint32_t) anim->mJointKeys.size());
+
+    auto jointSize = anim->mJointKeys.size();
+    writer.Write((uint32_t) jointSize);
+    SPDLOG_INFO("Joint Size: {}", jointSize);
 
     for(auto joint : anim->mJointKeys) {
-        for (int i = 0; i < 6; i++) {
-            writer.Write(joint.keys[i]);
-        }
+        writer.Write((char*) joint.keys, sizeof(joint.keys));
     }
-    for(auto data : anim->mFrameData) {
-        writer.Write(data);
+
+    auto frameSize = anim->mFrameData.size();
+    writer.Write((uint32_t) frameSize);
+    SPDLOG_INFO("Frame Size: {}", frameSize);
+    for(size_t i = 0; i < frameSize; i++) {
+        writer.Write(anim->mFrameData[i]);
     }
     writer.Finish(write);
     return std::nullopt;

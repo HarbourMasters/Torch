@@ -9,7 +9,7 @@ ExportResult SF64::ObjInitHeaderExporter::Export(std::ostream &write, std::share
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -50,16 +50,17 @@ ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::share
     auto data = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
 
     WriteHeader(writer, LUS::ResourceType::ObjectInit, 0);
-    writer.Write((uint32_t) data.size());
-    for(auto& obj : data) {
-        writer.Write(obj.zPos1);
-        writer.Write(obj.zPos2);
-        writer.Write(obj.xPos);
-        writer.Write(obj.yPos);
-        writer.Write(obj.rot.x);
-        writer.Write(obj.rot.y);
-        writer.Write(obj.rot.z);
-        writer.Write(obj.id);
+    auto count = data.size();
+    writer.Write((uint32_t) count);
+    for(size_t i = 0; i < data.size(); i++) {
+        writer.Write(data[i].zPos1);
+        writer.Write(data[i].zPos2);
+        writer.Write(data[i].xPos);
+        writer.Write(data[i].yPos);
+        writer.Write(data[i].rot.x);
+        writer.Write(data[i].rot.y);
+        writer.Write(data[i].rot.z);
+        writer.Write(data[i].id);
     }
     writer.Finish(write);
     return std::nullopt;

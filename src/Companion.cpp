@@ -477,7 +477,7 @@ void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML
             }
 
             // Recursive call for subdirectories
-            LoadYAMLRecursively(entry.path(), result, false);
+            LoadYAMLRecursively(entry.path().string(), result, false);
         } else if (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml") {
             // Load YAML file and add it to the result vector
             result.push_back(YAML::LoadFile(entry.path().string()));
@@ -973,7 +973,9 @@ void Companion::Process() {
             file.close();
         }
 
-        this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
+        if(this->gConfig.exporterType != ExportType::Binary) {
+            this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
+        }
     }
 
     if(wrapper != nullptr) {
@@ -1178,6 +1180,12 @@ std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNo
 std::string Companion::NormalizeAsset(const std::string& name) const {
     auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;
     return path;
+}
+
+std::string Companion::RelativePath(const std::string& path) const {
+    std::string doutput = (this->gCurrentDirectory / path).string();
+    std::replace(doutput.begin(), doutput.end(), '\\', '/');
+    return doutput;
 }
 
 std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {

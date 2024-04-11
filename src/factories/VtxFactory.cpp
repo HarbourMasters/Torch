@@ -13,7 +13,7 @@ ExportResult VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPar
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -42,7 +42,7 @@ ExportResult VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
 
     if(searchTable.has_value()){
         const auto [name, start, end, mode] = searchTable.value();
-        
+
 
         if(start == offset){
             write << "Vtx " << name << "[][" << vtx.size() << "] = {\n";

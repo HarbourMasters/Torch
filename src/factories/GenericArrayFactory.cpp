@@ -165,7 +165,7 @@ ExportResult ArrayHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     const auto type = GetSafeNode<std::string>(node, "array_type");
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 

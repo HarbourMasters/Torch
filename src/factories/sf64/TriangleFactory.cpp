@@ -17,7 +17,7 @@ ExportResult SF64::TriangleHeaderExporter::Export(std::ostream &write, std::shar
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -105,7 +105,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::TriangleFactory::parse(std::ve
                 }
             } else {
                 std::ostringstream offsetSeg;
-                
+
                 offsetSeg << std::uppercase << std::hex << meshOffset;
                 meshSymbol = std::regex_replace(meshSymbol, std::regex(R"(OFFSET)"), offsetSeg.str());
             }

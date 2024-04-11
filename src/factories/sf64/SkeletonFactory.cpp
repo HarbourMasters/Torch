@@ -19,7 +19,7 @@ ExportResult SF64::SkeletonHeaderExporter::Export(std::ostream &write, std::shar
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
@@ -106,22 +106,24 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
     for (auto &limb : limbs) {
         auto wrapper = Companion::Instance->GetCurrentWrapper();
         std::ostringstream stream;
-        stream.str("");
-        stream.clear();
 
         auto limbWriter = LUS::BinaryWriter();
         WriteHeader(limbWriter, LUS::ResourceType::Limb, 0);
-        uint64_t hash = 0;
-        if (limb.mDList != 0) {
+        bool hasDList = limb.mDList != 0 && (SEGMENT_NUMBER(limb.mDList) == SEGMENT_NUMBER(limb.mAddr));
+
+        if(hasDList){
             auto dec = Companion::Instance->GetNodeByAddr(limb.mDList);
             if (dec.has_value()){
-                hash = CRC64(std::get<0>(dec.value()).c_str());
-                SPDLOG_INFO("Found display list: 0x{:X} Hash: 0x{:X} Path: {}", limb.mDList, hash, std::get<0>(dec.value()));
+                std::string path = std::get<0>(dec.value());
+                limbWriter.Write(CRC64(path.c_str()));
+                SPDLOG_INFO("Found display list: 0x{:X} at {} with size {}", limb.mDList, path, path.size());
             } else {
                 SPDLOG_WARN("Could not find dlist at 0x{:X}", limb.mDList);
+                throw std::runtime_error("Could not find dlist at 0x" + std::to_string(limb.mDList));
             }
+        } else {
+            limbWriter.Write((uint64_t) 0);
         }
-        limbWriter.Write(hash);
         auto [transX, transY, transZ] = limb.mTrans;
         limbWriter.Write(transX);
         limbWriter.Write(transY);
@@ -148,8 +150,6 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
     }
 
     skeletonWriter.Finish(write);
-    
-    
     return std::nullopt;
 }
 
