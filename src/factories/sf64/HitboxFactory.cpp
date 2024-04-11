@@ -62,13 +62,13 @@ ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_p
 
     for(int i = 0; i < (int)count; i++) {
         if(hitbox->mTypes[i]  == 4) {
-            write << fourSpaceTab << "HITBOX_TYPE_4,   ";
+            write << fourSpaceTab << "HITBOX_WHOOSH,     ";
             index++;
         } else if (hitbox->mTypes[i] == 3) {
-            write << fourSpaceTab << "HITBOX_TYPE_3,   ";
+            write << fourSpaceTab << "HITBOX_SHADOW,     ";
             index++;
         } else if (hitbox->mTypes[i] == 2) {
-            write << fourSpaceTab << "HITBOX_TYPE_2,    ";
+            write << fourSpaceTab << "HITBOX_ROTATED,    ";
             index++;
             for(int j = 0; j < 3; j++) {
                 auto tempf = hitbox->mData[index++];
@@ -76,7 +76,7 @@ ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_p
                 write << ", ";
             }
         } else {
-            write << " /* HITBOX_TYPE_1 */ ";
+            write << " /* HITBOX_STANDARD */ ";
         }
         if(hasType2 && hitbox->mTypes[i] != 2) {
             for(int j = 0; j < 7; j++) {
