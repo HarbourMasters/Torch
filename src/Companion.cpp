@@ -1171,6 +1171,37 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(cons
     return this->gAddrMap[this->gCurrentFile][addr];
 }
 
+std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
+    if(!this->gParseResults.contains(this->gCurrentFile)){
+        return std::nullopt;
+    }
+
+    for(auto& result : this->gParseResults[this->gCurrentFile]){
+        if(result.data.has_value() && result.GetOffset() == addr){
+            return result;
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::optional<ParseResultData> Companion::GetParseDataBySymbol(const std::string& symbol) {
+    if(!this->gParseResults.contains(this->gCurrentFile)){
+        return std::nullopt;
+    }
+
+    for(auto& result : this->gParseResults[this->gCurrentFile]){
+        auto sym = GetNode<std::string>(result.node, "symbol");
+
+        if(result.data.has_value() && sym.has_value() && sym.value() == symbol){
+            return result;
+        }
+    }
+
+    return std::nullopt;
+
+}
+
 std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNodesByType(const std::string& type){
     std::vector<std::tuple<std::string, YAML::Node>> nodes;
 
@@ -1263,8 +1294,4 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     }
 
     return std::nullopt;
-}
-
-void Companion::AddTlutTextureMap(std::string index, std::shared_ptr<TextureData> entry) {
-    this->TlutTextureMap[index] = entry;
 }

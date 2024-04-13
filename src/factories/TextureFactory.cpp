@@ -255,16 +255,29 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
         case TextureType::Palette4bpp: {
             // This check needed until sf64 has tluts fixed.
             if (node["tlut_symbol"]) {
-                auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");            
-                auto tlutTextureMap = Companion::Instance->GetTlutTextureMap();
-                auto palettePtr = tlutTextureMap[tlut];
+                auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");
+                auto palette = Companion::Instance->GetParseDataBySymbol(tlut);
 
-                if (palettePtr) {
-                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palettePtr->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palettePtr->mFormat.depth);
-
+                if (palette.has_value()) {
+                    auto palTexture = std::static_pointer_cast<TextureData>(palette.value().data.value());
+                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palTexture->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palTexture->mFormat.depth);
                 } else {
                     auto symbol = GetSafeNode<std::string>(node, "symbol");
                     throw std::runtime_error("Could not convert ci8 '"+symbol+"' the tlut symbol name is probably wrong for tlut_symbol node");
+                }
+                break;
+            }
+
+            if (node["tlut"]) {
+                auto tlut = GetSafeNode<uint32_t>(node,"tlut");
+                auto palette = Companion::Instance->GetParseDataByAddr(tlut);
+
+                if (palette.has_value()) {
+                    auto palTexture = std::static_pointer_cast<TextureData>(palette.value().data.value());
+                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palTexture->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palTexture->mFormat.depth);
+                } else {
+                    auto symbol = GetSafeNode<std::string>(node, "symbol");
+                    throw std::runtime_error("Could not convert ci8 '"+symbol+"' the address is probably wrong for tlut address node");
                 }
                 break;
             }
@@ -351,7 +364,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         SPDLOG_INFO("Width: {}", width);
         SPDLOG_INFO("Height: {}", height);
     }
-    SPDLOG_INFO("Size: {}", size); 
+    SPDLOG_INFO("Size: {}", size);
     SPDLOG_INFO("Offset: 0x{:X}", offset);
 
     if(result.size() == 0){
@@ -360,12 +373,6 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
 
         if(result.size() == 0){
         return std::nullopt;
-    }
-
-    if (fmt.type == TextureType::TLUT) {
-        auto textureData = std::make_shared<TextureData>(fmt, width, height, result);
-        Companion::Instance->AddTlutTextureMap(symbol, textureData);
-        return textureData;
     }
 
     return std::make_shared<TextureData>(fmt, width, height, result);
@@ -432,7 +439,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
             // todo: Add wheel palette input
             // Implement so that it works.
 
-            // auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");            
+            // auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");
             // auto tlutTextureMap = Companion::Instance->GetTlutTextureMap();
             // auto palettePtr = tlutTextureMap[tlut];
 

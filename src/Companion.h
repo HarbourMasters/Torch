@@ -80,6 +80,14 @@ struct ParseResultData {
     std::string type;
     YAML::Node node;
     std::optional<std::shared_ptr<IParsedData>> data;
+
+    uint32_t GetOffset() {
+        return GetSafeNode<uint32_t>(node, "offset");
+    }
+
+    std::optional<std::string> GetSymbol() {
+        return GetSafeNode<std::string>(node, "symbol");
+    }
 };
 
 class Companion {
@@ -110,6 +118,9 @@ public:
     std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
 
+    std::optional<ParseResultData> GetParseDataByAddr(uint32_t addr);
+    std::optional<ParseResultData> GetParseDataBySymbol(const std::string& symbol);
+
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
@@ -120,8 +131,6 @@ public:
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
-    std::unordered_map<std::string, std::shared_ptr<TextureData>> GetTlutTextureMap() { return this->TlutTextureMap; };
-    void AddTlutTextureMap(std::string index, std::shared_ptr<TextureData> entry);
     std::optional<Table> SearchTable(uint32_t addr);
 
     static std::string CalculateHash(const std::vector<uint8_t>& data);
@@ -167,7 +176,6 @@ private:
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
-    std::unordered_map<std::string, std::shared_ptr<TextureData>> TlutTextureMap;
 
     void ParseEnums(std::string& file);
     void ParseHash();
