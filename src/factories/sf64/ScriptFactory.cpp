@@ -4,7 +4,7 @@
 #include "Companion.h"
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
-#include "regex.h"
+#include <regex>
 
 #include "storm/SWrapper.h"
 
@@ -39,7 +39,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 1: {
             auto f3 = arg1 & 0x7F;
             auto zmode = VALUE_TO_ENUM((arg1 >> 7) & 3, "EventModeZ", "EVOP_UNK");
-            
+
             cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2;
             comment << " // wait " << s2 << " frames";
         } break;
@@ -68,7 +68,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 25:
             cmd << "EVENT_STOP_ROTATE(";
             break;
-        case 44: 
+        case 44:
             cmd << "EVENT_CHASE_TARGET(" << std::dec << arg1 << ", " << s2;
             break;
         case 45: {
@@ -82,7 +82,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
             cmd << "EVENT_RESTORE_TEAM(" << teamId;
          } break;
-        case 58: 
+        case 58:
         case 59: {
             auto sfxIndex = VALUE_TO_ENUM(s2, "EventSfx", "EVSFX_UNK");
             cmd << "EVENT_" << ((opcode == 58) ? "PLAY" : "STOP") << "_SFX(" << sfxIndex;
@@ -125,7 +125,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             auto itemType = VALUE_TO_ENUM(s2, "ItemDrop", "DROP_UNK");
             cmd << "EVENT_DROP_ITEM(" << itemType;
         } break;
-        case 118: 
+        case 118:
             cmd << "EVENT_SET_REVERB(" << std::dec << s2;
             break;
         case 119: {
@@ -142,7 +142,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
             cmd << "EVENT_DAMAGE_TEAM(" << teamId << ", " << std::dec << arg1;
         } break;
-        case 122: 
+        case 122:
             cmd << "EVENT_STOP_BGM(";
             break;
         case 124: {
@@ -153,7 +153,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 125:
             cmd << "EVENT_STOP_TEXLINE(";
             break;
-        case 126: 
+        case 126:
             cmd << ((s2 == 0) ? "EVENT_GOTO(" : "EVENT_LOOP(");
             if(s2 != 0) {
                 cmd << std::dec << s2 << ", ";
@@ -206,7 +206,7 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
             // }
             write << MakeScriptCmd(script->mCmds[cmdIndex], script->mCmds[cmdIndex + 1]);
         }
-        
+
         write << "\n};\n";
 
         cmdOff += 4 * cmdCount;
