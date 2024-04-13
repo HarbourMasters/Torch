@@ -223,7 +223,10 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
         std::string doutput = (this->gCurrentDirectory / fst).string();
         std::replace(doutput.begin(), doutput.end(), '\\', '/');
         this->gAssetDependencies[this->gCurrentFile][fst].second = true;
-        this->ParseNode(snd.first, doutput);
+        auto result = this->ParseNode(snd.first, doutput);
+        if(result.has_value()) {
+            this->gParseResults[this->gCurrentFile].push_back(result.value());
+        }
         spdlog::set_pattern(regular);
         SPDLOG_INFO("------------------------------------------------");
         spdlog::set_pattern(line);
@@ -729,7 +732,10 @@ void Companion::Process() {
                     auto output = (this->gCurrentDirectory / entryName / childName).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
                     this->gConfig.segment.temporal.clear();
-                    this->ParseNode(node, output);
+                    auto result = this->ParseNode(node, output);
+                    if(result.has_value()) {
+                        this->gParseResults[this->gCurrentFile].push_back(result.value());
+                    }
                 }
             } else {
                 if(gCurrentFileOffset && assetNode["offset"]) {
@@ -741,7 +747,10 @@ void Companion::Process() {
                 std::string output = (this->gCurrentDirectory / entryName).string();
                 std::replace(output.begin(), output.end(), '\\', '/');
                 this->gConfig.segment.temporal.clear();
-                this->ParseNode(assetNode, output);
+                auto result = this->ParseNode(assetNode, output);
+                if(result.has_value()) {
+                    this->gParseResults[this->gCurrentFile].push_back(result.value());
+                }
             }
 
             spdlog::set_pattern(regular);
@@ -756,13 +765,17 @@ void Companion::Process() {
 
             auto data = result.data.value();
             const auto impl = this->GetFactory(result.type)->get();
-            const auto exporter = impl->GetExporter(this->gConfig.exporterType)->get();
+            const auto exporter = impl->GetExporter(this->gConfig.exporterType);
+
+            if(exporter == nullptr) {
+                continue;
+            }
 
             switch (this->gConfig.exporterType) {
                 case ExportType::Binary: {
                     stream.str("");
                     stream.clear();
-                    exporter->Export(stream, data, result.name, result.node, &result.name);
+                    exporter->get()->Export(stream, data, result.name, result.node, &result.name);
                     auto data = stream.str();;
                     break;
                 }
@@ -770,7 +783,7 @@ void Companion::Process() {
                     stream.str("");
                     stream.clear();
                     std::string ogname = result.name;
-                    exporter->Export(stream, data, result.name, result.node, &result.name);
+                    exporter->get()->Export(stream, data, result.name, result.node, &result.name);
 
                     auto data = stream.str();
                     if(data.empty()) {
@@ -790,7 +803,7 @@ void Companion::Process() {
                     break;
                 }
                 default: {
-                    endptr = exporter->Export(stream, data, result.name, result.node, &result.name);
+                    endptr = exporter->get()->Export(stream, data, result.name, result.node, &result.name);
                     break;
                 }
             }
