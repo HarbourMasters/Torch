@@ -342,6 +342,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         tlutNode["format"] = "TLUT";
         tlutNode["offset"] = tlutOffset;
         tlutNode["colors"] = GetSafeNode<uint32_t>(node, "colors");
+        node["tlut"] = tlutOffset;
         if(node["tlut_ctype"]) {
             tlutNode["ctype"] = GetSafeNode<std::string>(node, "tlut_ctype");
         }
