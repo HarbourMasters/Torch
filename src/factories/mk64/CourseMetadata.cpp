@@ -32,6 +32,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
             SPDLOG_INFO("Processing Course Id: "+std::to_string(m.id));
             file << '"' << m.name << "\", ";
         }
+        file << "\n";
        // file << "\n};\n\n";
         file.close();
     } else if (file.fail()) {
@@ -45,6 +46,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
             if (m.name == "null") { continue; }
             file << '"' << m.debugName << "\", ";
         }
+        file << "\n";
         //file << "\n};\n\n";
         file.close();
     }
@@ -56,6 +58,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
             if (m.cup == "null") { continue; }
             file << m.cup << ", ";
         }
+        file << "\n";
        // file << "\n};\n\n";
         file.close();
     }
@@ -67,6 +70,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
             if (m.cupIndex == -1) { continue; }
             file << m.cupIndex << ", ";
         }
+        file << "\n";
         //file << "\n};\n\n";
         file.close();
     }
@@ -77,6 +81,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
             if (m.courseLength == "null") { continue; }
             file << '"' << m.courseLength << "\", ";
         }
+        file << "\n";
         file.close();
     }
 
@@ -86,6 +91,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
             file << m.kartAIBehaviourLUT << ", ";
         }
         file << 0; // @WARNING TRAILING ZERO IN ARRAY
+        file << "\n";
         file.close();
     }
 
@@ -95,6 +101,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         for (const auto& m : metadata) {
             file << m.kartAIMaximumSeparation << ", ";
         }
+        file << "\n";
         // file << "\n};\n\n";
         file.close();
     }
@@ -105,6 +112,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         for (const auto& m : metadata) {
             file << m.kartAIMinimumSeparation << ", ";
         }
+        file << "\n";
         // file << "\n};\n\n";
         file.close();
     }
@@ -115,6 +123,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         for (const auto& m : metadata) {
             file << m.D_800DCBB4 << ", ";
         }
+        file << "\n";
         //file << "\n};\n\n";
         file.close();
     }
@@ -128,6 +137,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
             file << m.steeringSensitivity << ", ";
         }
         file << 0;
+        file << "\n";
         //file << "\n};\n\n";
         file.close();
     }
@@ -158,8 +168,16 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
             file << "{ ";
-            for (const auto& size : m.pathSizes) {
-                file << size << ", ";
+            for (size_t i = 0; i < m.pathSizes.size(); i++) {
+                if (i == 5) {
+                    file << "{";
+                }
+                if (i == 7) {
+                    file << m.pathSizes[i];
+                    file << "}";
+                } else {
+                    file << m.pathSizes[i] << ", ";
+                }
             }
             file << "},\n";
         }
