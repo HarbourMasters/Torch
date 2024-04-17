@@ -23,7 +23,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     std::ofstream file;
     auto outDir = GetSafeNode<std::string>(node, "out_directory") + "/";
 
-    file.open(outDir+"gCourseNames.inc.c");
+    file.open(outDir+"gCourseNames.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
        // file << "char *gCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -39,7 +39,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         throw std::runtime_error("Course metadata output folder is likely bad or the file is in-use");
     }
 
-    file.open(outDir+"gCourseDebugNames.inc.c");
+    file.open(outDir+"gCourseDebugNames.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
        // file << "char *gDebugCourseNames[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -51,7 +51,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gCupSelectionByCourseId.inc.c");
+    file.open(outDir+"gCupSelectionByCourseId.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         //file << "char *gCupSelectionByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -63,7 +63,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gPerCupIndexByCourseId.inc.c");
+    file.open(outDir+"gPerCupIndexByCourseId.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         //file << "const u8 gPerCupIndexByCourseId[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -75,7 +75,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"sCourseLengths.inc.c");
+    file.open(outDir+"sCourseLengths.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             if (m.courseLength == "null") { continue; }
@@ -85,7 +85,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gKartAIBehaviourLUT.inc.c");
+    file.open(outDir+"gKartAIBehaviourLUT.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << m.kartAIBehaviourLUT << ", ";
@@ -95,7 +95,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gKartAICourseMaximumSeparation.inc.c");
+    file.open(outDir+"gKartAICourseMaximumSeparation.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         // file << "f32 gWaypointWidth[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -106,7 +106,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gKartAICourseMinimumSeparation.inc.c");
+    file.open(outDir+"gKartAICourseMinimumSeparation.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         // file << "f32 gWaypointWidth2[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -117,7 +117,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_800DCBB4.inc.c");
+    file.open(outDir+"D_800DCBB4.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         //file << "uintptr_t *D_800DCBB4[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -128,7 +128,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gCPUSteeringSensitivity.inc.c");
+    file.open(outDir+"gCPUSteeringSensitivity.inc.c", std::ios_base::binary | std::ios_base::out);
 
     // @WARNING THIS FILE HAS A TRAILING ZERO
     if (file.is_open()) {
@@ -142,7 +142,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gBombKartSpawns.inc.c");
+    file.open(outDir+"gBombKartSpawns.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -163,7 +163,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gCoursePathSizes.inc.c");
+    file.open(outDir+"gCoursePathSizes.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -184,7 +184,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009418.inc.c");
+    file.open(outDir+"D_0D009418.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -197,7 +197,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009568.inc.c");
+    file.open(outDir+"D_0D009568.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -210,7 +210,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D0096B8.inc.c");
+    file.open(outDir+"D_0D0096B8.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -223,7 +223,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009808.inc.c");
+    file.open(outDir+"D_0D009808.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -236,7 +236,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gCoursePathTable.inc.c");
+    file.open(outDir+"gCoursePathTable.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -249,7 +249,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gCoursePathTableUnknown.inc.c");
+    file.open(outDir+"gCoursePathTableUnknown.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -262,7 +262,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"sSkyColors.inc.c");
+    file.open(outDir+"sSkyColors.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
@@ -275,7 +275,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"sSkyColors2.inc.c");
+    file.open(outDir+"sSkyColors2.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
