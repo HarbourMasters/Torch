@@ -611,7 +611,7 @@ void Companion::Process() {
     SPDLOG_INFO("Version: {}", this->gCartridge->GetVersion());
     SPDLOG_INFO("Country: [{}]", this->gCartridge->GetCountryCode());
     SPDLOG_INFO("Hash: {}", this->gCartridge->GetHash());
-  SPDLOG_INFO("Assets: {}", this->gAssetPath);
+    SPDLOG_INFO("Assets: {}", this->gAssetPath);
 
     AudioManager::Instance = new AudioManager();
     auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
