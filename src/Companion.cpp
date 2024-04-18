@@ -325,6 +325,33 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         this->gCurrentVram = { addr, offset };
     }
 
+    if (node["external_files"]) {
+        auto externalFiles = node["external_files"];
+        if (externalFiles.IsSequence() && externalFiles.size()) {
+            for(size_t i = 0; i < externalFiles.size(); i++) {
+                auto externalFile = externalFiles[i];
+                if (externalFile.size() == 0) {
+                    this->gCurrentExternalFiles.push_back(externalFile.as<std::string>());
+                } else {
+                    SPDLOG_INFO("External File size {}", externalFile.size());
+                    throw std::runtime_error("Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n  - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
+                }
+
+                auto externalFileName = externalFile.as<std::string>();
+                if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
+                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
+                } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
+                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
+                }
+                auto localCurrentDirectory = std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
+
+                if (!this->gAddrMap.contains(externalFileName)) {
+                    SPDLOG_WARN("External File: {} Not Found in Global Address Map", externalFileName);
+                }
+            }
+        }
+    }
+
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
     this->gNodeForceProcessing = GetSafeNode<bool>(node, "force", false);
 }
@@ -470,7 +497,7 @@ void Companion::Process() {
             this->gConfig.segment.global[i + 1] = segments[i];
         }
     }
-    auto path = rom["path"].as<std::string>();
+    this->gAssetPath = rom["path"].as<std::string>();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
@@ -584,7 +611,7 @@ void Companion::Process() {
     SPDLOG_INFO("Version: {}", this->gCartridge->GetVersion());
     SPDLOG_INFO("Country: [{}]", this->gCartridge->GetCountryCode());
     SPDLOG_INFO("Hash: {}", this->gCartridge->GetHash());
-    SPDLOG_INFO("Assets: {}", path);
+  SPDLOG_INFO("Assets: {}", this->gAssetPath);
 
     AudioManager::Instance = new AudioManager();
     auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
@@ -595,7 +622,7 @@ void Companion::Process() {
     vWriter.Write(static_cast<uint8_t>(LUS::Endianness::Big));
     vWriter.Write(this->gCartridge->GetCRC());
 
-    for (const auto & entry : fs::recursive_directory_iterator(path)){
+    for (const auto & entry : fs::recursive_directory_iterator(this->gAssetPath)){
         if(entry.is_directory())  {
             continue;
         }
@@ -607,7 +634,7 @@ void Companion::Process() {
         }
 
         YAML::Node root = YAML::LoadFile(yamlPath);
-        this->gCurrentDirectory = relative(entry.path(), path).replace_extension("");
+        this->gCurrentDirectory = relative(entry.path(), this->gAssetPath).replace_extension("");
         this->gCurrentFile = yamlPath;
 
         // Set compressed file offsets and compression type
@@ -690,6 +717,7 @@ void Companion::Process() {
         this->gCurrentSegmentNumber = 0;
         this->gCurrentCompressionType = CompressionType::None;
         this->gTables.clear();
+        this->gCurrentExternalFiles.clear();
         GFXDOverride::ClearVtx();
 
         if(root[":config"]) {
@@ -1165,6 +1193,17 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(cons
     }
 
     if(!this->gAddrMap[this->gCurrentFile].contains(addr)){
+        for (auto &file : this->gCurrentExternalFiles) {
+            if (!this->gAddrMap.contains(file)) {
+                SPDLOG_WARN("GetNodeByAddr: External File {} Not Found.", file);
+                continue;
+            }
+
+            if (!this->gAddrMap[file].contains(addr)) {
+                continue;
+            }
+            return this->gAddrMap[file][addr];
+        }
         return std::nullopt;
     }
 
@@ -1173,6 +1212,18 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(cons
 
 std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
     if(!this->gParseResults.contains(this->gCurrentFile)){
+        for (auto &file : this->gCurrentExternalFiles) {
+            if (!this->gParseResults.contains(file)) {
+                SPDLOG_INFO("GetParseDataByAddr: External File {} Not Found.", file);
+                continue;
+            }
+
+            for (auto& result : this->gParseResults[file]){
+                if (result.data.has_value() && result.GetOffset() == addr){
+                    return result;
+                }
+            }
+        }
         return std::nullopt;
     }
 
