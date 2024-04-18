@@ -148,6 +148,7 @@ private:
     YAML::Node gModdingConfig;
     fs::path gCurrentDirectory;
     std::string gCurrentHash;
+    std::string gAssetPath;
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     bool gNodeForceProcessing = false;
@@ -167,6 +168,7 @@ private:
     std::optional<VRAMEntry> gCurrentVram;
     CompressionType gCurrentCompressionType = CompressionType::None;
     std::vector<Table> gTables;
+    std::vector<std::string> gCurrentExternalFiles;
 
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
 
