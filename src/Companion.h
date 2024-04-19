@@ -118,7 +118,7 @@ public:
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
     std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
-    bool IsSingleCodeFile() const { return this->gIndividualIncludes; }
+    bool IsUsingIndividualIncludes() const { return this->gIndividualIncludes; }
 
     std::optional<ParseResultData> GetParseDataByAddr(uint32_t addr);
     std::optional<ParseResultData> GetParseDataBySymbol(const std::string& symbol);

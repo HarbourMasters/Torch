@@ -158,7 +158,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
     }
     imgstream << std::endl;
 
-    if (Companion::Instance->IsSingleCodeFile()){
+    if (!Companion::Instance->IsUsingIndividualIncludes()){
         std::ofstream file(dpath + ".inc.c", std::ios::binary);
         file << imgstream.str();
         file.close();
@@ -178,7 +178,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         write << tab << "{\n";
-        if (Companion::Instance->IsSingleCodeFile()){
+        if (!Companion::Instance->IsUsingIndividualIncludes()){
             write << tab << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
         } else {
             write << imgstream.str();
@@ -194,7 +194,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
     } else {
         write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol  << "[] = {\n";
 
-        if (Companion::Instance->IsSingleCodeFile()){
+        if (!Companion::Instance->IsUsingIndividualIncludes()){
             write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
         } else {
             write << imgstream.str();
