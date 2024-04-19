@@ -31,6 +31,7 @@ ExportResult SF64::ScriptHeaderExporter::Export(std::ostream &write, std::shared
 std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     auto opcode = (s1 & 0xFE00) >> 9;
     auto arg1 = s1 & 0x1FF;
+    int waitframes = 0;
     std::ostringstream cmd;
     std::ostringstream comment;
 
@@ -39,9 +40,8 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 1: {
             auto f3 = arg1 & 0x7F;
             auto zmode = VALUE_TO_ENUM((arg1 >> 7) & 3, "EventModeZ", "EVOP_UNK");
-
+            waitframes = s2;
             cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2;
-            comment << " // wait " << s2 << " frames";
         } break;
         case 2:
             cmd << "EVENT_SET_BASE_ZVEL(" << std::dec << s2;
@@ -59,7 +59,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             auto rotcmd = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
             cmd << rotcmd.replace(0, 4, "EVENT") << "(" << std::dec << s2 << ", " << std::fixed << std::setprecision(1) <<  arg1 / 10.0f;
             if(opcode < 16 && arg1 != 0) {
-                comment << " // wait " << 10 * s2 / arg1 << " frames";
+                waitframes = std::ceil(10.0f * s2 / arg1);
             }
         } break;
         case 24:
@@ -75,6 +75,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             auto teamId = VALUE_TO_ENUM(arg1, "TeamId", "TEAMID_UNK");
             cmd << "EVENT_SET_TARGET(" << teamId << ", " << std::dec << s2;
         } break;
+        case 48:
+            waitframes = s2;
+            cmd << "EVENT_SET_WAIT(" << std::dec << s2;
+            break;
         case 56:
             cmd << "EVENT_SET_CALL(" << std::dec << s2 << ", " << arg1;
             break;
@@ -101,7 +105,6 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             }
             break;
         case 104: {
-            // auto actorinfo = Companion::Instance->GetEnumFromValue("EventActorInfo", s2).value_or("/* EINFO_UNK */ " + std::to_string(s2));
             auto actorInfo = VALUE_TO_ENUM(s2, "EventActorInfo", "EINFO_UNK");
             cmd << "EVENT_INIT_ACTOR(" << actorInfo << ", " << std::dec << arg1;
         } break;
@@ -110,18 +113,16 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             cmd << "EVENT_SET_TEAM_ID(" << teamId;
         } break;
         case 112:{
-            // auto actiontype = Companion::Instance->GetEnumFromValue("EventAction", s2).value_or("/* EVACT_UNK */ " + std::to_string(s2));
             auto actiontype = VALUE_TO_ENUM(s2, "EventAction", "EVACT_UNK");
             cmd << "EVENT_SET_ACTION(" << actiontype;
             if((s2 == 14 || s2 == 15)) {
-                comment << " // wait 1 frame";
+                waitframes = 1;
             }
         } break;
         case 113:
             cmd << "EVENT_ADD_TO_GROUP(" << std::dec << s2 << ", " << arg1;
             break;
         case 116: {
-            // auto itemtype = Companion::Instance->GetEnumFromValue("ItemDrop", s2).value_or("/* DROP_UNK */ " + std::to_string(s2));
             auto itemType = VALUE_TO_ENUM(s2, "ItemDrop", "DROP_UNK");
             cmd << "EVENT_DROP_ITEM(" << itemType;
         } break;
@@ -129,12 +130,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             cmd << "EVENT_SET_REVERB(" << std::dec << s2;
             break;
         case 119: {
-            // auto groundtype = Companion::Instance->GetEnumFromValue("GroundType", s2).value_or("/* GROUNDTYPE_UNK */ " + std::to_string(s2));
             auto groundtype = VALUE_TO_ENUM(s2, "GroundType", "GROUNDTYPE_UNK");
             cmd << "EVENT_SET_GROUND(" << groundtype;
         } break;
         case 120: {
-            // auto rcidName = Companion::Instance->GetEnumFromValue("RadioCharacterId", arg1).value_or("/* RCID_UNK */ " + std::to_string(arg1));
             auto rcidName = VALUE_TO_ENUM(arg1, "RadioCharacterId", "RCID_UNK");
             cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << s2;
         } break;
@@ -146,7 +145,6 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             cmd << "EVENT_STOP_BGM(";
             break;
         case 124: {
-            // auto color = Companion::Instance->GetEnumFromValue("TexLineColor", s2).value_or("/* TXLC_UNK */ " + std::to_string(s2));
             auto color = VALUE_TO_ENUM(s2, "TexLineColor", "TXLC_UNK");
             cmd << "EVENT_MAKE_TEXLINE(" << color;
         } break;
@@ -162,18 +160,19 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             break;
         case 127:
             cmd << "EVENT_STOP_SCRIPT(";
-            comment << "// wait";
             break;
         default: {
-            // auto opcodeName = Companion::Instance->GetEnumFromValue("EventOpcode", opcode).value_or("/* EVOP_UNK */ " + std::to_string(opcode));
             auto opcodeName = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
             cmd << "EVENT_CMD(" << opcodeName << ", " << std::dec << arg1 << ", " << s2;
             if(opcode >= 40 && opcode <= 48) {
-                comment << " // wait";
+                waitframes = s2;
             }
         } break;
     }
-    cmd << "), " << comment.str();
+    cmd << ")," << comment.str();
+    if(waitframes != 0) {
+        cmd << "\n          // wait " << waitframes << " frame" << ((waitframes != 1) ? "s" : "");
+    }
     return cmd.str();
 }
 
