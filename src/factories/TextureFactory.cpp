@@ -137,7 +137,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         create_directories(fs::path(dpath).parent_path());
     }
 
-    std::ofstream file(dpath + ".inc.c", std::ios::binary);
+    std::ostringstream imgstream;
 
     size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
 
@@ -145,20 +145,24 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
 
     for (int i = 0; i < data.size(); i+=byteSize) {
         if (i % 16 == 0 && i != 0) {
-            file << std::endl;
+            imgstream << std::endl;
         }
 
-        file << "0x";
+        imgstream << "0x";
 
         for (int j = 0; j < byteSize; j++) {
-            file << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i + j]);
+            imgstream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i + j]);
         }
 
-        file << ", ";
+        imgstream << ", ";
     }
-    file << std::endl;
+    imgstream << std::endl;
 
-    file.close();
+    if (Companion::Instance->IsSingleCodeFile()){
+        std::ofstream file(dpath + ".inc.c", std::ios::binary);
+        file << imgstream.str();
+        file.close();
+    }
 
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
@@ -174,7 +178,11 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         write << tab << "{\n";
-        write << tab << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+        if (Companion::Instance->IsSingleCodeFile()){
+            write << tab << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+        } else {
+            write << imgstream.str();
+        }
         write << tab << "},\n";
 
         if(end == offset){
@@ -186,7 +194,11 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
     } else {
         write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol  << "[] = {\n";
 
-        write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+        if (Companion::Instance->IsSingleCodeFile()){
+            write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+        } else {
+            write << imgstream.str();
+        }
         write << "};\n";
 
         const auto sz = data.size();

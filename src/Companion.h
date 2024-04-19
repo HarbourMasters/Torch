@@ -53,6 +53,7 @@ struct VRAMEntry {
 };
 
 struct WriteEntry {
+    std::string name;
     uint32_t addr;
     uint32_t alignment;
     std::string buffer;
@@ -117,6 +118,7 @@ public:
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
     std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
+    bool IsSingleCodeFile() const { return this->gSingleCodeFile; }
 
     std::optional<ParseResultData> GetParseDataByAddr(uint32_t addr);
     std::optional<ParseResultData> GetParseDataBySymbol(const std::string& symbol);
@@ -152,6 +154,7 @@ private:
     std::vector<uint8_t> gRomData;
     std::filesystem::path gRomPath;
     bool gNodeForceProcessing = false;
+    bool gSingleCodeFile = true;
     YAML::Node gHashNode;
     std::shared_ptr<N64::Cartridge> gCartridge;
     std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
