@@ -354,6 +354,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
 
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
     this->gNodeForceProcessing = GetSafeNode<bool>(node, "force", false);
+    this->gSingleCodeFile = !GetSafeNode<bool>(node, "individual_data_incs", false);
 }
 
 void Companion::ParseHash() {
@@ -840,6 +841,7 @@ void Companion::Process() {
                 auto alignment = GetSafeNode<uint32_t>(result.node, "alignment", impl->GetAlignment());
                 if(!endptr.has_value()) {
                     wEntry = {
+                        result.name,
                         result.node["offset"].as<uint32_t>(),
                         alignment,
                         stream.str(),
@@ -849,6 +851,7 @@ void Companion::Process() {
                     switch (endptr->index()) {
                         case 0:
                             wEntry = {
+                                result.name,
                                 result.node["offset"].as<uint32_t>(),
                                 alignment,
                                 stream.str(),
@@ -858,6 +861,7 @@ void Companion::Process() {
                         case 1: {
                             const auto oentry = std::get<OffsetEntry>(endptr.value());
                             wEntry = {
+                                result.name,
                                 oentry.start,
                                 alignment,
                                 stream.str(),
@@ -948,7 +952,7 @@ void Companion::Process() {
                     stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.endptr.value()) << "\n\n";
                 }
 
-                if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code){
+                if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code && this->gSingleCodeFile){
                     int32_t startptr = ASSET_PTR(result.endptr.value());
                     int32_t end = ASSET_PTR(entries[i + 1].addr);
 
@@ -980,42 +984,62 @@ void Companion::Process() {
                         stream << "// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
                     }
                 }
+
+                if (this->gConfig.exporterType == ExportType::Code && !this->gSingleCodeFile) {
+                    fs::path outinc = fs::path(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() / (result.name + ".inc.c");
+    
+                    if(!exists(outinc.parent_path())){
+                        create_directories(outinc.parent_path());
+                    }
+
+                    std::ofstream file(outinc, std::ios::binary);
+
+                    if(!this->gFileHeader.empty()) {
+                        file << this->gFileHeader << std::endl;
+                    }
+                    file << stream.str();
+                    stream.str("");
+                    stream.seekp(0);
+                    file.close();
+                }
             }
 
             this->gWriteMap.clear();
 
-            std::string buffer = stream.str();
+            if (this->gConfig.exporterType != ExportType::Code || this->gSingleCodeFile) {
+                std::string buffer = stream.str();
 
-            if(buffer.empty()) {
-                continue;
-            }
-
-            std::string output = fsout.string();
-            std::replace(output.begin(), output.end(), '\\', '/');
-            if(!exists(fs::path(output).parent_path())){
-                create_directories(fs::path(output).parent_path());
-            }
-
-            std::ofstream file(output, std::ios::binary);
-
-            if(this->gConfig.exporterType == ExportType::Header) {
-                std::string symbol = entry.path().stem().string();
-                std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
-                file << "#ifndef " << symbol << "_H" << std::endl;
-                file << "#define " << symbol << "_H" << std::endl << std::endl;
-                if(!this->gFileHeader.empty()) {
-                    file << this->gFileHeader << std::endl;
+                if(buffer.empty()) {
+                    continue;
                 }
-                file << buffer;
-                file << std::endl << "#endif" << std::endl;
-            } else {
-                if(!this->gFileHeader.empty()) {
-                    file << this->gFileHeader << std::endl;
-                }
-                file << buffer;
-            }
 
-            file.close();
+                std::string output = fsout.string();
+                std::replace(output.begin(), output.end(), '\\', '/');
+                if(!exists(fs::path(output).parent_path())){
+                    create_directories(fs::path(output).parent_path());
+                }
+
+                std::ofstream file(output, std::ios::binary);
+
+                if(this->gConfig.exporterType == ExportType::Header) {
+                    std::string symbol = entry.path().stem().string();
+                    std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
+                    file << "#ifndef " << symbol << "_H" << std::endl;
+                    file << "#define " << symbol << "_H" << std::endl << std::endl;
+                    if(!this->gFileHeader.empty()) {
+                        file << this->gFileHeader << std::endl;
+                    }
+                    file << buffer;
+                    file << std::endl << "#endif" << std::endl;
+                } else {
+                    if(!this->gFileHeader.empty()) {
+                        file << this->gFileHeader << std::endl;
+                    }
+                    file << buffer;
+                }
+
+                file.close();
+            }
         }
 
         if(this->gConfig.exporterType != ExportType::Binary) {
