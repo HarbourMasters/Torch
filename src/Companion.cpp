@@ -354,7 +354,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
 
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
     this->gNodeForceProcessing = GetSafeNode<bool>(node, "force", false);
-    this->gSingleCodeFile = !GetSafeNode<bool>(node, "individual_data_incs", false);
+    this->gIndividualIncludes = GetSafeNode<bool>(node, "individual_data_incs", false);
 }
 
 void Companion::ParseHash() {
@@ -953,7 +953,7 @@ void Companion::Process() {
                     stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.endptr.value()) << "\n\n";
                 }
 
-                if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code && this->gSingleCodeFile){
+                if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code && !this->gIndividualIncludes){
                     int32_t startptr = ASSET_PTR(result.endptr.value());
                     int32_t end = ASSET_PTR(entries[i + 1].addr);
 
@@ -986,7 +986,7 @@ void Companion::Process() {
                     }
                 }
 
-                if (this->gConfig.exporterType == ExportType::Code && !this->gSingleCodeFile) {
+                if (this->gConfig.exporterType == ExportType::Code && this->gIndividualIncludes) {
                     fs::path outinc = fs::path(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() / (result.name + ".inc.c");
     
                     if(!exists(outinc.parent_path())){
@@ -1007,7 +1007,7 @@ void Companion::Process() {
 
             this->gWriteMap.clear();
 
-            if (this->gConfig.exporterType != ExportType::Code || this->gSingleCodeFile) {
+            if (this->gConfig.exporterType != ExportType::Code || !this->gIndividualIncludes) {
                 std::string buffer = stream.str();
 
                 if(buffer.empty()) {
