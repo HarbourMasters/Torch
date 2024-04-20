@@ -343,10 +343,30 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                 } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
                 }
-                auto localCurrentDirectory = std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
 
                 if (!this->gAddrMap.contains(externalFileName)) {
-                    SPDLOG_WARN("External File: {} Not Found in Global Address Map", externalFileName);
+                    SPDLOG_INFO("Dependency on external file {}. Now processing {}", externalFileName, externalFileName);
+                    auto currentFile = this->gCurrentFile;
+                    auto currentDirectory = this->gCurrentDirectory;
+                    auto currentSegmentNumber = gCurrentSegmentNumber;
+                    auto currentFileOffset = gCurrentFileOffset;
+                    auto currentCompressionType = gCurrentCompressionType;
+
+                    this->gCurrentFile = externalFileName;
+                    this->gCurrentDirectory = std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
+
+                    YAML::Node root = YAML::LoadFile(externalFileName);
+
+                    ProcessFile(root);
+
+                    SPDLOG_INFO("Finishing processing of file: {}", currentFile);
+
+                    this->gCurrentFile = currentFile;
+                    this->gCurrentDirectory = currentDirectory;
+
+                    gCurrentSegmentNumber = currentSegmentNumber;
+                    gCurrentFileOffset = currentFileOffset;
+                    gCurrentCompressionType = currentCompressionType;
                 }
             }
         }
@@ -454,6 +474,418 @@ void Companion::ProcessTables(YAML::Node& rom) {
             SPDLOG_INFO("------------");
         }
         SPDLOG_INFO("------ Metadata end ------");
+    }
+}
+
+void Companion::ProcessFile(YAML::Node root) {
+    // Set compressed file offsets and compression type
+    if (auto segments = root[":config"]["segments"]) {
+        if (segments.IsSequence() && segments.size() > 0) {
+            if (segments[0].IsSequence() && segments[0].size() == 2) {
+                gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
+                gCurrentFileOffset = segments[0][1].as<uint32_t>();
+                gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+            } else {
+                throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+            }
+        }
+    }
+
+    for(auto asset = root.begin(); asset != root.end(); ++asset){
+        auto node = asset->second;
+        auto entryName = asset->first.as<std::string>();
+
+        // Parse horizontal assets
+        if(node["files"]){
+            auto segment = node["segment"] ? node["segment"].as<uint8_t>() : -1;
+            const auto files = node["files"];
+            for (const auto& file : files) {
+                auto assetNode = file.as<YAML::Node>();
+                auto childName = assetNode["name"].as<std::string>();
+                auto output = (this->gCurrentDirectory / entryName / childName).string();
+                std::replace(output.begin(), output.end(), '\\', '/');
+
+                if(assetNode["type"]){
+                    const auto type = GetSafeNode<std::string>(assetNode, "type");
+                    if(type == "SAMPLE"){
+                        AudioManager::Instance->bind_sample(assetNode, output);
+                    }
+                }
+
+                if(!assetNode["offset"]) {
+                    continue;
+                }
+
+                if(segment != -1 || gCurrentSegmentNumber) {
+                    assetNode["offset"] = (segment << 24) | assetNode["offset"].as<uint32_t>();
+                }
+
+                this->gAddrMap[this->gCurrentFile][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
+            }
+        } else {
+
+            auto output = (this->gCurrentDirectory / entryName).string();
+            std::replace(output.begin(), output.end(), '\\', '/');
+
+
+            if(node["type"]){
+                const auto type = GetSafeNode<std::string>(node, "type");
+                if(type == "SAMPLE"){
+                    AudioManager::Instance->bind_sample(node, output);
+                }
+            }
+
+            if(!node["offset"])  {
+                continue;
+            }
+
+            if(gCurrentSegmentNumber) {
+                if (IS_SEGMENTED(node["offset"].as<uint32_t>()) == false) {
+                    node["offset"] = (gCurrentSegmentNumber << 24) | node["offset"].as<uint32_t>();
+                }
+            }
+
+            this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
+        }
+    }
+
+    // Stupid hack because the iteration broke the assets
+    root = YAML::LoadFile(this->gCurrentFile);
+    this->gConfig.segment.local.clear();
+    this->gFileHeader.clear();
+    this->gCurrentPad = 0;
+    this->gCurrentVram = std::nullopt;
+    this->gCurrentSegmentNumber = 0;
+    this->gCurrentCompressionType = CompressionType::None;
+    this->gCurrentFileOffset = 0;
+    this->gTables.clear();
+    this->gCurrentExternalFiles.clear();
+    GFXDOverride::ClearVtx();
+
+    if(root[":config"]) {
+        this->ParseCurrentFileConfig(root[":config"]);
+    }
+
+    if(!this->NodeHasChanges(this->gCurrentFile) && !this->gNodeForceProcessing) {
+        return;
+    }
+
+    spdlog::set_pattern(regular);
+    SPDLOG_INFO("------------------------------------------------");
+    spdlog::set_pattern(line);
+
+    for(auto asset = root.begin(); asset != root.end(); ++asset){
+
+        auto entryName = asset->first.as<std::string>();
+        auto assetNode = asset->second;
+
+        if(entryName.find(":config") != std::string::npos) {
+            continue;
+        }
+
+        // Parse horizontal assets
+        if(assetNode["files"]){
+            auto segment = assetNode["segment"] ? assetNode["segment"].as<uint8_t>() : -1;
+            auto files = assetNode["files"];
+            for (const auto& file : files) {
+                auto node = file.as<YAML::Node>();
+                auto childName = node["name"].as<std::string>();
+
+                if(!node["offset"]) {
+                    continue;
+                }
+
+                if(segment != -1 || gCurrentFileOffset) {
+                    node["offset"] = (segment << 24) | node["offset"].as<uint32_t>();
+                }
+
+                auto output = (this->gCurrentDirectory / entryName / childName).string();
+                std::replace(output.begin(), output.end(), '\\', '/');
+                this->gConfig.segment.temporal.clear();
+                auto result = this->ParseNode(node, output);
+                if(result.has_value()) {
+                    this->gParseResults[this->gCurrentFile].push_back(result.value());
+                }
+            }
+        } else {
+            if(gCurrentFileOffset && assetNode["offset"]) {
+                const auto offset = assetNode["offset"].as<uint32_t>();
+                if (!IS_SEGMENTED(offset)) {
+                    assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
+                }
+            }
+            std::string output = (this->gCurrentDirectory / entryName).string();
+            std::replace(output.begin(), output.end(), '\\', '/');
+            this->gConfig.segment.temporal.clear();
+            auto result = this->ParseNode(assetNode, output);
+            if(result.has_value()) {
+                this->gParseResults[this->gCurrentFile].push_back(result.value());
+            }
+        }
+
+        spdlog::set_pattern(regular);
+        SPDLOG_INFO("------------------------------------------------");
+        spdlog::set_pattern(line);
+    }
+
+    for(auto& result : this->gParseResults[this->gCurrentFile]){
+        std::ostringstream stream;
+        ExportResult endptr = std::nullopt;
+        WriteEntry wEntry;
+
+        auto data = result.data.value();
+        const auto impl = this->GetFactory(result.type)->get();
+        const auto exporter = impl->GetExporter(this->gConfig.exporterType);
+
+        if(exporter == nullptr) {
+            continue;
+        }
+
+        switch (this->gConfig.exporterType) {
+            case ExportType::Binary: {
+                stream.str("");
+                stream.clear();
+                exporter->get()->Export(stream, data, result.name, result.node, &result.name);
+                auto data = stream.str();;
+                break;
+            }
+            case ExportType::Modding: {
+                stream.str("");
+                stream.clear();
+                std::string ogname = result.name;
+                exporter->get()->Export(stream, data, result.name, result.node, &result.name);
+
+                auto data = stream.str();
+                if(data.empty()) {
+                    break;
+                }
+
+                std::string dpath = Instance->GetOutputPath() + "/" + result.name;
+                if(!exists(fs::path(dpath).parent_path())){
+                    create_directories(fs::path(dpath).parent_path());
+                }
+
+                this->gModdedAssetPaths[ogname] = result.name;
+
+                std::ofstream file(dpath, std::ios::binary);
+                file.write(data.c_str(), data.size());
+                file.close();
+                break;
+            }
+            default: {
+                endptr = exporter->get()->Export(stream, data, result.name, result.node, &result.name);
+                break;
+            }
+        }
+
+        if(result.node["offset"]) {
+            auto alignment = GetSafeNode<uint32_t>(result.node, "alignment", impl->GetAlignment());
+            if(!endptr.has_value()) {
+                wEntry = {
+                    result.name,
+                    result.node["offset"].as<uint32_t>(),
+                    alignment,
+                    stream.str(),
+                    std::nullopt
+                };
+            } else {
+                switch (endptr->index()) {
+                    case 0:
+                        wEntry = {
+                            result.name,
+                            result.node["offset"].as<uint32_t>(),
+                            alignment,
+                            stream.str(),
+                            std::get<size_t>(endptr.value())
+                        };
+                        break;
+                    case 1: {
+                        const auto oentry = std::get<OffsetEntry>(endptr.value());
+                        wEntry = {
+                            result.name,
+                            oentry.start,
+                            alignment,
+                            stream.str(),
+                            oentry.end
+                        };
+                        break;
+                    }
+                    default:
+                        SPDLOG_ERROR("Invalid endptr index {}", endptr->index());
+                        SPDLOG_ERROR("Type of endptr: {}", typeid(endptr).name());
+                        throw std::runtime_error("We should never reach this point");
+                }
+            }
+        }
+
+        this->gWriteMap[this->gCurrentFile][result.type].push_back(wEntry);
+    }
+
+    auto fsout = fs::path(this->gConfig.outputPath);
+
+    if(this->gConfig.exporterType == ExportType::Modding) {
+        fsout /= "modding.yml";
+        YAML::Node modding;
+
+        for (const auto& [key, value] : this->gModdedAssetPaths) {
+            modding["assets"][key] = value;
+        }
+
+        std::ofstream file(fsout.string(), std::ios::binary);
+        file << modding;
+        file.close();
+    } else if(this->gConfig.exporterType != ExportType::Binary){
+        std::string filename = this->gCurrentDirectory.filename().string();
+
+        switch (this->gConfig.exporterType) {
+            case ExportType::Header: {
+                fsout /= filename + ".h";
+                break;
+            }
+            case ExportType::Code: {
+                fsout /= this->gCurrentDirectory / (filename + ".c");
+                break;
+            }
+            default: break;
+        }
+
+        std::ostringstream stream;
+
+        std::vector<WriteEntry> entries;
+
+        if(std::holds_alternative<std::string>(this->gWriteOrder)) {
+            auto sort = std::get<std::string>(this->gWriteOrder);
+            for (const auto& [type, raw] : this->gWriteMap[this->gCurrentFile]) {
+                entries.insert(entries.end(), raw.begin(), raw.end());
+            }
+
+            if(sort == "OFFSET") {
+                std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                    return a.addr < b.addr;
+                });
+            } else if(sort == "ROFFSET") {
+                std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                    return a.addr > b.addr;
+                });
+            } else if(sort != "LINEAR") {
+                throw std::runtime_error("Invalid write order");
+            }
+        } else {
+            for (const auto& type : std::get<std::vector<std::string>>(this->gWriteOrder)) {
+                entries = this->gWriteMap[this->gCurrentFile][type];
+
+                std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                    return a.addr > b.addr;
+                });
+            }
+        }
+
+        for (size_t i = 0; i < entries.size(); i++) {
+            const auto result = entries[i];
+            const auto hasSize = result.endptr.has_value();
+            if (hasSize && this->IsDebug()) {
+                stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.addr) << "\n";
+            }
+
+            stream << result.buffer;
+
+            if (hasSize && this->IsDebug()) {
+                stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.endptr.value()) << "\n\n";
+            }
+
+            if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code && !this->gIndividualIncludes){
+                int32_t startptr = ASSET_PTR(result.endptr.value());
+                int32_t end = ASSET_PTR(entries[i + 1].addr);
+
+                uint32_t alignment = entries[i + 1].alignment;
+                int32_t gap = end - startptr;
+
+                if(gap < 0) {
+                    stream << "// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << std::abs(gap) << "\n";
+                    SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
+                } else if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
+                    SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
+                    SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
+                    const auto padfile = this->gCurrentDirectory.filename().string();
+                    if(this->IsDebug()){
+                        stream << "// 0x" << std::hex << std::uppercase << startptr << "\n";
+                    }
+                    stream << "char pad_" << padfile << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
+                    auto gapSize = gap & ~3;
+                    for(size_t j = 0; j < gapSize; j++){
+                        stream << "0x00, ";
+                    }
+                    stream << "\n};\n";
+                    if(this->IsDebug()){
+                        stream << "// 0x" << std::hex << std::uppercase << end << "\n\n";
+                    } else {
+                        stream << "\n";
+                    }
+                } else if(gap > 0x10) {
+                    stream << "// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
+                }
+            }
+
+            if (this->gConfig.exporterType == ExportType::Code && this->gIndividualIncludes) {
+                fs::path outinc = fs::path(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() / (result.name + ".inc.c");
+
+                if(!exists(outinc.parent_path())){
+                    create_directories(outinc.parent_path());
+                }
+
+                std::ofstream file(outinc, std::ios::binary);
+
+                if(!this->gFileHeader.empty()) {
+                    file << this->gFileHeader << std::endl;
+                }
+                file << stream.str();
+                stream.str("");
+                stream.seekp(0);
+                file.close();
+            }
+        }
+
+        this->gWriteMap.clear();
+
+        if (this->gConfig.exporterType != ExportType::Code || !this->gIndividualIncludes) {
+            std::string buffer = stream.str();
+
+            if(buffer.empty()) {
+                return;
+            }
+
+            std::string output = fsout.string();
+            std::replace(output.begin(), output.end(), '\\', '/');
+            if(!exists(fs::path(output).parent_path())){
+                create_directories(fs::path(output).parent_path());
+            }
+
+            std::ofstream file(output, std::ios::binary);
+
+            if(this->gConfig.exporterType == ExportType::Header) {
+                fs::path entryPath = this->gCurrentFile;
+                std::string symbol = entryPath.stem().string();
+                std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
+                file << "#ifndef " << symbol << "_H" << std::endl;
+                file << "#define " << symbol << "_H" << std::endl << std::endl;
+                if(!this->gFileHeader.empty()) {
+                    file << this->gFileHeader << std::endl;
+                }
+                file << buffer;
+                file << std::endl << "#endif" << std::endl;
+            } else {
+                if(!this->gFileHeader.empty()) {
+                    file << this->gFileHeader << std::endl;
+                }
+                file << buffer;
+            }
+
+            file.close();
+        }
+    }
+
+    if(this->gConfig.exporterType != ExportType::Binary) {
+        this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
     }
 }
 
@@ -638,413 +1070,9 @@ void Companion::Process() {
         this->gCurrentDirectory = relative(entry.path(), this->gAssetPath).replace_extension("");
         this->gCurrentFile = yamlPath;
 
-        // Set compressed file offsets and compression type
-        if (auto segments = root[":config"]["segments"]) {
-            if (segments.IsSequence() && segments.size() > 0) {
-                if (segments[0].IsSequence() && segments[0].size() == 2) {
-                    gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
-                    gCurrentFileOffset = segments[0][1].as<uint32_t>();
-                    gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
-                } else {
-                    throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
-                }
-            }
-        }
-
-        for(auto asset = root.begin(); asset != root.end(); ++asset){
-            auto node = asset->second;
-            auto entryName = asset->first.as<std::string>();
-
-            // Parse horizontal assets
-            if(node["files"]){
-                auto segment = node["segment"] ? node["segment"].as<uint8_t>() : -1;
-                const auto files = node["files"];
-                for (const auto& file : files) {
-                    auto assetNode = file.as<YAML::Node>();
-                    auto childName = assetNode["name"].as<std::string>();
-                    auto output = (this->gCurrentDirectory / entryName / childName).string();
-                    std::replace(output.begin(), output.end(), '\\', '/');
-
-                    if(assetNode["type"]){
-                        const auto type = GetSafeNode<std::string>(assetNode, "type");
-                        if(type == "SAMPLE"){
-                            AudioManager::Instance->bind_sample(assetNode, output);
-                        }
-                    }
-
-                    if(!assetNode["offset"]) {
-                        continue;
-                    }
-
-                    if(segment != -1 || gCurrentSegmentNumber) {
-                        assetNode["offset"] = (segment << 24) | assetNode["offset"].as<uint32_t>();
-                    }
-
-                    this->gAddrMap[this->gCurrentFile][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
-                }
-            } else {
-
-                auto output = (this->gCurrentDirectory / entryName).string();
-                std::replace(output.begin(), output.end(), '\\', '/');
-
-
-                if(node["type"]){
-                    const auto type = GetSafeNode<std::string>(node, "type");
-                    if(type == "SAMPLE"){
-                        AudioManager::Instance->bind_sample(node, output);
-                    }
-                }
-
-                if(!node["offset"])  {
-                    continue;
-                }
-
-                if(gCurrentSegmentNumber) {
-                    if (IS_SEGMENTED(node["offset"].as<uint32_t>()) == false) {
-                        node["offset"] = (gCurrentSegmentNumber << 24) | node["offset"].as<uint32_t>();
-                    }
-                }
-
-                this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
-            }
-        }
-
-        // Stupid hack because the iteration broke the assets
-        root = YAML::LoadFile(yamlPath);
-        this->gConfig.segment.local.clear();
-        this->gFileHeader.clear();
-        this->gCurrentPad = 0;
-        this->gCurrentVram = std::nullopt;
-        this->gCurrentSegmentNumber = 0;
-        this->gCurrentCompressionType = CompressionType::None;
-        this->gCurrentFileOffset = 0;
-        this->gTables.clear();
-        this->gCurrentExternalFiles.clear();
-        GFXDOverride::ClearVtx();
-
-        if(root[":config"]) {
-            this->ParseCurrentFileConfig(root[":config"]);
-        }
-
-        if(!this->NodeHasChanges(yamlPath) && !this->gNodeForceProcessing) {
-            continue;
-        }
-
-        spdlog::set_pattern(regular);
-        SPDLOG_INFO("------------------------------------------------");
-        spdlog::set_pattern(line);
-
-        for(auto asset = root.begin(); asset != root.end(); ++asset){
-
-            auto entryName = asset->first.as<std::string>();
-            auto assetNode = asset->second;
-
-            if(entryName.find(":config") != std::string::npos) {
-                continue;
-            }
-
-            // Parse horizontal assets
-            if(assetNode["files"]){
-                auto segment = assetNode["segment"] ? assetNode["segment"].as<uint8_t>() : -1;
-                auto files = assetNode["files"];
-                for (const auto& file : files) {
-                    auto node = file.as<YAML::Node>();
-                    auto childName = node["name"].as<std::string>();
-
-                    if(!node["offset"]) {
-                        continue;
-                    }
-
-                    if(segment != -1 || gCurrentFileOffset) {
-                        node["offset"] = (segment << 24) | node["offset"].as<uint32_t>();
-                    }
-
-                    auto output = (this->gCurrentDirectory / entryName / childName).string();
-                    std::replace(output.begin(), output.end(), '\\', '/');
-                    this->gConfig.segment.temporal.clear();
-                    auto result = this->ParseNode(node, output);
-                    if(result.has_value()) {
-                        this->gParseResults[this->gCurrentFile].push_back(result.value());
-                    }
-                }
-            } else {
-                if(gCurrentFileOffset && assetNode["offset"]) {
-                    const auto offset = assetNode["offset"].as<uint32_t>();
-                    if (!IS_SEGMENTED(offset)) {
-                        assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
-                    }
-                }
-                std::string output = (this->gCurrentDirectory / entryName).string();
-                std::replace(output.begin(), output.end(), '\\', '/');
-                this->gConfig.segment.temporal.clear();
-                auto result = this->ParseNode(assetNode, output);
-                if(result.has_value()) {
-                    this->gParseResults[this->gCurrentFile].push_back(result.value());
-                }
-            }
-
-            spdlog::set_pattern(regular);
-            SPDLOG_INFO("------------------------------------------------");
-            spdlog::set_pattern(line);
-        }
-
-        for(auto& result : this->gParseResults[this->gCurrentFile]){
-            std::ostringstream stream;
-            ExportResult endptr = std::nullopt;
-            WriteEntry wEntry;
-
-            auto data = result.data.value();
-            const auto impl = this->GetFactory(result.type)->get();
-            const auto exporter = impl->GetExporter(this->gConfig.exporterType);
-
-            if(exporter == nullptr) {
-                continue;
-            }
-
-            switch (this->gConfig.exporterType) {
-                case ExportType::Binary: {
-                    stream.str("");
-                    stream.clear();
-                    exporter->get()->Export(stream, data, result.name, result.node, &result.name);
-                    auto data = stream.str();;
-                    break;
-                }
-                case ExportType::Modding: {
-                    stream.str("");
-                    stream.clear();
-                    std::string ogname = result.name;
-                    exporter->get()->Export(stream, data, result.name, result.node, &result.name);
-
-                    auto data = stream.str();
-                    if(data.empty()) {
-                        break;
-                    }
-
-                    std::string dpath = Instance->GetOutputPath() + "/" + result.name;
-                    if(!exists(fs::path(dpath).parent_path())){
-                        create_directories(fs::path(dpath).parent_path());
-                    }
-
-                    this->gModdedAssetPaths[ogname] = result.name;
-
-                    std::ofstream file(dpath, std::ios::binary);
-                    file.write(data.c_str(), data.size());
-                    file.close();
-                    break;
-                }
-                default: {
-                    endptr = exporter->get()->Export(stream, data, result.name, result.node, &result.name);
-                    break;
-                }
-            }
-
-            if(result.node["offset"]) {
-                auto alignment = GetSafeNode<uint32_t>(result.node, "alignment", impl->GetAlignment());
-                if(!endptr.has_value()) {
-                    wEntry = {
-                        result.name,
-                        result.node["offset"].as<uint32_t>(),
-                        alignment,
-                        stream.str(),
-                        std::nullopt
-                    };
-                } else {
-                    switch (endptr->index()) {
-                        case 0:
-                            wEntry = {
-                                result.name,
-                                result.node["offset"].as<uint32_t>(),
-                                alignment,
-                                stream.str(),
-                                std::get<size_t>(endptr.value())
-                            };
-                            break;
-                        case 1: {
-                            const auto oentry = std::get<OffsetEntry>(endptr.value());
-                            wEntry = {
-                                result.name,
-                                oentry.start,
-                                alignment,
-                                stream.str(),
-                                oentry.end
-                            };
-                            break;
-                        }
-                        default:
-                            SPDLOG_ERROR("Invalid endptr index {}", endptr->index());
-                            SPDLOG_ERROR("Type of endptr: {}", typeid(endptr).name());
-                            throw std::runtime_error("We should never reach this point");
-                    }
-                }
-            }
-
-            this->gWriteMap[this->gCurrentFile][result.type].push_back(wEntry);
-        }
-
-        auto fsout = fs::path(this->gConfig.outputPath);
-
-        if(this->gConfig.exporterType == ExportType::Modding) {
-            fsout /= "modding.yml";
-            YAML::Node modding;
-
-            for (const auto& [key, value] : this->gModdedAssetPaths) {
-                modding["assets"][key] = value;
-            }
-
-            std::ofstream file(fsout.string(), std::ios::binary);
-            file << modding;
-            file.close();
-        } else if(this->gConfig.exporterType != ExportType::Binary){
-            std::string filename = this->gCurrentDirectory.filename().string();
-
-            switch (this->gConfig.exporterType) {
-                case ExportType::Header: {
-                    fsout /= filename + ".h";
-                    break;
-                }
-                case ExportType::Code: {
-                    fsout /= this->gCurrentDirectory / (filename + ".c");
-                    break;
-                }
-                default: break;
-            }
-
-            std::ostringstream stream;
-
-            std::vector<WriteEntry> entries;
-
-            if(std::holds_alternative<std::string>(this->gWriteOrder)) {
-                auto sort = std::get<std::string>(this->gWriteOrder);
-                for (const auto& [type, raw] : this->gWriteMap[this->gCurrentFile]) {
-                    entries.insert(entries.end(), raw.begin(), raw.end());
-                }
-
-                if(sort == "OFFSET") {
-                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
-                        return a.addr < b.addr;
-                    });
-                } else if(sort == "ROFFSET") {
-                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
-                        return a.addr > b.addr;
-                    });
-                } else if(sort != "LINEAR") {
-                    throw std::runtime_error("Invalid write order");
-                }
-            } else {
-                for (const auto& type : std::get<std::vector<std::string>>(this->gWriteOrder)) {
-                    entries = this->gWriteMap[this->gCurrentFile][type];
-
-                    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
-                        return a.addr > b.addr;
-                    });
-                }
-            }
-
-            for (size_t i = 0; i < entries.size(); i++) {
-                const auto result = entries[i];
-                const auto hasSize = result.endptr.has_value();
-                if (hasSize && this->IsDebug()) {
-                    stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.addr) << "\n";
-                }
-
-                stream << result.buffer;
-
-                if (hasSize && this->IsDebug()) {
-                    stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.endptr.value()) << "\n\n";
-                }
-
-                if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code && !this->gIndividualIncludes){
-                    int32_t startptr = ASSET_PTR(result.endptr.value());
-                    int32_t end = ASSET_PTR(entries[i + 1].addr);
-
-                    uint32_t alignment = entries[i + 1].alignment;
-                    int32_t gap = end - startptr;
-
-                    if(gap < 0) {
-                        stream << "// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << std::abs(gap) << "\n";
-                        SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
-                    } else if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
-                        SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
-                        SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
-                        const auto padfile = this->gCurrentDirectory.filename().string();
-                        if(this->IsDebug()){
-                            stream << "// 0x" << std::hex << std::uppercase << startptr << "\n";
-                        }
-                        stream << "char pad_" << padfile << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
-                        auto gapSize = gap & ~3;
-                        for(size_t j = 0; j < gapSize; j++){
-                            stream << "0x00, ";
-                        }
-                        stream << "\n};\n";
-                        if(this->IsDebug()){
-                            stream << "// 0x" << std::hex << std::uppercase << end << "\n\n";
-                        } else {
-                            stream << "\n";
-                        }
-                    } else if(gap > 0x10) {
-                        stream << "// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
-                    }
-                }
-
-                if (this->gConfig.exporterType == ExportType::Code && this->gIndividualIncludes) {
-                    fs::path outinc = fs::path(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() / (result.name + ".inc.c");
-    
-                    if(!exists(outinc.parent_path())){
-                        create_directories(outinc.parent_path());
-                    }
-
-                    std::ofstream file(outinc, std::ios::binary);
-
-                    if(!this->gFileHeader.empty()) {
-                        file << this->gFileHeader << std::endl;
-                    }
-                    file << stream.str();
-                    stream.str("");
-                    stream.seekp(0);
-                    file.close();
-                }
-            }
-
-            this->gWriteMap.clear();
-
-            if (this->gConfig.exporterType != ExportType::Code || !this->gIndividualIncludes) {
-                std::string buffer = stream.str();
-
-                if(buffer.empty()) {
-                    continue;
-                }
-
-                std::string output = fsout.string();
-                std::replace(output.begin(), output.end(), '\\', '/');
-                if(!exists(fs::path(output).parent_path())){
-                    create_directories(fs::path(output).parent_path());
-                }
-
-                std::ofstream file(output, std::ios::binary);
-
-                if(this->gConfig.exporterType == ExportType::Header) {
-                    std::string symbol = entry.path().stem().string();
-                    std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
-                    file << "#ifndef " << symbol << "_H" << std::endl;
-                    file << "#define " << symbol << "_H" << std::endl << std::endl;
-                    if(!this->gFileHeader.empty()) {
-                        file << this->gFileHeader << std::endl;
-                    }
-                    file << buffer;
-                    file << std::endl << "#endif" << std::endl;
-                } else {
-                    if(!this->gFileHeader.empty()) {
-                        file << this->gFileHeader << std::endl;
-                    }
-                    file << buffer;
-                }
-
-                file.close();
-            }
-        }
-
-        if(this->gConfig.exporterType != ExportType::Binary) {
-            this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
+        if (!this->gProcessedFiles.contains(this->gCurrentFile)) {
+            ProcessFile(root);
+            this->gProcessedFiles.insert(this->gCurrentFile);
         }
     }
 

@@ -6,6 +6,7 @@
 #include <vector>
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <variant>
 #include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
@@ -172,6 +173,7 @@ private:
     CompressionType gCurrentCompressionType = CompressionType::None;
     std::vector<Table> gTables;
     std::vector<std::string> gCurrentExternalFiles;
+    std::unordered_set<std::string> gProcessedFiles;
 
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
 
@@ -182,6 +184,7 @@ private:
     std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
+    void ProcessFile(YAML::Node root);
     void ParseEnums(std::string& file);
     void ParseHash();
     void ParseModdingConfig();
