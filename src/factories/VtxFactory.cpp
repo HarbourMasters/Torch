@@ -20,7 +20,8 @@ ExportResult VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPar
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
+        // We will ignore the overriden index_size for now...
 
         if(start != offset){
             return std::nullopt;
@@ -41,7 +42,7 @@ ExportResult VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
 
 
         if(start == offset){

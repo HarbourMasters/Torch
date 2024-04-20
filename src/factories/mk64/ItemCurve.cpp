@@ -28,7 +28,8 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
+        // We will ignore the overriden index_size for now...
 
         if(start == offset){
             write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << items.size() << "] = {\n";

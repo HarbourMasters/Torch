@@ -45,6 +45,7 @@ struct Table {
     uint32_t start;
     uint32_t end;
     TableMode mode;
+    int32_t index_size;
 };
 
 struct VRAMEntry {
