@@ -16,7 +16,7 @@ ExportResult LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<I
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
 
         if(start != offset){
             return std::nullopt;
@@ -36,7 +36,7 @@ ExportResult LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IPa
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
 
 
         if(start == offset){

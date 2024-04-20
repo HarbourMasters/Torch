@@ -314,7 +314,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             auto end = gCurrentSegmentNumber ? gCurrentSegmentNumber << 24 | range[1] : range[1];
             auto mode = GetSafeNode<std::string>(table->second, "mode", "APPEND");
             TableMode tMode = mode == "REFERENCE" ? TableMode::Reference : TableMode::Append;
-            this->gTables.push_back({name, start, end, tMode});
+            auto index_size = GetSafeNode<int32_t>(table->second, "index_size", -1);
+            this->gTables.push_back({name, start, end, tMode, index_size});
         }
     }
 

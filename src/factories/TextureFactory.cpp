@@ -93,7 +93,8 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
+        unsigned int isize = index_size > -1 ? index_size : data.size() / byteSize;
 
         if(isOTR){
             write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
@@ -109,7 +110,7 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
                 tableEntries.clear();
             }
         } else {
-            write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << (data.size() / byteSize) << "];\n";
+            write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << isize << "];\n";
         }
     } else {
         if(isOTR){
@@ -140,6 +141,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
     std::ostringstream imgstream;
 
     size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
+    size_t isize = texture->mBuffer.size() / byteSize;
 
     SPDLOG_INFO("Byte Size: {}", byteSize);
 
@@ -167,14 +169,18 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
 
         if(mode != TableMode::Append){
             throw std::runtime_error("Reference mode is not supported for now");
         }
 
+        if (index_size > -1) {
+            isize = index_size;
+        }
+
         if(start == offset){
-            write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << (texture->mBuffer.size() / byteSize) << "] = {\n";
+            write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << isize << "] = {\n";
         }
 
         write << tab << "{\n";
@@ -188,7 +194,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         if(end == offset){
             write << "};\n";
             if (Companion::Instance->IsDebug()) {
-                write << "// size: 0x" << std::hex << std::uppercase << ASSET_PTR((end - start) + data.size()) << "\n";
+                write << "// size: 0x" << std::hex << std::uppercase << ASSET_PTR((end - start) + isize * byteSize) << "\n";
             }
         }
     } else {
@@ -208,7 +214,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
 
         write << "\n";
     }
-    return offset + data.size();
+    return offset + isize * byteSize;
 }
 
 ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
