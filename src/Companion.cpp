@@ -158,7 +158,7 @@ void Companion::ParseEnums(std::string& header) {
         if(line.find("=") != std::string::npos) {
             auto value = line.substr(line.find("=") + 1);
             auto name = line.substr(0, line.find("="));
-            enumIndex = std::stoi(value);
+            enumIndex = static_cast<int32_t>(std::stoll(value, 0, 0));
             this->gEnums[enumName][enumIndex] = name;
         } else {
             enumIndex++;
