@@ -17,13 +17,15 @@ SF64::LimbData::LimbData(uint32_t addr, uint32_t dList, Vec3f trans, Vec3s rot, 
 
 ExportResult SF64::SkeletonHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto skeleton = std::static_pointer_cast<SF64::SkeletonData>(raw);
+    auto limbCount = skeleton->mSkeleton.size();
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
-    write << "extern Limb* " << symbol << "[];\n";
+    write << "extern Limb* " << symbol << "[" << std::dec << limbCount + 1 << "];\n";
     return std::nullopt;
 }
 
