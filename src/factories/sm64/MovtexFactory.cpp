@@ -24,7 +24,7 @@ ExportResult SM64::MovtexCodeExporter::Export(std::ostream &write, std::shared_p
 
     auto movtex = std::static_pointer_cast<SM64::MovtexData>(raw);
 
-    write << "static Movtex " << symbol << "[] = {";
+    write << "static Movtex " << symbol << "[] = {\n";
 
     if (movtex->mIsQuad) {
         auto numLists = movtex->mMovtexData.at(0);

@@ -34,6 +34,7 @@
 #include "factories/sm64/DictionaryFactory.h"
 #include "factories/sm64/TextFactory.h"
 #include "factories/sm64/GeoLayoutFactory.h"
+#include "factories/sm64/MacroFactory.h"
 #include "factories/sm64/MovtexFactory.h"
 #include "factories/sm64/MovtexQuadFactory.h"
 
@@ -93,6 +94,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
     this->RegisterFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactory>());
     this->RegisterFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
+    this->RegisterFactory("SM64:MACRO", std::make_shared<SM64::MacroFactory>());
     this->RegisterFactory("SM64:MOVTEX_QUAD", std::make_shared<SM64::MovtexQuadFactory>());
     this->RegisterFactory("SM64:MOVTEX", std::make_shared<SM64::MovtexFactory>());
 
