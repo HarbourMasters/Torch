@@ -1,4 +1,4 @@
-#include "PaintingFactory.h"
+#include "PaintingMapFactory.h"
 #include "spdlog/spdlog.h"
 
 #include "Companion.h"
@@ -8,7 +8,7 @@
 
 #define FORMAT_INT(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 
-ExportResult SM64::PaintingHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::PaintingMapHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
@@ -20,7 +20,7 @@ ExportResult SM64::PaintingHeaderExporter::Export(std::ostream &write, std::shar
     return std::nullopt;
 }
 
-ExportResult SM64::PaintingCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::PaintingMapCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -49,7 +49,7 @@ ExportResult SM64::PaintingCodeExporter::Export(std::ostream &write, std::shared
     return offset + size;
 }
 
-ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::PaintingMapBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto paintingData = std::static_pointer_cast<SM64::PaintingData>(raw);
 
@@ -75,7 +75,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::PaintingFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::PaintingMapFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     std::vector<PaintingMapping> paintingMappings;
     std::vector<Vec3s> paintingGroups;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);

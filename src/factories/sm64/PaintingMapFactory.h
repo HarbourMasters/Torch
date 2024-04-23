@@ -20,26 +20,26 @@ public:
     PaintingData(std::vector<PaintingMapping> paintingMappings, std::vector<Vec3s> paintingGroups) : mPaintingMappings(std::move(paintingMappings)), mPaintingGroups(std::move(paintingGroups)) {}
 };
 
-class PaintingHeaderExporter : public BaseExporter {
+class PaintingMapHeaderExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class PaintingBinaryExporter : public BaseExporter {
+class PaintingMapBinaryExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class PaintingCodeExporter : public BaseExporter {
+class PaintingMapCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class PaintingFactory : public BaseFactory {
+class PaintingMapFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Code, PaintingCodeExporter)
-            REGISTER(Header, PaintingHeaderExporter)
-            REGISTER(Binary, PaintingBinaryExporter)
+            REGISTER(Code, PaintingMapCodeExporter)
+            REGISTER(Header, PaintingMapHeaderExporter)
+            REGISTER(Binary, PaintingMapBinaryExporter)
         };
     }
 };
