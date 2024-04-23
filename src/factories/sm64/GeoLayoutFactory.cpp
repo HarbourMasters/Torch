@@ -8,14 +8,11 @@
 
 uint64_t RegisterAutoGen(uint32_t ptr, std::string type) {
 
-    const auto segment = Companion::Instance->GetCurrSegmentNumber();
-    if (segment.has_value()) {
-        if (SEGMENT_NUMBER(ptr) == segment.value()) {
-            YAML::Node node;
-            node["type"] = type;
-            node["offset"] = ptr;
-            Companion::Instance->AddAsset(node);
-        }
+    if (ptr != 0) {
+        YAML::Node node;
+        node["type"] = type;
+        node["offset"] = ptr;
+        Companion::Instance->AddAsset(node);
     }
 
     return ptr;
