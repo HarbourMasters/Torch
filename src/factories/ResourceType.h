@@ -31,6 +31,7 @@ enum class ResourceType {
     Collision = 0x434F4C20,    // COL
     Movtex = 0x4D4F5654,       // MOVT
     MovtexQuad = 0x4D4F5651,   // MOVQ
+    Trajectory = 0x5452414A,   // TRAJ
 
     // MK64
     CourseVertex = 0x43565458, // CVTX
