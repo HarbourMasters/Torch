@@ -255,6 +255,49 @@ void Companion::ParseModdingConfig() {
 
 
 void Companion::ParseCurrentFileConfig(YAML::Node node) {
+    if (node["external_files"]) {
+        auto externalFiles = node["external_files"];
+        if (externalFiles.IsSequence() && externalFiles.size()) {
+            for(size_t i = 0; i < externalFiles.size(); i++) {
+                auto externalFile = externalFiles[i];
+                if (externalFile.size() == 0) {
+                    this->gCurrentExternalFiles.push_back(externalFile.as<std::string>());
+                } else {
+                    SPDLOG_INFO("External File size {}", externalFile.size());
+                    throw std::runtime_error("Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n  - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
+                }
+
+                auto externalFileName = externalFile.as<std::string>();
+                if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
+                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
+                } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
+                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
+                }
+
+                if (!this->gAddrMap.contains(externalFileName)) {
+                    SPDLOG_INFO("Dependency on external file {}. Now processing {}", externalFileName, externalFileName);
+                    auto currentFile = this->gCurrentFile;
+                    auto currentDirectory = this->gCurrentDirectory;
+                    auto currentExternalFiles = this->gCurrentExternalFiles;
+
+                    this->gCurrentFile = externalFileName;
+                    this->gCurrentDirectory = std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
+
+                    YAML::Node root = YAML::LoadFile(externalFileName);
+
+                    ProcessFile(root);
+
+                    SPDLOG_INFO("Finishing processing of file: {}", currentFile);
+
+                    this->gCurrentFile = currentFile;
+                    this->gCurrentDirectory = currentDirectory;
+                    this->gCurrentExternalFiles = currentExternalFiles;
+                    this->gFileHeader.clear();
+                }
+            }
+        }
+    }
+
     if(node["segments"]) {
         auto segments = node["segments"];
 
@@ -324,53 +367,6 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         const auto addr = GetSafeNode<uint32_t>(vram, "addr");
         const auto offset = GetSafeNode<uint32_t>(vram, "offset");
         this->gCurrentVram = { addr, offset };
-    }
-
-    if (node["external_files"]) {
-        auto externalFiles = node["external_files"];
-        if (externalFiles.IsSequence() && externalFiles.size()) {
-            for(size_t i = 0; i < externalFiles.size(); i++) {
-                auto externalFile = externalFiles[i];
-                if (externalFile.size() == 0) {
-                    this->gCurrentExternalFiles.push_back(externalFile.as<std::string>());
-                } else {
-                    SPDLOG_INFO("External File size {}", externalFile.size());
-                    throw std::runtime_error("Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n  - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
-                }
-
-                auto externalFileName = externalFile.as<std::string>();
-                if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
-                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
-                } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
-                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
-                }
-
-                if (!this->gAddrMap.contains(externalFileName)) {
-                    SPDLOG_INFO("Dependency on external file {}. Now processing {}", externalFileName, externalFileName);
-                    auto currentFile = this->gCurrentFile;
-                    auto currentDirectory = this->gCurrentDirectory;
-                    auto currentSegmentNumber = gCurrentSegmentNumber;
-                    auto currentFileOffset = gCurrentFileOffset;
-                    auto currentCompressionType = gCurrentCompressionType;
-
-                    this->gCurrentFile = externalFileName;
-                    this->gCurrentDirectory = std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
-
-                    YAML::Node root = YAML::LoadFile(externalFileName);
-
-                    ProcessFile(root);
-
-                    SPDLOG_INFO("Finishing processing of file: {}", currentFile);
-
-                    this->gCurrentFile = currentFile;
-                    this->gCurrentDirectory = currentDirectory;
-
-                    gCurrentSegmentNumber = currentSegmentNumber;
-                    gCurrentFileOffset = currentFileOffset;
-                    gCurrentCompressionType = currentCompressionType;
-                }
-            }
-        }
     }
 
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
