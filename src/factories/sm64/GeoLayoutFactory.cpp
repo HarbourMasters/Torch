@@ -7,23 +7,18 @@
 #include "utils/TorchUtils.h"
 
 uint64_t RegisterAutoGen(uint32_t ptr, std::string type) {
-    if(!Companion::Instance->IsOTRMode()) {
-        return ptr;
+
+    const auto segment = Companion::Instance->GetCurrSegmentNumber();
+    if (segment.has_value()) {
+        if (SEGMENT_NUMBER(ptr) == segment.value()) {
+            YAML::Node node;
+            node["type"] = type;
+            node["offset"] = ptr;
+            Companion::Instance->AddAsset(node);
+        }
     }
 
-    YAML::Node node;
-    node["type"] = type;
-    node["offset"] = ptr;
-    const auto result = Companion::Instance->AddAsset(node);
-
-    if(result.has_value()){
-        auto path = GetSafeNode<std::string>(node, "path");
-        uint64_t hash = CRC64(path.c_str());
-        SPDLOG_INFO("Found {}: 0x{:X} Hash: 0x{:X} Path: {}", type, ptr, hash, path);
-        return hash;
-    }
-
-    return 0;
+    return ptr;
 }
 
 ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
@@ -189,7 +184,17 @@ ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr
                     break;
                 }
                 case GeoArgumentType::U64: {
-                    writer.Write(std::get<uint64_t>(args));
+                    auto ptr = std::get<uint64_t>(args);
+                    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+                    if (ptr == 0) {
+                        writer.Write((uint64_t)0);
+                    } else if (dec.has_value()) {
+                        uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
+                        SPDLOG_INFO("Found Asset: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
+                        writer.Write(hash);
+                    } else {
+                        SPDLOG_WARN("Could not find Asset at 0x{:X}", ptr);
+                    }
                     break;
                 }
                 case GeoArgumentType::VEC2F: {
