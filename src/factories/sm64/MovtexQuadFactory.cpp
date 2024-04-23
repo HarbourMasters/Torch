@@ -24,7 +24,7 @@ ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream &write, std::shar
 
     auto quadData = std::static_pointer_cast<SM64::MovtexQuadData>(raw);
 
-    write << "const struct MovtexQuadCollection " << symbol << "[] = {";
+    write << "const struct MovtexQuadCollection " << symbol << "[] = {\n";
 
     for (auto &quad: quadData->mMovtexQuads) {
         write << "{" << quad.first << ", ";
