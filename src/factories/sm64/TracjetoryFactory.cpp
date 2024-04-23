@@ -26,10 +26,10 @@ ExportResult SM64::TrajectoryCodeExporter::Export(std::ostream &write, std::shar
 
     write << "const Trajectory " << symbol << "[] = {\n";
 
-    for (auto &object : trajectoryData) {
+    for (auto &trajectory : trajectoryData) {
         write << fourSpaceTab;
         write << "TRAJECTORY_POS(";
-        write << object.trajId << ", " << object.posX << ", " << object.posY << ", " << object.posZ << "),\n";
+        write << trajectory.trajId << ", " << trajectory.posX << ", " << trajectory.posY << ", " << trajectory.posZ << "),\n";
     }
 
     write << fourSpaceTab << "TRAJECTORY_END(),";
