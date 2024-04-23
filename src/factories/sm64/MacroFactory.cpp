@@ -51,7 +51,7 @@ ExportResult SM64::MacroCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << "\n};\n";
 
-    size_t size = (macro->mMacroData.size()) * sizeof(MacroObject) + 1;
+    size_t size = (macro->mMacroData.size()) * 5 * sizeof(int16_t) + 1;
 
     return offset + size;
 }
