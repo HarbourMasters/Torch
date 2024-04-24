@@ -3,11 +3,12 @@
 #include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
+#include <regex>
 
-#define END_CODE 0x0
-#define NEWLINE_CODE 0x1
-#define SPC 15
-#define CLF 16
+#define END_CODE 0
+#define NEWLINE_CODE 1
+#define NXT_CODE 15
+#define CLF_CODE 16
 #define CUP 17
 #define CRT 18
 #define CDN 19
@@ -61,48 +62,13 @@ ExportResult SF64::MessageHeaderExporter::Export(std::ostream &write, std::share
     return std::nullopt;
 }
 
-void TextToStream(std::ostream& stream, int charCode) {
-    std::string enumCode = gCharCodeEnums[charCode];
-
-    if(enumCode.starts_with("_")){
-        stream << enumCode.substr(1);
-        return;
-    }
-
-    if(ASCIITable.contains(enumCode)){
-        stream << ASCIITable[enumCode];
-    }
-}
-
 ExportResult SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto message = std::static_pointer_cast<MessageData>(raw)->mMessage;
+    auto mesgStr = std::static_pointer_cast<MessageData>(raw)->mMesgStr;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    write << "// ";
-    bool lastWasSpace = false;
-    for (int i = 0; i < message.size(); ++i) {
-        const auto charCode = message[i];
-        std::string enumCode = gCharCodeEnums[charCode];
-
-        if(enumCode.find("SP") != std::string::npos){
-            if (lastWasSpace){
-                continue;
-            }
-            if (!enumCode.empty() && enumCode.back() != ' ') {
-                write << " ";
-                lastWasSpace = true;
-            }
-        } else {
-            lastWasSpace = false;
-        }
-
-        TextToStream(write,charCode );
-        if(message[i] == NEWLINE_CODE && i != message.size() - 2){
-            write << "\n// ";
-        }
-    }
-    write << "\n";
+    write << "// " << std::regex_replace(mesgStr, std::regex(R"(\n)"), "\n// ") << "\n";
 
     write << "u16 " << symbol << "[] = {\n" << fourSpaceTab;
     for (int i = 0; i < message.size(); ++i) {
@@ -141,17 +107,36 @@ ExportResult SF64::MessageBinaryExporter::Export(std::ostream &write, std::share
 
 std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     std::vector<uint16_t> message;
-
+    std::ostringstream mesgStr;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(LUS::Endianness::Big);
 
-    bool processing = true;
-    while(processing){
-        uint16_t c = reader.ReadUInt16();
+    uint16_t c;
+    bool lastWasSpace = false;
+    std::string whitespace = "";
+    do {
+        c = reader.ReadUInt16();
         message.push_back(c);
-        processing = c != END_CODE;
-    }
 
-    return std::make_shared<MessageData>(message);
+        std::string enumCode = gCharCodeEnums[c];
+        if((enumCode.find("SP") != std::string::npos) && whitespace.empty()) {
+            whitespace = " ";
+        }
+        if(c == NEWLINE_CODE) {
+            whitespace += "\n";
+        }
+        if (c >= CLF_CODE) {
+            mesgStr << whitespace;
+            whitespace = "";
+        }
+        if(enumCode.starts_with("_")){
+            mesgStr << enumCode.substr(1);
+        } else if(ASCIITable.contains(enumCode)){
+            mesgStr << ASCIITable[enumCode];
+        }
+
+    } while(c != END_CODE);
+
+    return std::make_shared<MessageData>(message, mesgStr.str());
 }

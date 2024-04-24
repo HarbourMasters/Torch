@@ -7,8 +7,9 @@ namespace SF64 {
 class MessageData : public IParsedData {
 public:
     std::vector<uint16_t> mMessage;
+    std::string mMesgStr;
 
-    MessageData(std::vector<uint16_t> message) : mMessage(message) {}
+    MessageData(std::vector<uint16_t> message, std::string mesgStr) : mMessage(message), mMesgStr(mesgStr) {}
 };
 
 class MessageCodeExporter : public BaseExporter {

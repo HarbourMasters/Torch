@@ -4,6 +4,7 @@
 #include "Companion.h"
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
+#include "factories/sf64/MessageFactory.h"
 #include <regex>
 
 #include "storm/SWrapper.h"
@@ -26,6 +27,17 @@ ExportResult SF64::ScriptHeaderExporter::Export(std::ostream &write, std::shared
 
     write << "extern u16* " << symbol << "[];\n";
     return std::nullopt;
+}
+
+std::string GetMsg(uint16_t msgId) {
+    std::string msg = "";
+    auto rawmsg = Companion::Instance->GetParseDataBySymbol("gMsg_ID_" + std::to_string(msgId));
+
+    if(rawmsg.has_value() && rawmsg.value().data.has_value()) {
+        auto msgData = std::static_pointer_cast<SF64::MessageData>(rawmsg.value().data.value());
+        auto msg = std::regex_replace(msgData->mMesgStr, std::regex(R"(\n)"), " ");
+    }
+    return msg;
 }
 
 std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
@@ -136,6 +148,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 120: {
             auto rcidName = VALUE_TO_ENUM(arg1, "RadioCharacterId", "RCID_UNK");
             cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << s2;
+            auto msg = GetMsg(s2);
+            if(!msg.empty()) {
+                comment << " // " << msg;
+            }
         } break;
         case 121: {
             auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
