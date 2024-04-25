@@ -27,6 +27,7 @@
 #include "factories/LightsFactory.h"
 #include "factories/Vec3fFactory.h"
 #include "factories/Vec3sFactory.h"
+#include "factories/AssetArrayFactory.h"
 
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/CollisionFactory.h"
@@ -88,6 +89,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
     this->RegisterFactory("VEC3S", std::make_shared<Vec3sFactory>());
     this->RegisterFactory("ARRAY", std::make_shared<GenericArrayFactory>());
+    this->RegisterFactory("ASSET_ARRAY", std::make_shared<AssetArrayFactory>());
 
     // SM64 specific
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
