@@ -37,6 +37,7 @@ enum class ResourceType {
     MovtexQuad = 0x4D4F5651,     // MOVQ
     PaintingData = 0x5041494E,   // PAIN
     Trajectory = 0x5452414A,     // TRAJ
+    WaterDroplet = 0x57545244,   // WTRD
 
     // MK64
     CourseVertex = 0x43565458, // CVTX
