@@ -25,17 +25,18 @@ enum class ResourceType {
     AssetArray = 0x41415252,   // AARR
 
     // SM64
-    Anim = 0x414E494D,         // ANIM
-    SDialog = 0x53444C47,      // SDLG
-    Dictionary = 0x44494354,   // DICT
-    GeoLayout = 0x47454F20,    // GEO
-    Collision = 0x434F4C20,    // COL
-    LevelScript = 0x4C564C53,  // LVLS 
-    MacroObject = 0x4D41434F,  // MACO
-    Movtex = 0x4D4F5654,       // MOVT
-    MovtexQuad = 0x4D4F5651,   // MOVQ
-    PaintingData = 0x5041494E, // PAIN
-    Trajectory = 0x5452414A,   // TRAJ
+    Anim = 0x414E494D,           // ANIM
+    BehaviorScript = 0x42485653, // BHVS
+    SDialog = 0x53444C47,        // SDLG
+    Dictionary = 0x44494354,     // DICT
+    GeoLayout = 0x47454F20,      // GEO
+    Collision = 0x434F4C20,      // COL
+    LevelScript = 0x4C564C53,    // LVLS 
+    MacroObject = 0x4D41434F,    // MACO
+    Movtex = 0x4D4F5654,         // MOVT
+    MovtexQuad = 0x4D4F5651,     // MOVQ
+    PaintingData = 0x5041494E,   // PAIN
+    Trajectory = 0x5452414A,     // TRAJ
 
     // MK64
     CourseVertex = 0x43565458, // CVTX
