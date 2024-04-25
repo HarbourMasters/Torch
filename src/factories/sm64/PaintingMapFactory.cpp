@@ -6,7 +6,7 @@
 #include "utils/TorchUtils.h"
 #include <regex>
 
-#define FORMAT_INT(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
+// #define FORMAT_INT(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 
 ExportResult SM64::PaintingMapHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -32,14 +32,14 @@ ExportResult SM64::PaintingMapCodeExporter::Export(std::ostream &write, std::sha
 
     for (auto &mapping : paintingData->mPaintingMappings) {
         write << fourSpaceTab;
-        write << FORMAT_INT(mapping.vtxId << "," << mapping.texX << "," << mapping.texY, 6) << ",\n";
+        write << mapping.vtxId << ", " << mapping.texX << ", " << mapping.texY << ",\n";
     }
 
     write << fourSpaceTab << paintingData->mPaintingMappings.size() << ",\n";
 
     for (auto &group : paintingData->mPaintingGroups) {
         write << fourSpaceTab;
-        write << FORMAT_INT(group, 4) << ",\n";
+        write << group.x << ", " << group.y << ", " << group.z << ", " << ",\n";
     }
 
     write << "};\n";
