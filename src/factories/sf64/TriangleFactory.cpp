@@ -15,13 +15,14 @@ SF64::TriangleData::TriangleData(std::vector<Vec3s> tris, std::vector<YAML::Node
 
 ExportResult SF64::TriangleHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto triData = std::static_pointer_cast<SF64::TriangleData>(raw);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
-    write << "extern Triangle " << symbol << "[];\n";
+    write << "extern Triangle " << symbol << "[" << std::dec << triData->mTris.size() << "];\n";
     return std::nullopt;
 }
 
