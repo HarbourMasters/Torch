@@ -164,7 +164,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
     }
     if (collision->mSurfaces.size()) {
         write << fourSpaceTab;
-        write << "COL_TRI_STOP()";
+        write << "COL_TRI_STOP()\n";
         ++count;
     }
 
@@ -231,7 +231,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
     }
 
     write << fourSpaceTab;
-    write << "COL_END()";
+    write << "COL_END()\n";
     ++count;
 
     write << "};\n";
