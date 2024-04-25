@@ -16,13 +16,14 @@ SF64::ColPolyData::ColPolyData(std::vector<SF64::CollisionPoly> polys, std::vect
 
 ExportResult SF64::ColPolyHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
-    write << "extern CollisionPoly " << symbol << "[];\n";
+    write << "extern CollisionPoly " << symbol << "[" << std::dec << colpolys->mPolys.size() << "];\n";
     return std::nullopt;
 }
 
