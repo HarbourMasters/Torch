@@ -29,6 +29,7 @@ enum class ResourceType {
     Dictionary = 0x44494354,   // DICT
     GeoLayout = 0x47454F20,    // GEO
     Collision = 0x434F4C20,    // COL
+    LevelScript = 0x4C564C53,  // LVLS 
     MacroObject = 0x4D41434F,  // MACO
     Movtex = 0x4D4F5654,       // MOVT
     MovtexQuad = 0x4D4F5651,   // MOVQ
