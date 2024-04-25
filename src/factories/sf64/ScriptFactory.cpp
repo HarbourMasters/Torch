@@ -142,8 +142,8 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             cmd << "EVENT_SET_REVERB(" << std::dec << s2;
             break;
         case 119: {
-            auto groundtype = VALUE_TO_ENUM(s2, "GroundType", "GROUNDTYPE_UNK");
-            cmd << "EVENT_SET_GROUND(" << groundtype;
+            auto groundtype = VALUE_TO_ENUM(s2, "GroundSurface", "SURFACE_UNK");
+            cmd << "EVENT_SET_SURFACE(" << groundtype;
         } break;
         case 120: {
             auto rcidName = VALUE_TO_ENUM(arg1, "RadioCharacterId", "RCID_UNK");
