@@ -35,7 +35,8 @@ enum class ResourceType {
     MacroObject = 0x4D41434F,    // MACO
     Movtex = 0x4D4F5654,         // MOVT
     MovtexQuad = 0x4D4F5651,     // MOVQ
-    PaintingData = 0x5041494E,   // PAIN
+    Painting = 0x504E5420,       // PNT
+    PaintingData = 0x504E5444,   // PNTD
     Trajectory = 0x5452414A,     // TRAJ
     WaterDroplet = 0x57545244,   // WTRD
 

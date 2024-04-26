@@ -109,9 +109,7 @@ ExportResult SM64::WaterDropletCodeExporter::Export(std::ostream &write, std::sh
 
     write << "};\n";
 
-    size_t size = 0;
-
-    return offset + size;
+    return offset + 36;
 }
 
 ExportResult SM64::WaterDropletBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
