@@ -40,6 +40,7 @@
 #include "factories/sm64/MacroFactory.h"
 #include "factories/sm64/MovtexFactory.h"
 #include "factories/sm64/MovtexQuadFactory.h"
+#include "factories/sm64/PaintingFactory.h"
 #include "factories/sm64/PaintingMapFactory.h"
 #include "factories/sm64/TrajectoryFactory.h"
 #include "factories/sm64/WaterDropletFactory.h"
@@ -106,6 +107,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:MACRO", std::make_shared<SM64::MacroFactory>());
     this->RegisterFactory("SM64:MOVTEX_QUAD", std::make_shared<SM64::MovtexQuadFactory>());
     this->RegisterFactory("SM64:MOVTEX", std::make_shared<SM64::MovtexFactory>());
+    this->RegisterFactory("SM64:PAINTING", std::make_shared<SM64::PaintingFactory>());
     this->RegisterFactory("SM64:PAINTING_MAP", std::make_shared<SM64::PaintingMapFactory>());
     this->RegisterFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactory>());
     this->RegisterFactory("SM64:WATER_DROPLET", std::make_shared<SM64::WaterDropletFactory>());
