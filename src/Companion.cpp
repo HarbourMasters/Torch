@@ -765,7 +765,7 @@ void Companion::ProcessFile(YAML::Node root) {
 
         switch (this->gConfig.exporterType) {
             case ExportType::Header: {
-                fsout /= filename + ".h";
+                fsout /= this->gCurrentDirectory.parent_path() / (filename + ".h");
                 break;
             }
             case ExportType::Code: {
