@@ -16,6 +16,11 @@
 class SWrapper;
 namespace fs = std::filesystem;
 
+enum class ParseMode {
+    Default,
+    Directory
+};
+
 enum class GBIVersion {
     f3d,
     f3dex,
@@ -73,6 +78,7 @@ struct TorchConfig {
     std::string outputPath;
     std::string moddingPath;
     ExportType exporterType;
+    ParseMode parseMode;
     bool otrMode;
     bool debug;
     bool modding;

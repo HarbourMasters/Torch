@@ -223,8 +223,14 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
         input.close();
 
         result = impl->parse_modding(data, node);
-    } else {
+    } else if(this->gConfig.parseMode == ParseMode::Default) {
         result = impl->parse(this->gRomData, node);
+    } else if(this->gConfig.parseMode == ParseMode::Directory) {
+        auto path = GetSafeNode<std::string>(node, "path");
+        std::ifstream input( path, std::ios::binary );
+        auto data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {} );
+        result = impl->parse(data, node);
+        input.close();
     }
 
     if(!result.has_value()){
@@ -910,26 +916,32 @@ void Companion::Process() {
     }
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-
-    std::ifstream input( this->gRomPath, std::ios::binary );
-    this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator( input ), {} );
-    input.close();
-
-    this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
-    this->gCartridge->Initialize();
-
     YAML::Node config = YAML::LoadFile("config.yml");
 
-    if(!config[this->gCartridge->GetHash()]){
-        SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
-        return;
+    bool isDirectoryMode = config["mode"] && config["mode"].as<std::string>() == "directory";
+
+    if(!isDirectoryMode) {
+        std::ifstream input( this->gRomPath, std::ios::binary );
+        this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator( input ), {} );
+        input.close();
+
+        this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
+        this->gCartridge->Initialize();
+
+        if(!config[this->gCartridge->GetHash()]){
+            SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
+            return;
+        }
+        this->gConfig.parseMode = ParseMode::Default;
+    } else {
+        this->gConfig.parseMode = ParseMode::Directory;
     }
 
-    auto rom = config[this->gCartridge->GetHash()];
+    auto rom = !isDirectoryMode ? config[this->gCartridge->GetHash()] : config;
     auto cfg = rom["config"];
 
     if(!cfg) {
-        SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
+        SPDLOG_ERROR("No config found for {}", !isDirectoryMode ? this->gCartridge->GetHash() : GetSafeNode<std::string>(config, "folder"));
         return;
     }
 
@@ -1052,12 +1064,19 @@ void Companion::Process() {
     spdlog::set_pattern(line);
 
     SPDLOG_INFO("Starting Torch...");
-    SPDLOG_INFO("Game: {}", this->gCartridge->GetGameTitle());
-    SPDLOG_INFO("CRC: {}", this->gCartridge->GetCRC());
-    SPDLOG_INFO("Version: {}", this->gCartridge->GetVersion());
-    SPDLOG_INFO("Country: [{}]", this->gCartridge->GetCountryCode());
-    SPDLOG_INFO("Hash: {}", this->gCartridge->GetHash());
-    SPDLOG_INFO("Assets: {}", this->gAssetPath);
+
+    if(this->gConfig.parseMode == ParseMode::Default) {
+        SPDLOG_INFO("ROM: {}", this->gRomPath);
+        SPDLOG_INFO("Game: {}", this->gCartridge->GetGameTitle());
+        SPDLOG_INFO("CRC: {}", this->gCartridge->GetCRC());
+        SPDLOG_INFO("Version: {}", this->gCartridge->GetVersion());
+        SPDLOG_INFO("Country: [{}]", this->gCartridge->GetCountryCode());
+        SPDLOG_INFO("Hash: {}", this->gCartridge->GetHash());
+        SPDLOG_INFO("Assets: {}", this->gAssetPath);
+    } else {
+        SPDLOG_INFO("Mode: Directory");
+        SPDLOG_INFO("Directory: {}", rom["folder"].as<std::string>());
+    }
 
     AudioManager::Instance = new AudioManager();
     auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
@@ -1066,7 +1085,12 @@ void Companion::Process() {
     auto vWriter = LUS::BinaryWriter();
     vWriter.SetEndianness(LUS::Endianness::Big);
     vWriter.Write(static_cast<uint8_t>(LUS::Endianness::Big));
-    vWriter.Write(this->gCartridge->GetCRC());
+
+    if(this->gConfig.parseMode == ParseMode::Default) {
+        vWriter.Write(this->gCartridge->GetCRC());
+    } else {
+        vWriter.Write((uint32_t) 0);
+    }
 
     for (const auto & entry : fs::recursive_directory_iterator(this->gAssetPath)){
         if(entry.is_directory())  {
@@ -1076,6 +1100,10 @@ void Companion::Process() {
         const auto yamlPath = entry.path().string();
 
         if(yamlPath.find(".yaml") == std::string::npos && yamlPath.find(".yml") == std::string::npos) {
+            continue;
+        }
+
+        if(yamlPath.find("config.yml") != std::string::npos) {
             continue;
         }
 
