@@ -449,7 +449,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     index = C0(0, 8);
                     offset = C0(8, 8) * 8;
 
-                    if(index == GBI(G_MV_LIGHT)) {
+                    // same thing as above; see macro gSPLight at gbi.h
+                    if(index == GBI(G_MV_LIGHT) && offset == (2 * 24 + 24)) {
                         light = true;
                     }
                     break;
