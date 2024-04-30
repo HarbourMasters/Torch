@@ -18,7 +18,6 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 
     const unsigned char* in_buf = buffer.data() + offset;
 
-                SPDLOG_INFO("Offset: 0x{:X}", offset);
     switch (type) {
         case CompressionType::MIO0: {
             mio0_header_t head;
