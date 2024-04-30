@@ -41,36 +41,28 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     CompressionType type = Companion::Instance->GetCurrCompressionType();
 
+    auto fileOffset = TranslateAddr(offset, true);
 
-    // Extract compressed assets. Do not run if the offset is 0x0 as that is handled in the below switch statement.
-    if (offset != 0x0) {
-        auto fileOffset = TranslateAddr(offset, true);
+    // Extract compressed assets.
+    if (node["mio0"]) {
         auto assetPtr = ASSET_PTR(offset);
         auto gameSize = Companion::Instance->GetRomData().size();
 
-        LUS::BinaryReader reader((char*)buffer.data(), gameSize);
-        reader.SetEndianness(LUS::Endianness::Big);
-        reader.Seek(fileOffset + assetPtr, LUS::SeekOffsetType::Start);
-        std::string mio0 = reader.ReadCString();
+        auto fileOffset = TranslateAddr(offset, true);
+        offset = ASSET_PTR(offset);
 
-        if (mio0.compare("MIO0")) {
-            auto fileOffset = TranslateAddr(offset, true);
-            offset = ASSET_PTR(offset);
-
-            auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
-            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
-            return {
-                    .root = decoded,
-                    .segment = { decoded->data, size }
-            };
-        }
+        auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
+        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
+        return {
+                .root = decoded,
+                .segment = { decoded->data, size }
+        };
     }
 
-    // Extract compressed files
+    // Extract compressed files that contain many assets.
     switch(type) {
         case CompressionType::MIO0:
         {
-            auto fileOffset = TranslateAddr(offset, true);
             offset = ASSET_PTR(offset);
 
             auto decoded = Decode(buffer, fileOffset, CompressionType::MIO0);
@@ -86,7 +78,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
         case CompressionType::None: // The data does not have compression
         {
-            auto fileOffset = TranslateAddr(offset);
+            fileOffset = TranslateAddr(offset, false);
 
             auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - fileOffset);
 
