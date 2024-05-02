@@ -6,6 +6,7 @@
 
 extern "C" {
 #include <libmio0/mio0.h>
+#include <libmio0/tkmk00.h>
 }
 
 std::unordered_map<uint32_t, DataChunk*> gCachedChunks;
@@ -35,6 +36,23 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
     }
 }
 
+DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const uint32_t offset, const uint32_t size, const uint32_t alpha) {
+
+    if(gCachedChunks.contains(offset)){
+        return gCachedChunks[offset];
+    }
+
+    const uint8_t* in_buf = buffer.data() + offset;
+
+    const auto decompressed = new uint8_t[size];
+    const auto rgba = new uint8_t[size];
+    SPDLOG_INFO("RUN?");
+    tkmk00_decode(in_buf, decompressed, rgba, alpha);
+    SPDLOG_INFO("RUN2?");
+    gCachedChunks[offset] = new DataChunk{ decompressed, size };
+    return gCachedChunks[offset];
+}
+
 DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer, std::optional<size_t> manualSize) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -51,6 +69,26 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         offset = ASSET_PTR(offset);
 
         auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
+        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
+        return {
+                .root = decoded,
+                .segment = { decoded->data, size }
+        };
+    }
+
+    // Extract compressed tkmk00 assets in mk64.
+    if (node["tkmk00"]) {
+        const auto alpha = GetSafeNode<uint32_t>(node, "alpha");
+        const auto width = GetSafeNode<uint32_t>(node, "width");
+        const auto height = GetSafeNode<uint32_t>(node, "height");
+        const auto textureSize = width * height * 2;
+        auto assetPtr = ASSET_PTR(offset);
+        auto gameSize = Companion::Instance->GetRomData().size();
+
+        auto fileOffset = TranslateAddr(offset, true);
+        offset = ASSET_PTR(offset);
+
+        auto decoded = DecodeTKMK00(buffer, fileOffset + offset, textureSize, alpha);
         auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
         return {
                 .root = decoded,
