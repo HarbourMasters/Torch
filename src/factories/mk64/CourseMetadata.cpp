@@ -290,18 +290,6 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     return std::nullopt;
 }
 
-ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    //auto metadata = std::static_pointer_cast<MetadataData>(raw)->mMetadata;
-    //auto writer = LUS::BinaryWriter();
-
-    throw std::runtime_error("CourseMetadata not implemented for OTR");
-
-    // WriteHeader(writer, LUS::ResourceType::Metadata, 0);
-    // writer.Write((uint32_t) metadata.size());
-    //writer.Finish(write);
-    return std::nullopt;
-}
-
 std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto dir = GetSafeNode<std::string>(node, "input_directory");
  
