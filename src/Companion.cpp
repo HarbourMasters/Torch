@@ -329,6 +329,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                 gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
                 gCurrentFileOffset = segments[0][1].as<uint32_t>();
                 gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+                if(node["no_compression"]) {
+                    gCurrentCompressionType = CompressionType::None;
+                }
             } else {
                 throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
             }
@@ -504,6 +507,9 @@ void Companion::ProcessFile(YAML::Node root) {
                 gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
                 gCurrentFileOffset = segments[0][1].as<uint32_t>();
                 gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+                if(root[":config"]["no_compression"]) {
+                    gCurrentCompressionType = CompressionType::None;
+                }
             } else {
                 throw std::runtime_error("Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, <file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
             }
