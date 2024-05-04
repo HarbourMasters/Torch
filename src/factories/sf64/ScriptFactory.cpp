@@ -58,6 +58,15 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 2:
             cmd << "EVENT_SET_BASE_ZVEL(" << std::dec << s2;
             break;
+        case 3:
+            cmd << "EVENT_SET_AS_LEADER(";
+            break;
+        case 4:
+            cmd << "EVENT_START_FORMATION(" << std::dec << s2;
+            break;
+        case 8:
+            cmd << "EVENT_STOP_FORMATION(";
+            break;
         case 9:
         case 10:
         case 11:
@@ -80,9 +89,16 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 25:
             cmd << "EVENT_STOP_ROTATE(";
             break;
+        case 40:
+        case 41:
+        case 42:
+        case 43:
         case 44:
-            cmd << "EVENT_CHASE_TARGET(" << std::dec << arg1 << ", " << s2;
-            break;
+        case 46:
+        case 47: {
+            auto chaseCmd = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
+            cmd << chaseCmd.replace(0, 4, "EVENT") << "(" << std::dec << s2 << ", " << arg1;
+        } break;
         case 45: {
             auto teamId = VALUE_TO_ENUM(arg1, "TeamId", "TEAMID_UNK");
             cmd << "EVENT_SET_TARGET(" << teamId << ", " << std::dec << s2;
@@ -108,7 +124,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
                 cmd << "EVENT_CLEAR_TRIGGER(" << std::dec << arg1;
             } else {
                 if (s2 >= 100) {
-                    cmd << "EVENT_SET_Z_TRIGGER(" << std::dec << (s2 - 100) * 10 << ", ";
+                    cmd << "EVENT_SET_Z_TRIGGER(" << std::dec << (s2 - 100) * 100 << ", ";
                 } else {
                     auto condition = VALUE_TO_ENUM(s2, "EventCondition", "EVC_UNK");
                     cmd << "EVENT_SET_TRIGGER(" << condition << ", ";
@@ -117,7 +133,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             }
             break;
         case 104: {
-            auto actorInfo = VALUE_TO_ENUM(s2, "EventActorInfo", "EINFO_UNK");
+            auto actorInfo = VALUE_TO_ENUM(s2, "EventActorId", "EVID_UNK");
             cmd << "EVENT_INIT_ACTOR(" << actorInfo << ", " << std::dec << arg1;
         } break;
         case 105: {
