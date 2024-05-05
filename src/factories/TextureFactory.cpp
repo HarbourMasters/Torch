@@ -143,8 +143,6 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
     size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
     size_t isize = texture->mBuffer.size() / byteSize;
 
-    SPDLOG_INFO("Byte Size: {}", byteSize);
-
     for (int i = 0; i < data.size(); i+=byteSize) {
         if (i % 16 == 0 && i != 0) {
             imgstream << std::endl;
