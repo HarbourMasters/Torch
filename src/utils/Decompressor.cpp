@@ -49,7 +49,7 @@ DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const 
     SPDLOG_INFO("RUN?");
     tkmk00_decode(in_buf, decompressed, rgba, alpha);
     SPDLOG_INFO("RUN2?");
-    gCachedChunks[offset] = new DataChunk{ decompressed, size };
+    gCachedChunks[offset] = new DataChunk{ rgba, size };
     return gCachedChunks[offset];
 }
 
