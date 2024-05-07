@@ -10,11 +10,12 @@ namespace MK64 {
         uint8_t	    cn[4];	/* color & alpha */
     };
 
+
     class CourseVtxData : public IParsedData {
     public:
-        std::vector<CourseVtx> mVtxs;
+        std::vector<Vtx> mVtxs;
 
-        explicit CourseVtxData(std::vector<CourseVtx> vtxs) : mVtxs(vtxs) {}
+        explicit CourseVtxData(std::vector<Vtx> vtxs) : mVtxs(vtxs) {}
     };
 
     class CourseVtxHeaderExporter : public BaseExporter {
