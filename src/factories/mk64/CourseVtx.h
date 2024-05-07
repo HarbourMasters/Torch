@@ -10,12 +10,18 @@ namespace MK64 {
         uint8_t	    cn[4];	/* color & alpha */
     };
 
+    struct VtxRaw {
+        int16_t		ob[3];	/* x, y, z */
+        uint16_t	flag;
+        int16_t		tc[2];	/* texture coord */
+        uint8_t	    cn[4];	/* color & alpha */
+    };
 
     class CourseVtxData : public IParsedData {
     public:
-        std::vector<Vtx> mVtxs;
+        std::vector<VtxRaw> mVtxs;
 
-        explicit CourseVtxData(std::vector<Vtx> vtxs) : mVtxs(vtxs) {}
+        explicit CourseVtxData(std::vector<VtxRaw> vtxs) : mVtxs(vtxs) {}
     };
 
     class CourseVtxHeaderExporter : public BaseExporter {
