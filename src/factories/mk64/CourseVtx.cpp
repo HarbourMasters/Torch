@@ -46,19 +46,19 @@ ExportResult MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::share
             write << fourSpaceTab;
         }
 
-        // {{{ x, y, z }, { tc1, tc2 }, { c1, c2, c3, c4 }}}
-        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << NUM(flag) << " {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
+        // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
+        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << NUM(f) << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
     }
     write << "};\n";
 
-    return offset + vtx.size() * sizeof(Vtx);
+    return offset + vtx.size() * sizeof(VtxRaw);
 }
 
 ExportResult MK64::CourseVtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<CourseVtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Vtx, 0);
+    WriteHeader(writer, LUS::ResourceType::Vertex, 0);
     writer.Write((uint32_t) vtx->mVtxs.size());
     for(auto v : vtx->mVtxs) {
         writer.Write(v.ob[0]);
@@ -84,7 +84,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
     LUS::BinaryReader reader(segment.data, count * sizeof(CourseVtx));
 
     reader.SetEndianness(LUS::Endianness::Big);
-    std::vector<Vtx> vertices;
+    std::vector<VtxRaw> vertices;
 
     for(size_t i = 0; i < count; i++) {
         const auto x = reader.ReadInt16();
@@ -102,11 +102,9 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
 
         cn1 &= 0xFC;
         cn2 &= 0xFC;
-    
-        vertices->v.flag = flags;
         cn4 = 0xFF;
 
-        vertices.push_back(Vtx({
+        vertices.push_back(VtxRaw({
            {x, y, z}, flag, {tc1, tc2}, {cn1, cn2, cn3, cn4}
        }));
     }
