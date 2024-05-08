@@ -671,7 +671,8 @@ void Companion::ProcessFile(YAML::Node root) {
                 stream.str("");
                 stream.clear();
                 exporter->get()->Export(stream, data, result.name, result.node, &result.name);
-                auto data = stream.str();;
+                auto data = stream.str();
+                this->gCurrentWrapper->CreateFile(result.name, std::vector(data.begin(), data.end()));
                 break;
             }
             case ExportType::Modding: {
