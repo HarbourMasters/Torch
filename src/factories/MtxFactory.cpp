@@ -132,10 +132,10 @@ ExportResult MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPar
 }
 
 std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto count = GetSafeNode<size_t>(node, "count");
+    //auto count = GetSafeNode<size_t>(node, "count");
 
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
-    LUS::BinaryReader reader(segment.data, count * sizeof(MtxRaw));
+    LUS::BinaryReader reader(segment.data, 1 * sizeof(MtxRaw));
 
     reader.SetEndianness(LUS::Endianness::Big);
     std::vector<MtxRaw> matrix;
@@ -143,7 +143,7 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
     #define FIXTOF(x)      ((float)((x) / 65536.0f))
 
     // Reads the inteer portion, the fractional portion, puts each together into a fixed-point value, and finally converts to float.
-    for(size_t i = 0; i < count; i++) {
+    for(size_t i = 0; i < 1; i++) {
         // Read the integer portion of the fixed-point value (ex. 4)
         auto i1  = reader.ReadInt16();
         auto i2  = reader.ReadInt16();
