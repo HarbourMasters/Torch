@@ -853,7 +853,8 @@ void Companion::ProcessFile(YAML::Node root) {
             }
 
             if (this->gConfig.exporterType == ExportType::Code && this->gIndividualIncludes) {
-                fs::path outinc = fs::path(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() / (result.name + ".inc.c");
+                fs::path outinc = fs::path(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() /
+                    fs::relative(fs::path(result.name + ".inc.c"), this->gCurrentDirectory.parent_path());
 
                 if(!exists(outinc.parent_path())){
                     create_directories(outinc.parent_path());
