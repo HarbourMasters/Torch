@@ -99,12 +99,6 @@ struct ParseResultData {
     }
 };
 
-struct Dependency {
-    std::string name;
-    YAML::Node node;
-    bool processed;
-};
-
 class Companion {
 public:
     static Companion* Instance;
@@ -190,12 +184,12 @@ private:
     std::unordered_set<std::string> gProcessedFiles;
 
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
-    std::vector<Dependency> gDependencies;
 
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
+    std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
     void ProcessFile(YAML::Node root);
