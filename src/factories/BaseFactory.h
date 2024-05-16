@@ -101,6 +101,9 @@ public:
     virtual bool SupportModdedAssets() {
         return false;
     }
+    virtual bool HasModdedDependencies() {
+        return false;
+    }
     virtual uint32_t GetAlignment() {
         return 4;
     }

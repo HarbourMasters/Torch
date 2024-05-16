@@ -38,5 +38,6 @@ public:
             REGISTER(Binary, MessageLookupBinaryExporter)
         };
     }
+    bool HasModdedDependencies() override { return true; }
 };
 }

@@ -163,7 +163,7 @@ void Companion::ParseEnums(std::string& header) {
             continue;
         }
 
-        if(line.find("}") != std::string::npos) {
+        if(line.find('}') != std::string::npos) {
             inEnum = false;
             continue;
         }
@@ -171,10 +171,10 @@ void Companion::ParseEnums(std::string& header) {
         // Remove any comments and non-alphanumeric characters
         line = std::regex_replace(line, std::regex(R"((/\*.*?\*/)|(//.*$)|([^a-zA-Z0-9=_\-\.]))"), "");
 
-        if(line.find("=") != std::string::npos) {
-            auto value = line.substr(line.find("=") + 1);
-            auto name = line.substr(0, line.find("="));
-            enumIndex = static_cast<int32_t>(std::stoll(value, 0, 0));
+        if(line.find('=') != std::string::npos) {
+            auto value = line.substr(line.find('=') + 1);
+            auto name = line.substr(0, line.find('='));
+            enumIndex = static_cast<int32_t>(std::stoll(value, nullptr, 0));
             this->gEnums[enumName][enumIndex] = name;
         } else {
             enumIndex++;
@@ -196,6 +196,7 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
         SPDLOG_INFO("- [{}] Processing {}", type, name);
     }
     spdlog::set_pattern(line);
+    node["vpath"] = name;
 
     auto factory = this->GetFactory(type);
     if(!factory.has_value()){
@@ -205,27 +206,32 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
     auto impl = factory->get();
 
     auto exporter = impl->GetExporter(this->gConfig.exporterType);
-    if(!exporter.has_value()){
+    if(!exporter.has_value() && !impl->HasModdedDependencies()){
         SPDLOG_WARN("No exporter found for {}", name);
         return std::nullopt;
     }
 
+    bool executeDef = true;
     std::optional<std::shared_ptr<IParsedData>> result;
     if(this->gConfig.modding && impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
         auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
-        if(!fs::exists(path)) {
+        if(!exists(path)) {
             SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
-            return std::nullopt;
+        } else {
+            std::ifstream input(path, std::ios::binary);
+            std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
+            input.close();
+
+            result = impl->parse_modding(data, node);
+            executeDef = !result.has_value();
         }
+    }
 
-        std::ifstream input(path, std::ios::binary);
-        std::vector<uint8_t> data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {});
-        input.close();
-
-        result = impl->parse_modding(data, node);
-    } else if(this->gConfig.parseMode == ParseMode::Default) {
+    if(executeDef && this->gConfig.parseMode == ParseMode::Default) {
         result = impl->parse(this->gRomData, node);
-    } else if(this->gConfig.parseMode == ParseMode::Directory) {
+    }
+
+    if(executeDef && this->gConfig.parseMode == ParseMode::Directory) {
         auto path = GetSafeNode<std::string>(node, "path");
         std::ifstream input( path, std::ios::binary );
         auto data = std::vector<uint8_t>( std::istreambuf_iterator( input ), {} );
@@ -238,16 +244,16 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
         return std::nullopt;
     }
 
-    for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
-        if(snd.second) {
+    for (auto& [name, node, processed] : this->gDependencies) {
+        if(processed) {
             continue;
         }
-        std::string doutput = (this->gCurrentDirectory / fst).string();
+        std::string doutput = (this->gCurrentDirectory / name).string();
         std::replace(doutput.begin(), doutput.end(), '\\', '/');
-        this->gAssetDependencies[this->gCurrentFile][fst].second = true;
-        auto result = this->ParseNode(snd.first, doutput);
-        if(result.has_value()) {
-            this->gParseResults[this->gCurrentFile].push_back(result.value());
+        processed = true;
+        auto dResult = this->ParseNode(node, doutput);
+        if(dResult.has_value()) {
+            this->gParseResults[this->gCurrentFile].push_back(dResult.value());
         }
         spdlog::set_pattern(regular);
         SPDLOG_INFO("------------------------------------------------");
@@ -256,6 +262,7 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
 
 
     SPDLOG_INFO("Processed {}", name);
+    this->gDependencies.clear();
 
     return ParseResultData {
         name, type, node, result
@@ -397,6 +404,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
     this->gEnablePadGen = GetSafeNode<bool>(node, "autopads", true);
     this->gNodeForceProcessing = GetSafeNode<bool>(node, "force", false);
     this->gIndividualIncludes = GetSafeNode<bool>(node, "individual_data_incs", false);
+    this->gCurrentVirtualPath = GetSafeNode<std::string>(node, "path", "");
 }
 
 void Companion::ParseHash() {
@@ -545,6 +553,10 @@ void Companion::ProcessFile(YAML::Node root) {
                     assetNode["offset"] = (segment << 24) | assetNode["offset"].as<uint32_t>();
                 }
 
+                if(!gCurrentVirtualPath.empty()) {
+                    node["path"] = gCurrentVirtualPath;
+                }
+
                 this->gAddrMap[this->gCurrentFile][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
             }
         } else {
@@ -570,6 +582,10 @@ void Companion::ProcessFile(YAML::Node root) {
                 }
             }
 
+            if(!gCurrentVirtualPath.empty()) {
+                node["path"] = gCurrentVirtualPath;
+            }
+
             this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
         }
     }
@@ -580,6 +596,7 @@ void Companion::ProcessFile(YAML::Node root) {
     this->gFileHeader.clear();
     this->gCurrentPad = 0;
     this->gCurrentVram = std::nullopt;
+    this->gCurrentVirtualPath = "";
     this->gCurrentSegmentNumber = 0;
     this->gCurrentCompressionType = CompressionType::None;
     this->gCurrentFileOffset = 0;
@@ -624,6 +641,10 @@ void Companion::ProcessFile(YAML::Node root) {
                     node["offset"] = (segment << 24) | node["offset"].as<uint32_t>();
                 }
 
+                if(!gCurrentVirtualPath.empty()) {
+                    node["path"] = gCurrentVirtualPath;
+                }
+
                 auto output = (this->gCurrentDirectory / entryName / childName).string();
                 std::replace(output.begin(), output.end(), '\\', '/');
                 this->gConfig.segment.temporal.clear();
@@ -639,6 +660,11 @@ void Companion::ProcessFile(YAML::Node root) {
                     assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
                 }
             }
+
+            if(!gCurrentVirtualPath.empty()) {
+                assetNode["path"] = gCurrentVirtualPath;
+            }
+
             std::string output = (this->gCurrentDirectory / entryName).string();
             std::replace(output.begin(), output.end(), '\\', '/');
             this->gConfig.segment.temporal.clear();
@@ -662,7 +688,7 @@ void Companion::ProcessFile(YAML::Node root) {
         const auto impl = this->GetFactory(result.type)->get();
         const auto exporter = impl->GetExporter(this->gConfig.exporterType);
 
-        if(exporter == nullptr) {
+        if(!exporter.has_value()) {
             continue;
         }
 
@@ -691,6 +717,7 @@ void Companion::ProcessFile(YAML::Node root) {
                     create_directories(fs::path(dpath).parent_path());
                 }
 
+                SPDLOG_INFO(ogname);
                 this->gModdedAssetPaths[ogname] = result.name;
 
                 std::ofstream file(dpath, std::ios::binary);
@@ -1199,7 +1226,9 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
         return std::nullopt;
     }
 
-    this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, false);
+    this->gDependencies.push_back(Dependency {
+        name, node, false
+    });
 
     auto output = (this->gCurrentDirectory / name).string();
     std::replace(output.begin(), output.end(), '\\', '/');
@@ -1394,13 +1423,12 @@ std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
 }
 
 static std::string ConvertType(std::string type) {
-    int index;
+    int index = type.find(':');
 
-    if((index = type.find(':')) != std::string::npos) {
+    if(index != std::string::npos) {
         type = type.substr(index + 1);
     }
-    type = std::regex_replace(type, std::regex(R"([^_A-Za-z0-9]*)"), "");
-    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+    std::transform(type.begin(), type.end(), type.begin(), tolower);
     return type;
 }
 
@@ -1428,7 +1456,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     std::string output;
     std::string typeId = ConvertType(type);
 
-    if(symbol != "") {
+    if(!symbol.empty()) {
         output = symbol;
     } else if(Decompressor::IsSegmented(offset)){
         output = this->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(offset)) +"_" + typeId + "_" + Torch::to_hex(SEGMENT_OFFSET(offset), false));
@@ -1441,7 +1469,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     auto result = this->RegisterAsset(output, asset);
 
     if(result.has_value()){
-        asset["path"] = std::get<0>(result.value());
+        asset["vpath"] = std::get<0>(result.value());
 
         return std::get<1>(result.value());
     }

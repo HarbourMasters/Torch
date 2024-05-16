@@ -245,7 +245,7 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
     auto ext = GetSafeNode<std::string>(node, "format");
 
     std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
-    (*replacement) += "." + ext + ".png";
+    *replacement += "." + ext + ".png";
 
     switch (format.type) {
         case TextureType::TLUT:
@@ -269,7 +269,6 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
         }
         case TextureType::Palette8bpp:
         case TextureType::Palette4bpp: {
-            // This check needed until sf64 has tluts fixed.
             if (node["tlut_symbol"]) {
                 auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");
                 auto palette = Companion::Instance->GetParseDataBySymbol(tlut);
@@ -474,7 +473,8 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
             // } else {
 
             // }
-            break;
+            SPDLOG_ERROR("Unsupported texture format for modding: {}", format);
+            return std::nullopt;
         }
         case TextureType::Grayscale8bpp:
         case TextureType::Grayscale4bpp: {
