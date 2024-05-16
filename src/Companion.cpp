@@ -441,7 +441,7 @@ bool Companion::NodeHasChanges(const std::string& path) {
 
     if(this->gHashNode[path]) {
         auto entry = GetSafeNode<YAML::Node>(this->gHashNode, path);
-        const auto hash = GetSafeNode<std::string>(entry, "hash");
+        const auto hash = GetSafeNode<std::string>(entry, "hash", "no-hash");
         auto modes = GetSafeNode<YAML::Node>(entry, "extracted");
         auto extracted = GetSafeNode<bool>(modes, ExportTypeToString(this->gConfig.exporterType));
 
