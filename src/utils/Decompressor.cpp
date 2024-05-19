@@ -7,6 +7,7 @@
 extern "C" {
 #include <libmio0/mio0.h>
 #include <libmio0/tkmk00.h>
+#include <libmio0/displaylist_unpack.h>
 }
 
 std::unordered_map<uint32_t, DataChunk*> gCachedChunks;
@@ -51,12 +52,37 @@ DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const 
     return gCachedChunks[offset];
 }
 
+DataChunk* Decompressor::DecodePackedDList(const std::vector<uint8_t>& buffer, const uint32_t offset, const size_t size) {
+
+    if (gCachedChunks.contains(offset)) {
+        return gCachedChunks[offset];
+    }
+
+    const uint8_t* in_buf = buffer.data() + offset;
+    const auto gfx = new Gfx[size];
+
+    displaylist_unpack(in_buf, gfx, 0);
+    const auto gfx_uint8 = reinterpret_cast<uint8_t*>(gfx);
+    gCachedChunks[offset] = new DataChunk{ gfx_uint8, size };
+    return gCachedChunks[offset];
+}
+
 DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer, std::optional<size_t> manualSize) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     CompressionType type = Companion::Instance->GetCurrCompressionType();
 
     auto fileOffset = TranslateAddr(offset, true);
+
+    if (node["packed"]) {
+        auto size = GetSafeNode<size_t>(node, "size");
+        Gfx *decodeBuffer[size];
+        auto decoded = DecodePackedDList(buffer, offset, size);
+        return {
+                .root = decoded,
+                .segment = { decoded->data, size }
+        };
+    }
 
     // Extract compressed assets.
     if (node["mio0"]) {
