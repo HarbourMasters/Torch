@@ -5,8 +5,6 @@
 
 ExportResult BlobHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    auto vtx = std::static_pointer_cast<VtxData>(raw)->mVtxs;
-    const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
