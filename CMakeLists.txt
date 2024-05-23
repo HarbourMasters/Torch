@@ -5,6 +5,22 @@ include(FetchContent)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 11)
 
+################################################################################
+# Set target arch type if empty. Visual studio solution generator provides it.
+################################################################################
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    if(NOT CMAKE_VS_PLATFORM_NAME)
+        set(CMAKE_VS_PLATFORM_NAME "x64")
+    endif()
+    message("${CMAKE_VS_PLATFORM_NAME} architecture in use")
+
+    if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"
+        OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32"))
+        message(FATAL_ERROR "${CMAKE_VS_PLATFORM_NAME} arch is not supported!")
+    endif()
+endif()
+
+
 # Link libgfxd
 # Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
 
@@ -33,7 +49,8 @@ file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURREN
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/**/*.c)
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
-set(USE_STANDALONE ON)
+option(USE_STANDALONE "Build as a standalone executable" ON)
+option(BUILD_STORMLIB "Build with StormLib support" ON)
 
 # Build
 if (USE_STANDALONE)
@@ -122,14 +139,14 @@ endif()
 # Fetch Dependencies
 
 if(EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
-FetchContent_Declare(
-    GSL
-    GIT_REPOSITORY https://github.com/Microsoft/GSL.git
-    GIT_TAG a3534567187d2edc428efd3f13466ff75fe5805c
+    FetchContent_Declare(
+        GSL
+        GIT_REPOSITORY https://github.com/Microsoft/GSL.git
+        GIT_TAG a3534567187d2edc428efd3f13466ff75fe5805c
     )
     FetchContent_MakeAvailable(GSL)
     target_link_libraries(${PROJECT_NAME} PRIVATE GSL)
-    endif()
+endif()
 
 # Link BinaryTools
 
@@ -145,9 +162,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE N64Graphics)
 
 # Link StormLib
 
-set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
-add_subdirectory(${STORMLIB_DIR})
-target_link_libraries(${PROJECT_NAME} PRIVATE storm)
+if (BUILD_STORMLIB)
+    set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
+    add_subdirectory(${STORMLIB_DIR})
+    target_link_libraries(${PROJECT_NAME} PRIVATE storm)
+endif()
 
 # Link YamlCpp
 
