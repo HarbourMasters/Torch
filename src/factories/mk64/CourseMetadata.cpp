@@ -3,6 +3,7 @@
 #include "Companion.h"
 #include "spdlog/spdlog.h"
 #include <algorithm>
+#include <filesystem>
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
@@ -14,6 +15,8 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         throw std::runtime_error("Course metadata null");
     }
 
+    
+
     // Sort the data by id, 0 to 20 and beyond.
     std::sort(metadata.begin(), metadata.end(),
         [this](const CourseMetadata& a, const CourseMetadata& b) {
@@ -23,6 +26,11 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     std::ofstream file;
     auto outDir = GetSafeNode<std::string>(node, "out_directory") + "/";
 
+    // Check if the output directory exists, and create it if it doesn't.
+    if (!std::filesystem::exists(outDir)) {
+        std::filesystem::create_directory(outDir);
+    }
+    
     file.open(outDir+"gCourseNames.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
        // file << "char *gCourseNames[] = {\n" << fourSpaceTab;
