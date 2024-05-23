@@ -15,8 +15,6 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         throw std::runtime_error("Course metadata null");
     }
 
-    
-
     // Sort the data by id, 0 to 20 and beyond.
     std::sort(metadata.begin(), metadata.end(),
         [this](const CourseMetadata& a, const CourseMetadata& b) {
