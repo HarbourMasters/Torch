@@ -11,7 +11,7 @@ ExportResult BlobHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPa
         return std::nullopt;
     }
 
-    write << "extern u8" << symbol << "[];\n";
+    write << "extern u8 " << symbol << "[];\n";
 
     return std::nullopt;
 }
