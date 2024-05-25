@@ -313,7 +313,10 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
 
                     YAML::Node root = YAML::LoadFile(externalFileName);
 
-                    ProcessFile(root);
+                    if (!this->gProcessedFiles.contains(this->gCurrentFile)) {
+                        ProcessFile(root);
+                        this->gProcessedFiles.insert(this->gCurrentFile);
+                    }
 
                     SPDLOG_INFO("Finishing processing of file: {}", currentFile);
 
