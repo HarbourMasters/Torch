@@ -2,8 +2,9 @@
 #include "CLI11.hpp"
 #include "Companion.h"
 
-#ifdef STANDALONE
 Companion* Companion::Instance;
+
+#ifdef STANDALONE
 
 int main(int argc, char *argv[]) {
     CLI::App app{"Torch - [T]orch is [O]ur [R]esource [C]onversion [H]elper\n\

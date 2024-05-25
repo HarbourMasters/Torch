@@ -12,8 +12,8 @@
 #include <optional>
 #include <yaml-cpp/yaml.h>
 #include <strhash64/StrHash64.h>
-#include <binarytools/BinaryWriter.h>
-#include <binarytools/BinaryReader.h>
+#include "lib/binarytools/BinaryWriter.h"
+#include "lib/binarytools/BinaryReader.h"
 
 #define REGISTER(type, c) { ExportType::type, std::make_shared<c>() },
 
