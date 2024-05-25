@@ -49,7 +49,7 @@ ExportResult MK64::WaypointBinaryExporter::Export(std::ostream &write, std::shar
     auto waypoints = std::static_pointer_cast<WaypointData>(raw)->mWaypoints;
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Waypoints, 0);
+    WriteHeader(writer, Torch::ResourceType::Waypoints, 0);
     writer.Write((uint32_t) waypoints.size());
     for(auto w : waypoints) {
         writer.Write(w.posX);
@@ -68,7 +68,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::WaypointsFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(MK64::TrackWaypoint));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<MK64::TrackWaypoint> waypoints;
 
     for(size_t i = 0; i < count; i++) {

@@ -192,7 +192,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::DisplayList, 0);
+    WriteHeader(writer, Torch::ResourceType::DisplayList, 0);
 
     while (writer.GetBaseAddress() % 8 != 0)
         writer.Write(static_cast<int8_t>(0xFF));
@@ -385,7 +385,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
     auto [_, segment] = Decompressor::AutoDecode(node, raw_buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     std::vector<uint32_t> gfxs;
     auto processing = true;

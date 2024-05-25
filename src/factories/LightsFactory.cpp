@@ -108,7 +108,7 @@ ExportResult LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
     auto writer = LUS::BinaryWriter();
     auto size = sizeof(light.l) / sizeof(LightRaw);
 
-    WriteHeader(writer, LUS::ResourceType::Lights, 0);
+    WriteHeader(writer, Torch::ResourceType::Lights, 0);
 
     writer.Write(reinterpret_cast<char*>(light.a.l.col), 3);
     writer.Write(reinterpret_cast<char*>(light.a.l.colc), 3);
@@ -130,7 +130,7 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, sizeof(Lights1Raw));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     Lights1Raw lights;
     // Directional light
 

@@ -62,7 +62,7 @@ ExportResult SF64::EnvironmentBinaryExporter::Export(std::ostream &write, std::s
     auto writer = LUS::BinaryWriter();
     auto environment = std::static_pointer_cast<SF64::EnvironmentData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Environment, 0);
+    WriteHeader(writer, Torch::ResourceType::Environment, 0);
 
     writer.Write(environment->mType);
     writer.Write(environment->mGround);
@@ -90,7 +90,7 @@ ExportResult SF64::EnvironmentBinaryExporter::Export(std::ostream &write, std::s
 std::optional<std::shared_ptr<IParsedData>> SF64::EnvironmentFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, sizeof(SF64::EnvironmentData));
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     Vec3f lightDir;
     int32_t  type = reader.ReadInt32();
     int32_t  ground = reader.ReadInt32();

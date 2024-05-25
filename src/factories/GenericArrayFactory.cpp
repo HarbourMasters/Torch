@@ -270,8 +270,8 @@ ExportResult ArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
     ArrayType arrayType = arrayTypeMap.at(type);
 
-    WriteHeader(writer, LUS::ResourceType::GenericArray, 0);
-    
+    WriteHeader(writer, Torch::ResourceType::GenericArray, 0);
+
     writer.Write(static_cast<uint32_t>(arrayType));
     writer.Write((uint32_t) array->mData.size());
 
@@ -379,7 +379,7 @@ std::optional<std::shared_ptr<IParsedData>> GenericArrayFactory::parse(std::vect
 
     auto [root, segment] = Decompressor::AutoDecode(node, buffer, count * typeSize);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for (int i = 0; i < count; i++) {
         switch (arrayType) {

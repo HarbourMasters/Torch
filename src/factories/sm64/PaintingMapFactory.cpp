@@ -53,10 +53,10 @@ ExportResult SM64::PaintingMapBinaryExporter::Export(std::ostream &write, std::s
     auto writer = LUS::BinaryWriter();
     auto paintingData = std::static_pointer_cast<SM64::PaintingData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::PaintingData, 0);
+    WriteHeader(writer, Torch::ResourceType::PaintingData, 0);
 
     writer.Write((int16_t)paintingData->mPaintingMappings.size());
-    
+
     for (auto &mapping : paintingData->mPaintingMappings) {
         writer.Write(mapping.vtxId);
         writer.Write(mapping.texX);
@@ -80,7 +80,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::PaintingMapFactory::parse(std:
     std::vector<Vec3s> paintingGroups;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     auto mappingsSize = reader.ReadInt16();
 

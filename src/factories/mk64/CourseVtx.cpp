@@ -58,7 +58,7 @@ ExportResult MK64::CourseVtxBinaryExporter::Export(std::ostream &write, std::sha
     auto vtx = std::static_pointer_cast<CourseVtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Vertex, 0);
+    WriteHeader(writer, Torch::ResourceType::Vertex, 0);
     writer.Write((uint32_t) vtx->mVtxs.size());
     for(auto v : vtx->mVtxs) {
         writer.Write(v.ob[0]);
@@ -83,7 +83,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(CourseVtx));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<VtxRaw> vertices;
 
     for(size_t i = 0; i < count; i++) {

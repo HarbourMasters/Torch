@@ -248,7 +248,7 @@ ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr
     writer.Close();
 
     LUS::BinaryWriter output = LUS::BinaryWriter();
-    WriteHeader(output, LUS::ResourceType::Blob, 0);
+    WriteHeader(output, Torch::ResourceType::Blob, 0);
 
     output.Write(static_cast<uint32_t>(buffer.size()));
     output.Write(buffer.data(), buffer.size());

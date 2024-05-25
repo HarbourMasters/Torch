@@ -70,7 +70,7 @@ void Bank::print() const {
 std::vector<Entry> AudioManager::parse_seq_file(std::vector<uint8_t>& buffer, uint32_t offset, bool isCTL){
     std::vector<Entry> entries;
     LUS::BinaryReader reader((char*) buffer.data(), buffer.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     reader.Seek(offset, LUS::SeekOffsetType::Start);
 
     uint16_t magic = reader.ReadUInt16();
@@ -100,7 +100,7 @@ std::vector<Entry> AudioManager::parse_seq_file(std::vector<uint8_t>& buffer, ui
 
 CTLHeader AudioManager::parse_ctl_header(std::vector<uint8_t>& data){
     LUS::BinaryReader reader((char*) data.data(), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     CTLHeader header = { reader.ReadUInt32(), reader.ReadUInt32(), reader.ReadUInt32() };
 
@@ -268,7 +268,7 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
 
 std::optional<AudioBankSound> AudioManager::parse_sound(std::vector<uint8_t> data) {
     LUS::BinaryReader reader((char*) data.data(), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     uint32_t addr = reader.ReadUInt32();
     float tuning = reader.ReadFloat();
@@ -286,7 +286,7 @@ std::optional<AudioBankSound> AudioManager::parse_sound(std::vector<uint8_t> dat
 
 Drum AudioManager::parse_drum(std::vector<uint8_t>& data, uint32_t addr) {
     LUS::BinaryReader reader((char*) data.data(), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::string name = gen_name("drum");
 
     uint8_t releaseRate = reader.ReadInt8();
@@ -331,7 +331,7 @@ Instrument AudioManager::parse_inst(std::vector<uint8_t>& data, uint32_t addr) {
 
 AdpcmLoop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData){
     LUS::BinaryReader reader((char*) bankData.data(), bankData.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     reader.Seek(addr, LUS::SeekOffsetType::Start);
 
     std::optional<std::vector<int16_t>> state = std::nullopt;
@@ -352,7 +352,7 @@ AdpcmLoop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData
 
 AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData){
     LUS::BinaryReader reader((char*) bankData.data(), bankData.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     reader.Seek(addr, LUS::SeekOffsetType::Start);
 
     int32_t order = reader.ReadInt32();
@@ -375,7 +375,7 @@ AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData
 
 AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank){
     LUS::BinaryReader reader((char*) data.data(), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     uint32_t zero = reader.ReadUInt32();
     uint32_t addr = reader.ReadUInt32();
@@ -397,7 +397,7 @@ AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vec
 std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank){
     std::vector<AdsrEnvelope> entries;
     LUS::BinaryReader reader((char*) dataBank.data(), dataBank.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     while(true){
         reader.Seek(addr, LUS::SeekOffsetType::Start);
@@ -516,12 +516,12 @@ void serialize_f80(double num, LUS::BinaryWriter &writer) {
     { \
     out.Write((uint32_t) BSWAP32(section)); \
     LUS::BinaryWriter tmp = LUS::BinaryWriter(); \
-    tmp.SetEndianness(LUS::Endianness::Big);     \
+    tmp.SetEndianness(Torch::Endianness::Big);     \
 
 #define START_CUSTOM_SECTION(section) \
     {                                 \
     LUS::BinaryWriter tmp = LUS::BinaryWriter(); \
-    tmp.SetEndianness(LUS::Endianness::Big);     \
+    tmp.SetEndianness(Torch::Endianness::Big);     \
     out.Write((uint32_t) BSWAP32(AIFC::MagicValues::AAPL)); \
     tmp.Write(AIFC::MagicValues::stoc); \
     tmp.Write(section, false);                 \

@@ -284,7 +284,7 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
         std::ostringstream stream;
 
         auto cmdWriter = LUS::BinaryWriter();
-        WriteHeader(cmdWriter, LUS::ResourceType::ScriptCmd, 0);
+        WriteHeader(cmdWriter, Torch::ResourceType::ScriptCmd, 0);
 
         auto cmdCount = script->mSizeMap.at(ptr) / 2;
         cmdWriter.Write((uint32_t) cmdCount);
@@ -307,7 +307,7 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
     }
 
     // Export Script
-    WriteHeader(scriptWriter, LUS::ResourceType::Script, 0);
+    WriteHeader(scriptWriter, Torch::ResourceType::Script, 0);
     auto count = script->mPtrs.size();
     scriptWriter.Write((uint32_t) count);
     for (size_t i = 0; i < script->mPtrs.size(); i++) {
@@ -328,7 +328,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ScriptFactory::parse(std::vect
     std::map<uint32_t, int> sizeMap;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0x1000);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     auto ptr = reader.ReadUInt32();
 
     while(SEGMENT_NUMBER(ptr) == SEGMENT_NUMBER(offset)) {
@@ -351,7 +351,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ScriptFactory::parse(std::vect
     scriptNode["offset"] = cmdsStart;
     auto [__, scriptSegment] = Decompressor::AutoDecode(scriptNode, buffer, scriptLen * sizeof(uint16_t));
     LUS::BinaryReader scriptReader(scriptSegment.data, scriptSegment.size);
-    scriptReader.SetEndianness(LUS::Endianness::Big);
+    scriptReader.SetEndianness(Torch::Endianness::Big);
     for(int i = 0; i < scriptLen; i++) {
         scriptCmds.push_back(scriptReader.ReadUInt16());
     }

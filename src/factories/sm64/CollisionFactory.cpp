@@ -339,7 +339,7 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
     writer.Close();
 
     LUS::BinaryWriter output = LUS::BinaryWriter();
-    WriteHeader(output, LUS::ResourceType::Collision, 0);
+    WriteHeader(output, Torch::ResourceType::Collision, 0);
 
     output.Write(static_cast<uint32_t>(buffer.size()));
     output.Write(buffer.data(), buffer.size());
@@ -357,7 +357,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::CollisionFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     auto cmd = segment.data;
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     while (processing) {
         int16_t terrainLoadType = reader.ReadInt16();

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace LUS {
+namespace Torch {
 
 enum class ResourceType {
     // Not set

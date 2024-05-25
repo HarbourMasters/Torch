@@ -99,7 +99,7 @@ ExportResult SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared
     auto hitbox = std::static_pointer_cast<SF64::HitboxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Hitbox, 0);
+    WriteHeader(writer, Torch::ResourceType::Hitbox, 0);
 
     auto count = hitbox->mData.size();
     writer.Write((uint32_t) count);
@@ -116,7 +116,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::HitboxFactory::parse(std::vect
     std::vector<int> types;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0x10000);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     data.push_back(reader.ReadFloat());
     count = data[0];

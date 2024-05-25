@@ -53,7 +53,7 @@ ExportResult MK64::TrackSectionsBinaryExporter::Export(std::ostream &write, std:
     auto sections = std::static_pointer_cast<TrackSectionsData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::TrackSection, 0);
+    WriteHeader(writer, Torch::ResourceType::TrackSection, 0);
     writer.Write((uint32_t) sections->mSecs.size());
     for(auto entry : sections->mSecs) {
         writer.Write(entry.addr);
@@ -72,7 +72,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::TrackSectionsFactory::parse(st
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(MK64::TrackSections));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<MK64::TrackSections> sections;
 
     for(size_t i = 0; i < count; i++) {

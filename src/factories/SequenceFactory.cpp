@@ -4,7 +4,7 @@ ExportResult SequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr
     auto writer = LUS::BinaryWriter();
     const auto sequence = std::static_pointer_cast<SequenceData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Sequence, 0);
+    WriteHeader(writer, Torch::ResourceType::Sequence, 0);
     writer.Write(sequence->mId);
     writer.Write(static_cast<uint32_t>(sequence->mBanks.size()));
     for (auto& bank : sequence->mBanks) {

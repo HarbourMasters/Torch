@@ -126,7 +126,7 @@ ExportResult SM64::LevelScriptBinaryExporter::Export(std::ostream &write, std::s
     auto writer = LUS::BinaryWriter();
     const auto commands = std::static_pointer_cast<LevelScriptData>(raw)->mCommands;
 
-    WriteHeader(writer, LUS::ResourceType::LevelScript, 0);
+    WriteHeader(writer, Torch::ResourceType::LevelScript, 0);
 
     writer.Write((uint32_t)commands.size());
 
@@ -240,7 +240,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std:
                 cmd += 0x4 << CMD_SIZE_SHIFT;
                 break;
             }
-            case LevelOpcode::SLEEP: 
+            case LevelOpcode::SLEEP:
             case LevelOpcode::SLEEP_BEFORE_EXIT: {
                 auto frames = cur_level_cmd_s16(0x02);
                 arguments.emplace_back(frames);
@@ -310,8 +310,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std:
                 break;
             }
             case LevelOpcode::SKIP:
-            case LevelOpcode::SKIP_NOP: { 
-                cmd += 0x4 << CMD_SIZE_SHIFT;  
+            case LevelOpcode::SKIP_NOP: {
+                cmd += 0x4 << CMD_SIZE_SHIFT;
                 break;
             }
             case LevelOpcode::CALL:

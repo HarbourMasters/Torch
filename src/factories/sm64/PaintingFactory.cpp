@@ -126,7 +126,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
     auto painting = std::static_pointer_cast<SM64::Painting>(raw);
     uint32_t ptr;
 
-    WriteHeader(writer, LUS::ResourceType::Painting, 0);
+    WriteHeader(writer, Torch::ResourceType::Painting, 0);
 
     writer.Write(painting->id);
     writer.Write(painting->imageCount);
@@ -221,7 +221,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
 std::optional<std::shared_ptr<IParsedData>> SM64::PaintingFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     auto id = reader.ReadInt16();
     auto imageCount = reader.ReadInt8();

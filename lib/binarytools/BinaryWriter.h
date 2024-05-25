@@ -4,8 +4,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "endianness.h"
-#include "Stream.h"
+#include "lib/binarytools/endianness.h"
+#include "lib/binarytools/Stream.h"
 
 namespace LUS {
 class BinaryWriter {
@@ -14,7 +14,7 @@ class BinaryWriter {
     BinaryWriter(Stream* nStream);
     BinaryWriter(std::shared_ptr<Stream> nStream);
 
-    void SetEndianness(Endianness endianness);
+    void SetEndianness(Torch::Endianness endianness);
 
     std::shared_ptr<Stream> GetStream();
     uint64_t GetBaseAddress();
@@ -43,7 +43,7 @@ class BinaryWriter {
 
 protected:
     std::shared_ptr<Stream> mStream;
-    Endianness mEndianness = Endianness::Native;
+    Torch::Endianness mEndianness = Torch::Endianness::Native;
 
 };
 } // namespace LUS

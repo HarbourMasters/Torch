@@ -45,10 +45,10 @@ ExportResult SM64::TrajectoryBinaryExporter::Export(std::ostream &write, std::sh
     auto writer = LUS::BinaryWriter();
     auto trajectoryData = std::static_pointer_cast<SM64::TrajectoryData>(raw)->mTrajectoryData;
 
-    WriteHeader(writer, LUS::ResourceType::Trajectory, 0);
+    WriteHeader(writer, Torch::ResourceType::Trajectory, 0);
 
     writer.Write((uint32_t)trajectoryData.size());
-    
+
     for (auto &trajectory : trajectoryData) {
         writer.Write(trajectory.trajId);
         writer.Write(trajectory.posX);
@@ -64,7 +64,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::TrajectoryFactory::parse(std::
     std::vector<Trajectory> trajectoryData;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     while (true) {
         auto trajId = reader.ReadInt16();

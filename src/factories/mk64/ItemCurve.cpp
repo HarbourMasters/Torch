@@ -83,7 +83,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::ItemCurveFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, (10 * 10) * sizeof(uint8_t));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<uint8_t> items;
 
     // Each array is size of 10*10.

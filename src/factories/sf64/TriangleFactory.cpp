@@ -56,7 +56,7 @@ ExportResult SF64::TriangleBinaryExporter::Export(std::ostream &write, std::shar
     auto writer = LUS::BinaryWriter();
     auto triData = std::static_pointer_cast<TriangleData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Vec3s, 0);
+    WriteHeader(writer, Torch::ResourceType::Vec3s, 0);
     writer.Write((uint32_t) triData->mTris.size());
 
     for(Vec3s tri : triData->mTris) {
@@ -79,7 +79,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::TriangleFactory::parse(std::ve
     int meshSize = 0;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(Vec3s));
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for(int i = 0; i < count; i++) {
         Vec3s tri;

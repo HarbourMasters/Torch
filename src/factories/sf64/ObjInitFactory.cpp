@@ -49,7 +49,7 @@ ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::share
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
 
-    WriteHeader(writer, LUS::ResourceType::ObjectInit, 0);
+    WriteHeader(writer, Torch::ResourceType::ObjectInit, 0);
     auto count = data.size();
     writer.Write((uint32_t) count);
     for(size_t i = 0; i < data.size(); i++) {
@@ -70,7 +70,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vec
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
 
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<ObjectInit> objects;
     bool terminator = false;
 

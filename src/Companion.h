@@ -103,7 +103,15 @@ class Companion {
 public:
     static Companion* Instance;
 
-    explicit Companion(std::filesystem::path rom, const bool otr, const bool debug, const bool modding = false) : gRomPath(std::move(rom)), gCartridge(nullptr) {
+    explicit Companion(std::filesystem::path rom, const bool otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
+        this->gRomPath = rom;
+        this->gConfig.otrMode = otr;
+        this->gConfig.debug = debug;
+        this->gConfig.modding = modding;
+    }
+
+    explicit Companion(std::vector<uint8_t> rom, const bool otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
+        this->gRomData = rom;
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
         this->gConfig.modding = modding;
@@ -160,7 +168,7 @@ private:
     std::string gCurrentHash;
     std::string gAssetPath;
     std::vector<uint8_t> gRomData;
-    std::filesystem::path gRomPath;
+    std::optional<std::filesystem::path> gRomPath;
     bool gNodeForceProcessing = false;
     bool gIndividualIncludes = false;
     YAML::Node gHashNode;

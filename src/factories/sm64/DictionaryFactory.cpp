@@ -6,7 +6,7 @@ ExportResult SM64::DictionaryBinaryExporter::Export(std::ostream &write, std::sh
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<DictionaryData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Dictionary, 0);
+    WriteHeader(writer, Torch::ResourceType::Dictionary, 0);
 
     writer.Write(static_cast<uint32_t>(data->mDictionary.size()));
     for(auto& [key, value] : data->mDictionary){

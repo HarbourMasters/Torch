@@ -110,7 +110,7 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
         std::ostringstream stream;
 
         auto limbWriter = LUS::BinaryWriter();
-        WriteHeader(limbWriter, LUS::ResourceType::Limb, 0);
+        WriteHeader(limbWriter, Torch::ResourceType::Limb, 0);
         bool hasDList = limb.mDList != 0 && (SEGMENT_NUMBER(limb.mDList) == SEGMENT_NUMBER(limb.mAddr));
 
         if(hasDList){
@@ -145,7 +145,7 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
     }
 
     // Export Skeleton
-    WriteHeader(skeletonWriter, LUS::ResourceType::Skeleton, 0);
+    WriteHeader(skeletonWriter, Torch::ResourceType::Skeleton, 0);
     skeletonWriter.Write((uint32_t) limbs.size());
     for (auto &limb : limbs) {
         skeletonWriter.Write(limbDict.at(limb.mAddr));
@@ -159,7 +159,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
     std::vector<SF64::LimbData> skeleton;
     auto [root, segment] = Decompressor::AutoDecode(node, buffer, 0x1000);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     auto limbAddr = reader.ReadUInt32();
     auto limbIndex = 0;
 
@@ -170,7 +170,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::SkeletonFactory::parse(std::ve
         limbNode["offset"] = limbAddr;
         DecompressedData limbDataRaw = Decompressor::AutoDecode(limbNode, buffer, 0x20);
         LUS::BinaryReader limbReader(limbDataRaw.segment.data, limbDataRaw.segment.size);
-        limbReader.SetEndianness(LUS::Endianness::Big);
+        limbReader.SetEndianness(Torch::Endianness::Big);
 
         auto dListAddr = limbReader.ReadUInt32();
         trans.x = limbReader.ReadFloat();

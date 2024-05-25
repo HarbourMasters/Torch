@@ -112,7 +112,7 @@ ExportResult SM64::BehaviorScriptBinaryExporter::Export(std::ostream &write, std
     auto writer = LUS::BinaryWriter();
     const auto commands = std::static_pointer_cast<BehaviorScriptData>(raw)->mCommands;
 
-    WriteHeader(writer, LUS::ResourceType::BehaviorScript, 0);
+    WriteHeader(writer, Torch::ResourceType::BehaviorScript, 0);
 
     writer.Write((uint32_t)commands.size());
 

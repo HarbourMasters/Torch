@@ -67,7 +67,7 @@ ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::share
     auto writer = LUS::BinaryWriter();
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::ColPoly, 0);
+    WriteHeader(writer, Torch::ResourceType::ColPoly, 0);
 
     writer.Write((uint32_t) colpolys->mPolys.size());
 
@@ -100,7 +100,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
     int meshSize = 0;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(SF64::CollisionPoly));
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for(int i = 0; i < count; i++) {
         int16_t v0 = reader.ReadInt16();

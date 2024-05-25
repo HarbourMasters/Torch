@@ -110,7 +110,7 @@ ExportResult SF64::MessageBinaryExporter::Export(std::ostream &write, std::share
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<MessageData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Message, 0);
+    WriteHeader(writer, Torch::ResourceType::Message, 0);
 
     auto count = data->mMessage.size();
     writer.Write(static_cast<uint32_t>(count));
@@ -154,7 +154,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vec
     std::ostringstream mesgStr;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     uint16_t c;
     std::string whitespace = "";

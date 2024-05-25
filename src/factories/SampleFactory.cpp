@@ -4,7 +4,7 @@ ExportResult SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
     auto writer = LUS::BinaryWriter();
     auto sample = std::static_pointer_cast<SampleData>(raw)->mSample;
 
-    WriteHeader(writer, LUS::ResourceType::Sample, 0);
+    WriteHeader(writer, Torch::ResourceType::Sample, 0);
     writer.Write(sample.loop.start);
     writer.Write(sample.loop.end);
     writer.Write(sample.loop.count);

@@ -48,7 +48,7 @@ ExportResult SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std:
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<MessageTable>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::MessageTable, 0);
+    WriteHeader(writer, Torch::ResourceType::MessageTable, 0);
 
     const auto count = data->mTable.size();
     SPDLOG_INFO("Message Count: {}", count);
@@ -76,7 +76,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageLookupFactory::parse(st
 
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     int32_t id = reader.ReadInt32();
     uint32_t ptr = reader.ReadInt32();

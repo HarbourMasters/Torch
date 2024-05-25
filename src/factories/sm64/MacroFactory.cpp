@@ -60,10 +60,10 @@ ExportResult SM64::MacroBinaryExporter::Export(std::ostream &write, std::shared_
     auto writer = LUS::BinaryWriter();
     auto macro = std::static_pointer_cast<SM64::MacroData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::MacroObject, 0);
+    WriteHeader(writer, Torch::ResourceType::MacroObject, 0);
 
     writer.Write((uint32_t)macro->mMacroData.size());
-    
+
     for (auto &object : macro->mMacroData) {
         writer.Write(static_cast<int16_t>(object.preset));
         writer.Write(object.yaw);
@@ -81,7 +81,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MacroFactory::parse(std::vecto
     std::vector<MacroObject> macroData;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     while (true) {
         auto presetYaw = reader.ReadInt16();

@@ -116,7 +116,7 @@ ExportResult SM64::WaterDropletBinaryExporter::Export(std::ostream &write, std::
     auto writer = LUS::BinaryWriter();
     auto waterDropletData = std::static_pointer_cast<SM64::WaterDropletData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::WaterDroplet, 0);
+    WriteHeader(writer, Torch::ResourceType::WaterDroplet, 0);
 
     writer.Write(waterDropletData->flags);
     writer.Write(waterDropletData->model);
@@ -145,7 +145,7 @@ ExportResult SM64::WaterDropletBinaryExporter::Export(std::ostream &write, std::
 std::optional<std::shared_ptr<IParsedData>> SM64::WaterDropletFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     auto flags = reader.ReadInt16();
     auto model = reader.ReadInt16();

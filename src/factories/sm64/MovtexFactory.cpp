@@ -80,7 +80,7 @@ ExportResult SM64::MovtexBinaryExporter::Export(std::ostream &write, std::shared
     auto writer = LUS::BinaryWriter();
     auto movtex = std::static_pointer_cast<SM64::MovtexData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Movtex, 0);
+    WriteHeader(writer, Torch::ResourceType::Movtex, 0);
 
     // May want extra info, but importer should just be mMovtexData with an extra 0 (or 2) at the end
     // if (movtex->mIsQuad) {
@@ -90,7 +90,7 @@ ExportResult SM64::MovtexBinaryExporter::Export(std::ostream &write, std::shared
     //     writer.Write(movtex->mVertexCount);
     //     writer.Write((uint32_t)(movtex->mHasColor ? 1 : 0));
     // }
-    
+
     for (auto datum : movtex->mMovtexData) {
         writer.Write(datum);
     }
@@ -125,7 +125,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MovtexFactory::parse(std::vect
     }
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     std::vector<int16_t> movtexData;
 

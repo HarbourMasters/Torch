@@ -106,7 +106,7 @@ ExportResult MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPar
     auto mtx = std::static_pointer_cast<MtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Matrix, 0);
+    WriteHeader(writer, Torch::ResourceType::Matrix, 0);
     writer.Write((uint32_t) mtx->mMtxs.size());
     for(auto m : mtx->mMtxs) {
         writer.Write(m.mtx[0]);
@@ -137,7 +137,7 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, 1 * sizeof(MtxRaw));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<MtxRaw> matrix;
 
     #define FIXTOF(x)      ((float)((x) / 65536.0f))

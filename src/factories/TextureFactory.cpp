@@ -220,7 +220,7 @@ ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     auto texture = std::static_pointer_cast<TextureData>(raw);
     auto data = texture->mBuffer;
 
-    WriteHeader(writer, LUS::ResourceType::Texture, 0);
+    WriteHeader(writer, Torch::ResourceType::Texture, 0);
 
     if(texture->mFormat.type == TextureType::TLUT) {
         texture->mFormat.type = TextureType::RGBA16bpp;

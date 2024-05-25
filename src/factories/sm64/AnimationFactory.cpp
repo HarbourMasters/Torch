@@ -9,7 +9,7 @@ ExportResult SM64::AnimationBinaryExporter::Export(std::ostream &write, std::sha
     auto writer = LUS::BinaryWriter();
     const auto anim = std::static_pointer_cast<AnimationData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Anim, 0);
+    WriteHeader(writer, Torch::ResourceType::Anim, 0);
     writer.Write(anim->mFlags);
     writer.Write(anim->mAnimYTransDivisor);
     writer.Write(anim->mStartFrame);
@@ -36,7 +36,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
     auto offset = node["offset"];
 
     LUS::BinaryReader header = Decompressor::AutoDecode(node, buffer).GetReader();
-    header.SetEndianness(LUS::Endianness::Big);
+    header.SetEndianness(Torch::Endianness::Big);
 
     auto flags = header.ReadInt16();
     auto animYTransDivisor = header.ReadInt16();
@@ -50,7 +50,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
 
     size_t indexLength = ANIMINDEX_COUNT(unusedBoneCount);
     LUS::BinaryReader indices = Decompressor::AutoDecode(indexAddr, indexLength * sizeof(uint16_t), buffer).GetReader();
-    indices.SetEndianness(LUS::Endianness::Big);
+    indices.SetEndianness(Torch::Endianness::Big);
     std::vector<int16_t> indicesData;
     for (size_t i = 0; i < indexLength; i++) {
         indicesData.push_back(indices.ReadInt16());
@@ -58,7 +58,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
 
     size_t valuesSize = (indexAddr - valuesAddr);
     LUS::BinaryReader values = Decompressor::AutoDecode(valuesAddr, valuesSize, buffer).GetReader();
-    values.SetEndianness(LUS::Endianness::Big);
+    values.SetEndianness(Torch::Endianness::Big);
     std::vector<uint16_t> valuesData;
     for (size_t i = 0; i < valuesSize / sizeof(uint16_t); i++) {
         valuesData.push_back(values.ReadUInt16());

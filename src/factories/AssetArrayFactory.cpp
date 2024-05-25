@@ -50,10 +50,10 @@ ExportResult AssetArrayBinaryExporter::Export(std::ostream &write, std::shared_p
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<AssetArrayData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::AssetArray, 0);
+    WriteHeader(writer, Torch::ResourceType::AssetArray, 0);
 
     writer.Write((uint32_t)data->mPtrs.size());
-    
+
     for (auto ptr : data->mPtrs) {
         if (ptr == 0) {
             writer.Write((uint64_t)0);
@@ -81,7 +81,7 @@ std::optional<std::shared_ptr<IParsedData>> AssetArrayFactory::parse(std::vector
     const auto count = GetSafeNode<uint32_t>(node, "count");
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for (uint32_t i = 0; i < count; ++i) {
         auto ptr = reader.ReadUInt32();

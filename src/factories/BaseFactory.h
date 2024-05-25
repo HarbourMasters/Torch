@@ -82,7 +82,7 @@ public:
 class BaseExporter {
 public:
     virtual ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) = 0;
-    static void WriteHeader(LUS::BinaryWriter& write, LUS::ResourceType resType, int32_t version);
+    static void WriteHeader(LUS::BinaryWriter& write, Torch::ResourceType resType, int32_t version);
 };
 
 class BaseFactory {

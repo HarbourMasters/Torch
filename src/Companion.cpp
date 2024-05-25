@@ -958,9 +958,11 @@ void Companion::Process() {
     bool isDirectoryMode = config["mode"] && config["mode"].as<std::string>() == "directory";
 
     if(!isDirectoryMode) {
-        std::ifstream input( this->gRomPath, std::ios::binary );
-        this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator( input ), {} );
-        input.close();
+        if(this->gRomPath.has_value()){
+            std::ifstream input( this->gRomPath.value(), std::ios::binary );
+            this->gRomData = std::vector<uint8_t>( std::istreambuf_iterator( input ), {} );
+            input.close();
+        }
 
         this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
         this->gCartridge->Initialize();
@@ -1103,7 +1105,6 @@ void Companion::Process() {
     SPDLOG_INFO("Starting Torch...");
 
     if(this->gConfig.parseMode == ParseMode::Default) {
-        SPDLOG_INFO("ROM: {}", this->gRomPath);
         SPDLOG_INFO("Game: {}", this->gCartridge->GetGameTitle());
         SPDLOG_INFO("CRC: {}", this->gCartridge->GetCRC());
         SPDLOG_INFO("Version: {}", this->gCartridge->GetVersion());
@@ -1120,8 +1121,8 @@ void Companion::Process() {
     this->gCurrentWrapper = wrapper;
 
     auto vWriter = LUS::BinaryWriter();
-    vWriter.SetEndianness(LUS::Endianness::Big);
-    vWriter.Write(static_cast<uint8_t>(LUS::Endianness::Big));
+    vWriter.SetEndianness(Torch::Endianness::Big);
+    vWriter.Write(static_cast<uint8_t>(Torch::Endianness::Big));
 
     if(this->gConfig.parseMode == ParseMode::Default) {
         vWriter.Write(this->gCartridge->GetCRC());
@@ -1261,7 +1262,7 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
 CompressionType Companion::GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset) {
     if (offset) {
         LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
-        reader.SetEndianness(LUS::Endianness::Big);
+        reader.SetEndianness(Torch::Endianness::Big);
 
         const std::string header = reader.ReadCString();
 
