@@ -104,7 +104,7 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
             if(end == offset){
                 write << "static const char* " << name << "[] = {\n";
                 for(auto& entry : tableEntries){
-                    write << tab << entry << ",\n";
+                    write << tab_t << entry << ",\n";
                 }
                 write << "};\n\n";
                 tableEntries.clear();
@@ -181,13 +181,13 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
             write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << isize << "] = {\n";
         }
 
-        write << tab << "{\n";
+        write << tab_t << "{\n";
         if (!Companion::Instance->IsUsingIndividualIncludes()){
-            write << tab << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+            write << tab_t << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
         } else {
             write << imgstream.str();
         }
-        write << tab << "},\n";
+        write << tab_t << "},\n";
 
         if(end == offset){
             write << "};\n";
@@ -199,7 +199,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol  << "[] = {\n";
 
         if (!Companion::Instance->IsUsingIndividualIncludes()){
-            write << tab << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+            write << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
         } else {
             write << imgstream.str();
         }

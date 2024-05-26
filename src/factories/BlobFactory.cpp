@@ -26,11 +26,11 @@ ExportResult BlobCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
         return std::nullopt;
     }
 
-    write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[] = {\n" << tab;
+    write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[] = {\n" << tab_t;
 
     for (int i = 0; i < data.size(); i++) {
         if ((i % 15 == 0) && i != 0) {
-            write << "\n" << tab;
+            write << "\n" << tab_t;
         }
 
         write << "0x" << std::hex << std::setw(2) << std::setfill('0') << (int) data[i] << ", ";

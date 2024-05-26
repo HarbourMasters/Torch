@@ -4,9 +4,9 @@
 #include <fstream>
 
 #include "spdlog/spdlog.h"
+#include <Companion.h>
 
 namespace fs = std::filesystem;
-bool debugMode = true;
 
 SWrapper::SWrapper(const std::string& path) {
     if(fs::exists(path)) {
@@ -20,7 +20,7 @@ SWrapper::SWrapper(const std::string& path) {
 }
 
 bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
-    if(debugMode){
+    if(Companion::Instance->IsDebug()){
         SPDLOG_INFO("Creating debug file: debug/{}", path);
         std::string dpath = "debug/" + path;
         if(!fs::exists(fs::path(dpath).parent_path())){

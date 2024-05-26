@@ -23,7 +23,7 @@
 #define IS_SEGMENTED(x) ((SEGMENT_NUMBER(x) > 0) && (SEGMENT_NUMBER(x) < 0x20))
 #define ASSET_PTR(x) (IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : (x))
 
-#define tab "\t"
+#define tab_t "\t"
 #define fourSpaceTab "    "
 
 struct OffsetEntry {
