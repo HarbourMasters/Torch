@@ -56,7 +56,7 @@ bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
     }
 
     if(!SFileCreateFile(this->hMpq, path.c_str(), theTime, size, 0, MPQ_FILE_COMPRESS, &hFile)){
-        throw std::runtime_error("Failed to create file at path " + path + " with error " + std::to_string(GetLastError()));
+        return false;
     }
 
     if(!SFileWriteFile(hFile, (void*) raw, size, MPQ_COMPRESSION_ZLIB)){

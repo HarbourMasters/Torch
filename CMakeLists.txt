@@ -58,7 +58,7 @@ if (USE_STANDALONE)
     add_definitions(-DSTANDALONE)
     add_executable(${PROJECT_NAME} ${SRC_DIR})
 else()
-    add_library(${PROJECT_NAME} SHARED ${SRC_DIR})
+    add_library(${PROJECT_NAME} STATIC ${SRC_DIR})
 endif()
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -71,13 +71,13 @@ else()
             $<$<CONFIG:Debug>:
                 /w;
                 /Od;
-                /MDd
+                /MTd
             >
             $<$<CONFIG:Release>:
                 /Oi;
                 /Gy;
                 /W3;
-                /MD
+                /MT
             >
             /STACK:16777216
             /permissive-;
@@ -89,13 +89,13 @@ else()
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_compile_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
-                /MDd
+                /MTd
             >
             $<$<CONFIG:Release>:
                 /O2;
                 /Oi;
                 /Gy;
-                /MD
+                /MT
             >
             /STACK:16777216
             /permissive-;
@@ -139,7 +139,12 @@ endif()
 
 # Fetch Dependencies
 
-if(EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
+endif()
+
+if(NOT USE_STANDALONE AND EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
     FetchContent_Declare(
         GSL
         GIT_REPOSITORY https://github.com/Microsoft/GSL.git
@@ -171,6 +176,9 @@ endif()
 
 # Link YamlCpp
 
+set(YAML_CPP_BUILD_TOOLS OFF)
+set(YAML_CPP_BUILD_TESTS OFF)
+set(YAML_CPP_DISABLE_UNINSTALL ON)
 FetchContent_Declare(
     yaml-cpp
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
