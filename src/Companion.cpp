@@ -865,7 +865,7 @@ void Companion::ProcessFile(YAML::Node root) {
                     if(this->IsDebug()){
                         stream << "// 0x" << std::hex << std::uppercase << startptr << "\n";
                     }
-                    stream << "char pad_" << padfile << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab;
+                    stream << "char pad_" << padfile << "_" << std::to_string(gCurrentPad++) << "[] = {\n" << tab_t;
                     auto gapSize = gap & ~3;
                     for(size_t j = 0; j < gapSize; j++){
                         stream << "0x00, ";
