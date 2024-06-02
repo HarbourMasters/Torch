@@ -41,10 +41,11 @@ enum class ResourceType {
     WaterDroplet = 0x57545244,   // WTRD
 
     // MK64
-    TrackSection = 0x5343544E, // SCTN
-    Waypoints = 0x57505453,    // WPTS
-    Metadata  = 0x4D444154,    // MDAT
-    SpawnData = 0x53444154,    // SDAT
+    CourseVertex = 0x43565458,     // CVTX
+    TrackSection = 0x5343544E,     // SCTN
+    Waypoints = 0x57505453,        // WPTS
+    Metadata  = 0x4D444154,        // MDAT
+    SpawnData = 0x53444154,        // SDAT
     DrivingBehaviour = 0x44424856, // DBHV
 
     // SF64
