@@ -14,7 +14,7 @@ ExportResult MK64::CourseVtxHeaderExporter::Export(std::ostream &write, std::sha
         return std::nullopt;
     }
 
-    write << "extern Vtx " << symbol << "[];\n";
+    write << "extern CourseVtx " << symbol << "[];\n";
     return std::nullopt;
 }
 
@@ -23,7 +23,7 @@ ExportResult MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::share
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    write << "Vtx " << symbol << "[] = {\n";
+    write << "CourseVtx " << symbol << "[] = {\n";
 
     for (int i = 0; i < vtx.size(); ++i) {
         auto v = vtx[i];
@@ -31,8 +31,6 @@ ExportResult MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::share
         auto x = v.ob[0];
         auto y = v.ob[1];
         auto z = v.ob[2];
-
-        auto f = v.flag;
 
         auto tc1 = v.tc[0];
         auto tc2 = v.tc[1];
@@ -46,25 +44,24 @@ ExportResult MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::share
             write << fourSpaceTab;
         }
 
-        // {{{ x, y, z }, f, { tc1, tc2 }, { c1, c2, c3, c4 }}}
-        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, " << NUM(f) << ", {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
+        // {{{ x, y, z }, { tc1, tc2 }, { c1, c2, c3, c4 }}}
+        write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
     }
     write << "};\n";
 
-    return offset + vtx.size() * sizeof(VtxRaw);
+    return offset + vtx.size() * sizeof(CourseVtx);
 }
 
 ExportResult MK64::CourseVtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<CourseVtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, Torch::ResourceType::Vertex, 0);
+    WriteHeader(writer, Torch::ResourceType::CourseVertex, 0);
     writer.Write((uint32_t) vtx->mVtxs.size());
     for(auto v : vtx->mVtxs) {
         writer.Write(v.ob[0]);
         writer.Write(v.ob[1]);
         writer.Write(v.ob[2]);
-        writer.Write(v.flag);
         writer.Write(v.tc[0]);
         writer.Write(v.tc[1]);
         writer.Write(v.cn[0]);
@@ -83,29 +80,22 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(CourseVtx));
 
-    reader.SetEndianness(Torch::Endianness::Big);
-    std::vector<VtxRaw> vertices;
+    reader.SetEndianness(LUS::Endianness::Big);
+    std::vector<CourseVtx> vertices;
 
     for(size_t i = 0; i < count; i++) {
-        const auto x = reader.ReadInt16();
-        const auto y = reader.ReadInt16();
-        const auto z = reader.ReadInt16();
-        const auto tc1 = reader.ReadInt16();
-        const auto tc2 = reader.ReadInt16();
+        auto x = reader.ReadInt16();
+        auto y = reader.ReadInt16();
+        auto z = reader.ReadInt16();
+        auto tc1 = reader.ReadInt16();
+        auto tc2 = reader.ReadInt16();
         auto cn1 = reader.ReadUByte();
         auto cn2 = reader.ReadUByte();
         auto cn3 = reader.ReadUByte();
         auto cn4 = reader.ReadUByte();
 
-        uint16_t flag = cn1 & 3;
-        flag |= (cn2 << 2) & 0xC;
-
-        cn1 &= 0xFC;
-        cn2 &= 0xFC;
-        cn4 = 0xFF;
-
-        vertices.push_back(VtxRaw({
-           {x, y, z}, flag, {tc1, tc2}, {cn1, cn2, cn3, cn4}
+        vertices.push_back(CourseVtx({
+           {x, y, z}, {tc1, tc2}, {cn1, cn2, cn3, cn4}
        }));
     }
 
