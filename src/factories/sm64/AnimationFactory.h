@@ -12,10 +12,10 @@ public:
     int16_t mLoopEnd;
     int16_t mUnusedBoneCount;
     int16_t mLength;
-    std::vector<int16_t> mIndices;
-    std::vector<uint16_t> mEntries;
+    std::vector<uint16_t> mIndices;
+    std::vector<int16_t> mEntries;
 
-    AnimationData(int16_t flags, int16_t animYTransDivisor, int16_t startFrame, int16_t loopStart, int16_t loopEnd, int16_t unusedBoneCount, int16_t length, std::vector<int16_t> indices, std::vector<uint16_t> entries) : mFlags(flags), mAnimYTransDivisor(animYTransDivisor), mStartFrame(startFrame), mLoopStart(loopStart), mLoopEnd(loopEnd), mUnusedBoneCount(unusedBoneCount), mLength(length), mIndices(std::move(indices)), mEntries(std::move(entries)) {}
+    AnimationData(int16_t flags, int16_t animYTransDivisor, int16_t startFrame, int16_t loopStart, int16_t loopEnd, int16_t unusedBoneCount, int16_t length, std::vector<uint16_t> indices, std::vector<int16_t> entries) : mFlags(flags), mAnimYTransDivisor(animYTransDivisor), mStartFrame(startFrame), mLoopStart(loopStart), mLoopEnd(loopEnd), mUnusedBoneCount(unusedBoneCount), mLength(length), mIndices(std::move(indices)), mEntries(std::move(entries)) {}
 };
 
 class AnimationBinaryExporter : public BaseExporter {
