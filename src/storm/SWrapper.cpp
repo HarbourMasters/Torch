@@ -20,7 +20,7 @@ SWrapper::SWrapper(const std::string& path) {
 }
 
 bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
-    if(Companion::Instance->IsDebug()){
+    if(Companion::Instance != nullptr && Companion::Instance->IsDebug()){
         SPDLOG_INFO("Creating debug file: debug/{}", path);
         std::string dpath = "debug/" + path;
         if(!fs::exists(fs::path(dpath).parent_path())){
