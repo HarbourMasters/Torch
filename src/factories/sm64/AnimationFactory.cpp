@@ -3,7 +3,7 @@
 
 #include "utils/Decompressor.h"
 
-#define ANIMINDEX_COUNT(boneCount) (sizeof(boneCount) + 1) * 6 * sizeof(uint16_t)
+#define ANIMINDEX_COUNT(boneCount) (boneCount + 1) * 6 * sizeof(uint16_t)
 
 ExportResult SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
@@ -53,17 +53,17 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
 
     LUS::BinaryReader indices = LUS::BinaryReader(data.data + indexAddr, indexLength * sizeof(uint16_t));
     indices.SetEndianness(Torch::Endianness::Big);
-    std::vector<int16_t> indicesData;
+    std::vector<uint16_t> indicesData;
     for (size_t i = 0; i < indexLength; i++) {
-        indicesData.push_back(indices.ReadInt16());
+        indicesData.push_back(indices.ReadUInt16());
     }
 
-    size_t valuesSize = length * sizeof(uint16_t);
+    size_t valuesSize = length * sizeof(int16_t);
     LUS::BinaryReader values = LUS::BinaryReader(data.data + valuesAddr, valuesSize);
     values.SetEndianness(Torch::Endianness::Big);
-    std::vector<uint16_t> valuesData;
-    for (size_t i = 0; i < valuesSize / sizeof(uint16_t); i++) {
-        valuesData.push_back(values.ReadUInt16());
+    std::vector<int16_t> valuesData;
+    for (size_t i = 0; i < valuesSize / sizeof(int16_t); i++) {
+        valuesData.push_back(values.ReadInt16());
     }
 
     SPDLOG_INFO("Flags: {}", flags);
