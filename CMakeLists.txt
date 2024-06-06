@@ -58,7 +58,7 @@ if (USE_STANDALONE)
     add_definitions(-DSTANDALONE)
     add_executable(${PROJECT_NAME} ${SRC_DIR})
 else()
-    add_library(${PROJECT_NAME} STATIC ${SRC_DIR})
+    add_library(${PROJECT_NAME} SHARED ${SRC_DIR})
 endif()
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -71,13 +71,13 @@ else()
             $<$<CONFIG:Debug>:
                 /w;
                 /Od;
-                /MTd
+                /MDd
             >
             $<$<CONFIG:Release>:
                 /Oi;
                 /Gy;
                 /W3;
-                /MT
+                /MD
             >
             /STACK:16777216
             /permissive-;
@@ -89,13 +89,13 @@ else()
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_compile_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
-                /MTd
+                /MDd
             >
             $<$<CONFIG:Release>:
                 /O2;
                 /Oi;
                 /Gy;
-                /MT
+                /MD
             >
             /STACK:16777216
             /permissive-;
