@@ -76,7 +76,7 @@ ExportResult SM64::MacroBinaryExporter::Export(std::ostream &write, std::shared_
     writer.Finish(write);
     return std::nullopt;
 }
-#define BINANG_TO_DEG(binang) ((float)(binang) * (180.0f / 0x8000))
+
 std::optional<std::shared_ptr<IParsedData>> SM64::MacroFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     std::vector<MacroObject> macroData;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
