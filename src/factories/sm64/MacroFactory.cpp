@@ -36,7 +36,7 @@ ExportResult SM64::MacroCodeExporter::Export(std::ostream &write, std::shared_pt
         }
 
         write << object.preset << ", ";
-        write << object.yaw << ", ";
+        write << "CONVERT_YAW(" << object.yaw << "), ";
         write << object.posX << ", ";
         write << object.posY << ", ";
         write << object.posZ;
@@ -76,7 +76,7 @@ ExportResult SM64::MacroBinaryExporter::Export(std::ostream &write, std::shared_
     writer.Finish(write);
     return std::nullopt;
 }
-
+#define BINANG_TO_DEG(binang) ((float)(binang) * (180.0f / 0x8000))
 std::optional<std::shared_ptr<IParsedData>> SM64::MacroFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     std::vector<MacroObject> macroData;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
@@ -89,8 +89,9 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MacroFactory::parse(std::vecto
             break;
         }
 
-        int16_t yaw = ((presetYaw >> 9) * 45) / 0x10;
-        int16_t preset = (presetYaw - ((yaw * 0x10 / 45) << 9)) - 0x1F;
+        int16_t yaw = ((presetYaw >> 9) & 0x7F) << 1;
+        int16_t preset = (presetYaw & 0x1FF) - 0x1F;
+
         auto posX = reader.ReadInt16();
         auto posY = reader.ReadInt16();
         auto posZ = reader.ReadInt16();
