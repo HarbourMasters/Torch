@@ -298,10 +298,11 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 auto str = node["mode"].as<std::string>();
                 // Too lower case
                 std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
+                Gfx value;
                 if (str == "index") {
-                    Gfx value = gsSPDisplayListOTRIndex(ptr);
+                    value = gsSPDisplayListOTRIndex(ptr);
                 } else {
-                    Gfx value = gsSPDisplayListOTRHash(ptr);
+                    value = gsSPDisplayListOTRHash(ptr);
                 }
                 w0 = value.words.w0;
                 w1 = value.words.w1;
