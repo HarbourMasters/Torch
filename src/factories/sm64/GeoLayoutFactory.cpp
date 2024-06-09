@@ -427,8 +427,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 break;
             }
             case GeoOpcode::NodeLevelOfDetail: {
-                auto min = cur_geo_cmd_s16(0x02);
-                auto max = cur_geo_cmd_s16(0x04);
+                auto min = cur_geo_cmd_s16(0x04);
+                auto max = cur_geo_cmd_s16(0x06);
 
                 arguments.emplace_back(min);
                 arguments.emplace_back(max);
