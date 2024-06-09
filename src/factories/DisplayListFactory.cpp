@@ -291,10 +291,12 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         if(opcode == GBI(G_DL)) {
+            Gfx value;
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
+            auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
-            Gfx value = gsSPDisplayListOTRHash(ptr);
+            value = gsSPDisplayListOTRHash(ptr);
             w0 = value.words.w0;
             w1 = value.words.w1;
 
@@ -308,6 +310,15 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 w1 = hash & 0xFFFFFFFF;
             } else {
                 SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
+            }
+
+            if(branch){
+                writer.Write(w0);
+                writer.Write(w1);
+
+                value = gsSPRawOpcode(GBI(G_ENDDL));
+                w0 = value.words.w0;
+                w1 = value.words.w1;
             }
         }
 
