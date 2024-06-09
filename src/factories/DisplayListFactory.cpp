@@ -312,6 +312,8 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         if(opcode == GBI(G_MOVEMEM)) {
+            // TODO: Fix this opcode
+            continue;
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
@@ -320,7 +322,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
             switch (gbi) {
                 case GBIVersion::f3d:
-                    index = C0(0, 8);
+                    index = C0(16, 8);
                     offset = 0;
                     break;
                 default:

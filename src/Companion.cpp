@@ -922,13 +922,19 @@ void Companion::ProcessFile(YAML::Node root) {
                 fs::path entryPath = this->gCurrentFile;
                 std::string symbol = entryPath.stem().string();
                 std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
-                file << "#ifndef " << symbol << "_H" << std::endl;
-                file << "#define " << symbol << "_H" << std::endl << std::endl;
+                if(this->IsOTRMode()){
+                    file << "#pragma once\n\n";
+                } else {
+                    file << "#ifndef " << symbol << "_H" << std::endl;
+                    file << "#define " << symbol << "_H" << std::endl << std::endl;
+                }
                 if(!this->gFileHeader.empty()) {
                     file << this->gFileHeader << std::endl;
                 }
                 file << buffer;
-                file << std::endl << "#endif" << std::endl;
+                if(!this->IsOTRMode()){
+                    file << std::endl << "#endif" << std::endl;
+                }
             } else {
                 if(!this->gFileHeader.empty()) {
                     file << this->gFileHeader << std::endl;
