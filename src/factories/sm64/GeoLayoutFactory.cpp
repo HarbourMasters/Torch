@@ -6,6 +6,11 @@
 #include "geo/GeoUtils.h"
 #include "utils/TorchUtils.h"
 
+#include <regex>
+
+std::unordered_map<uint32_t, std::string> gFunctionMap;
+static std::regex pattern(R"(0x([0-9a-fA-F]+)\s{16}([^\s]+))");
+
 uint64_t RegisterAutoGen(uint32_t ptr, std::string type) {
 
     if (ptr != 0) {
@@ -13,16 +18,48 @@ uint64_t RegisterAutoGen(uint32_t ptr, std::string type) {
         node["type"] = type;
         node["offset"] = ptr;
         Companion::Instance->AddAsset(node);
+    } else {
+        SPDLOG_WARN("RegisterAutoGen: ptr is 0 type: {}", type);
     }
 
     return ptr;
 }
 
+void StoreFunc(uint32_t vram) {
+    return;
+
+    if(!gFunctionMap.contains(vram)) {
+        return;
+    }
+
+    auto name = gFunctionMap[vram];
+    SPDLOG_INFO("Found Function: 0x{:X} Name: {}", vram, name);
+
+    std::ofstream outfile;
+    outfile.open("map.txt", std::ios_base::app);
+    outfile << "{ 0x" << std::hex << vram << ", " << name << " },\n";
+
+    gFunctionMap.erase(vram);
+}
+
+SM64::GeoLayoutFactory::GeoLayoutFactory() {
+    // std::ifstream file("/Users/lywx/Downloads/sm64.jp.map");
+    // std::string str;
+    // while (std::getline(file, str)) {
+    //     if(str.find('=') != std::string::npos) {
+    //         continue;
+    //     }
+
+    //     std::smatch match;
+    //     if (std::regex_search(str, match, pattern)) {
+    //         gFunctionMap[std::stoul(match[1].str(), nullptr, 16)] = match[2].str();
+    //     }
+    // }
+}
+
 ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
     const auto cmds = std::static_pointer_cast<GeoLayout>(data)->commands;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    auto offset = GetSafeNode<uint32_t>(node, "offset");
-    size_t size = 0;
     uint32_t indentCount = 1;
     uint32_t cmdCount = 0;
 
@@ -258,6 +295,15 @@ ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr
 }
 
 ExportResult SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+
+    if(Companion::Instance->IsOTRMode()){
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return std::nullopt;
+    }
+
+    write << "extern GeoLayout " << symbol << "[];\n";
+
     return std::nullopt;
 }
 
@@ -297,8 +343,10 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 cmd += 0x08 << CMD_SIZE_SHIFT;
                 break;
             }
-            case GeoOpcode::Return:
+            case GeoOpcode::Return: {
                 processing = false;
+                break;
+            }
             case GeoOpcode::OpenNode:
             case GeoOpcode::CloseNode: {
                 cmd += 0x04 << CMD_SIZE_SHIFT;
@@ -359,6 +407,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                     auto ptr = cur_geo_cmd_u32(0x08);
                     arguments.emplace_back(ptr);
 
+                    StoreFunc(ptr);
+
                     cmd += 0x04 << CMD_SIZE_SHIFT;
                 }
 
@@ -377,8 +427,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 break;
             }
             case GeoOpcode::NodeLevelOfDetail: {
-                auto min = cur_geo_cmd_s16(0x02);
-                auto max = cur_geo_cmd_s16(0x04);
+                auto min = cur_geo_cmd_s16(0x04);
+                auto max = cur_geo_cmd_s16(0x06);
 
                 arguments.emplace_back(min);
                 arguments.emplace_back(max);
@@ -392,6 +442,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 arguments.emplace_back(cs);
                 arguments.emplace_back(ptr);
+
+                StoreFunc(ptr);
 
                 cmd += 0x08 << CMD_SIZE_SHIFT;
                 break;
@@ -411,6 +463,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 arguments.emplace_back(pos);
                 arguments.emplace_back(focus);
                 arguments.emplace_back(ptr);
+
+                StoreFunc(ptr);
 
                 cmd += 0x14 << CMD_SIZE_SHIFT;
                 break;
@@ -547,7 +601,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 arguments.emplace_back(param);
                 arguments.emplace_back(ptr);
-                SPDLOG_INFO("Found ASM: 0x{:X}", ptr);
+                StoreFunc(ptr);
 
                 cmd += 0x08 << CMD_SIZE_SHIFT;
                 break;
@@ -558,6 +612,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 arguments.emplace_back(bg);
                 arguments.emplace_back(ptr);
+
+                StoreFunc(ptr);
 
                 cmd += 0x08 << CMD_SIZE_SHIFT;
                 break;
@@ -577,6 +633,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
             case GeoOpcode::NodeHeldObj: {
                 auto ptr = cur_geo_cmd_u32(0x08);
                 auto player = cur_geo_cmd_u8(0x01);
+
+                StoreFunc(ptr);
 
                 arguments.emplace_back(ptr);
                 arguments.emplace_back(player);

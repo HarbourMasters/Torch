@@ -132,6 +132,9 @@ _DW({                                                                           
 #define gsSPVertexOTR(v, n, v0) \
     { (_SHIFTL(G_VTX_OTR_HASH, 24, 8) | _SHIFTL((n), 12, 8) | _SHIFTL((v0) + (n), 1, 7)), (uintptr_t)(v) }
 
+#define gsSPRawOpcode(opcode) \
+    { _SHIFTL(opcode, 24, 8), 0 }
+
 #define	gsDPSetTextureOTRImage(fmt, siz, width, i)	\
     {{									\
         _SHIFTL(G_SETTIMG_OTR_HASH, 24, 8) | _SHIFTL(fmt, 21, 3) |			\
@@ -142,7 +145,7 @@ _DW({                                                                           
 #define gsSPBranchListOTRHash(dl) \
     {{									\
         (_SHIFTL((G_DL_OTR_HASH), 24, 8) | _SHIFTL((0x01), 16, 8) | 			\
-         _SHIFTL((0), 0, 16)), 						\
+         _SHIFTL((0), 1, 16)), 						\
             (uintptr_t)(dl)						\
     }}
 

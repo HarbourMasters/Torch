@@ -291,11 +291,13 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         if(opcode == GBI(G_DL)) {
+            Gfx value;
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
+            auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
-            if (node["mode"]) {
-                auto str = node["mode"].as<std::string>();
+            if (node["otr_mode"]) {
+                auto str = node["otr_mode"].as<std::string>();
                 // Too lower case
                 std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
                 Gfx value;
@@ -319,9 +321,20 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             } else {
                 SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
             }
+
+            if(branch){
+                writer.Write(w0);
+                writer.Write(w1);
+
+                value = gsSPRawOpcode(GBI(G_ENDDL));
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            }
         }
 
         if(opcode == GBI(G_MOVEMEM)) {
+            // TODO: Fix this opcode
+            continue;
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
@@ -330,7 +343,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
             switch (gbi) {
                 case GBIVersion::f3d:
-                    index = C0(0, 8);
+                    index = C0(16, 8);
                     offset = 0;
                     break;
                 default:
