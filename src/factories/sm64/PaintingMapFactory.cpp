@@ -35,7 +35,7 @@ ExportResult SM64::PaintingMapCodeExporter::Export(std::ostream &write, std::sha
         write << mapping.vtxId << ", " << mapping.texX << ", " << mapping.texY << ",\n";
     }
 
-    write << fourSpaceTab << paintingData->mPaintingMappings.size() << ",\n";
+    write << fourSpaceTab << paintingData->mPaintingGroups.size() << ",\n";
 
     for (auto &group : paintingData->mPaintingGroups) {
         write << fourSpaceTab;
