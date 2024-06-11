@@ -30,13 +30,17 @@ ExportResult AssetArrayCodeExporter::Export(std::ostream &write, std::shared_ptr
     write << "static " << data->mType << "* " << symbol << "[] = {\n";
     for (auto ptr : data->mPtrs) {
         write << fourSpaceTab;
-        auto dec = Companion::Instance->GetNodeByAddr(ptr);
-        if (dec.has_value()) {
-            auto node = std::get<1>(dec.value());
-            auto assetSymbol = GetSafeNode<std::string>(node, "symbol");
-            write << "&" << assetSymbol << ",\n";
+        if (ptr == 0) {
+            write << "NULL,\n";
         } else {
-            write << FORMAT_HEX(ptr) << ",\n";
+            auto dec = Companion::Instance->GetNodeByAddr(ptr);
+            if (dec.has_value()) {
+                auto node = std::get<1>(dec.value());
+                auto assetSymbol = GetSafeNode<std::string>(node, "symbol");
+                write << "&" << assetSymbol << ",\n";
+            } else {
+                write << FORMAT_HEX(ptr) << ",\n";
+            }
         }
     }
     write << "};\n";
@@ -86,10 +90,12 @@ std::optional<std::shared_ptr<IParsedData>> AssetArrayFactory::parse(std::vector
     for (uint32_t i = 0; i < count; ++i) {
         auto ptr = reader.ReadUInt32();
 
-        YAML::Node assetNode;
-        assetNode["type"] = factoryType;
-        assetNode["offset"] = ptr;
-        Companion::Instance->AddAsset(assetNode);
+        if (ptr != 0) {
+            YAML::Node assetNode;
+            assetNode["type"] = factoryType;
+            assetNode["offset"] = ptr;
+            Companion::Instance->AddAsset(assetNode);
+        }
 
         ptrs.emplace_back(ptr);
     }
