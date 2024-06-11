@@ -162,6 +162,13 @@ _DW({                                                                           
             (uintptr_t)(dl)						\
     }}
 
+#define gsSPDisplayListOTRIndex(dl) \
+    {{                                  \
+        (_SHIFTL((G_DL_OTR_INDEX), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
+         _SHIFTL((0), 0, 16)), 						\
+            (uintptr_t)((SEGMENT_NUMBER(dl) << 24) | ((SEGMENT_OFFSET(dl) / 8) * (sizeof(uint64_t) * 2) & 0x00FFFFFF))	\
+    }}
+
 #define gsSPDisplayListOTRFilePath(dl) \
     {{									\
         (_SHIFTL((G_DL_OTR_FILEPATH), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
