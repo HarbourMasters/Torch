@@ -386,7 +386,6 @@ std::optional<std::shared_ptr<IParsedData>> GenericArrayFactory::parse(std::vect
             case ArrayType::u8: {
                 uint8_t x = reader.ReadUByte();
                 data.emplace_back(x);
-                SPDLOG_INFO("HERE");
                 break;
             }
             case ArrayType::s8: {
