@@ -296,9 +296,23 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
             auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
-            value = gsSPDisplayListOTRHash(ptr);
-            w0 = value.words.w0;
-            w1 = value.words.w1;
+            Gfx value;
+            if (node["otr_mode"]) {
+                auto str = node["otr_mode"].as<std::string>();
+                // Too lower case
+                std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
+                if (str == "index") {
+                    value = gsSPDisplayListOTRIndex(w1);
+                } else {
+                    value = gsSPDisplayListOTRHash(ptr);
+                }
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            } else {
+                    value = gsSPDisplayListOTRHash(ptr);
+                    w0 = value.words.w0;
+                    w1 = value.words.w1;
+            }
 
             writer.Write(w0);
             writer.Write(w1);

@@ -19,6 +19,7 @@
 #define G_MTX_OTR 0x36
 #define G_TEXRECT_WIDE 0x37
 #define G_FILLWIDERECT 0x38
+#define G_DL_OTR_INDEX 0x3D
 #define G_MOVEMEM_OTR_HASH 0x42
 
 // DL FLAGS
@@ -160,6 +161,13 @@ _DW({                                                                           
         (_SHIFTL((G_DL_OTR_HASH), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
          _SHIFTL((0), 0, 16)), 						\
             (uintptr_t)(dl)						\
+    }}
+
+#define gsSPDisplayListOTRIndex(dl) \
+    {{                                  \
+        (_SHIFTL((G_DL_OTR_INDEX), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
+         _SHIFTL((0), 0, 16)), 						\
+            (uintptr_t)((SEGMENT_NUMBER(dl) << 24) | ((SEGMENT_OFFSET(dl) / 8) & 0x00FFFFFF))	\
     }}
 
 #define gsSPDisplayListOTRFilePath(dl) \
