@@ -301,13 +301,13 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 auto str = node["otr_mode"].as<std::string>();
                 // Too lower case
                 std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
-                if (str.c_str() == "index") {
+                if (str == "index") {
                     value = gsSPDisplayListOTRIndex(w1);
                 } else {
                     value = gsSPDisplayListOTRHash(ptr);
                 }
-                    w0 = value.words.w0;
-                    w1 = value.words.w1;
+                w0 = value.words.w0;
+                w1 = value.words.w1;
             } else {
                     value = gsSPDisplayListOTRHash(ptr);
                     w0 = value.words.w0;
