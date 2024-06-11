@@ -296,7 +296,6 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
             auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
-            Gfx value;
             if (node["otr_mode"]) {
                 auto str = node["otr_mode"].as<std::string>();
                 // Too lower case
