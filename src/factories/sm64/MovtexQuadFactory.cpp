@@ -92,14 +92,17 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MovtexQuadFactory::parse(std::
 
     for (size_t i = 0; i < count; ++i) {
         auto id = reader.ReadInt16();
+        auto pad = reader.ReadInt16();
         auto movtexPtr = reader.ReadUInt32();
         movtexQuads.emplace_back(std::make_pair(id, movtexPtr));
 
-        YAML::Node movtexNode;
-        movtexNode["type"] = "SM64:MOVTEX";
-        movtexNode["offset"] = movtexPtr;
-        movtexNode["quad"] = true;
-        Companion::Instance->AddAsset(movtexNode);
+        if (movtexPtr != 0) {
+            YAML::Node movtexNode;
+            movtexNode["type"] = "SM64:MOVTEX";
+            movtexNode["offset"] = movtexPtr;
+            movtexNode["quad"] = true;
+            Companion::Instance->AddAsset(movtexNode);
+        }
     }
 
     return std::make_shared<SM64::MovtexQuadData>(movtexQuads);
