@@ -340,6 +340,13 @@ ExportResult ArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 writer.Write(z);
                 break;
             }
+            case ArrayType::Vec3iu: {
+                auto [x, y, z] = std::get<Vec3iu>(datum);
+                writer.Write(x);
+                writer.Write(y);
+                writer.Write(z);
+                break;
+            }
             case ArrayType::Vec4f: {
                 auto [x, y, z, w] = std::get<Vec4f>(datum);
                 writer.Write(x);
