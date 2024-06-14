@@ -68,14 +68,16 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
     for(auto& [opcode, arguments] : cmds) {
         bool commaFlag = false;
 
+        if (opcode == GeoOpcode::OpenNode) {
+            ++indentCount;
+        }
+
         for (uint32_t i = 0; i < indentCount; ++i) {
             write << fourSpaceTab;
         }
 
         if (opcode == GeoOpcode::CloseNode) {
             --indentCount;
-        } else if (opcode == GeoOpcode::OpenNode) {
-            ++indentCount;
         }
 
         write << opcode << "(";
@@ -324,6 +326,9 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
         switch(opcode){
             case GeoOpcode::BranchAndLink: {
                 auto ptr = cur_geo_cmd_u32(0x04);
+                if (ptr == 0) {
+                    processing = false;
+                }
                 arguments.emplace_back(RegisterAutoGen(ptr, "SM64:GEO_LAYOUT"));
 
                 cmd += 0x08 << CMD_SIZE_SHIFT;
