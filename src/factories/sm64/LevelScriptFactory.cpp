@@ -43,14 +43,16 @@ ExportResult SM64::LevelScriptCodeExporter::Export(std::ostream &write, std::sha
     for(auto& [opcode, arguments] : commands) {
         bool commaFlag = false;
 
+        if (opcode == LevelOpcode::END_AREA) {
+            --indentCount;
+        }
+
         for (uint32_t i = 0; i < indentCount; ++i) {
             write << fourSpaceTab;
         }
 
         if (opcode == LevelOpcode::AREA) {
             ++indentCount;
-        } else if (opcode == LevelOpcode::END_AREA) {
-            --indentCount;
         }
 
         write << opcode << "(";

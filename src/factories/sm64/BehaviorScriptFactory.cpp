@@ -29,14 +29,16 @@ ExportResult SM64::BehaviorScriptCodeExporter::Export(std::ostream &write, std::
     for(auto& [opcode, arguments] : commands) {
         bool commaFlag = false;
 
+        if (opcode == BehaviorOpcode::END_LOOP || opcode == BehaviorOpcode::END_REPEAT || opcode == BehaviorOpcode::END_REPEAT_CONTINUE) {
+            --indentCount;
+        }
+
         for (uint32_t i = 0; i < indentCount; ++i) {
             write << fourSpaceTab;
         }
 
         if (opcode == BehaviorOpcode::BEGIN_LOOP || opcode == BehaviorOpcode::BEGIN_REPEAT) {
             ++indentCount;
-        } else if (opcode == BehaviorOpcode::END_LOOP || opcode == BehaviorOpcode::END_REPEAT || opcode == BehaviorOpcode::END_REPEAT_CONTINUE) {
-            --indentCount;
         }
 
         write << opcode << "(";
