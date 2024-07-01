@@ -23,13 +23,15 @@ ExportResult SM64::MovtexCodeExporter::Export(std::ostream &write, std::shared_p
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     auto movtex = std::static_pointer_cast<SM64::MovtexData>(raw);
+    uint32_t additionalSize = 1;
 
     write << "static Movtex " << symbol << "[] = {\n";
 
     if (movtex->mIsQuad) {
         auto numLists = movtex->mMovtexData.at(0);
         write << "MOV_TEX_INIT_LOAD(" << numLists << "),\n";
-        for (int16_t i = 0; i < numLists; ++i) {
+        additionalSize++; // MOV_TEX_INIT_LOAD has additional padding
+        for (uint32_t i = 0; i < numLists; ++i) {
             write << "MOV_TEX_ROT_SPEED(" << movtex->mMovtexData.at(i * 14 + 1) << "),\n";
             write << "MOV_TEX_ROT_SCALE(" << movtex->mMovtexData.at(i * 14 + 2) << "),\n";
             write << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(i * 14 + 3) << ", " << movtex->mMovtexData.at(i * 14 + 4) << "),\n";
@@ -71,7 +73,7 @@ ExportResult SM64::MovtexCodeExporter::Export(std::ostream &write, std::shared_p
 
     write << "\n};\n";
 
-    size_t size = (movtex->mMovtexData.size() + 1) * sizeof(int16_t);
+    size_t size = (movtex->mMovtexData.size() + additionalSize) * sizeof(int16_t);
 
     return offset + size;
 }
@@ -131,6 +133,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MovtexFactory::parse(std::vect
 
     if (isQuad) {
         auto numLists = reader.ReadInt16();
+        reader.ReadInt16(); // pad
         movtexData.emplace_back(numLists);
         // movtex quad data has 14 elements
         for (int16_t i = 0; i < numLists * 14; ++i) {
