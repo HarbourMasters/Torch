@@ -115,7 +115,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MovtexFactory::parse(std::vect
     // Otherwise we need to know the count of vertices and the colour attribute
     if (!isQuad) {
         if (node["count"]) {
-            count = GetSafeNode<uint32_t>(node, "quad");
+            count = GetSafeNode<uint32_t>(node, "count");
         } else {
             SPDLOG_WARN("Non quad movtex needs count field");
         }
