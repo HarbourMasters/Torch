@@ -27,7 +27,7 @@ ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream &write, std::shar
     write << "const struct MovtexQuadCollection " << symbol << "[] = {\n";
 
     for (auto &quad: quadData->mMovtexQuads) {
-        write << "{" << quad.first << ", ";
+        write << fourSpaceTab << "{" << quad.first << ", ";
         if (quad.second == 0) {
             write << "NULL";
         } else {
@@ -44,7 +44,7 @@ ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream &write, std::shar
         write << "},\n";
     }
 
-    write << "\n};\n";
+    write << "};\n";
 
     if (Companion::Instance->IsDebug()) {
         write << "// MovtexQuad count: " << quadData->mMovtexQuads.size() << "\n";
