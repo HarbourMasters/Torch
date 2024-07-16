@@ -376,6 +376,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
+            // Export texture segment addresses as segmented addresses
             if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) && ((SEGMENT_NUMBER(w1) == 0x03) || (SEGMENT_NUMBER(w1) == 0x05))) {
                 w1 |= 1;
                 writer.Write(w0);
