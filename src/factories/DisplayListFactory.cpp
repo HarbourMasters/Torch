@@ -376,25 +376,33 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
-            Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
-            w0 = value.words.w0;
-            w1 = value.words.w1;
-
-            writer.Write(w0);
-            writer.Write(w1);
-
-            if(dec.has_value()){
-                uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
-
-                if(hash == 0){
-                    throw std::runtime_error("Texture hash is 0 for " + std::get<0>(dec.value()));
-                }
-
-                SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
-                w0 = hash >> 32;
-                w1 = hash & 0xFFFFFFFF;
+            // Export texture segment addresses as segmented addresses
+            if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) && ((SEGMENT_NUMBER(w1) == 0x03) || (SEGMENT_NUMBER(w1) == 0x05))) {
+                w1 |= 1;
+                writer.Write(w0);
+                writer.Write(w1);
             } else {
-                SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
+                Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            
+
+                writer.Write(w0);
+                writer.Write(w1);
+
+                if(dec.has_value()){
+                    uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
+
+                    if(hash == 0){
+                        throw std::runtime_error("Texture hash is 0 for " + std::get<0>(dec.value()));
+                    }
+
+                    SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
+                    w0 = hash >> 32;
+                    w1 = hash & 0xFFFFFFFF;
+                } else {
+                    SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
+                }
             }
         }
 
