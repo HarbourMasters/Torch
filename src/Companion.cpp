@@ -477,10 +477,10 @@ void Companion::LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML
             }
 
             // Recursive call for subdirectories
-            LoadYAMLRecursively(entry.path().string(), result, false);
+            LoadYAMLRecursively(entry.path().generic_string(), result, false);
         } else if (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml") {
             // Load YAML file and add it to the result vector
-            result.push_back(YAML::LoadFile(entry.path().string()));
+            result.push_back(YAML::LoadFile(entry.path().generic_string()));
         }
     }
 }
@@ -1141,7 +1141,7 @@ void Companion::Process() {
             continue;
         }
 
-        const auto yamlPath = entry.path().string();
+        const auto yamlPath = entry.path().generic_string();
 
         if(yamlPath.find(".yaml") == std::string::npos && yamlPath.find(".yml") == std::string::npos) {
             continue;
@@ -1207,7 +1207,7 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
         std::ifstream input( entry.path(), std::ios::binary );
         auto data = std::vector( std::istreambuf_iterator( input ), {} );
         input.close();
-        files[entry.path().string()] = data;
+        files[entry.path().generic_string()] = data;
     }
 
     auto wrapper = SWrapper(output);
