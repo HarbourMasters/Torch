@@ -1475,6 +1475,10 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
 
     auto result = this->RegisterAsset(output, asset);
 
+    if(!gCurrentVirtualPath.empty()) {
+        asset["path"] = gCurrentVirtualPath;
+    }
+
     if(result.has_value()){
         asset["vpath"] = std::get<0>(result.value());
 
