@@ -296,21 +296,15 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
             auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
-            if (node["otr_mode"]) {
-                auto str = node["otr_mode"].as<std::string>();
-                // Too lower case
-                std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
-                if (str == "index") {
-                    value = gsSPDisplayListOTRIndex(w1);
-                } else {
-                    value = gsSPDisplayListOTRHash(ptr);
-                }
+            // Export displaylist segment addresses as an index into a buffer of gfx
+            if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) && (SEGMENT_NUMBER(w1) == 0x07)) {
+                value = gsSPDisplayListOTRIndex(w1);
                 w0 = value.words.w0;
                 w1 = value.words.w1;
             } else {
-                    value = gsSPDisplayListOTRHash(ptr);
-                    w0 = value.words.w0;
-                    w1 = value.words.w1;
+                value = gsSPDisplayListOTRHash(ptr);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
             }
 
             writer.Write(w0);
