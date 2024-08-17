@@ -272,8 +272,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
                 SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
 
-                // TODO: Find a better way to do this because its going to break on other games
-                Gfx value = gsSPVertexOTR(didx, nvtx, 0);
+                Gfx value = gsSPVertexOTR(0, nvtx, didx);
 
                 SPDLOG_INFO("gsSPVertex({}, {}, 0x{:X})", nvtx, didx, ptr);
 
