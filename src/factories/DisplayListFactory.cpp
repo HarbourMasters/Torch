@@ -328,14 +328,13 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             }
         }
 
+        // TODO: Fix this opcode
         if(opcode == GBI(G_MOVEMEM)) {
-            // TODO: Fix this opcode
-            continue;
             auto ptr = w1;
-            auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             uint8_t index = 0;
             uint8_t offset = 0;
+            bool hasOffset = false;
 
             switch (gbi) {
                 case GBIVersion::f3d:
@@ -347,21 +346,33 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                     offset = C0(8, 8) * 8;
                     break;
             }
+                        
+            auto res = Companion::Instance->GetNodeByAddr(ptr);
+
+            if(!res.has_value()){
+                res = Companion::Instance->GetNodeByAddr(ptr - 0x8);
+                hasOffset = res.has_value();
+
+                if(!hasOffset){
+                    SPDLOG_INFO("Could not find light {:X}", ptr);
+                    // throw std::runtime_error("Could not find light");                    
+                }
+            }
 
             w0 &= 0x00FFFFFF;
             w0 += G_MOVEMEM_OTR_HASH << 24;
-            w1 = _SHIFTL(index, 24, 8) | _SHIFTL(offset, 16, 8);
+            w1 = _SHIFTL(index, 24, 8) | _SHIFTL(offset, 16, 8) | _SHIFTL((uint8_t)(hasOffset ? 1 : 0), 8, 8);
 
             writer.Write(w0);
             writer.Write(w1);
 
-            if(dec.has_value()){
-                uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
-                SPDLOG_INFO("Found movemem: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
+            if(res.has_value()){
+                uint64_t hash = CRC64(std::get<0>(res.value()).c_str());
+                SPDLOG_INFO("Found movemem: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(res.value()));
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
             } else {
-                SPDLOG_WARN("Could not find movemem at 0x{:X}", ptr);
+                SPDLOG_WARN("Could not find light at 0x{:X}", ptr);
             }
         }
 

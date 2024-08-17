@@ -133,9 +133,9 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     // Directional light
 
     // Ambient
-    auto r = (uint8_t)reader.ReadInt8();
-    auto g = (uint8_t)reader.ReadInt8();
-    auto b = (uint8_t)reader.ReadInt8();
+    auto r = reader.ReadUByte();
+    auto g = reader.ReadUByte();
+    auto b = reader.ReadUByte();
     //auto nil = reader.ReadInt32();
     reader.Seek(5, LUS::SeekOffsetType::Current);
 
@@ -153,7 +153,7 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
 
     // TODO: This is a hack, but it works for now.
     // The struct has several copies/padding. The zeros skip those for gdSPDefLights1.
-    lights = {r, g, b, 0, 0, 0, 0, 0, r2, g2, b2, 0, 0, 0, 0, 0, x, y, z};
+    lights = {r, g, b, 0, r, g, b, 0, r2, g2, b2, 0, r2, g2, b2, 0, x, y, z};
 
     return std::make_shared<LightsData>(lights);
 }
