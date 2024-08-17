@@ -111,13 +111,11 @@ ExportResult LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
     WriteHeader(writer, Torch::ResourceType::Lights, 0);
 
     writer.Write(reinterpret_cast<char*>(light.a.l.col), 3);
-    writer.Write(reinterpret_cast<char*>(light.a.l.colc), 3);
 
     writer.Write(static_cast<uint32_t>(size));
 
     for(size_t i = 0; i < size; i++) {
         writer.Write(reinterpret_cast<char*>(light.l[i].l.col), 3);
-        writer.Write(reinterpret_cast<char*>(light.l[i].l.colc), 3);
         writer.Write(reinterpret_cast<char*>(light.l[i].l.dir), 3);
     }
     writer.Finish(write);
