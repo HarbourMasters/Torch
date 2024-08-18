@@ -77,7 +77,6 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
     std::vector<uint16_t> indicesData;
     for (size_t i = 0; i < indexLength; i++) {
         indicesData.push_back(indices.ReadUInt16());
-        SPDLOG_INFO("Index: {}", indicesData.back());
     }
 
     LUS::BinaryReader values = LUS::BinaryReader(mainData + valuesAddr, valuesSize);
@@ -85,7 +84,6 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
     std::vector<int16_t> valuesData;
     for (size_t i = 0; i < valuesSize / sizeof(int16_t); i++) {
         valuesData.push_back(values.ReadInt16());
-        SPDLOG_INFO("Value: {}", valuesData.back());
     }
 
     return std::make_shared<AnimationData>(flags, animYTransDivisor, startFrame, loopStart, loopEnd, unusedBoneCount, length, indicesData, valuesData);
