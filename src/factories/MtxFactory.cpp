@@ -107,26 +107,12 @@ ExportResult MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPar
     auto writer = LUS::BinaryWriter();
 
     WriteHeader(writer, Torch::ResourceType::Matrix, 0);
-    writer.Write((uint32_t) mtx->mMtxs.size());
-    for(auto m : mtx->mMtxs) {
-        writer.Write(m.mtx[0]);
-        writer.Write(m.mtx[1]);
-        writer.Write(m.mtx[2]);
-        writer.Write(m.mtx[3]);
-        writer.Write(m.mtx[4]);
-        writer.Write(m.mtx[5]);
-        writer.Write(m.mtx[6]);
-        writer.Write(m.mtx[7]);
-        writer.Write(m.mtx[8]);
-        writer.Write(m.mtx[9]);
-        writer.Write(m.mtx[10]);
-        writer.Write(m.mtx[11]);
-        writer.Write(m.mtx[12]);
-        writer.Write(m.mtx[13]);
-        writer.Write(m.mtx[14]);
-        writer.Write(m.mtx[15]);
+
+    for(size_t i = 0; i < 4; i++){
+        for(size_t j = 0; j < 4; j++){
+            writer.Write(mtx->mMtxs[0].mt.mint[i][j]);
+        }
     }
-    //throw std::runtime_error("Mtx not tested for otr/o2r.");
     writer.Finish(write);
     return std::nullopt;
 }
@@ -144,6 +130,7 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
 
     // Reads the inteer portion, the fractional portion, puts each together into a fixed-point value, and finally converts to float.
     for(size_t i = 0; i < 1; i++) {
+
         // Read the integer portion of the fixed-point value (ex. 4)
         auto i1  = reader.ReadInt16();
         auto i2  = reader.ReadInt16();
@@ -198,13 +185,28 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
         auto m15 = FIXTOF( (int32_t) ( (i15 << 16) | f15 ) );
         auto m16 = FIXTOF( (int32_t) ( (i16 << 16) | f16 ) );
 
-
         matrix.push_back(MtxRaw({
-           m1, m2, m3, m4,
-           m5, m6, m7, m8,
-           m9, m10, m11, m12,
-           m13, m14, m15, m16,
-       }));
+            .mtx = {
+                m1, m2, m3, m4,
+                m5, m6, m7, m8,
+                m9, m10, m11, m12,
+                m13, m14, m15, m16,
+            },
+            .mt = MtxS {{
+                {
+                    i1,  i2,  i3,  i4,
+                    i5,  i6,  i7,  i8,
+                    i9,  i10, i11, i12,
+                    i13, i14, i15, i16,
+                },
+                {
+                    f1,  f2,  f3,  f4,
+                    f5,  f6,  f7,  f8,
+                    f9,  f10, f11, f12,
+                    f13, f14, f15, f16,
+                }
+            }}
+        }));
     }
 
     #undef FIXTOF
