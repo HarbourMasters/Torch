@@ -110,7 +110,7 @@ ExportResult MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPar
 
     for(size_t i = 0; i < 4; i++){
         for(size_t j = 0; j < 4; j++){
-            writer.Write(BSWAP32(mtx->mMtxs[0].mt.mint[i][j]));
+            writer.Write((uint32_t) BSWAP32(mtx->mMtxs[0].mt.mint[i][j]));
         }
     }
     writer.Finish(write);
