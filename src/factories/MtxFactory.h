@@ -4,8 +4,8 @@
 
 union MtxS {
     struct {
-        int16_t intPart[16];
-        uint16_t fracPart[16];
+        uint16_t intPart[4][4];
+        uint16_t fracPart[4][4];
     };
     int32_t mint[4][4];
     long long int forc_structure_alignment;

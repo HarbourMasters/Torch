@@ -132,22 +132,22 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
     for(size_t i = 0; i < 1; i++) {
 
         // Read the integer portion of the fixed-point value (ex. 4)
-        auto i1  = reader.ReadInt16();
-        auto i2  = reader.ReadInt16();
-        auto i3  = reader.ReadInt16();
-        auto i4  = reader.ReadInt16();
-        auto i5  = reader.ReadInt16();
-        auto i6  = reader.ReadInt16();
-        auto i7  = reader.ReadInt16();
-        auto i8  = reader.ReadInt16();
-        auto i9  = reader.ReadInt16();
-        auto i10 = reader.ReadInt16();
-        auto i11 = reader.ReadInt16();
-        auto i12 = reader.ReadInt16();
-        auto i13 = reader.ReadInt16();
-        auto i14 = reader.ReadInt16();
-        auto i15 = reader.ReadInt16();
-        auto i16 = reader.ReadInt16();
+        auto i1  = reader.ReadUInt16();
+        auto i2  = reader.ReadUInt16();
+        auto i3  = reader.ReadUInt16();
+        auto i4  = reader.ReadUInt16();
+        auto i5  = reader.ReadUInt16();
+        auto i6  = reader.ReadUInt16();
+        auto i7  = reader.ReadUInt16();
+        auto i8  = reader.ReadUInt16();
+        auto i9  = reader.ReadUInt16();
+        auto i10 = reader.ReadUInt16();
+        auto i11 = reader.ReadUInt16();
+        auto i12 = reader.ReadUInt16();
+        auto i13 = reader.ReadUInt16();
+        auto i14 = reader.ReadUInt16();
+        auto i15 = reader.ReadUInt16();
+        auto i16 = reader.ReadUInt16();
 
         // Read the fractional portion of the fixed-point value (ex. 0.45)
         auto f1  = reader.ReadUInt16();
@@ -194,16 +194,16 @@ std::optional<std::shared_ptr<IParsedData>> MtxFactory::parse(std::vector<uint8_
             },
             .mt = MtxS {{
                 {
-                    i1,  i2,  i3,  i4,
-                    i5,  i6,  i7,  i8,
-                    i9,  i10, i11, i12,
-                    i13, i14, i15, i16,
+                    { i1,  i2,  i3,  i4 },
+                    { i5,  i6,  i7,  i8 },
+                    { i9,  i10, i11, i12 },
+                    { i13, i14, i15, i16 },
                 },
                 {
-                    f1,  f2,  f3,  f4,
-                    f5,  f6,  f7,  f8,
-                    f9,  f10, f11, f12,
-                    f13, f14, f15, f16,
+                    { f1,  f2,  f3,  f4 },
+                    { f5,  f6,  f7,  f8 },
+                    { f9,  f10, f11, f12 },
+                    { f13, f14, f15, f16 },
                 }
             }}
         }));
