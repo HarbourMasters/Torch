@@ -72,9 +72,10 @@ ExportResult SM64::MovtexQuadBinaryExporter::Export(std::ostream &write, std::sh
                 writer.Write(hash);
             } else {
                 SPDLOG_WARN("Could not find movtex at 0x{:X}", quad.second);
+                writer.Write(0);
+                throw std::runtime_error("PANIC");
             }
         }
-        write << "},\n";
     }
 
     writer.Finish(write);

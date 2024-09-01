@@ -84,18 +84,43 @@ ExportResult SM64::MovtexBinaryExporter::Export(std::ostream &write, std::shared
 
     WriteHeader(writer, Torch::ResourceType::Movtex, 0);
 
-    // May want extra info, but importer should just be mMovtexData with an extra 0 (or 2) at the end
-    // if (movtex->mIsQuad) {
-    //     writer.Write(0);
-    //     writer.Write(0);
-    // } else {
-    //     writer.Write(movtex->mVertexCount);
-    //     writer.Write((uint32_t)(movtex->mHasColor ? 1 : 0));
-    // }
+    std::vector<int16_t> buffer;
 
-    for (auto datum : movtex->mMovtexData) {
-        writer.Write(datum);
+    if (movtex->mIsQuad) {
+        auto numLists = movtex->mMovtexData.at(0);
+        
+        buffer.push_back(numLists);
+        buffer.push_back(0);
+        
+        for (uint32_t i = 0; i < numLists; ++i) {
+            for(size_t j = 0; j < 14; j++){
+                buffer.push_back(movtex->mMovtexData.at(i * 14 + (j + 1)));
+            }
+
+            buffer.push_back(0);
+        }
+    } else {
+        buffer.push_back(movtex->mMovtexData.at(0));
+        
+        if (movtex->mHasColor) {
+            for (uint32_t i = 0; i < movtex->mVertexCount; ++i) {
+                for(size_t j = 0; j < 8; j++){
+                    buffer.push_back(movtex->mMovtexData.at(i * 8 + (j + 1)));
+                }
+            }
+        } else {
+            for (uint32_t i = 0; i < movtex->mVertexCount; ++i) {
+                for(size_t j = 0; j < 5; j++){
+                    buffer.push_back(movtex->mMovtexData.at(i * 5 + (j + 1)));
+                }
+            }
+        }
+        
+        buffer.push_back(0);
     }
+
+    writer.Write((uint32_t) buffer.size());
+    writer.Write((char*) buffer.data(), buffer.size() * sizeof(int16_t));
 
     writer.Finish(write);
     return std::nullopt;

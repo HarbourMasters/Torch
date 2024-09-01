@@ -62,11 +62,11 @@ ExportResult SM64::MacroBinaryExporter::Export(std::ostream &write, std::shared_
 
     WriteHeader(writer, Torch::ResourceType::MacroObject, 0);
 
-    writer.Write((uint32_t)macro->mMacroData.size());
+    writer.Write((uint32_t) macro->mMacroData.size());
 
     for (auto &object : macro->mMacroData) {
         writer.Write(static_cast<int16_t>(object.preset));
-        writer.Write(object.yaw);
+        writer.Write((int16_t) std::round(object.yaw * 1.41));
         writer.Write(object.posX);
         writer.Write(object.posY);
         writer.Write(object.posZ);
