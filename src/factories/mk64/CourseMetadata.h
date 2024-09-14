@@ -62,6 +62,7 @@ namespace MK64 {
         inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
             return {
                 REGISTER(Code, CourseMetadataCodeExporter)
+                REGISTER(Binary, CourseMetadataBinaryExporter)
             };
         }
         bool SupportModdedAssets() override { return false; }
