@@ -296,6 +296,77 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     return std::nullopt;
 }
 
+ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    auto properties = std::static_pointer_cast<MetadataData>(raw);
+    auto writer = LUS::BinaryWriter();
+
+    WriteHeader(writer, Torch::ResourceType::CourseProperties, 0);
+    writer.Write((uint32_t) properties->mMetadata.size());
+
+    for (auto m : properties->mMetadata) {
+        writer.Write(m.id);
+        writer.Write(m.name);
+        writer.Write(m.debugName);
+        writer.Write(m.cup);
+        writer.Write(m.cupIndex);
+        writer.Write(m.courseLength);
+        writer.Write(m.kartAIBehaviourLUT);
+        writer.Write(m.kartAIMaximumSeparation);
+        writer.Write(m.kartAIMinimumSeparation);
+        writer.Write(m.D_800DCBB4);
+        writer.Write(m.steeringSensitivity);
+
+        for (auto b : m.bombKartSpawns) {
+            writer.Write(b.waypointIndex);
+            writer.Write(b.startingState);
+            writer.Write(b.unk_04);
+            writer.Write(b.x);
+            writer.Write(b.z);
+            writer.Write(b.unk10);
+            writer.Write(b.unk14);
+        }
+
+        for (auto p : m.pathSizes) {
+            writer.Write(p);
+        }
+
+        for (auto s : m.D_0D009418) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.D_0D009568) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.D_0D0096B8) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.D_0D009808) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.pathTable) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.pathTableUnknown) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.skyColors) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.skyColors2) {
+            writer.Write(s);
+        }
+    }
+
+    writer.Finish(write);
+    return std::nullopt;
+}
+
 std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto dir = GetSafeNode<std::string>(node, "input_directory");
  
