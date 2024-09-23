@@ -451,7 +451,7 @@ std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vecto
 
 std::vector<Entry> AudioManager::parse_sh_header(std::vector<uint8_t>& data, bool isCTL) {
     LUS::BinaryReader reader(reinterpret_cast<char*>(data.data()), data.size());
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     int16_t num_entries = reader.ReadInt16();
     uint32_t prev = 0;
     std::vector<Entry> entries;

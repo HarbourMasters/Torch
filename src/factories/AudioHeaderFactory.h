@@ -4,9 +4,7 @@
 
 class AudioAIFCExporter : public BaseExporter {
 public:
-    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override {
-        return std::nullopt;
-    }
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement);
 };
 
 class AudioDummyExporter : public BaseExporter {

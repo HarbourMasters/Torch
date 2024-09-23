@@ -6,7 +6,7 @@
 #include "audio/AIFCDecode.h"
 #include "spdlog/spdlog.h"
 
-void AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) {
 
     auto samples = AudioManager::Instance->get_samples();
 
@@ -27,6 +27,8 @@ void AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IParsedData>
         file.close();
         SPDLOG_INFO("Exported {}", dpath + "_bank_" + std::to_string(temp) + ".aif");
     }
+
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> AudioHeaderFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
