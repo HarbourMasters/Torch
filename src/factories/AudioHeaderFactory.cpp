@@ -31,6 +31,5 @@ void AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IParsedData>
 
 std::optional<std::shared_ptr<IParsedData>> AudioHeaderFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
     AudioManager::Instance->initialize(buffer, data);
-    auto parsed = std::make_shared<IParsedData>();
-    return parsed;
+    return std::make_shared<IParsedData>();
 }

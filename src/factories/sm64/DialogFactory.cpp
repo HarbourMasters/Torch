@@ -2,11 +2,11 @@
 #include "spdlog/spdlog.h"
 #include "utils/Decompressor.h"
 
-void SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto dialog = std::static_pointer_cast<DialogData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::SDialog, 0);
+    WriteHeader(writer, Torch::ResourceType::SDialog, 0);
     writer.Write((uint32_t) dialog->mUnused);
     writer.Write((int8_t) dialog->mLinesPerBox);
     writer.Write((int16_t) dialog->mLeftOffset);
@@ -15,13 +15,14 @@ void SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPa
     writer.Write((uint32_t) dialog->mText.size());
     writer.Write((char*) dialog->mText.data(), dialog->mText.size());
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto [root, segment] = Decompressor::AutoDecode(node, buffer);
 
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     // Validate this
     // reader.Seek(mio0, LUS::SeekOffsetType::Start);
 

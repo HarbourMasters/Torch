@@ -86,6 +86,23 @@ std::ostream& operator<< (std::ostream& stream, const Vec3i& vec) {
     return stream;
 }
 
+Vec3iu::Vec3iu(uint32_t xv, uint32_t yv, uint32_t zv) : x(xv), y(yv), z(zv) {}
+
+int Vec3iu::width() {
+    auto wx = GetMagnitude(this->x);
+    auto wy = GetMagnitude(this->y);
+    auto wz = GetMagnitude(this->z);
+
+    return std::max(wx, std::max(wy, wz));
+}
+
+std::ostream& operator<< (std::ostream& stream, const Vec3iu& vec) {
+    int width = stream.width();
+
+    stream << std::setw(0) << "{" << std::setw(width) << vec.x << ", " << std::setw(width) << vec.y << ", " << std::setw(width) << vec.z << "}";
+    return stream;
+}
+
 Vec2f::Vec2f(float xv, float zv) : x(xv), z(zv) {}
 
 int Vec2f::precision() {

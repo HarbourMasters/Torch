@@ -3,8 +3,8 @@
 #include <string>
 #include <memory>
 #include <vector>
-#include "endianness.h"
-#include "Stream.h"
+#include "lib/binarytools/endianness.h"
+#include "lib/binarytools/Stream.h"
 
 class BinaryReader;
 
@@ -19,8 +19,8 @@ class BinaryReader {
 
     void Close();
 
-    void SetEndianness(Endianness endianness);
-    Endianness GetEndianness() const;
+    void SetEndianness(Torch::Endianness endianness);
+    Torch::Endianness GetEndianness() const;
 
     void Seek(int32_t offset, SeekOffsetType seekType);
     uint32_t GetBaseAddress();
@@ -47,6 +47,6 @@ class BinaryReader {
 
   protected:
     std::shared_ptr<Stream> mStream;
-    Endianness mEndianness = Endianness::Native;
+    Torch::Endianness mEndianness = Torch::Endianness::Native;
 };
 } // namespace LUS

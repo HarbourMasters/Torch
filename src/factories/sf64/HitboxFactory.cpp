@@ -5,92 +5,109 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
-#define FLOAT(x, w) std::dec << std::setfill(' ') << (((int) x == x) ? "" : "  ") << std::setw(w - 2) << x << (((int) x == x) ? ".0f" : "f")
+static int GetPrecision(float f) {
+    int p = 0;
+    int shift = 1;
+    float approx = std::round(f);
 
-SF64::HitboxData::HitboxData(std::vector<float> data, std::vector<int> types): mData(data), mTypes(types) {
-    
+    while(f != approx && p < 12 ){
+        shift *= 10;
+        p++;
+        approx = std::round(f * shift) / shift;
+    }
+    return p;
 }
 
-void SF64::HitboxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+static void FormatFloat(std::ostream& out, const float x, int w) {
+    if(x == (int) x) {
+        out << std::dec << std::fixed << std::setprecision(0) << std::setfill(' ') << std::setw(w - 2) << x << ".0f";
+    } else {
+        out << std::dec << std::fixed << std::setprecision(GetPrecision(x)) << std::setfill(' ') << std::setw(w) << x << "f";
+    }
+}
+
+SF64::HitboxData::HitboxData(std::vector<float> data, std::vector<int> types): mData(data), mTypes(types) {
+
+}
+
+ExportResult SF64::HitboxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return std::nullopt;
     }
 
     write << "extern f32 " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto hitbox = std::static_pointer_cast<SF64::HitboxData>(raw);
     auto index = 0;
     auto count = hitbox->mData[index++];
-    auto hasType2 = false;
-    auto off = offset;
-    
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    } 
+    auto hasRot = false;
+
     for(int type : hitbox->mTypes) {
         if(type == 2) {
-            hasType2 = true;
+            hasRot = true;
             break;
         }
     }
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
+
     write << "f32 " << symbol << "[] = {\n";
     write << fourSpaceTab << count << ",\n";
-    
+
     for(int i = 0; i < (int)count; i++) {
-        if(hitbox->mTypes[i]  == 4) {
-            write << fourSpaceTab << "HITBOX_TYPE_4,   ";
+        if(hitbox->mTypes[i] == 4) {
+            write << fourSpaceTab << "HITBOX_WHOOSH,     ";
             index++;
         } else if (hitbox->mTypes[i] == 3) {
-            write << fourSpaceTab << "HITBOX_TYPE_3,   ";
+            write << fourSpaceTab << "HITBOX_SHADOW,     ";
             index++;
         } else if (hitbox->mTypes[i] == 2) {
-            write << fourSpaceTab << "HITBOX_TYPE_2,    ";
+            write << fourSpaceTab << "HITBOX_ROTATED,    ";
             index++;
             for(int j = 0; j < 3; j++) {
                 auto tempf = hitbox->mData[index++];
-                write << FLOAT(tempf, 6) << ", ";
+                FormatFloat(write, tempf, 6);
+                write << ", ";
             }
-            write << fourSpaceTab;
         } else {
-            write << " /* HITBOX_TYPE_1 */ ";
+            write << " /* HITBOX_STANDARD */ ";
         }
-        if(hasType2 && hitbox->mTypes[i] != 2) {
-            for(int j = 0; j < 8; j++) {
+        if(hasRot && hitbox->mTypes[i] != 2) {
+            for(int j = 0; j < 7; j++) {
                 write << fourSpaceTab;
             }
         }
         for(int j = 0; j < 6; j++) {
             auto tempf = hitbox->mData[index++];
-            write << FLOAT(tempf, 7) << ", ";
+            FormatFloat(write, tempf, 7);
+            write << ", ";
         }
         write << "\n";
     }
     write << "};\n";
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off + sizeof(float) * index << "\n";
-    }
-    write << "\n";
+
+    return offset + sizeof(float) * index;
 }
 
-void SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto hitbox = std::static_pointer_cast<SF64::HitboxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Hitbox, 0);
-    for (float value : hitbox->mData) {
-        writer.Write(value);
+    WriteHeader(writer, Torch::ResourceType::Hitbox, 0);
+
+    auto count = hitbox->mData.size();
+    writer.Write((uint32_t) count);
+    for(size_t i = 0; i < hitbox->mData.size(); i++) {
+        writer.Write(hitbox->mData[i]);
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::HitboxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -99,7 +116,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::HitboxFactory::parse(std::vect
     std::vector<int> types;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0x10000);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     data.push_back(reader.ReadFloat());
     count = data[0];

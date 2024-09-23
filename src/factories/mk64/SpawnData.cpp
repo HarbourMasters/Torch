@@ -6,25 +6,22 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
-void MK64::SpawnDataHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult MK64::SpawnDataHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return std::nullopt;
     }
 
     write << "extern ActorSpawnData " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void MK64::SpawnDataCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::SpawnDataCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto spawns = std::static_pointer_cast<SpawnDataData>(raw)->mSpawns;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
-
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
 
     write << "ActorSpawnData " << symbol << "[] = {\n";
 
@@ -42,19 +39,16 @@ void MK64::SpawnDataCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         // { x, y, z, id },
         write << "{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << ", " << NUM(id) << " },\n";
     }
+    write << "};\n";
 
-    if (Companion::Instance->IsDebug()) {
-        write << fourSpaceTab << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(MK64::ActorSpawnData) * spawns.size())) << "\n";
-    }
-
-    write << "};\n\n";
+    return offset + spawns.size() * sizeof(MK64::ActorSpawnData);
 }
 
-void MK64::SpawnDataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::SpawnDataBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto spawns = std::static_pointer_cast<SpawnDataData>(raw)->mSpawns;
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::SpawnData, 0);
+    WriteHeader(writer, Torch::ResourceType::SpawnData, 0);
     writer.Write((uint32_t) spawns.size());
     for(auto s : spawns) {
         writer.Write(s.x);
@@ -64,6 +58,7 @@ void MK64::SpawnDataBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::SpawnDataFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -72,7 +67,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::SpawnDataFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(MK64::ActorSpawnData));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<MK64::ActorSpawnData> spawns;
 
     for(size_t i = 0; i < count; i++) {

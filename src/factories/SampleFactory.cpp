@@ -1,10 +1,10 @@
 #include "SampleFactory.h"
 
-void SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto sample = std::static_pointer_cast<SampleData>(raw)->mSample;
 
-    WriteHeader(writer, LUS::ResourceType::Sample, 0);
+    WriteHeader(writer, Torch::ResourceType::Sample, 0);
     writer.Write(sample.loop.start);
     writer.Write(sample.loop.end);
     writer.Write(sample.loop.count);
@@ -30,6 +30,7 @@ void SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDa
     writer.Write(sample.name);
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SampleFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {

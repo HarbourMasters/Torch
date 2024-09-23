@@ -51,7 +51,11 @@ ia *raw2ia(const uint8_t *raw, int width, int height, int depth);
 ia *raw2i(const uint8_t *raw, int width, int height, int depth);
 
 // N64 raw CI4/CI8 -> intermediate CI
-ci* raw2ci_torch(const uint8_t* raw, int width, int height, int depth);
+ci *raw2ci_torch(const uint8_t* raw, int width, int height, int depth);
+
+int convert_raw_to_ci8(unsigned char **png_output, int *size_output, uint8_t *texture, uint8_t *palette, int format, int width, int height, int depth, int pal_depth);
+
+int imgpal2rawci(uint8_t *rawci, const rgba *img, const rgba *pal, const uint8_t *wheel_mask, int raw_size, int ci_depth, int img_size, int pal_size);
 
 //---------------------------------------------------------
 // intermediate RGBA/IA -> N64 RGBA/IA/I/CI
@@ -69,7 +73,6 @@ int i2raw(uint8_t *raw, const ia *img, int width, int height, int depth);
 
 // intermediate CI -> N64 raw CI4/CI8
 int ci2raw_torch(uint8_t* raw, const ci* img, int width, int height, int depth);
-
 
 //---------------------------------------------------------
 // N64 CI <-> N64 RGBA16/IA16
@@ -93,7 +96,6 @@ int ia2png(unsigned char** png_output, int* size_output, const ia* img, int widt
 
 int ci2png(unsigned char** png_output, int* size_output, const ci* img, int width, int height);
 
-
 //---------------------------------------------------------
 // PNG -> intermediate RGBA/IA
 //---------------------------------------------------------
@@ -110,6 +112,8 @@ ia *png2ia(unsigned char* png_input, int size_input, int *width, int *height);
 // PNG file -> intermediate CI
 ci* png2ci(unsigned char* png_input, int size_input, int* width, int* height);
 
+// Adds colours to palette data
+static int pal_add_color(palette_t* pal, uint16_t val);
 
 //---------------------------------------------------------
 // version

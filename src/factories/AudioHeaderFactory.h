@@ -4,7 +4,16 @@
 
 class AudioAIFCExporter : public BaseExporter {
 public:
-    void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override {
+        return std::nullopt;
+    }
+};
+
+class AudioDummyExporter : public BaseExporter {
+public:
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override {
+        return std::nullopt;
+    }
 };
 
 class AudioHeaderFactory : public BaseFactory {
@@ -13,9 +22,12 @@ public:
     std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override {
         return std::nullopt;
     }
-    inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
+    std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
             REGISTER(Modding, AudioAIFCExporter)
+            REGISTER(Header, AudioDummyExporter)
+            REGISTER(Binary, AudioDummyExporter)
+            REGISTER(Code, AudioDummyExporter)
         };
     }
     bool SupportModdedAssets() override { return true; }

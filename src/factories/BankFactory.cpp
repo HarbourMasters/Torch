@@ -1,11 +1,11 @@
 #include "BankFactory.h"
 #include "Companion.h"
 
-void BankBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult BankBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto bank = std::static_pointer_cast<BankData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Bank, 0);
+    WriteHeader(writer, Torch::ResourceType::Bank, 0);
     writer.Write(bank->mBankId);
     writer.Write(static_cast<uint32_t>(bank->mBank.insts.size()));
     for (auto& instrument : bank->mBank.insts) {
@@ -84,6 +84,7 @@ void BankBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> BankFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {

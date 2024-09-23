@@ -14,7 +14,7 @@ LUS::BinaryWriter::BinaryWriter(std::shared_ptr<Stream> nStream) {
     mStream = nStream;
 }
 
-void LUS::BinaryWriter::SetEndianness(Endianness endianness) {
+void LUS::BinaryWriter::SetEndianness(Torch::Endianness endianness) {
     this->mEndianness = endianness;
 }
 
@@ -47,7 +47,7 @@ void LUS::BinaryWriter::Write(uint8_t value) {
 }
 
 void LUS::BinaryWriter::Write(int16_t value) {
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         value = BSWAP16(value);
     }
 
@@ -55,7 +55,7 @@ void LUS::BinaryWriter::Write(int16_t value) {
 }
 
 void LUS::BinaryWriter::Write(uint16_t value) {
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         value = BSWAP16(value);
     }
 
@@ -63,7 +63,7 @@ void LUS::BinaryWriter::Write(uint16_t value) {
 }
 
 void LUS::BinaryWriter::Write(int32_t value) {
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         value = BSWAP32(value);
     }
 
@@ -76,7 +76,7 @@ void LUS::BinaryWriter::Write(int32_t valueA, int32_t valueB) {
 }
 
 void LUS::BinaryWriter::Write(uint32_t value) {
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         value = BSWAP32(value);
     }
 
@@ -84,7 +84,7 @@ void LUS::BinaryWriter::Write(uint32_t value) {
 }
 
 void LUS::BinaryWriter::Write(int64_t value) {
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         value = BSWAP64(value);
     }
 
@@ -92,7 +92,7 @@ void LUS::BinaryWriter::Write(int64_t value) {
 }
 
 void LUS::BinaryWriter::Write(uint64_t value) {
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         value = BSWAP64(value);
     }
 
@@ -100,7 +100,7 @@ void LUS::BinaryWriter::Write(uint64_t value) {
 }
 
 void LUS::BinaryWriter::Write(float value) {
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         float tmp;
         char* dst = (char*)&tmp;
         char* src = (char*)&value;
@@ -115,7 +115,7 @@ void LUS::BinaryWriter::Write(float value) {
 }
 
 void LUS::BinaryWriter::Write(double value) {
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         double tmp;
         char* dst = (char*)&tmp;
         char* src = (char*)&value;

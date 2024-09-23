@@ -6,25 +6,22 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
-void MK64::CourseVtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult MK64::CourseVtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return std::nullopt;
     }
 
     write << "extern CourseVtx " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<CourseVtxData>(raw)->mVtxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
-
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
 
     write << "CourseVtx " << symbol << "[] = {\n";
 
@@ -50,19 +47,16 @@ void MK64::CourseVtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         // {{{ x, y, z }, { tc1, tc2 }, { c1, c2, c3, c4 }}}
         write << "{{{" << NUM(x) << ", " << NUM(y) << ", " << NUM(z) << "}, {" << NUM(tc1) << ", " << NUM(tc2) << "}, {" << COL(c1) << ", " << COL(c2) << ", " << COL(c3) << ", " << COL(c4) << "}}},\n";
     }
+    write << "};\n";
 
-    if (Companion::Instance->IsDebug()) {
-        write << fourSpaceTab << "// 0x" << std::hex << std::uppercase << (offset + (sizeof(CourseVtx) * vtx.size())) << "\n";
-    }
-
-    write << "};\n\n";
+    return offset + vtx.size() * sizeof(CourseVtx);
 }
 
-void MK64::CourseVtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MK64::CourseVtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto vtx = std::static_pointer_cast<CourseVtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::CourseVertex, 0);
+    WriteHeader(writer, Torch::ResourceType::CourseVertex, 0);
     writer.Write((uint32_t) vtx->mVtxs.size());
     for(auto v : vtx->mVtxs) {
         writer.Write(v.ob[0]);
@@ -77,6 +71,7 @@ void MK64::CourseVtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -85,7 +80,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(CourseVtx));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<CourseVtx> vertices;
 
     for(size_t i = 0; i < count; i++) {

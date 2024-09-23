@@ -19,7 +19,12 @@
 #define G_MTX_OTR 0x36
 #define G_TEXRECT_WIDE 0x37
 #define G_FILLWIDERECT 0x38
+#define G_DL_OTR_INDEX 0x3D
 #define G_MOVEMEM_OTR_HASH 0x42
+
+// DL FLAGS
+#define G_DL_PUSH 0x00
+#define G_DL_NO_PUSH 0x01
 
 /* GFX Effects */
 #define G_SETGRAYSCALE 0x39
@@ -127,6 +132,9 @@ _DW({                                                                           
 #define gsSPVertexOTR(v, n, v0) \
     { (_SHIFTL(G_VTX_OTR_HASH, 24, 8) | _SHIFTL((n), 12, 8) | _SHIFTL((v0) + (n), 1, 7)), (uintptr_t)(v) }
 
+#define gsSPRawOpcode(opcode) \
+    { _SHIFTL(opcode, 24, 8), 0 }
+
 #define	gsDPSetTextureOTRImage(fmt, siz, width, i)	\
     {{									\
         _SHIFTL(G_SETTIMG_OTR_HASH, 24, 8) | _SHIFTL(fmt, 21, 3) |			\
@@ -137,7 +145,7 @@ _DW({                                                                           
 #define gsSPBranchListOTRHash(dl) \
     {{									\
         (_SHIFTL((G_DL_OTR_HASH), 24, 8) | _SHIFTL((0x01), 16, 8) | 			\
-         _SHIFTL((0), 0, 16)), 						\
+         _SHIFTL((0), 1, 16)), 						\
             (uintptr_t)(dl)						\
     }}
 
@@ -153,6 +161,13 @@ _DW({                                                                           
         (_SHIFTL((G_DL_OTR_HASH), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
          _SHIFTL((0), 0, 16)), 						\
             (uintptr_t)(dl)						\
+    }}
+
+#define gsSPDisplayListOTRIndex(dl) \
+    {{                                  \
+        (_SHIFTL((G_DL_OTR_INDEX), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
+         _SHIFTL((0), 0, 16)), 						\
+            (uintptr_t)((SEGMENT_NUMBER(dl) << 24) | ((SEGMENT_OFFSET(dl) / 8) & 0x00FFFFFF))	\
     }}
 
 #define gsSPDisplayListOTRFilePath(dl) \

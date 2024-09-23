@@ -1,10 +1,10 @@
 #include "BaseFactory.h"
 
-void BaseExporter::WriteHeader(LUS::BinaryWriter &writer, LUS::ResourceType resType, int32_t version) {
-    writer.Write((uint8_t)(LUS::Endianness::Native)); // 0x00
-    writer.Write((uint8_t)0); // 0x01
-    writer.Write((uint8_t)0); // 0x02
-    writer.Write((uint8_t)0); // 0x03
+void BaseExporter::WriteHeader(LUS::BinaryWriter &writer, Torch::ResourceType resType, int32_t version) {
+    writer.Write((int8_t)(Torch::Endianness::Native)); // 0x00 - Endianness
+    writer.Write((int8_t)0); // 0x01 - Is Asset Custom
+    writer.Write((int8_t)0); // 0x02 -
+    writer.Write((int8_t)0); // 0x03
     writer.Write((uint32_t) resType); // 0x04
     writer.Write((uint32_t) version); // 0x08
     writer.Write((uint64_t) 0xDEADBEEFDEADBEEF); // id, 0x0C

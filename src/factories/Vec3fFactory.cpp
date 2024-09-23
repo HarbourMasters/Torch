@@ -16,15 +16,16 @@ Vec3fData::Vec3fData(std::vector<Vec3f> vecs): mVecs(vecs) {
     }
 }
 
-void Vec3fHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult Vec3fHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return std::nullopt;
     }
 
     write << "extern Vec3f " << symbol << "[];\n";
+    return std::nullopt;
 }
 
 
@@ -32,24 +33,15 @@ int GetPrecision(Vec3f v) {
     return std::max(std::max(GetPrecision(v.x), GetPrecision(v.y)), GetPrecision(v.z));
 }
 
-void Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto vecData = std::static_pointer_cast<Vec3fData>(raw);
-    auto off = offset;
-    int i;
-
-    if(IS_SEGMENTED(off)) {
-        off = SEGMENT_OFFSET(off);
-    } 
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::uppercase << std::hex << off << "\n";
-    }
+    int i = 0;
 
     write << "Vec3f " << symbol << "[] = {";
 
     int cols = 120 / (3 * vecData->mMaxWidth + 8);
-    i = 0;
     for(Vec3f v : vecData->mVecs) {
         if((i++ % cols) == 0) {
             write << "\n" << fourSpaceTab;
@@ -58,24 +50,38 @@ void Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     }
 
     write << "\n};\n";
+
     if (Companion::Instance->IsDebug()) {
         write << "// Count: " << vecData->mVecs.size() << " Vec3fs\n";
-        write << "// 0x" << std::uppercase << std::hex << off + vecData->mVecs.size() * sizeof(Vec3f) << "\n";
     }
-    write << "\n";
-    
+
+    return offset + vecData->mVecs.size() * sizeof(Vec3f);
 }
 
-void Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto vecData = std::static_pointer_cast<Vec3fData>(raw);
 
+    WriteHeader(writer, Torch::ResourceType::Vec3f, 0);
+    writer.Write((uint32_t) vecData->mVecs.size());
+
+    for(Vec3f v : vecData->mVecs) {
+        auto [x, y, z] = v;
+        writer.Write(x);
+        writer.Write(y);
+        writer.Write(z);
+    }
+
+    writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> Vec3fFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     std::vector<Vec3f> vecs;
     const auto count = GetSafeNode<int>(node, "count");
-    auto [root, segment] = Decompressor::AutoDecode(node, buffer, 0x1000);
+    auto [root, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(Vec3f));
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for(int i = 0; i < count; i++) {
         auto vx = reader.ReadFloat();

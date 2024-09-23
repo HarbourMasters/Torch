@@ -37,9 +37,23 @@ std::unordered_map<std::string, uint8_t> gF3DExTable = {
     { "G_QUAD", 0xB5 }
 };
 
+std::unordered_map<std::string, uint8_t> gF3DEx2Table = {
+    { "G_VTX", 0x01 },
+    { "G_DL", 0xDE },
+    { "G_ENDDL", 0xDF },
+    { "G_SETTIMG", 0xFD },
+    { "G_MOVEMEM", 0xDC },
+    { "G_MV_L0", 0x86 },
+    { "G_MV_L1", 0x88 },
+    { "G_MV_LIGHT", 0xA },
+    { "G_TRI2", 0x06 },
+    { "G_QUAD", 0x07 }
+};
+
 std::unordered_map<GBIVersion, std::unordered_map<std::string, uint8_t>> gGBITable = {
     { GBIVersion::f3d, gF3DTable },
     { GBIVersion::f3dex, gF3DExTable },
+    { GBIVersion::f3dex2, gF3DEx2Table },
 };
 
 #define GBI(cmd) gGBITable[Companion::Instance->GetGBIVersion()][#cmd]
@@ -64,18 +78,19 @@ void GFXDSetGBIVersion(){
     }
 }
 
-void DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return std::nullopt;
     }
 
     write << "extern Gfx " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -110,33 +125,24 @@ void DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData>
     gfxd_timg_callback(GFXDOverride::Texture);
     gfxd_dl_callback(GFXDOverride::DisplayList);
     gfxd_tlut_callback(GFXDOverride::Palette);
-    gfxd_lightsn_callback(GFXDOverride::Light);
+    gfxd_lightsn_callback(GFXDOverride::Lights);
+    gfxd_light_callback(GFXDOverride::Light);
     GFXDSetGBIVersion();
-
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
     gfxd_execute();
 
     write << std::string(out);
     write << "};\n";
+    const auto sz = (sizeof(uint32_t) * cmds.size());
 
     if (Companion::Instance->IsDebug()) {
-        const auto sz = (sizeof(uint32_t) * cmds.size());
-
         write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << (offset + sz) << "\n";
+    } else {
+        write << "\n";
     }
 
-    write << "\n";
+    return offset + sz;
 }
 
 void DebugDisplayList(uint32_t w0, uint32_t w1){
@@ -181,14 +187,15 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr){
     return std::nullopt;
 }
 
-void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    const auto gbi = Companion::Instance->GetGBIVersion();
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::DisplayList, 0);
+    WriteHeader(writer, Torch::ResourceType::DisplayList, 0);
 
     while (writer.GetBaseAddress() % 8 != 0)
-        writer.Write(static_cast<uint8_t>(0xFF));
+        writer.Write(static_cast<int8_t>(0xFF));
 
     auto bhash = CRC64((*replacement).c_str());
     writer.Write(static_cast<uint32_t>((G_MARKER << 24)));
@@ -202,17 +209,70 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         uint8_t opcode = w0 >> 24;
 
         if(opcode == GBI(G_VTX)) {
-            auto nvtx = (C0(0, 16)) / sizeof(Vtx);
-            auto didx = C0(16, 4);
+            size_t nvtx;
+            size_t didx;
+
+            switch (gbi) {
+                case GBIVersion::f3dex2:
+                    nvtx = C0(12, 8);
+                    didx = C0(1, 7) - C0(12, 8);
+                    break;
+                case GBIVersion::f3dex:
+                case GBIVersion::f3dexb:
+                    nvtx = C0(10, 6);
+                    didx = C0(17, 7);
+                    break;
+                default:
+                    nvtx = (C0(0, 16)) / sizeof(Vtx_t);
+                    didx = C0(16, 4);
+                    break;
+            }
+
             auto ptr = w1;
+            auto overlap = GFXDOverride::GetVtxOverlap(ptr);
+
+            if(overlap.has_value()){
+                auto ovnode = std::get<1>(overlap.value());
+                auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
+                uint64_t hash = CRC64(path.c_str());
+
+                if(hash == 0) {
+                    throw std::runtime_error("Vtx hash is 0 for " + std::get<0>(overlap.value()));
+                }
+
+                SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, path);
+
+                auto offset = GetSafeNode<uint32_t>(ovnode, "offset");
+                auto count = GetSafeNode<uint32_t>(ovnode, "count");
+                auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
+
+                Gfx value = gsSPVertexOTR(diff, nvtx, didx);
+
+                SPDLOG_INFO("gsSPVertexOTR({}, {}, {})", diff, nvtx, didx);
+
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+
+                writer.Write(w0);
+                writer.Write(w1);
+
+                w0 = hash >> 32;
+                w1 = hash & 0xFFFFFFFF;
+            } else {
+                SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
+            }
+
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
             if(dec.has_value()){
                 uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
+                if(hash == 0) {
+                    throw std::runtime_error("Vtx hash is 0 for " + std::get<0>(dec.value()));
+                }
+
                 SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
 
-                // TODO: Find a better way to do this because its going to break on other games
-                Gfx value = gsSPVertexOTR(didx, nvtx, 0);
+                Gfx value = gsSPVertexOTR(0, nvtx, didx);
 
                 SPDLOG_INFO("gsSPVertex({}, {}, 0x{:X})", nvtx, didx, ptr);
 
@@ -230,12 +290,21 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
         }
 
         if(opcode == GBI(G_DL)) {
+            Gfx value;
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
+            auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
-            Gfx value = gsSPDisplayListOTRHash(ptr);
-            w0 = value.words.w0;
-            w1 = value.words.w1;
+            // Export displaylist segment addresses as an index into a buffer of gfx
+            if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) && (SEGMENT_NUMBER(w1) == 0x07)) {
+                value = gsSPDisplayListOTRIndex(w1);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            } else {
+                value = gsSPDisplayListOTRHash(ptr);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            }
 
             writer.Write(w0);
             writer.Write(w1);
@@ -248,26 +317,62 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
             } else {
                 SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
             }
+
+            if(branch){
+                writer.Write(w0);
+                writer.Write(w1);
+
+                value = gsSPRawOpcode(GBI(G_ENDDL));
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            }
         }
 
+        // TODO: Fix this opcode
         if(opcode == GBI(G_MOVEMEM)) {
             auto ptr = w1;
-            auto dec = Companion::Instance->GetNodeByAddr(ptr);
+
+            uint8_t index = 0;
+            uint8_t offset = 0;
+            bool hasOffset = false;
+
+            switch (gbi) {
+                case GBIVersion::f3d:
+                    index = C0(16, 8);
+                    offset = 0;
+                    break;
+                default:
+                    index = C0(0, 8);
+                    offset = C0(8, 8) * 8;
+                    break;
+            }
+                        
+            auto res = Companion::Instance->GetNodeByAddr(ptr);
+
+            if(!res.has_value()){
+                res = Companion::Instance->GetNodeByAddr(ptr - 0x8);
+                hasOffset = res.has_value();
+
+                if(!hasOffset){
+                    SPDLOG_INFO("Could not find light {:X}", ptr);
+                    // throw std::runtime_error("Could not find light");                    
+                }
+            }
 
             w0 &= 0x00FFFFFF;
             w0 += G_MOVEMEM_OTR_HASH << 24;
-            w1 = 0;
+            w1 = _SHIFTL(index, 24, 8) | _SHIFTL(offset, 16, 8) | _SHIFTL((uint8_t)(hasOffset ? 1 : 0), 8, 8);
 
             writer.Write(w0);
             writer.Write(w1);
 
-            if(dec.has_value()){
-                uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
-                SPDLOG_INFO("Found movemem: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
+            if(res.has_value()){
+                uint64_t hash = CRC64(std::get<0>(res.value()).c_str());
+                SPDLOG_INFO("Found movemem: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(res.value()));
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
             } else {
-                SPDLOG_WARN("Could not find movemem at 0x{:X}", ptr);
+                SPDLOG_WARN("Could not find light at 0x{:X}", ptr);
             }
         }
 
@@ -275,20 +380,33 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
-            Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
-            w0 = value.words.w0;
-            w1 = value.words.w1;
-
-            writer.Write(w0);
-            writer.Write(w1);
-
-            if(dec.has_value()){
-                uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
-                SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
-                w0 = hash >> 32;
-                w1 = hash & 0xFFFFFFFF;
+            // Export texture segment addresses as segmented addresses
+            if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) && ((SEGMENT_NUMBER(w1) == 0x03) || (SEGMENT_NUMBER(w1) == 0x05))) {
+                w1 |= 1;
+                writer.Write(w0);
+                writer.Write(w1);
             } else {
-                SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
+                Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            
+
+                writer.Write(w0);
+                writer.Write(w1);
+
+                if(dec.has_value()){
+                    uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
+
+                    if(hash == 0){
+                        throw std::runtime_error("Texture hash is 0 for " + std::get<0>(dec.value()));
+                    }
+
+                    SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
+                    w0 = hash >> 32;
+                    w1 = hash & 0xFFFFFFFF;
+                } else {
+                    SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
+                }
             }
         }
 
@@ -297,6 +415,7 @@ void DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedDat
     }
 
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& raw_buffer, YAML::Node& node) {
@@ -304,7 +423,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
     auto [_, segment] = Decompressor::AutoDecode(node, raw_buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     std::vector<uint32_t> gfxs;
     auto processing = true;
@@ -320,74 +439,46 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         }
 
         if(opcode == GBI(G_DL)) {
+            if (SEGMENT_NUMBER(node["offset"].as<uint32_t>()) == SEGMENT_NUMBER(w1)) {
 
-            std::optional<uint32_t> segment;
+                std::optional<uint32_t> segment;
 
-            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value()){
-                SPDLOG_INFO("Addr to Display list command at 0x{:X} not in yaml, autogenerating it", w1);
-
-                auto rom = Companion::Instance->GetRomData();
-                auto factory = Companion::Instance->GetFactory("GFX")->get();
-
-                std::string output;
-                YAML::Node dl;
-                uint32_t ptr = w1;
-
-                if(Decompressor::IsSegmented(w1)){
-                    SPDLOG_INFO("Found segmented display list at 0x{:X}", w1);
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(ptr)) +"_dl_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
-                } else {
-                    SPDLOG_INFO("Found display list at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("dl_" + Torch::to_hex(ptr, false));
+                if ((w0 >> 16) & G_DL_NO_PUSH) {
+                    SPDLOG_INFO("Branch List Command Found");
+                    processing = false;
                 }
 
-                dl["type"] = "GFX";
-                dl["offset"] = ptr;
-                dl["symbol"] = output;
-                dl["autogen"] = true;
+                YAML::Node gfx;
+                gfx["type"] = "GFX";
+                gfx["offset"] = w1;
 
-                auto result = factory->parse(rom, dl);
-
-                if(!result.has_value()){
-                    continue;
-                }
-
-                Companion::Instance->RegisterAsset(output, dl);
-            } else {
-                SPDLOG_WARN("Could not find display list at 0x{:X}", w1);
+                Companion::Instance->AddAsset(gfx);
             }
         }
 
-	    // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
-	    // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
+        // This opcode is generally used as part of multiple macros such as gsSPSetLights1.
+        // We need to process gsSPLight which is a subcommand inside G_MOVEMEM (0x03).
         if(opcode == GBI(G_MOVEMEM)) {
-	    // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
-	    uint8_t subcommand = (w0 >> 16) & 0xFF;
+            // 0x03860000 or 0x03880000 subcommand will contain 0x86/0x88 for G_MV_L0 and G_MV_L1. Other subcommands also exist.
+            uint8_t subcommand = (w0 >> 16) & 0xFF;
             uint8_t index = 0;
             uint8_t offset = 0;
             bool light = false;
 
             switch (Companion::Instance->GetGBIVersion()) {
-                case GBIVersion::f3d:
-                    index = C0(16, 8);
-
-                    if(index == GBI(G_MV_L0) || index == GBI(G_MV_L1)) {
-                        light = true;
-                    }
-
-                    break;
-	           // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
-	           // Otherwise mk64 will break.
+               // If needing light generation on G_MV_L0 then we'll need to walk the DL ptr forward/backward to check for 0xBC
+               // Otherwise mk64 will break.
+               // PD: Mega, this works for sm64 too, why you didn't implement it? >:(
+               // PD: Im jk, <3
+               case GBIVersion::f3d:
                case GBIVersion::f3dex:
-                    offset = w1;
-
                     /*
                      * Only generate lights on the second gsSPLight.
                      * gsSPSetLights1(name) outputs three macros:
                      *
-	                 * gsSPNumLights(NUMLIGHTS_1)
-	                 * gsSPLight(&name.l[0], G_MV_L0)
-	                 * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
+                     * gsSPNumLights(NUMLIGHTS_1)
+                     * gsSPLight(&name.l[0], G_MV_L0)
+                     * gsSPLight(&name.a, G_MV_L1) <-- This ptr is used to generate the lights
                     */
                     if (subcommand == GBI(G_MV_L1)) {
                         light = true;
@@ -396,40 +487,18 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     index = C0(0, 8);
                     offset = C0(8, 8) * 8;
 
-                    if(index == GBI(G_MV_LIGHT)) {
+                    // same thing as above; see macro gSPLight at gbi.h
+                    if(index == GBI(G_MV_LIGHT) && offset == (2 * 24 + 24)) {
                         light = true;
                     }
                     break;
             }
 
-            if(const auto decl = Companion::Instance->GetNodeByAddr(w1); !decl.has_value() && light){
-                SPDLOG_INFO("Addr to Lights1 command at 0x{:X} not in yaml, autogenerating it", w1);
-                auto rom = Companion::Instance->GetRomData();
-                auto factory = Companion::Instance->GetFactory("LIGHTS")->get();
-
-                std::string output;
-                YAML::Node light;
-                uint32_t ptr = w1;
-
-                if(Decompressor::IsSegmented(w1)){
-                    SPDLOG_INFO("Found segmented lights at 0x{:X}", w1);
-                    ptr = w1;
-                    output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_lights1_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
-                } else {
-                    SPDLOG_INFO("Found lights at 0x{:X}", ptr);
-                    output = Companion::Instance->NormalizeAsset("lights1_" + Torch::to_hex(w1, false));
-                }
-
-                light["type"] = "lights";
-                light["offset"] = ptr;
-                light["symbol"] = output;
-                light["autogen"] = true;
-                auto result = factory->parse(rom, light);
-                if(result.has_value()){
-                    Companion::Instance->RegisterAsset(output, light);
-                }
-            } else {
-                SPDLOG_WARN("Could not find lights at 0x{:X}", w1);
+            if(light){
+                YAML::Node lnode;
+                lnode["type"] = "LIGHTS";
+                lnode["offset"] = w1;
+                Companion::Instance->AddAsset(lnode);
             }
         }
 
@@ -467,33 +536,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                         GFXDOverride::RegisterVTXOverlap(w1, search.value());
                     }
                 } else {
-                    SPDLOG_INFO("Addr to Vtx array at 0x{:X} not in yaml, autogenerating it", w1);
-
-                    auto ptr = w1;
-                    auto rom = Companion::Instance->GetRomData();
-                    auto factory = Companion::Instance->GetFactory("VTX")->get();
-
-                    std::string output;
                     YAML::Node vtx;
-
-                    if(Decompressor::IsSegmented(w1)){
-                        SPDLOG_INFO("Creating segmented vtx from 0x{:X}", ptr);
-                        ptr = w1;
-                        output = Companion::Instance->NormalizeAsset("seg" + std::to_string(SEGMENT_NUMBER(w1)) +"_vtx_" + Torch::to_hex(SEGMENT_OFFSET(ptr), false));
-                    } else {
-                        SPDLOG_INFO("Creating vtx from 0x{:X}", ptr);
-                        output = Companion::Instance->NormalizeAsset("vtx_" + Torch::to_hex(w1, false));
-                    }
-
                     vtx["type"] = "VTX";
-                    vtx["offset"] = ptr;
+                    vtx["offset"] = w1;
                     vtx["count"] = nvtx;
-                    vtx["symbol"] = output;
-                    vtx["autogen"] = true;
-                    auto result = factory->parse(rom, vtx);
-                    if(result.has_value()){
-                        Companion::Instance->RegisterAsset(output, vtx);
-                    }
+                    Companion::Instance->AddAsset(vtx);
                 }
             } else {
                 SPDLOG_WARN("Found vtx at 0x{:X}", w1);

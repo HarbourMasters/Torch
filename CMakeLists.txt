@@ -1,9 +1,25 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.5)
 project(torch)
 include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 11)
+
+################################################################################
+# Set target arch type if empty. Visual studio solution generator provides it.
+################################################################################
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    if(NOT CMAKE_VS_PLATFORM_NAME)
+        set(CMAKE_VS_PLATFORM_NAME "x64")
+    endif()
+    message("${CMAKE_VS_PLATFORM_NAME} architecture in use")
+
+    if(NOT ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64"
+        OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32"))
+        message(FATAL_ERROR "${CMAKE_VS_PLATFORM_NAME} arch is not supported!")
+    endif()
+endif()
+
 
 # Link libgfxd
 # Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
@@ -27,16 +43,15 @@ endif()
 
 # Source files
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp)
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/**/*.c)
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
-set(USE_STANDALONE ON)
-set(VPKTOOL_BUILD_GUI OFF)
-set(VPKTOOL_BUILD_TESTS OFF)
-set(VPKTOOL_BUILD_INSTALLER OFF)
+option(USE_STANDALONE "Build as a standalone executable" ON)
+option(BUILD_STORMLIB "Build with StormLib support" ON)
 
 # Build
 if (USE_STANDALONE)
@@ -64,6 +79,7 @@ else()
                 /W3;
                 /MD
             >
+            /STACK:16777216
             /permissive-;
             /MP;
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
@@ -81,6 +97,7 @@ else()
                 /Gy;
                 /MD
             >
+            /STACK:16777216
             /permissive-;
             /MP;
             /w;
@@ -99,21 +116,20 @@ else()
                 /INCREMENTAL:NO;
                 /FORCE:MULTIPLE
             >
+            /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
             /SUBSYSTEM:CONSOLE
         )
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /STACK:8777216
-            >
             $<$<CONFIG:Release>:
                 /OPT:REF;
                 /OPT:ICF;
                 /INCREMENTAL:NO;
                 /FORCE:MULTIPLE
             >
+            /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
             /SUBSYSTEM:CONSOLE
@@ -123,15 +139,20 @@ endif()
 
 # Fetch Dependencies
 
-if(EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
-FetchContent_Declare(
-    GSL
-    GIT_REPOSITORY https://github.com/Microsoft/GSL.git
-    GIT_TAG a3534567187d2edc428efd3f13466ff75fe5805c
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
+endif()
+
+if(NOT USE_STANDALONE AND EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
+    FetchContent_Declare(
+        GSL
+        GIT_REPOSITORY https://github.com/Microsoft/GSL.git
+        GIT_TAG a3534567187d2edc428efd3f13466ff75fe5805c
     )
     FetchContent_MakeAvailable(GSL)
     target_link_libraries(${PROJECT_NAME} PRIVATE GSL)
-    endif()
+endif()
 
 # Link BinaryTools
 
@@ -147,12 +168,17 @@ target_link_libraries(${PROJECT_NAME} PRIVATE N64Graphics)
 
 # Link StormLib
 
-set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
-add_subdirectory(${STORMLIB_DIR})
-target_link_libraries(${PROJECT_NAME} PRIVATE storm)
+if (BUILD_STORMLIB)
+    set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
+    add_subdirectory(${STORMLIB_DIR})
+    target_link_libraries(${PROJECT_NAME} PRIVATE storm)
+endif()
 
 # Link YamlCpp
 
+set(YAML_CPP_BUILD_TOOLS OFF)
+set(YAML_CPP_BUILD_TESTS OFF)
+set(YAML_CPP_DISABLE_UNINSTALL ON)
 FetchContent_Declare(
     yaml-cpp
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
@@ -181,4 +207,11 @@ if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES
 endif()
 if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     target_compile_definitions(storm PRIVATE -D_POSIX_C_SOURCE=200809L)
+endif()
+
+if(NOT USE_STANDALONE)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME} PUBLIC ${yaml-cpp_SOURCE_DIR}/include)
 endif()

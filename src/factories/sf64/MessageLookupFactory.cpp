@@ -4,32 +4,22 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 
-void SF64::MessageLookupHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::MessageLookupHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return std::nullopt;
     }
 
     write << "extern MsgLookup " << symbol << "[];\n";
+    return std::nullopt;
 }
 
-void SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto table = std::static_pointer_cast<MessageTable>(raw)->mTable;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
-
-    if (IS_SEGMENTED(offset)) {
-        offset = SEGMENT_OFFSET(offset);
-    }
-
-    if (Companion::Instance->IsDebug()) {
-        if (IS_SEGMENTED(offset)) {
-            offset = SEGMENT_OFFSET(offset);
-        }
-        write << "// 0x" << std::hex << std::uppercase << offset << "\n";
-    }
 
     write << "// clang-format on\n";
     write << "MsgLookup " << symbol << "[] = {\n" << fourSpaceTab;
@@ -51,26 +41,32 @@ void SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::shared_pt
     }
 
     write << "\n};\n";
-
-    if (Companion::Instance->IsDebug()) {
-        write << "// 0x" << std::hex << std::uppercase << (offset + (table.size() * sizeof(uint16_t))) << "\n";
-    }
-
-    write << "\n";
+    return offset + table.size() * sizeof(uint16_t);
 }
 
-void SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<MessageTable>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::MessageTable, 0);
+    WriteHeader(writer, Torch::ResourceType::MessageTable, 0);
 
-    writer.Write(static_cast<uint32_t>(data->mTable.size()));
+    const auto count = data->mTable.size();
+    SPDLOG_INFO("Message Count: {}", count);
+    writer.Write(static_cast<uint32_t>(count));
     for(auto m : data->mTable) {
         writer.Write(m.id);
-        writer.Write(m.ptr);
+        auto dec = Companion::Instance->GetNodeByAddr(m.ptr);
+        if(dec.has_value()){
+            std::string path = std::get<0>(dec.value());
+            SPDLOG_INFO("Message ID: {} Ptr: {:X} Path: {}", m.id, m.ptr, path);
+            writer.Write(CRC64(path.c_str()));
+        } else {
+            writer.Write((uint64_t) 0);
+            SPDLOG_WARN("Failed to find message ID: {} Ptr: {:X}", m.id, m.ptr);
+        }
     }
     writer.Finish(write);
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SF64::MessageLookupFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -80,7 +76,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageLookupFactory::parse(st
 
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     int32_t id = reader.ReadInt32();
     uint32_t ptr = reader.ReadInt32();

@@ -112,14 +112,39 @@ int Palette(uint32_t ptr, int32_t idx, int32_t count) {
     return 0;
 }
 
-int Light(uint32_t ptr, int32_t count) {
+int Lights(uint32_t ptr, int32_t count) {
     auto dec = Companion::Instance->GetNodeByAddr(ptr);
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
         auto symbol = GetSafeNode<std::string>(node, "symbol");
-        SPDLOG_INFO("Found Light: 0x{:X} Symbol: {}", ptr, symbol);
+        SPDLOG_INFO("Found Lightsn: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts(symbol.c_str());
+        return 1;
+    }
+
+    SPDLOG_WARN("Could not find lights at 0x{:X}", ptr);
+    return 0;
+}
+
+int Light(uint32_t ptr) {
+    auto res = Companion::Instance->GetNodeByAddr(ptr);
+
+    if(res.has_value()){
+        auto node = std::get<1>(res.value());
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
+        SPDLOG_INFO("Found Light A Ptr: 0x{:X} Symbol: {}", ptr, symbol);
+        gfxd_puts(("&" + symbol + ".a").c_str());
+        return 1;
+    }
+
+    res = Companion::Instance->GetNodeByAddr(ptr - 0x8);
+
+    if(res.has_value()){
+        auto node = std::get<1>(res.value());
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
+        SPDLOG_INFO("Found Light L Ptr: 0x{:X} Symbol: {}", ptr, symbol);
+        gfxd_puts(("&" + symbol + ".l").c_str());
         return 1;
     }
 

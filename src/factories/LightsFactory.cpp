@@ -4,100 +4,120 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 
-void LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult LightsHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
-        write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return;
+        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+        return std::nullopt;
     }
 
-    write << "extern Lights1 " << symbol << ";\n";
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    const auto searchTable = Companion::Instance->SearchTable(offset);
+
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode, index_size] = searchTable.value();
+
+        if(start != offset){
+            return std::nullopt;
+        }
+
+        write << "extern Lights1 " << name << "[];\n";
+    } else {
+        write << "extern Lights1 " << symbol << ";\n";
+    }
+    return std::nullopt;
 }
 
-void LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult LightsCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;
     auto symbol = GetSafeNode(node, "symbol", entryName);
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    const auto searchTable = Companion::Instance->SearchTable(offset);
 
-    write << "Lights1 " << symbol << " = gdSPDefLights1 (\n";
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode, index_size] = searchTable.value();
 
-    // Ambient
-    auto r = (int16_t) light.a.l.col[0];
-    auto g = (int16_t) light.a.l.col[1];
-    auto b = (int16_t) light.a.l.col[2];
 
-    // Diffuse
-    auto r2 = (int16_t) light.l[0].l.col[0];
-    auto g2 = (int16_t) light.l[0].l.col[1];
-    auto b2 = (int16_t) light.l[0].l.col[2];
+        if(start == offset){
+            write << "Lights1 " << name << "[] = {\n";
+        }
 
-    // Direction
-    auto x = (int16_t) light.l[0].l.dir[0];
-    auto y = (int16_t) light.l[0].l.dir[1];
-    auto z = (int16_t) light.l[0].l.dir[2];
+        // Ambient
+        auto r = (int16_t) light.a.l.col[0];
+        auto g = (int16_t) light.a.l.col[1];
+        auto b = (int16_t) light.a.l.col[2];
 
-    SPDLOG_INFO("Read light: {:X} {:X} {:X} {:X} {:X}", r, g, b, r2, g2);
+        // Diffuse
+        auto r2 = (int16_t) light.l[0].l.col[0];
+        auto g2 = (int16_t) light.l[0].l.col[1];
+        auto b2 = (int16_t) light.l[0].l.col[2];
 
-    write << fourSpaceTab;
-    write << r << ", " << g << ", " << b << ",\n";
-    write << fourSpaceTab;
-    write << r2 << ", " << g2 << ", " << b2 << ", " << x << ", " << y << ", " << z << "\n";
+        // Direction
+        auto x = (int16_t) light.l[0].l.dir[0];
+        auto y = (int16_t) light.l[0].l.dir[1];
+        auto z = (int16_t) light.l[0].l.dir[2];
 
-    write << ");\n\n";
+        SPDLOG_INFO("Read light: {:X} {:X} {:X} {:X} {:X}", r, g, b, r2, g2);
+
+        write << fourSpaceTab << "gdSPDefLights1(\n";
+
+        write << fourSpaceTab << fourSpaceTab;
+        write << r << ", " << g << ", " << b << ",\n";
+        write << fourSpaceTab << fourSpaceTab;
+        write << r2 << ", " << g2 << ", " << b2 << ", " << x << ", " << y << ", " << z << "\n";
+
+        write << fourSpaceTab << "),\n";
+
+        if (end == offset) {
+            write << "};\n\n";
+        }
+
+    } else {
+        write << "Lights1 " << symbol << " = gdSPDefLights1(\n";
+
+        // Ambient
+        auto r = (int16_t) light.a.l.col[0];
+        auto g = (int16_t) light.a.l.col[1];
+        auto b = (int16_t) light.a.l.col[2];
+
+        // Diffuse
+        auto r2 = (int16_t) light.l[0].l.col[0];
+        auto g2 = (int16_t) light.l[0].l.col[1];
+        auto b2 = (int16_t) light.l[0].l.col[2];
+
+        // Direction
+        auto x = (int16_t) light.l[0].l.dir[0];
+        auto y = (int16_t) light.l[0].l.dir[1];
+        auto z = (int16_t) light.l[0].l.dir[2];
+
+        SPDLOG_INFO("Read light: {:X} {:X} {:X} {:X} {:X}", r, g, b, r2, g2);
+
+        write << fourSpaceTab;
+        write << r << ", " << g << ", " << b << ",\n";
+        write << fourSpaceTab;
+        write << r2 << ", " << g2 << ", " << b2 << ", " << x << ", " << y << ", " << z << "\n";
+
+        write << ");\n\n";
+    }
+    return std::nullopt;
 }
 
-void LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult LightsBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto light = std::static_pointer_cast<LightsData>(raw)->mLights;
     auto writer = LUS::BinaryWriter();
-    auto size = sizeof(light.l) / sizeof(LightRaw);
-
-    WriteHeader(writer, LUS::ResourceType::Lights, 0);
-
-    writer.Write(reinterpret_cast<char*>(light.a.l.col), 3);
-    writer.Write(reinterpret_cast<char*>(light.a.l.colc), 3);
-
-    writer.Write(static_cast<uint32_t>(size));
-
-    for(size_t i = 0; i < size; i++) {
-        writer.Write(reinterpret_cast<char*>(light.l[i].l.col), 3);
-        writer.Write(reinterpret_cast<char*>(light.l[i].l.colc), 3);
-        writer.Write(reinterpret_cast<char*>(light.l[i].l.dir), 3);
-    }
+    WriteHeader(writer, Torch::ResourceType::Lights, 0);
+    writer.Write(reinterpret_cast<char*>(&light), sizeof(Lights1Raw));
     writer.Finish(write);
     writer.Close();
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto decoded = Decompressor::AutoDecode(node, buffer);
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, sizeof(Lights1Raw));
-
-    reader.SetEndianness(LUS::Endianness::Big);
     Lights1Raw lights;
-    // Directional light
-
-    // Ambient
-    auto r = (uint8_t)reader.ReadInt8();
-    auto g = (uint8_t)reader.ReadInt8();
-    auto b = (uint8_t)reader.ReadInt8();
-    //auto nil = reader.ReadInt32();
-    reader.Seek(5, LUS::SeekOffsetType::Current);
-
-    // Diffuse copy
-    auto r2 = reader.ReadUByte();
-    auto g2 = reader.ReadUByte();
-    auto b2 = reader.ReadUByte();
-
-    reader.Seek(5, LUS::SeekOffsetType::Current);
-
-    // Direction
-    auto x = reader.ReadInt8();
-    auto y = reader.ReadInt8();
-    auto z = reader.ReadInt8();
-
-    // TODO: This is a hack, but it works for now.
-    // The struct has several copies/padding. The zeros skip those for gdSPDefLights1.
-    lights = {r, g, b, 0, 0, 0, 0, 0, r2, g2, b2, 0, 0, 0, 0, 0, x, y, z};
-
+    reader.Read((char*) &lights, sizeof(Lights1Raw));
     return std::make_shared<LightsData>(lights);
 }
