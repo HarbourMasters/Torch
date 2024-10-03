@@ -165,6 +165,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
             writer.Write(hash);
         } else {
             SPDLOG_WARN("Could not find DisplayList at 0x{:X}", ptr);
+            writer.Write((uint64_t) 0);
         }
     }
 
@@ -177,6 +178,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
             writer.Write(hash);
         } else {
             SPDLOG_WARN("Could not find Texture Maps at 0x{:X}", ptr);
+            writer.Write((uint64_t) 0);
         }
     }
 
@@ -189,6 +191,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
             writer.Write(hash);
         } else {
             SPDLOG_WARN("Could not find Texture Arrays at 0x{:X}", ptr);
+            writer.Write((uint64_t) 0);
         }
     }
 
@@ -204,6 +207,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
             writer.Write(hash);
         } else {
             SPDLOG_WARN("Could not find DisplayList at 0x{:X}", ptr);
+            writer.Write((uint64_t) 0);
         }
     }
 

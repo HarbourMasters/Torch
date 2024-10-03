@@ -1,6 +1,6 @@
 #include "GeoUtils.h"
 
-#define next_s16_in_geo_script(src) BSWAP16((*(*src)++))
+#define next_s16_in_geo_script(src) (int16_t) BSWAP16((*(*src)++))
 
 int16_t* read_vec3s_to_vec3f(Vec3f& dst, int16_t *src) {
     dst.x = next_s16_in_geo_script(&src);
