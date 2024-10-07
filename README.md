@@ -1,5 +1,5 @@
 # Torch - [T]orch is [O]ur [R]esource [C]onversion [H]elper
-A generic asset processor for N64 games
+A generic asset processor for games
 
 ## Usage
 `./torch otr baserom.z64`
