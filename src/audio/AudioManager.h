@@ -25,9 +25,17 @@ namespace AIFC {
     };
 }
 
+struct SHHeader {
+    uint8_t sampleBankIndex;
+    int8_t sampleBankIndex2;
+    uint8_t numInsts;
+    uint8_t numDrums;
+};
+
 struct Entry {
     uint32_t offset;
     uint32_t length;
+    std::optional<SHHeader> header = std::nullopt;
 };
 
 struct AudioBankSound {
@@ -109,7 +117,7 @@ struct TBLFile {
 struct CTLHeader {
     uint32_t instruments;
     uint32_t numDrums;
-    uint32_t shared;
+    std::string date;
 };
 
 struct AdsrEnvelope {
@@ -143,7 +151,9 @@ public:
     std::string& get_sample(uint32_t id);
     AudioBankSample get_aifc(int32_t index);
     std::map<uint32_t, Bank> get_banks();
+    std::vector<AudioBankSample*> get_samples();
     uint32_t get_index(AudioBankSample* bank);
+    static void write_aifc(AudioBankSample* entry, LUS::BinaryWriter& writer);
 
 private:
     std::map<uint32_t, Bank> banks;
@@ -157,10 +167,9 @@ private:
     static Instrument parse_inst(std::vector<uint8_t>& data, uint32_t addr);
     static AdpcmLoop parse_loop(uint32_t addr, std::vector<uint8_t>& bankData);
     static AdpcmBook parse_book(uint32_t addr, std::vector<uint8_t>& bankData);
-    static AudioBankSample* parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank);
+    static AudioBankSample* parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank, bool hasHeaders);
     static std::vector<AdsrEnvelope> parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank);
-    static Bank parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank* bank, uint32_t index);
+    static Bank parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank* bank, uint32_t index, bool hasHeaders);
+    static std::vector<Entry> parse_sh_header(std::vector<uint8_t>& data, bool isCTL);
     static TBLFile parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& entries);
-
-    static void write_aifc(AudioBankSample* entry, LUS::BinaryWriter& writer);
 };
