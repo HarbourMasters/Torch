@@ -6,6 +6,7 @@
 
 extern "C" {
 #include <libmio0/mio0.h>
+#include <libyay0/yay0.h>
 #include <libmio0/tkmk00.h>
 }
 
@@ -31,13 +32,23 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
             gCachedChunks[offset] = new DataChunk{ decompressed, head.dest_size };
             return gCachedChunks[offset];
         }
+        case CompressionType::YAY0: {
+            uint32_t size = 0;
+            uint8_t* decompressed = yay0_decode(in_buf, &size);
+
+            if(!decompressed){
+                throw std::runtime_error("Failed to decode YAY0");
+            }
+
+            gCachedChunks[offset] = new DataChunk{ decompressed, size };
+            return gCachedChunks[offset];
+        }
         default:
             throw std::runtime_error("Unknown compression type");
     }
 }
 
 DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const uint32_t offset, const uint32_t size, const uint32_t alpha) {
-
     if(gCachedChunks.contains(offset)){
         return gCachedChunks[offset];
     }
@@ -59,18 +70,13 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     auto fileOffset = TranslateAddr(offset, true);
 
     // Extract compressed assets.
-    if (node["mio0"]) {
-        auto assetPtr = ASSET_PTR(offset);
-        auto gameSize = Companion::Instance->GetRomData().size();
-
-        auto fileOffset = TranslateAddr(offset, true);
-        offset = ASSET_PTR(offset);
-
-        auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
+    if (node["mio0"] || node["yay0"]) {
+        auto foffset = TranslateAddr(offset, true);
+        auto decoded = Decode(buffer, foffset, node["mio0"] ? CompressionType::MIO0 : CompressionType::YAY0);
         auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
         return {
-                .root = decoded,
-                .segment = { decoded->data, size }
+            .root = decoded,
+            .segment = { decoded->data, size }
         };
     }
 
@@ -80,8 +86,6 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         const auto width = GetSafeNode<uint32_t>(node, "width");
         const auto height = GetSafeNode<uint32_t>(node, "height");
         const auto textureSize = width * height * 2;
-        auto assetPtr = ASSET_PTR(offset);
-        auto gameSize = Companion::Instance->GetRomData().size();
 
         auto fileOffset = TranslateAddr(offset, true);
         offset = ASSET_PTR(offset);
@@ -89,26 +93,24 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         auto decoded = DecodeTKMK00(buffer, fileOffset + offset, textureSize, alpha);
         auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
         return {
-                .root = decoded,
-                .segment = { decoded->data, size }
+            .root = decoded,
+            .segment = { decoded->data, size }
         };
     }
 
     // Extract compressed files that contain many assets.
     switch(type) {
-        case CompressionType::MIO0:
-        {
+        case CompressionType::YAY0:
+        case CompressionType::MIO0: {
             offset = ASSET_PTR(offset);
 
-            auto decoded = Decode(buffer, fileOffset, CompressionType::MIO0);
+            auto decoded = Decode(buffer, fileOffset, type);
             auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
             return {
                 .root = decoded,
                 .segment = { decoded->data + offset, size }
             };
         }
-        case CompressionType::YAY0:
-            throw std::runtime_error("Found compressed yay0 segment.\nDecompression of yay0 has not been implemented yet.");
         case CompressionType::YAZ0:
             throw std::runtime_error("Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
         case CompressionType::None: // The data does not have compression
@@ -156,6 +158,29 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
     }
 
     return addr;
+}
+
+CompressionType Decompressor::GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset) {
+    if (offset) {
+        LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
+        reader.SetEndianness(Torch::Endianness::Big);
+
+        const std::string header = reader.ReadCString();
+
+        // Check if a compressed header exists
+        if (header == "MIO0") {
+            return CompressionType::MIO0;
+        }
+
+        if (header == "Yay0" || header == "PERS") {
+            return CompressionType::YAY0;
+        }
+
+        if (header == "Yaz0") {
+            return CompressionType::YAZ0;
+        }
+    }
+    return CompressionType::None;
 }
 
 bool Decompressor::IsSegmented(uint32_t addr) {

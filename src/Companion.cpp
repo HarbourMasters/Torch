@@ -339,7 +339,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             if (segments[0].IsSequence() && segments[0].size() == 2) {
                 gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
                 gCurrentFileOffset = segments[0][1].as<uint32_t>();
-                gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+                gCurrentCompressionType = Decompressor::GetCompressionType(this->gRomData, gCurrentFileOffset);
                 if(node["no_compression"]) {
                     gCurrentCompressionType = CompressionType::None;
                 }
@@ -518,7 +518,7 @@ void Companion::ProcessFile(YAML::Node root) {
             if (segments[0].IsSequence() && segments[0].size() == 2) {
                 gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
                 gCurrentFileOffset = segments[0][1].as<uint32_t>();
-                gCurrentCompressionType = GetCompressionType(this->gRomData, gCurrentFileOffset);
+                gCurrentCompressionType = Decompressor::GetCompressionType(this->gRomData, gCurrentFileOffset);
                 if(root[":config"]["no_compression"]) {
                     gCurrentCompressionType = CompressionType::None;
                 }
@@ -1261,29 +1261,6 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
     }
 
     return this->gFactories[type];
-}
-
-/**
- * @param offset Rom offset of compressed mio0 file.
- * @returns CompressionType
- */
-CompressionType Companion::GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset) {
-    if (offset) {
-        LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
-        reader.SetEndianness(Torch::Endianness::Big);
-
-        const std::string header = reader.ReadCString();
-
-        // Check if a compressed header exists
-        if (header == "MIO0") {
-            return CompressionType::MIO0;
-        } else if (header == "YAY0") {
-            return CompressionType::YAY0;
-        } else if (header == "YAZ0") {
-            return CompressionType::YAZ0;
-        }
-    }
-    return CompressionType::None;
 }
 
 std::optional<Table> Companion::SearchTable(uint32_t addr){

@@ -147,7 +147,6 @@ public:
     std::optional<std::uint32_t> GetFileOffset(void) const { return this->gCurrentFileOffset; };
     std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
-    CompressionType GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset);
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
     std::optional<Table> SearchTable(uint32_t addr);
 
