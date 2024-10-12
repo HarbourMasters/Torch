@@ -53,6 +53,16 @@ void BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData
     writer.Finish(write);
 }
 
+void BlobModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+
+    *replacement += ".bin";
+
+    auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
+    writer.Write((char*) data.data(), data.size());
+    writer.Finish(write);
+}
+
 std::optional<std::shared_ptr<IParsedData>> BlobFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto size = GetSafeNode<size_t>(node, "size");
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);

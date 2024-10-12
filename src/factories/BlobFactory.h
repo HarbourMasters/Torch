@@ -10,6 +10,10 @@ class BlobCodeExporter : public BaseExporter {
     void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+class BlobModdingExporter : public BaseExporter {
+    void Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
 class BlobFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -20,7 +24,8 @@ public:
         return {
             REGISTER(Binary, BlobBinaryExporter)
             REGISTER(Code, BlobCodeExporter)
+            REGISTER(Modding, BlobModdingExporter)
         };
     }
-    bool SupportModdedAssets() override { return false; }
+    bool SupportModdedAssets() override { return true; }
 };
