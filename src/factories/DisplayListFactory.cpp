@@ -341,6 +341,10 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                     index = C0(16, 8);
                     offset = 0;
                     break;
+                case GBIVersion::f3dex:
+                    index = (w0 >> 16) & 0xFF;
+                    offset = C0(8, 8) * 8;
+                    break;
                 default:
                     index = C0(0, 8);
                     offset = C0(8, 8) * 8;
