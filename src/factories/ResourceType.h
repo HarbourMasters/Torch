@@ -23,6 +23,7 @@ enum class ResourceType {
     Vec3s = 0x56433353,        // VC3S
     GenericArray = 0x47415252, // GARR
     AssetArray = 0x41415252,   // AARR
+    Viewport = 0x4F565054,     // OVPT
 
     // SM64
     Anim = 0x414E494D,           // ANIM

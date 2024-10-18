@@ -45,6 +45,7 @@ int  Palette(uint32_t tlut, int32_t idx, int32_t count);
 int  Lights(uint32_t lightsn, int32_t count);
 int  Light(uint32_t light);
 int  DisplayList(uint32_t dl);
+int  Viewport(uint32_t vp);
 void RegisterVTXOverlap(uint32_t ptr, std::tuple<std::string, YAML::Node>& vtx);
 std::optional<std::tuple<std::string, YAML::Node>> GetVtxOverlap(uint32_t ptr);
 void ClearVtx();

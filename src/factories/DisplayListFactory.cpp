@@ -127,6 +127,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     gfxd_tlut_callback(GFXDOverride::Palette);
     gfxd_lightsn_callback(GFXDOverride::Lights);
     gfxd_light_callback(GFXDOverride::Light);
+    gfxd_vp_callback(GFXDOverride::Viewport);
     GFXDSetGBIVersion();
 
     gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
