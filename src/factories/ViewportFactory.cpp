@@ -24,23 +24,23 @@ ExportResult ViewportCodeExporter::Export(std::ostream &write, std::shared_ptr<I
 
     write << "Vp " << symbol << " = {\n";
 
-    write << fourSpaceTab << "{ ";
+    write << fourSpaceTab;
     for (size_t i = 0; i < 4; i++) {
         write << viewport->mViewport.vscale[i];
         if (i != 3) {
             write << ", ";
         }
     }
-    write << " },\n",
+    write << ",\n";
 
-    write << fourSpaceTab << "{ ";
+    write << fourSpaceTab;
     for (size_t i = 0; i < 4; i++) {
         write << viewport->mViewport.vtrans[i];
         if (i != 3) {
             write << ", ";
         }
     }
-    write << " }\n",
+    write << ",\n";
 
     write << "};\n\n";
 
