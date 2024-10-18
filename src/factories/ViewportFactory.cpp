@@ -22,7 +22,7 @@ ExportResult ViewportCodeExporter::Export(std::ostream &write, std::shared_ptr<I
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto viewport = std::static_pointer_cast<VpData>(raw);
 
-    write << "static Vp " << symbol << " = {\n";
+    write << "Vp " << symbol << " = {\n";
 
     write << fourSpaceTab << "{ ";
     for (size_t i = 0; i < 4; i++) {
