@@ -195,6 +195,8 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
     WriteHeader(writer, Torch::ResourceType::DisplayList, 0);
 
+    writer.Write((int8_t) gbi);
+    
     while (writer.GetBaseAddress() % 8 != 0)
         writer.Write(static_cast<int8_t>(0xFF));
 
