@@ -22,11 +22,11 @@ enum class ParseMode {
 };
 
 enum class GBIVersion {
+    f3db,
     f3d,
     f3dex,
-    f3db,
-    f3dex2,
     f3dexb,
+    f3dex2,
 };
 
 enum class GBIMinorVersion {
