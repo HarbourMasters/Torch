@@ -167,6 +167,21 @@ int DisplayList(uint32_t ptr) {
     return 0;
 }
 
+int Viewport(uint32_t ptr) {
+    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+
+    if(dec.has_value()){
+        auto node = std::get<1>(dec.value());
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
+        SPDLOG_INFO("Found Viewport: 0x{:X} Symbol: {}", ptr, symbol);
+        gfxd_puts(("&" + symbol).c_str());
+        return 1;
+    }
+
+    SPDLOG_WARN("Could not find viewport to override at 0x{:X}", ptr);
+    return 0;
+}
+
 std::optional<std::tuple<std::string, YAML::Node>> GetVtxOverlap(uint32_t ptr){
     if(mVtxOverlaps.contains(ptr)){
         SPDLOG_INFO("Found overlap for ptr 0x{:X}", ptr);
