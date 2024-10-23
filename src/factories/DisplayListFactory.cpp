@@ -90,10 +90,17 @@ ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     return std::nullopt;
 }
 
+bool hasTable = false;
+
 ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
+    const auto searchTable = Companion::Instance->SearchTable(offset);
+    const auto sz = (sizeof(uint32_t) * cmds.size());
+    hasTable = searchTable.has_value();
+
+    size_t isize = cmds.size();
 
     char out[0xFFFF] = {0};
 
@@ -105,7 +112,11 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         auto gfx = static_cast<const Gfx*>(gfxd_macro_data());
         const uint8_t opcode = (gfx->words.w0 >> 24) & 0xFF;
 
-        gfxd_puts(fourSpaceTab);
+        if(hasTable) {
+            gfxd_puts(fourSpaceTab fourSpaceTab);
+        } else {
+            gfxd_puts(fourSpaceTab);
+        }
 
         // For mk64 only
         if(opcode == GBI(G_QUAD) && Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) {
@@ -130,17 +141,47 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     gfxd_vp_callback(GFXDOverride::Viewport);
     GFXDSetGBIVersion();
 
-    gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
-    gfxd_execute();
+    if(searchTable.has_value()){
+        const auto [name, start, end, mode, index_size] = searchTable.value();
 
-    write << std::string(out);
-    write << "};\n";
-    const auto sz = (sizeof(uint32_t) * cmds.size());
+        if(mode != TableMode::Append){
+            throw std::runtime_error("Reference mode is not supported for now");
+        }
 
-    if (Companion::Instance->IsDebug()) {
-        write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
+        if (index_size > -1) {
+            isize = index_size;
+        }
+
+        if(start == offset){
+            gfxd_puts(("Gfx " + name + "[][" + std::to_string(isize / 2) + "] = {\n").c_str());
+            gfxd_puts("\t{\n");
+        } else {
+            gfxd_puts("\t{\n");
+        }
+        gfxd_execute();
+        write << std::string(out);
+        if(end == offset){
+            write << tab_t << "}\n";
+            write << "};\n";
+            if (Companion::Instance->IsDebug()) {
+                write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
+            }else {
+                write << "\n";
+            }
+        } else {
+            write << tab_t << "},\n";
+        }
     } else {
-        write << "\n";
+        gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
+        gfxd_execute();
+        write << std::string(out);
+        write << "};\n";
+
+        if (Companion::Instance->IsDebug()) {
+            write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
+        } else {
+            write << "\n";
+        }
     }
 
     return offset + sz;
