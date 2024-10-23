@@ -161,7 +161,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         gfxd_execute();
         write << std::string(out);
         if(end == offset){
-            write << tab_t << "}\n";
+            write << fourSpaceTab << "}\n";
             write << "};\n";
             if (Companion::Instance->IsDebug()) {
                 write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
@@ -169,7 +169,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
                 write << "\n";
             }
         } else {
-            write << tab_t << "},\n";
+            write << fourSpaceTab << "},\n";
         }
     } else {
         gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
