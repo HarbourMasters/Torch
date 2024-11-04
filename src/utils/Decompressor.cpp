@@ -70,13 +70,18 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     auto fileOffset = TranslateAddr(offset, true);
 
     // Extract compressed assets.
-    if (node["mio0"] || node["yay0"]) {
-        auto foffset = TranslateAddr(offset, true);
-        auto decoded = Decode(buffer, foffset, node["mio0"] ? CompressionType::MIO0 : CompressionType::YAY0);
+    if (node["mio0"]) {
+        auto assetPtr = ASSET_PTR(offset);
+        auto gameSize = Companion::Instance->GetRomData().size();
+
+        auto fileOffset = TranslateAddr(offset, true);
+        offset = ASSET_PTR(offset);
+
+        auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
         auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
         return {
-            .root = decoded,
-            .segment = { decoded->data, size }
+                .root = decoded,
+                .segment = { decoded->data, size }
         };
     }
 
