@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include <factories/BaseFactory.h>
 #include "../../types/RawBuffer.h"
 
 namespace SM64 {

@@ -2,8 +2,8 @@
 
 #include <utility>
 
-#include "BaseFactory.h"
-#include "audio/AudioManager.h"
+#include <factories/BaseFactory.h>
+#include "AudioManager.h"
 
 class SampleData : public IParsedData {
 public:

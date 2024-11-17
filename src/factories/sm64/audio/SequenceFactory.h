@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BaseFactory.h"
+#include <factories/BaseFactory.h>
 
 class SequenceData : public IParsedData {
 public:

@@ -11,10 +11,6 @@
 #include <iostream>
 #include <filesystem>
 
-#include "factories/BankFactory.h"
-#include "factories/AudioHeaderFactory.h"
-#include "factories/SampleFactory.h"
-#include "factories/SequenceFactory.h"
 #include "factories/GenericArrayFactory.h"
 #include "factories/VtxFactory.h"
 #include "factories/MtxFactory.h"
@@ -30,6 +26,10 @@
 #include "factories/AssetArrayFactory.h"
 #include "factories/ViewportFactory.h"
 
+#include "factories/sm64/audio/BankFactory.h"
+#include "factories/sm64/audio/AudioHeaderFactory.h"
+#include "factories/sm64/audio/SampleFactory.h"
+#include "factories/sm64/audio/SequenceFactory.h"
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
 #include "factories/sm64/CollisionFactory.h"
@@ -88,10 +88,6 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("INC", std::make_shared<IncludeFactory>());
     this->RegisterFactory("LIGHTS", std::make_shared<LightsFactory>());
     this->RegisterFactory("GFX", std::make_shared<DListFactory>());
-    this->RegisterFactory("AUDIO:HEADER", std::make_shared<AudioHeaderFactory>());
-    this->RegisterFactory("SEQUENCE", std::make_shared<SequenceFactory>());
-    this->RegisterFactory("SAMPLE", std::make_shared<SampleFactory>());
-    this->RegisterFactory("BANK", std::make_shared<BankFactory>());
     this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
     this->RegisterFactory("VEC3S", std::make_shared<Vec3sFactory>());
     this->RegisterFactory("ARRAY", std::make_shared<GenericArrayFactory>());
@@ -99,6 +95,10 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("VP", std::make_shared<ViewportFactory>());
 
     // SM64 specific
+    this->RegisterFactory("SM64:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
+    this->RegisterFactory("SM64:SEQUENCE", std::make_shared<SequenceFactory>());
+    this->RegisterFactory("SM64:SAMPLE", std::make_shared<SampleFactory>());
+    this->RegisterFactory("SM64:BANK", std::make_shared<BankFactory>());
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
