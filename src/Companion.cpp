@@ -26,10 +26,6 @@
 #include "factories/AssetArrayFactory.h"
 #include "factories/ViewportFactory.h"
 
-#include "factories/sm64/audio/BankFactory.h"
-#include "factories/sm64/audio/AudioHeaderFactory.h"
-#include "factories/sm64/audio/SampleFactory.h"
-#include "factories/sm64/audio/SequenceFactory.h"
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
 #include "factories/sm64/CollisionFactory.h"
@@ -66,6 +62,21 @@
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
 
+#include "factories/naudio/v0/AudioHeaderFactory.h"
+#include "factories/naudio/v0/BankFactory.h"
+#include "factories/naudio/v0/SampleFactory.h"
+#include "factories/naudio/v0/SequenceFactory.h"
+
+#include "factories/naudio/v1/AudioContext.h"
+#include "factories/naudio/v1/SoundFontFactory.h"
+#include "factories/naudio/v1/AudioTableFactory.h"
+#include "factories/naudio/v1/InstrumentFactory.h"
+#include "factories/naudio/v1/SampleFactory.h"
+#include "factories/naudio/v1/DrumFactory.h"
+#include "factories/naudio/v1/EnvelopeFactory.h"
+#include "factories/naudio/v1/LoopFactory.h"
+#include "factories/naudio/v1/BookFactory.h"
+
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
@@ -95,10 +106,6 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("VP", std::make_shared<ViewportFactory>());
 
     // SM64 specific
-    this->RegisterFactory("SM64:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
-    this->RegisterFactory("SM64:SEQUENCE", std::make_shared<SequenceFactory>());
-    this->RegisterFactory("SM64:SAMPLE", std::make_shared<SampleFactory>());
-    this->RegisterFactory("SM64:BANK", std::make_shared<BankFactory>());
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
@@ -136,6 +143,22 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
     this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
     this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
+
+    // NAudio specific
+    this->RegisterFactory("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
+    this->RegisterFactory("NAUDIO:V0:SEQUENCE", std::make_shared<SequenceFactory>());
+    this->RegisterFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactory>());
+    this->RegisterFactory("NAUDIO:V0:BANK", std::make_shared<BankFactory>());
+
+    this->RegisterFactory("NAUDIO:V1:AUDIO_SETUP", std::make_shared<AudioContextFactory>());
+    this->RegisterFactory("NAUDIO:V1:AUDIO_TABLE", std::make_shared<AudioTableFactory>());
+    this->RegisterFactory("NAUDIO:V1:SOUND_FONT", std::make_shared<SoundFontFactory>());
+    this->RegisterFactory("NAUDIO:V1:INSTRUMENT", std::make_shared<InstrumentFactory>());
+    this->RegisterFactory("NAUDIO:V1:DRUM", std::make_shared<DrumFactory>());
+    this->RegisterFactory("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactory>());
+    this->RegisterFactory("NAUDIO:V1:ENVELOPE", std::make_shared<EnvelopeFactory>());
+    this->RegisterFactory("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
+    this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
 
     this->Process();
 }
@@ -1451,6 +1474,9 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     } else {
         output = this->NormalizeAsset(typeId + "_" + Torch::to_hex(offset, false));
     }
+
+    std::replace(output.begin(), output.end(), ':', '_');
+
     asset["autogen"] = true;
     asset["symbol"] = output;
 
