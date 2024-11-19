@@ -111,5 +111,7 @@ public:
         return std::nullopt;
     }
 private:
-    virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() = 0;
+    virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() {
+        return {};
+    }
 };

@@ -15,9 +15,6 @@ enum class ResourceType {
     Array = 0x4F415252,        // OARR
     Blob = 0x4F424C42,         // OBLB
     Texture = 0x4F544558,      // OTEX
-    Bank = 0x42414E4B,         // BANK
-    Sample = 0x41554643,       // AIFC
-    Sequence = 0x53455143,     // SEQC
     Lights = 0x46669697,       // LGTS
     Vec3f = 0x56433346,        // VC3F
     Vec3s = 0x56433353,        // VC3S
@@ -63,5 +60,18 @@ enum class ResourceType {
     ScriptCmd = 0x53434D44,    // SCMD
     Hitbox = 0x48544258,       // HTBX
     ObjectInit = 0x4F42494E,   // OBIN
+
+    // NAudio v0
+    Bank = 0x42414E4B,         // BANK
+    Sample = 0x41554643,       // AIFC
+    Sequence = 0x53455143,     // SEQC
+
+    // NAudio v1
+    SoundFont = 0x53464E54,    // SFNT
+    Drum = 0x4452554D,         // DRUM
+    Instrument = 0x494E5354,   // INST
+    AdpcmLoop = 0x4150434C,    // APCL
+    AdpcmBook = 0x41504342,    // APCB
+    Envelope = 0x45564C50,     // EVLP
 };
 } // namespace LUS
