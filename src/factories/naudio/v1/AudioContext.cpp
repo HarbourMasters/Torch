@@ -4,7 +4,7 @@
 
 std::unordered_map<AudioTableType, std::unordered_map<uint32_t, AudioTableEntry>> AudioContext::tables;
 std::unordered_map<AudioTableType, std::vector<uint8_t>> AudioContext::data;
-std::unordered_map<AudioTableType, AudioTableData> AudioContext::tableData;
+std::unordered_map<AudioTableType, std::shared_ptr<AudioTableData>> AudioContext::tableData;
 
 std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto seq = GetSafeNode<YAML::Node>(node, "audio_seq");
