@@ -73,16 +73,19 @@ ExportResult AudioTableBinaryExporter::Export(std::ostream &write, std::shared_p
     auto data = std::static_pointer_cast<AudioTableData>(raw);
 
     WriteHeader(writer, Torch::ResourceType::AudioTable, 0);
-    writer.Write((uint8_t) data->type);
     writer.Write(data->medium);
     writer.Write(data->addr);
     writer.Write((uint32_t) data->entries.size());
 
     for(auto& entry : data->entries){
-        if(data->type != AudioTableType::SAMPLE_TABLE){
-            writer.Write(AudioContext::GetPathByAddr(entry.addr));
+        if(data->type == AudioTableType::FONT_TABLE && entry.crc == 0){
+            throw std::runtime_error("Fuck this thing");
+        }
+        if(entry.size == 0){
+            auto item = AudioContext::tableData[AudioTableType::SEQ_TABLE]->entries[entry.addr];
+            writer.Write(item.crc);
         } else {
-            writer.Write((uint64_t) entry.addr);
+            writer.Write(entry.crc);
         }
         writer.Write(entry.size);
         writer.Write(entry.medium);
@@ -121,6 +124,8 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
     SPDLOG_INFO("addr: {}", baddr);
 
     std::vector<AudioTableEntry> entries;
+    auto parent = AudioContext::tableOffsets[AudioTableType::SEQ_TABLE];
+
     for(size_t i = 0; i < count; i++){
         auto addr = reader.ReadUInt32();
         auto size = reader.ReadUInt32();
@@ -129,8 +134,7 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         auto sd1 = reader.ReadInt16();
         auto sd2 = reader.ReadInt16();
         auto sd3 = reader.ReadInt16();
-        auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3 };
-        entries.push_back(entry);
+        uint64_t crc = 0;
 
         switch (type) {
             case AudioTableType::FONT_TABLE: {
@@ -138,17 +142,26 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                 font["type"] = "NAUDIO:V1:SOUND_FONT";
                 font["offset"] = addr;
                 Companion::Instance->AddAsset(font);
+                std::string path = font["vpath"].as<std::string>();
+                crc = CRC64(path.c_str());
                 break;
             }
             case AudioTableType::SEQ_TABLE: {
-                YAML::Node seq;
-                seq["type"] = "NAUDIO:V1:SEQUENCE";
-                seq["offset"] = addr;
-                Companion::Instance->AddAsset(seq);
-                break;
+                if(size != 0){
+                    YAML::Node seq;
+                    seq["type"] = "BLOB";
+                    seq["offset"] = parent + addr;
+                    seq["size"] = size;
+                    Companion::Instance->AddAsset(seq);
+                    std::string path = seq["vpath"].as<std::string>();
+                    crc = CRC64(path.c_str());
+                    break;
+                }
             }
         }
 
+        auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3, crc };
+        entries.push_back(entry);
         AudioContext::tables[type][addr] = entry;
     }
 

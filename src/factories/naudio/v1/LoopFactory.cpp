@@ -29,7 +29,7 @@ ExportResult ADPCMLoopBinaryExporter::Export(std::ostream &write, std::shared_pt
     writer.Write(data->count);
     if(data->count != 0){
         for(size_t i = 0; i < 16; i++){
-             writer.Write(data->predictorState[i]);
+            writer.Write(data->predictorState[i]);
         }
     }
 
