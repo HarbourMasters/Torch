@@ -70,12 +70,29 @@ ExportResult AudioTableCodeExporter::Export(std::ostream &write, std::shared_ptr
 
 ExportResult AudioTableBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
-    // auto data = std::static_pointer_cast<AudioTableEntry>(raw)->mBuffer;
+    auto data = std::static_pointer_cast<AudioTableData>(raw);
 
-    // WriteHeader(writer, Torch::ResourceType::Blob, 0);
-    // writer.Write((uint32_t) data.size());
-    // writer.Write((char*) data.data(), data.size());
-    // writer.Finish(write);
+    WriteHeader(writer, Torch::ResourceType::AudioTable, 0);
+    writer.Write((uint8_t) data->type);
+    writer.Write(data->medium);
+    writer.Write(data->addr);
+    writer.Write((uint32_t) data->entries.size());
+
+    for(auto& entry : data->entries){
+        if(data->type != AudioTableType::SAMPLE_TABLE){
+            writer.Write(AudioContext::GetPathByAddr(entry.addr));
+        } else {
+            writer.Write((uint64_t) entry.addr);
+        }
+        writer.Write(entry.size);
+        writer.Write(entry.medium);
+        writer.Write(entry.cachePolicy);
+        writer.Write(entry.shortData1);
+        writer.Write(entry.shortData2);
+        writer.Write(entry.shortData3);
+    }
+
+    writer.Finish(write);
     return std::nullopt;
 }
 
