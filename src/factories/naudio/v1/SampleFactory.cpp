@@ -35,8 +35,7 @@ ExportResult NSampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     auto entry = AudioContext::tableData[AudioTableType::SAMPLE_TABLE]->entries[data->sampleBankId];
     auto buffer = AudioContext::data[AudioTableType::SAMPLE_TABLE];
 
-    writer.Write((uint32_t) data->size);
-    writer.Write((char*) buffer.data() + data->sampleAddr, data->size);
+    writer.Write((char*) buffer.data() + entry.addr + data->sampleAddr, data->size);
 
     writer.Finish(write);
     return std::nullopt;

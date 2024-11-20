@@ -47,19 +47,19 @@ ExportResult SoundFontCodeExporter::Export(std::ostream &write, std::shared_ptr<
 }
 
 ExportResult SoundFontBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-     auto writer = LUS::BinaryWriter();
-     auto data = std::static_pointer_cast<SoundFontData>(raw);
+    auto writer = LUS::BinaryWriter();
+    auto data = std::static_pointer_cast<SoundFontData>(raw);
 
-     WriteHeader(writer, Torch::ResourceType::SoundFont, 0);
-     writer.Write(data->numInstruments);
-     writer.Write(data->numDrums);
-     writer.Write(data->sampleBankId1);
-     writer.Write(data->sampleBankId2);
+    WriteHeader(writer, Torch::ResourceType::SoundFont, 0);
+    writer.Write(data->numInstruments);
+    writer.Write(data->numDrums);
+    writer.Write(data->sampleBankId1);
+    writer.Write(data->sampleBankId2);
 
-     for(auto& instrument : data->instruments){
-         auto crc = AudioContext::GetPathByAddr(instrument);
-         writer.Write(crc);
-     }
+    for(auto& instrument : data->instruments){
+        auto crc = AudioContext::GetPathByAddr(instrument);
+        writer.Write(crc);
+    }
 
     for(auto& drum : data->drums){
         auto crc = AudioContext::GetPathByAddr(drum);

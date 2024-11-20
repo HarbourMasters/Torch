@@ -5,6 +5,7 @@
 std::unordered_map<AudioTableType, std::unordered_map<uint32_t, AudioTableEntry>> AudioContext::tables;
 std::unordered_map<AudioTableType, std::vector<uint8_t>> AudioContext::data;
 std::unordered_map<AudioTableType, std::shared_ptr<AudioTableData>> AudioContext::tableData;
+std::unordered_map<AudioTableType, uint32_t> AudioContext::tableOffsets;
 
 std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto seq = GetSafeNode<YAML::Node>(node, "audio_seq");
@@ -22,6 +23,10 @@ std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vect
     AudioContext::data[AudioTableType::SEQ_TABLE] = std::vector<uint8_t>(buffer.begin() + seqOffset, buffer.begin() + seqOffset + seqSize);
     AudioContext::data[AudioTableType::FONT_TABLE] = std::vector<uint8_t>(buffer.begin() + bankOffset, buffer.begin() + bankOffset + bankSize);
     AudioContext::data[AudioTableType::SAMPLE_TABLE] = std::vector<uint8_t>(buffer.begin() + tableOffset, buffer.begin() + tableOffset + tableSize);
+
+    AudioContext::tableOffsets[AudioTableType::SEQ_TABLE] = seqOffset;
+    AudioContext::tableOffsets[AudioTableType::FONT_TABLE] = bankOffset;
+    AudioContext::tableOffsets[AudioTableType::SAMPLE_TABLE] = tableOffset;
 
     SPDLOG_INFO("Sequence Table 0x{:X}", seqOffset);
     SPDLOG_INFO("Sound Font Table 0x{:X}", bankOffset);
@@ -73,6 +78,7 @@ uint64_t AudioContext::GetPathByAddr(uint32_t addr) {
         SPDLOG_INFO("Found path of 0x{:X} {}", addr, path);
         return hash;
     } else {
+        SPDLOG_INFO("Failed to find path for 0x{:X}", addr);
         throw std::runtime_error("Failed to find node by addr");
     }
 }

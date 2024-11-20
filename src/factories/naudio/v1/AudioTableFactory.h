@@ -10,6 +10,7 @@ struct AudioTableEntry {
     int16_t shortData1;
     int16_t shortData2;
     int16_t shortData3;
+    uint64_t crc;
 };
 
 enum class AudioTableType {
