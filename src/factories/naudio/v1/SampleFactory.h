@@ -5,11 +5,11 @@
 
 class NSampleData : public IParsedData {
 public:
-    uint32_t codec;
-    uint32_t medium;
-    uint32_t unk;
-    uint32_t isRelocated;
-    uint32_t size;
+    uint32_t codec : 4;
+    uint32_t medium : 2;
+    uint32_t unk : 1;
+    uint32_t isRelocated : 1;
+    uint32_t size : 24;
     uint32_t sampleAddr;
     uint32_t loop;
     uint32_t book;
