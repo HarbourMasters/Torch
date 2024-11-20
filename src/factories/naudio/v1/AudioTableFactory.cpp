@@ -132,11 +132,21 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3 };
         entries.push_back(entry);
 
-        if(type == AudioTableType::FONT_TABLE){
-            YAML::Node font;
-            font["type"] = "NAUDIO:V1:SOUND_FONT";
-            font["offset"] = addr;
-            Companion::Instance->AddAsset(font);
+        switch (type) {
+            case AudioTableType::FONT_TABLE: {
+                YAML::Node font;
+                font["type"] = "NAUDIO:V1:SOUND_FONT";
+                font["offset"] = addr;
+                Companion::Instance->AddAsset(font);
+                break;
+            }
+            case AudioTableType::SEQ_TABLE: {
+                YAML::Node seq;
+                seq["type"] = "NAUDIO:V1:SEQUENCE";
+                seq["offset"] = addr;
+                Companion::Instance->AddAsset(seq);
+                break;
+            }
         }
 
         AudioContext::tables[type][addr] = entry;

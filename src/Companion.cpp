@@ -76,6 +76,7 @@
 #include "factories/naudio/v1/EnvelopeFactory.h"
 #include "factories/naudio/v1/LoopFactory.h"
 #include "factories/naudio/v1/BookFactory.h"
+#include "factories/naudio/v1/SequenceFactory.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -159,6 +160,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("NAUDIO:V1:ENVELOPE", std::make_shared<EnvelopeFactory>());
     this->RegisterFactory("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
+    this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 
     this->Process();
 }
