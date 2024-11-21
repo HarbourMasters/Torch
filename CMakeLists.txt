@@ -53,6 +53,9 @@ set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 option(USE_STANDALONE "Build as a standalone executable" ON)
 option(BUILD_STORMLIB "Build with StormLib support" ON)
 
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
+
 # Build
 if (USE_STANDALONE)
     add_definitions(-DSTANDALONE)
@@ -79,6 +82,7 @@ else()
                 /W3;
                 /MD
             >
+            /bigobj
             /STACK:16777216
             /permissive-;
             /MP;
@@ -99,6 +103,7 @@ else()
             >
             /STACK:16777216
             /permissive-;
+            /bigobj
             /MP;
             /w;
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
@@ -116,6 +121,7 @@ else()
                 /INCREMENTAL:NO;
                 /FORCE:MULTIPLE
             >
+            /bigobj
             /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
@@ -129,6 +135,7 @@ else()
                 /INCREMENTAL:NO;
                 /FORCE:MULTIPLE
             >
+            /bigobj
             /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
