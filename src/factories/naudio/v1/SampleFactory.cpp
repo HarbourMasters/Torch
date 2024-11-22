@@ -95,6 +95,7 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     sample->sampleAddr = addr;
     sample->tuning = tuning;
     sample->sampleBankId = sampleBankId;
+    sample->sampleRate = sampleRate;
 
     return sample;
 }

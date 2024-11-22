@@ -389,10 +389,15 @@ void permute(s16 *out, s32 *in, s32 scale)
     }
 }
 
-void write_header(LUS::BinaryWriter& writer, const char *id, s32 size) {
-    writer.Write((char*) id, (size_t) 4);
-    BSWAP32(size);
-    writer.Write(size);
+void WriteString(const char* str, int32_t size, LUS::BinaryWriter& writer) {
+    for (int i = 0; i < size; i++) {
+        writer.Write((uint8_t) str[i]);
+    }
+}
+
+void write_header(LUS::BinaryWriter& writer, std::string id, s32 size) {
+    WriteString(id.data(), id.size(), writer);
+    writer.Write(BSWAP32(size));
 }
 
 void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
@@ -586,7 +591,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
 
     // Write an incomplete file header. We'll fill in the size later.
     writer.Seek(0, LUS::SeekOffsetType::Start);
-    writer.Write((char*) "FORM\0\0\0\0AIFF", 12);
+    WriteString("FORM\0\0\0\0AIFF", 12, writer);
 
     // Subtract 4 from the COMM size to skip the compression field.
     write_header(writer, "COMM", sizeof(CommonChunk) - 4);
@@ -634,12 +639,13 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
     // be needed and "tabledesign -s 1" would generate the right table, but in
     // practice it's difficult to adjust samples to make that happen.
     write_header(writer, "APPL", 4 + 12 + sizeof(CodeChunk) + npredictors * order * 8 * 2);
-    writer.Write("stoc", false);
+    WriteString("stoc", 4, writer);
     CodeChunk cChunk;
     cChunk.version = bswap16(1);
     cChunk.order = bswap16(order);
     cChunk.nEntries = bswap16(npredictors);
-    writer.Write("\x0bVADPCMCODES", false);
+    writer.Write((uint8_t) 0xB);
+    WriteString("VADPCMCODES", 11, writer);
     writer.Write((char*) &cChunk, sizeof(CodeChunk));
     for (s32 i = 0; i < npredictors; i++) {
         for (s32 j = 0; j < order; j++) {
