@@ -39,7 +39,7 @@ void AIFCWriter::Close(LUS::BinaryWriter& out){
 void SerializeF80(double num, LUS::BinaryWriter &writer) {
     // Convert the input double to a uint64_t representation
     std::uint64_t f64;
-    std::memcpy(&f64, &num, sizeof(double));
+    memcpy((void*) &f64, (void*) &num, sizeof(double));
 
     // Extract the sign bit
     std::uint64_t f64_sign_bit = f64 & (1ULL << 63);
