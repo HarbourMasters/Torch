@@ -7,6 +7,7 @@
 #include <factories/BaseFactory.h>
 #include <Companion.h>
 #include <cassert>
+#include <cstring>
 
 void AIFCWriter::End(std::string chunk, LUS::BinaryWriter& writer) {
     auto buffer = writer.ToVector();
@@ -38,11 +39,11 @@ void AIFCWriter::Close(LUS::BinaryWriter& out){
 // Function to serialize double to 80-bit extended-precision
 void SerializeF80(double num, LUS::BinaryWriter &writer) {
     // Convert the input double to a uint64_t representation
-    std::uint64_t f64;
+    uint64_t f64;
     memcpy((void*) &f64, (void*) &num, sizeof(double));
 
     // Extract the sign bit
-    std::uint64_t f64_sign_bit = f64 & (1ULL << 63);
+    uint64_t f64_sign_bit = f64 & (1ULL << 63);
 
     // Handle the special case: zero
     if (num == 0.0) {
@@ -56,18 +57,18 @@ void SerializeF80(double num, LUS::BinaryWriter &writer) {
     }
 
     // Extract the exponent and mantissa
-    std::uint64_t exponent = (f64 >> 52) & 0x7FF; // Exponent bits
+    uint64_t exponent = (f64 >> 52) & 0x7FF; // Exponent bits
     assert(exponent != 0);                        // Ensure not denormal
     assert(exponent != 0x7FF);                    // Ensure not infinity/NaN
 
     exponent -= 1023; // Adjust bias for 64-bit
 
-    std::uint64_t f64_mantissa_bits = f64 & ((1ULL << 52) - 1); // Mantissa bits
+    uint64_t f64_mantissa_bits = f64 & ((1ULL << 52) - 1); // Mantissa bits
 
     // Construct the 80-bit extended-precision fields
-    std::uint64_t f80_sign_bit = f64_sign_bit << (80 - 64);           // Shift sign
-    std::uint64_t f80_exponent = (exponent + 0x3FFF) & 0x7FFF;        // Adjust bias
-    std::uint64_t f80_mantissa_bits = (1ULL << 63) | (f64_mantissa_bits << (63 - 52)); // Add implicit bit
+    uint64_t f80_sign_bit = f64_sign_bit << (80 - 64);           // Shift sign
+    uint64_t f80_exponent = (exponent + 0x3FFF) & 0x7FFF;        // Adjust bias
+    uint64_t f80_mantissa_bits = (1ULL << 63) | (f64_mantissa_bits << (63 - 52)); // Add implicit bit
 
     // Combine components into the 80-bit representation
     uint16_t high = static_cast<uint16_t>(f80_sign_bit >> 48) | static_cast<uint16_t>(f80_exponent);
