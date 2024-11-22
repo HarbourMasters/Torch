@@ -176,11 +176,11 @@ s32 readaifccodebook(LUS::BinaryReader& fhandle, s32 ****table, s16 *order, s16 
     BSWAP16(*order);
     checked_fread(npredictors, sizeof(s16), 1, fhandle);
     BSWAP16(*npredictors);
-    *table = static_cast<s32 ***>(malloc(*npredictors * sizeof(s32 **)));
+    *table = new s32**[*npredictors];
     for (s32 i = 0; i < *npredictors; i++) {
-        (*table)[i] = static_cast<s32 **>(malloc(8 * sizeof(s32 *)));
+        (*table)[i] = new s32*[8];
         for (s32 j = 0; j < 8; j++) {
-            (*table)[i][j] = static_cast<s32 *>(malloc((*order + 8) * sizeof(s32)));
+            (*table)[i][j] = new s32[*order + 8];
         }
     }
 
@@ -401,7 +401,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
     ALADPCMloop *aloops = nullptr;
     s16 npredictors = -1;
     s32 ***coefTable = nullptr;
-    s32 state[16];
+    s32 state[16] = {0};
     s32 soundPointer = -1;
     s32 currPos = 0;
     s32 nSamples = 0;
@@ -525,12 +525,12 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
     reader.Seek(soundPointer, LUS::SeekOffsetType::Start);
 
     while (currPos < nSamples) {
-        u8 input[9];
-        u8 encoded[9];
-        s32 lastState[16];
-        s32 decoded[16];
-        s16 guess[16];
-        s16 origGuess[16];
+        u8 input[9] = {0};
+        u8 encoded[9] = {0};
+        s32 lastState[16] = {0};
+        s32 decoded[16] = {0};
+        s16 guess[16] = {0};
+        s16 origGuess[16] = {0};
 
         memcpy(lastState, state, sizeof(lastState));
         checked_fread(input, 9, 1, reader);
@@ -550,7 +550,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
         my_encodeframe(encoded, guess, state, coefTable, order, npredictors);
 
         // If it doesn't match, randomly round numbers until it does.
-        if (memcmp(input, encoded, 9) != 0) {
+        if (0 && memcmp(input, encoded, 9) != 0) {
             s32 scale = 1 << (input[0] >> 4);
             do {
                 permute(guess, decoded, scale);

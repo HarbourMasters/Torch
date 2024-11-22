@@ -1,6 +1,7 @@
 #include "SampleFactory.h"
-#include "utils/Decompressor.h"
+#include "AudioConverter.h"
 #include "Companion.h"
+#include <factories/naudio/v0/AIFCDecode.h>
 
 ExportResult NSampleHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -41,9 +42,26 @@ ExportResult NSampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     return std::nullopt;
 }
 
+ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto aiff = LUS::BinaryWriter();
+    auto data = std::static_pointer_cast<NSampleData>(raw);
+    *replacement += ".aiff";
+
+    auto aifc = LUS::BinaryWriter();
+    AudioConverter::SampleToAIFC(data.get(), aifc);
+    auto cnv = aifc.ToVector();
+
+    if(!cnv.empty()){
+        write_aiff(cnv, aiff);
+        aiff.Finish(write);
+    }
+    return std::nullopt;
+}
+
 std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto parent = GetSafeNode<uint32_t>(node, "parent");
+    auto tuning = GetSafeNode<float>(node, "tuning", 1.0f);
     auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
 
     auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].at(parent);
@@ -74,6 +92,7 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     Companion::Instance->AddAsset(book);
 
     sample->sampleAddr = addr;
+    sample->tuning = tuning;
     sample->sampleBankId = sampleBankId;
 
     return sample;

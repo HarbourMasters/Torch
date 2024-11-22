@@ -37,4 +37,6 @@ public:
             REGISTER(Code, InstrumentCodeExporter)
         };
     }
+
+    bool HasModdedDependencies() override { return true; }
 };

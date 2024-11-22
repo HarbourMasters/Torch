@@ -60,6 +60,7 @@ TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t pa
     node["type"] = "NAUDIO:V1:SAMPLE";
     node["parent"] = parent;
     node["offset"] = parent + sampleAddr;
+    node["tuning"] = tuning;
     node["sampleBankId"] = sampleBankId;
     Companion::Instance->AddAsset(node);
 

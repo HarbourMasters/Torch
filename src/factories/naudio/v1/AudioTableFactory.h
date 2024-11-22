@@ -51,4 +51,6 @@ public:
             REGISTER(Code, AudioTableCodeExporter)
         };
     }
+
+    bool HasModdedDependencies() override { return true; }
 };

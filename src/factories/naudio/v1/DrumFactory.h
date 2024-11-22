@@ -34,4 +34,6 @@ public:
             REGISTER(Code, DrumCodeExporter)
         };
     }
+
+    bool HasModdedDependencies() override { return true; }
 };

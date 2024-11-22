@@ -34,4 +34,6 @@ public:
             REGISTER(Code, SoundFontCodeExporter)
         };
     }
+
+    bool HasModdedDependencies() override { return true; }
 };

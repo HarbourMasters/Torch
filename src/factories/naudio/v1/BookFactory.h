@@ -32,4 +32,6 @@ public:
             REGISTER(Code, ADPCMBookCodeExporter)
         };
     }
+
+    bool HasModdedDependencies() override { return true; }
 };

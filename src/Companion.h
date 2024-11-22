@@ -127,7 +127,7 @@ public:
     bool IsDebug() const { return this->gConfig.debug; }
 
     N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
-    std::vector<uint8_t> GetRomData() { return this->gRomData; }
+    std::vector<uint8_t>& GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gConfig.outputPath; }
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }

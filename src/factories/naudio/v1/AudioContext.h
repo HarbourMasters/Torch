@@ -33,4 +33,6 @@ public:
             REGISTER(Code, AudioDummyExporter)
         };
     }
+
+    bool HasModdedDependencies() override { return true; }
 };

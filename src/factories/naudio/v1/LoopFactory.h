@@ -33,4 +33,6 @@ public:
             REGISTER(Code, ADPCMLoopCodeExporter)
         };
     }
+
+    bool HasModdedDependencies() override { return true; }
 };

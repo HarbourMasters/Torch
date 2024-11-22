@@ -38,4 +38,6 @@ public:
             REGISTER(Code, EnvelopeCodeExporter)
         };
     }
+
+    bool HasModdedDependencies() override { return true; }
 };

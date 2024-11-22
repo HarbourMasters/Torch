@@ -14,6 +14,7 @@ public:
     uint32_t loop;
     uint32_t book;
     uint32_t sampleBankId;
+    float tuning;
 };
 
 class NSampleHeaderExporter : public BaseExporter {
@@ -28,6 +29,10 @@ class NSampleCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+class NSampleModdingExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
 class NSampleFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -36,6 +41,8 @@ public:
             REGISTER(Header, NSampleHeaderExporter)
             REGISTER(Binary, NSampleBinaryExporter)
             REGISTER(Code, NSampleCodeExporter)
+            REGISTER(Modding, NSampleModdingExporter)
         };
     }
+    bool SupportModdedAssets() override { return true; }
 };
