@@ -101,7 +101,7 @@ void AudioConverter::SampleToAIFC(NSampleData* sample, LUS::BinaryWriter &out) {
         } else if (sample->tuning <= 2.5f) {
             sample_rate = 80000;
         } else {
-            sample_rate = 16000 * sample->tuning;
+            sample_rate = 32000 * sample->tuning;
         }
     }
 
