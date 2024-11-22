@@ -1,7 +1,7 @@
 #include "AudioContext.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
-#include "Utils/StringHelper.h"
+#include "utils/StringHelper.h"
 
 std::unordered_map<AudioTableType, std::unordered_map<uint32_t, AudioTableEntry>> AudioContext::tables;
 std::unordered_map<AudioTableType, std::vector<uint8_t>> AudioContext::data;
