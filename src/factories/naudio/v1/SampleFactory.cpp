@@ -62,6 +62,7 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto parent = GetSafeNode<uint32_t>(node, "parent");
     auto tuning = GetSafeNode<float>(node, "tuning", 1.0f);
+    auto sampleRate = GetSafeNode<uint32_t>(node, "sampleRate", 0);
     auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
 
     auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].at(parent);

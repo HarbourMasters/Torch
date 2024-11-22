@@ -1,6 +1,7 @@
 #include "AudioContext.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
+#include "Utils/StringHelper.h"
 
 std::unordered_map<AudioTableType, std::unordered_map<uint32_t, AudioTableEntry>> AudioContext::tables;
 std::unordered_map<AudioTableType, std::vector<uint8_t>> AudioContext::data;
@@ -62,6 +63,7 @@ TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t pa
     node["offset"] = parent + sampleAddr;
     node["tuning"] = tuning;
     node["sampleBankId"] = sampleBankId;
+    node["symbol"] = StringHelper::Sprintf("Sample_P_%X_O_%X_B_%d", parent, parent + sampleAddr, sampleBankId);
     Companion::Instance->AddAsset(node);
 
     return { parent + sampleAddr, sampleBankId, tuning };

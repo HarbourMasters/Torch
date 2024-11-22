@@ -13,7 +13,10 @@ public:
     uint32_t sampleAddr;
     uint32_t loop;
     uint32_t book;
+
+    // Custom fields
     uint32_t sampleBankId;
+    uint32_t sampleRate;
     float tuning;
 };
 
