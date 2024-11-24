@@ -98,11 +98,18 @@ int main(int argc, char *argv[]) {
         }
     });
 
+    modding_export->add_option("mode", mode, "xml or binary")->required();
     modding_export->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
     modding_export->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, false, debug);
-        instance->Init(ExportType::Modding);
+        if (mode == "binary") {
+            instance->Init(ExportType::Modding);
+        } else if (mode == "xml") {
+            instance->Init(ExportType::XML);
+        } else {
+            std::cout << "Invalid mode" << std::endl;
+        }
     });
 
     try {

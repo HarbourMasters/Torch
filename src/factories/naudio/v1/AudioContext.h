@@ -20,6 +20,10 @@ public:
     static LUS::BinaryReader MakeReader(AudioTableType type, uint32_t offset);
     static TunedSample LoadTunedSample(LUS::BinaryReader& reader, uint32_t parent, uint32_t sampleBankId);
     static uint64_t GetPathByAddr(uint32_t addr);
+
+    static const char* GetMediumStr(uint8_t medium);
+    static const char* GetCachePolicyStr(uint8_t policy);
+    static const char* GetCodecStr(uint8_t codec);
 };
 
 class AudioContextFactory : public BaseFactory {

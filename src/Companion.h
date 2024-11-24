@@ -154,6 +154,7 @@ public:
     static void Pack(const std::string& folder, const std::string& output);
     std::string NormalizeAsset(const std::string& name) const;
     std::string RelativePath(const std::string& path) const;
+    void RegisterCompanionFile(const std::string path, std::vector<char> data);
 
     TorchConfig& GetConfig() { return this->gConfig; }
     SWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
@@ -190,6 +191,7 @@ private:
     std::vector<std::string> gCurrentExternalFiles;
     std::unordered_set<std::string> gProcessedFiles;
 
+    std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
 
     std::unordered_map<std::string, std::string> gModdedAssetPaths;

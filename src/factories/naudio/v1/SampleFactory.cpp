@@ -1,6 +1,9 @@
 #include "SampleFactory.h"
 #include "AudioConverter.h"
 #include "Companion.h"
+#include <tinyxml2.h>
+#include "LoopFactory.h"
+#include "BookFactory.h"
 #include <factories/naudio/v0/AIFCDecode.h>
 
 ExportResult NSampleHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
@@ -55,6 +58,61 @@ ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr
         write_aiff(cnv, aiff);
         aiff.Finish(write);
     }
+    return std::nullopt;
+}
+
+ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto aiff = LUS::BinaryWriter();
+    auto entry = std::static_pointer_cast<NSampleData>(raw);
+    auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(entry->loop)->data.value());
+    auto book = std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(entry->book)->data.value());
+
+    auto path = fs::path(*replacement);
+
+    *replacement += ".meta";
+
+    tinyxml2::XMLDocument sample;
+    tinyxml2::XMLElement* root = sample.NewElement("Sample");
+    root->SetAttribute("Codec", AudioContext::GetCodecStr(entry->codec));
+    root->SetAttribute("Medium", AudioContext::GetMediumStr(entry->medium));
+    root->SetAttribute("Unk", entry->unk);
+    // root->SetAttribute("Relocated", entry->isRelocated);
+
+    tinyxml2::XMLElement* adpcmLoop = sample.NewElement("ADPCMLoop");
+    adpcmLoop->SetAttribute("Start", loop->start);
+    adpcmLoop->SetAttribute("End", loop->end);
+    adpcmLoop->SetAttribute("Count", loop->count);
+    if (loop->count != 0) {
+        for (size_t i = 0; i < 16; i++) {
+            tinyxml2::XMLElement* loopEntry = adpcmLoop->InsertNewChildElement("Predictor");
+            loopEntry->SetAttribute("State", loop->predictorState[i]);
+            adpcmLoop->InsertEndChild(loopEntry);
+        }
+    }
+    root->InsertEndChild(adpcmLoop);
+
+    tinyxml2::XMLElement* adpcmBook = sample.NewElement("ADPCMBook");
+    adpcmBook->SetAttribute("Order", book->order);
+    adpcmBook->SetAttribute("Npredictors", book->numPredictors);
+
+    for (size_t i = 0; i < book->book.size(); i++) {
+        tinyxml2::XMLElement* bookEntry = adpcmBook->InsertNewChildElement("Book");
+        bookEntry->SetAttribute("Page", book->book[i]);
+        adpcmBook->InsertEndChild(bookEntry);
+    }
+    root->InsertEndChild(adpcmBook);
+    sample.InsertEndChild(root);
+
+    tinyxml2::XMLPrinter printer;
+    sample.Accept(&printer);
+    write.write(printer.CStr(), printer.CStrSize() - 1);
+
+    auto tableEntry = AudioContext::tableData[AudioTableType::SAMPLE_TABLE]->entries[entry->sampleBankId];
+    auto buffer = AudioContext::data[AudioTableType::SAMPLE_TABLE];
+    auto sampleData = buffer.data() + tableEntry.addr + entry->sampleAddr;
+    std::vector<char> data(sampleData, sampleData + entry->size);
+    Companion::Instance->RegisterCompanionFile(path.filename(), data);
+
     return std::nullopt;
 }
 

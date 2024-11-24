@@ -63,7 +63,7 @@ TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t pa
     node["offset"] = parent + sampleAddr;
     node["tuning"] = tuning;
     node["sampleBankId"] = sampleBankId;
-    node["symbol"] = StringHelper::Sprintf("Sample_P_%X_O_%X_B_%d", parent, parent + sampleAddr, sampleBankId);
+    node["symbol"] = StringHelper::Sprintf("%d_Sample_P_%X_B_%d", parent + sampleAddr, parent, sampleBankId);
     Companion::Instance->AddAsset(node);
 
     return { parent + sampleAddr, sampleBankId, tuning };
@@ -83,5 +83,60 @@ uint64_t AudioContext::GetPathByAddr(uint32_t addr) {
     } else {
         SPDLOG_INFO("Failed to find path for 0x{:X}", addr);
         throw std::runtime_error("Failed to find node by addr");
+    }
+}
+
+const char* AudioContext::GetMediumStr(uint8_t medium) {
+    switch (medium) {
+        case 0:
+            return "Ram";
+        case 1:
+            return "Unk";
+        case 2:
+            return "Cart";
+        case 3:
+            return "Disk";
+        case 5:
+            return "RamUnloaded";
+        default:
+            return "ERROR";
+    }
+}
+
+const char* AudioContext::GetCachePolicyStr(uint8_t policy) {
+    switch (policy) {
+        case 0:
+            return "Temporary";
+        case 1:
+            return "Persistent";
+        case 2:
+            return "Either";
+        case 3:
+            return "Permanent";
+        default:
+            return "ERROR";
+    }
+}
+
+const char* AudioContext::GetCodecStr(uint8_t codec) {
+    switch (codec) {
+        case 0:
+            return "ADPCM";
+        case 1:
+            return "S8";
+        case 2:
+            return "S16MEM";
+        case 3:
+            return "ADPCMSMALL";
+        case 4:
+            return "REVERB";
+        case 5:
+            return "S16";
+        case 6:
+            return "UNK6";
+        case 7:
+            return "UNK7";
+        default:
+            return "ERROR";
     }
 }
