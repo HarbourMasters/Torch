@@ -4,7 +4,6 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <fstream>
-#include <utils/TorchUtils.h>
 #include "n64/gbi-otr.h"
 
 #ifdef STANDALONE
@@ -91,7 +90,7 @@ ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
         return std::nullopt;
     }
 
-    write << "extern Gfx " << symbol << "[];\n";
+    write << "extern N64Gfx " << symbol << "[];\n";
     return std::nullopt;
 }
 
@@ -114,7 +113,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
 
     gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
     gfxd_macro_fn([] {
-        auto gfx = static_cast<const Gfx*>(gfxd_macro_data());
+        auto gfx = static_cast<const N64Gfx*>(gfxd_macro_data());
         const uint8_t opcode = (gfx->words.w0 >> 24) & 0xFF;
 
         if(hasTable) {
@@ -158,7 +157,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         }
 
         if(start == offset){
-            gfxd_puts(("Gfx " + name + "[][" + std::to_string(isize / 2) + "] = {\n").c_str());
+            gfxd_puts(("N64Gfx " + name + "[][" + std::to_string(isize / 2) + "] = {\n").c_str());
             gfxd_puts("\t{\n");
         } else {
             gfxd_puts("\t{\n");
@@ -169,7 +168,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
             write << fourSpaceTab << "}\n";
             write << "};\n";
             if (Companion::Instance->IsDebug()) {
-                write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
+                write << "// count: " << std::to_string(sz / 8) << " N64Gfx\n";
             }else {
                 write << "\n";
             }
@@ -177,13 +176,13 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
             write << fourSpaceTab << "},\n";
         }
     } else {
-        gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
+        gfxd_puts(("N64Gfx " + symbol + "[] = {\n").c_str());
         gfxd_execute();
         write << std::string(out);
         write << "};\n";
 
         if (Companion::Instance->IsDebug()) {
-            write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
+            write << "// count: " << std::to_string(sz / 8) << " N64Gfx\n";
         } else {
             write << "\n";
         }
@@ -225,7 +224,7 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr){
 
         auto offset = GetSafeNode<uint32_t>(node, "offset");
         auto count = GetSafeNode<uint32_t>(node, "count");
-        auto end = ALIGN16((count * sizeof(Vtx_t)));
+        auto end = ALIGN16((count * sizeof(N64Vtx_t)));
 
         if(ptr > offset && ptr <= offset + end){
             return std::make_tuple(GetSafeNode<std::string>(node, "symbol", name), node);
@@ -273,7 +272,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                     didx = C0(17, 7);
                     break;
                 default:
-                    nvtx = (C0(0, 16)) / sizeof(Vtx_t);
+                    nvtx = (C0(0, 16)) / sizeof(N64Vtx_t);
                     didx = C0(16, 4);
                     break;
             }
@@ -296,7 +295,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 auto count = GetSafeNode<uint32_t>(ovnode, "count");
                 auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
 
-                Gfx value = gsSPVertexOTR(diff, nvtx, didx);
+                N64Gfx value = gsSPVertexOTR(diff, nvtx, didx);
 
                 SPDLOG_INFO("gsSPVertexOTR({}, {}, {})", diff, nvtx, didx);
 
@@ -322,7 +321,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
                 SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
 
-                Gfx value = gsSPVertexOTR(0, nvtx, didx);
+                N64Gfx value = gsSPVertexOTR(0, nvtx, didx);
 
                 SPDLOG_INFO("gsSPVertex({}, {}, 0x{:X})", nvtx, didx, ptr);
 
@@ -340,7 +339,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         if(opcode == GBI(G_DL)) {
-            Gfx value;
+            N64Gfx value;
             auto ptr = w1;
             auto dec = Companion::Instance->GetNodeByAddr(ptr);
             auto branch = (w0 >> 16) & G_DL_NO_PUSH;
@@ -440,7 +439,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 writer.Write(w0);
                 writer.Write(w1);
             } else {
-                Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
+                N64Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
                 w0 = value.words.w0;
                 w1 = value.words.w1;
             
@@ -568,7 +567,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     nvtx = C0(10, 6);
                 break;
                 default:
-                    nvtx = (C0(0, 16)) / sizeof(Vtx_t);
+                    nvtx = (C0(0, 16)) / sizeof(N64Vtx_t);
                 break;
             }
             const auto decl = Companion::Instance->GetNodeByAddr(w1);
@@ -583,7 +582,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
                     auto lOffset = GetSafeNode<uint32_t>(vtx, "offset");
                     auto lCount = GetSafeNode<uint32_t>(vtx, "count");
-                    auto lSize = ALIGN16(lCount * sizeof(Vtx_t));
+                    auto lSize = ALIGN16(lCount * sizeof(N64Vtx_t));
 
                     if(w1 > lOffset && w1 <= lOffset + lSize){
                         SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", w1, lOffset);

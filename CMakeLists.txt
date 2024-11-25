@@ -5,6 +5,15 @@ include(FetchContent)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 11)
 
+# Set build options
+option(USE_STANDALONE "Build as a standalone executable" ON)
+option(BUILD_STORMLIB "Build with StormLib support" ON)
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+
+option(BUILD_SM64 "Build with Super Mario 64 support" ON)
+option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
+option(BUILD_SF64 "Build with Star Fox 64 support" ON)
+
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
 ################################################################################
@@ -20,36 +29,26 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     endif()
 endif()
 
+if(USE_STANDALONE)
+    # Link libgfxd
+    # Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
+    FetchContent_Declare(
+        libgfxd
+        GIT_REPOSITORY https://github.com/glankk/libgfxd.git
+        GIT_TAG 96fd3b849f38b3a7c7b7f3ff03c5921d328e6cdf
+    )
 
-# Link libgfxd
-# Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
+    FetchContent_GetProperties(libgfxd)
 
-FetchContent_Declare(
-    libgfxd
-    GIT_REPOSITORY https://github.com/glankk/libgfxd.git
-    GIT_TAG 96fd3b849f38b3a7c7b7f3ff03c5921d328e6cdf
-)
-
-FetchContent_GetProperties(libgfxd)
-
-if(NOT libgfxd_POPULATED)
-    FetchContent_Populate(libgfxd)
-    include_directories(${libgfxd_SOURCE_DIR})
-    set(LGFXD_SRC gfxd.c uc_f3d.c uc_f3db.c uc_f3dex.c uc_f3dexb.c uc_f3dex2.c)
-    foreach (LGFXD_FILE ${LGFXD_SRC})
-        list(APPEND LGFXD_FILES "${libgfxd_SOURCE_DIR}/${LGFXD_FILE}")
-    endforeach()
+    if(NOT libgfxd_POPULATED)
+        FetchContent_Populate(libgfxd)
+        include_directories(${libgfxd_SOURCE_DIR})
+        set(LGFXD_SRC gfxd.c uc_f3d.c uc_f3db.c uc_f3dex.c uc_f3dexb.c uc_f3dex2.c)
+        foreach (LGFXD_FILE ${LGFXD_SRC})
+            list(APPEND LGFXD_FILES "${libgfxd_SOURCE_DIR}/${LGFXD_FILE}")
+        endforeach()
+    endif()
 endif()
-
-# Set build options
-option(USE_STANDALONE "Build as a standalone executable" ON)
-option(BUILD_STORMLIB "Build with StormLib support" ON)
-option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
-
-option(BUILD_SM64 "Build with Super Mario 64 support" ON)
-option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
-option(BUILD_SF64 "Build with Star Fox 64 support" ON)
-
 # Source files
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
