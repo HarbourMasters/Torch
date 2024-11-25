@@ -111,9 +111,8 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
 
         auto limbWriter = LUS::BinaryWriter();
         WriteHeader(limbWriter, Torch::ResourceType::Limb, 0);
-        bool hasDList = limb.mDList != 0 && (SEGMENT_NUMBER(limb.mDList) == SEGMENT_NUMBER(limb.mAddr));
 
-        if(hasDList){
+        if(limb.mDList != 0){
             auto dec = Companion::Instance->GetNodeByAddr(limb.mDList);
             if (dec.has_value()){
                 std::string path = std::get<0>(dec.value());
