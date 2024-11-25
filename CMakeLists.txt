@@ -169,37 +169,12 @@ if(USE_STANDALONE)
             )
         endif()
     endif()
+endif()
 
-    if(MSVC)
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
-    endif()
-elseif(MSVC)
-    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-        get_property(MSVC_RUNTIME_LIBRARY_DEFAULT TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY)
-        if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-            string(CONCAT "MSVC_RUNTIME_LIBRARY_STR"
-                $<$<CONFIG:Debug>:
-                    MultiThreadedDebug
-                >
-                $<$<CONFIG:Release>:
-                    MultiThreaded
-                >
-                $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
-            )
-        elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-            string(CONCAT "MSVC_RUNTIME_LIBRARY_STR"
-                $<$<CONFIG:Debug>:
-                    MultiThreadedDebug
-                >
-                $<$<CONFIG:Release>:
-                    MultiThreaded
-                >
-                $<$<NOT:$<OR:$<CONFIG:Debug>,$<CONFIG:Release>>>:${MSVC_RUNTIME_LIBRARY_DEFAULT}>
-            )
-        endif()
-        set_target_properties(${PROJECT_NAME} PROPERTIES MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STR})
-    endif()
+if(MSVC)
+    # Set it to debug or release
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
 endif()
 
 # Fetch Dependencies
