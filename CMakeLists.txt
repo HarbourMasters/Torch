@@ -89,93 +89,88 @@ else()
     add_library(${PROJECT_NAME} STATIC ${SRC_DIR})
 endif()
 
-if(USE_STANDALONE)
-    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-        set(CMAKE_CXX_FLAGS_DEBUG "-g")
-        set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-        set(CMAKE_CXX_FLAGS "-Wno-narrowing")
-    else()
-        if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-            target_compile_options(${PROJECT_NAME} PRIVATE
-                $<$<CONFIG:Debug>:
-                    /w;
-                    /Od;
-                    /MDd
-                >
-                $<$<CONFIG:Release>:
-                    /O3;
-                    /Gy;
-                    /W3;
-                    /MD
-                >
-                /bigobj
-                /STACK:16777216
-                /permissive-;
-                /MP;
-                ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-                ${DEFAULT_CXX_EXCEPTION_HANDLING}
-            )
-            target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
-        elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-            target_compile_options(${PROJECT_NAME} PRIVATE
-                $<$<CONFIG:Debug>:
-                    /MDd
-                >
-                $<$<CONFIG:Release>:
-                    /O3;
-                    /Oi;
-                    /Gy;
-                    /MD
-                >
-                /STACK:16777216
-                /permissive-;
-                /bigobj
-                /MP;
+if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+    set(CMAKE_CXX_FLAGS "-Wno-narrowing")
+else()
+    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
                 /w;
-                ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-                ${DEFAULT_CXX_EXCEPTION_HANDLING}
-            )
-            endif()
-        if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-            target_link_options(${PROJECT_NAME} PRIVATE
-                $<$<CONFIG:Debug>:
-                    /INCREMENTAL
-                >
-                $<$<CONFIG:Release>:
-                    /OPT:REF;
-                    /OPT:ICF;
-                    /INCREMENTAL:NO;
-                    /FORCE:MULTIPLE
-                >
-                /bigobj
-                /STACK:16777216
-                /MANIFEST:NO;
-                /DEBUG;
-                /SUBSYSTEM:CONSOLE
-            )
-        elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-            target_link_options(${PROJECT_NAME} PRIVATE
-                $<$<CONFIG:Release>:
-                    /OPT:REF;
-                    /OPT:ICF;
-                    /INCREMENTAL:NO;
-                    /FORCE:MULTIPLE
-                >
-                /bigobj
-                /STACK:16777216
-                /MANIFEST:NO;
-                /DEBUG;
-                /SUBSYSTEM:CONSOLE
-            )
+                /Od;
+                /MTd
+            >
+            $<$<CONFIG:Release>:
+                /O3;
+                /Gy;
+                /W3;
+                /MT
+            >
+            /bigobj
+            /STACK:16777216
+            /permissive-;
+            /MP;
+            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
+            ${DEFAULT_CXX_EXCEPTION_HANDLING}
+        )
+        target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
+    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
+                /MTd
+            >
+            $<$<CONFIG:Release>:
+                /O3;
+                /Oi;
+                /Gy;
+                /MT
+            >
+            /STACK:16777216
+            /permissive-;
+            /bigobj
+            /MP;
+            /w;
+            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
+            ${DEFAULT_CXX_EXCEPTION_HANDLING}
+        )
         endif()
+    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        target_link_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Debug>:
+                /INCREMENTAL
+            >
+            $<$<CONFIG:Release>:
+                /OPT:REF;
+                /OPT:ICF;
+                /INCREMENTAL:NO;
+                /FORCE:MULTIPLE
+            >
+            /bigobj
+            /STACK:16777216
+            /MANIFEST:NO;
+            /DEBUG;
+            /SUBSYSTEM:CONSOLE
+        )
+    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+        target_link_options(${PROJECT_NAME} PRIVATE
+            $<$<CONFIG:Release>:
+                /OPT:REF;
+                /OPT:ICF;
+                /INCREMENTAL:NO;
+                /FORCE:MULTIPLE
+            >
+            /bigobj
+            /STACK:16777216
+            /MANIFEST:NO;
+            /DEBUG;
+            /SUBSYSTEM:CONSOLE
+        )
     endif()
 endif()
 
-if(MSVC)
-    # Set it to debug or release
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
-endif()
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
 
 # Fetch Dependencies
 
