@@ -3,10 +3,13 @@
 #include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
-#include <gfxd.h>
 #include <fstream>
 #include <utils/TorchUtils.h>
 #include "n64/gbi-otr.h"
+
+#ifdef STANDALONE
+#include <gfxd.h>
+#endif
 
 #define C0(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
 #define ALIGN16(val) (((val) + 0xF) & ~0xF)
@@ -58,6 +61,7 @@ std::unordered_map<GBIVersion, std::unordered_map<std::string, uint8_t>> gGBITab
 
 #define GBI(cmd) gGBITable[Companion::Instance->GetGBIVersion()][#cmd]
 
+#ifdef STANDALONE
 void GFXDSetGBIVersion(){
     switch (Companion::Instance->GetGBIVersion()) {
         case GBIVersion::f3d:
@@ -77,6 +81,7 @@ void GFXDSetGBIVersion(){
             break;
     }
 }
+#endif
 
 ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -90,8 +95,8 @@ ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     return std::nullopt;
 }
 
+#ifdef STANDALONE
 bool hasTable = false;
-
 ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -206,6 +211,7 @@ void DebugDisplayList(uint32_t w0, uint32_t w1){
     GFXDSetGBIVersion();
     gfxd_execute();
 }
+#endif
 
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr){
     auto decs = Companion::Instance->GetNodesByType("VTX");

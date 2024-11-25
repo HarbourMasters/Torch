@@ -26,6 +26,7 @@
 #include "factories/AssetArrayFactory.h"
 #include "factories/ViewportFactory.h"
 
+#ifdef SM64_SUPPORT
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
 #include "factories/sm64/CollisionFactory.h"
@@ -41,6 +42,7 @@
 #include "factories/sm64/PaintingMapFactory.h"
 #include "factories/sm64/TrajectoryFactory.h"
 #include "factories/sm64/WaterDropletFactory.h"
+#endif
 
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
@@ -84,8 +86,6 @@ namespace fs = std::filesystem;
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
 
-#define ABS(x) ((x) < 0 ? -(x) : (x))
-
 void Companion::Init(const ExportType type) {
 
     spdlog::set_level(spdlog::level::debug);
@@ -106,7 +106,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("ASSET_ARRAY", std::make_shared<AssetArrayFactory>());
     this->RegisterFactory("VP", std::make_shared<ViewportFactory>());
 
-    // SM64 specific
+#ifdef SM64_SUPPORT
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
@@ -122,8 +122,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:PAINTING_MAP", std::make_shared<SM64::PaintingMapFactory>());
     this->RegisterFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactory>());
     this->RegisterFactory("SM64:WATER_DROPLET", std::make_shared<SM64::WaterDropletFactory>());
+#endif
 
-    // MK64 specific
+#ifdef MK64_SUPPORT
     this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
     this->RegisterFactory("MK64:TRACK_WAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
@@ -132,8 +133,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
     this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
     this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
+#endif
 
-    // SF64 specific
+#ifdef SF64_SUPPORT
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
     this->RegisterFactory("SF64:SKELETON", std::make_shared<SF64::SkeletonFactory>());
     this->RegisterFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>());
@@ -144,6 +146,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
     this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
     this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
+#endif
 
     // NAudio specific
     this->RegisterFactory("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());

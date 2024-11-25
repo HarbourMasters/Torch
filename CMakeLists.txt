@@ -41,6 +41,15 @@ if(NOT libgfxd_POPULATED)
     endforeach()
 endif()
 
+# Set build options
+option(USE_STANDALONE "Build as a standalone executable" ON)
+option(BUILD_STORMLIB "Build with StormLib support" ON)
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+
+option(BUILD_SM64 "Build with Super Mario 64 support" ON)
+option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
+option(BUILD_SF64 "Build with Star Fox 64 support" ON)
+
 # Source files
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -50,106 +59,125 @@ file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURREN
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/**/*.c)
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
-option(USE_STANDALONE "Build as a standalone executable" ON)
-option(BUILD_STORMLIB "Build with StormLib support" ON)
+if(BUILD_SM64)
+    add_definitions(-DSM64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/sm64/*")
+endif()
 
-#add_compile_options(-fsanitize=address)
-#add_link_options(-fsanitize=address)
+if(BUILD_SF64)
+    add_definitions(-DSF64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/sf64/*")
+endif()
+
+if(BUILD_MK64)
+    add_definitions(-DMK64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/mk64/*")
+endif()
+
+if(ENABLE_ASAN)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif()
 
 # Build
 if (USE_STANDALONE)
     add_definitions(-DSTANDALONE)
     add_executable(${PROJECT_NAME} ${SRC_DIR})
 else()
-    add_library(${PROJECT_NAME} SHARED ${SRC_DIR})
+    add_library(${PROJECT_NAME} STATIC ${SRC_DIR})
 endif()
 
-if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-    set(CMAKE_CXX_FLAGS "-Wno-narrowing")
-else()
-    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
+if(USE_STANDALONE)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        set(CMAKE_CXX_FLAGS_DEBUG "-g")
+        set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+        set(CMAKE_CXX_FLAGS "-Wno-narrowing")
+    else()
+        if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+            target_compile_options(${PROJECT_NAME} PRIVATE
+                $<$<CONFIG:Debug>:
+                    /w;
+                    /Od;
+                    /MDd
+                >
+                $<$<CONFIG:Release>:
+                    /O3;
+                    /Gy;
+                    /W3;
+                    /MD
+                >
+                /bigobj
+                /STACK:16777216
+                /permissive-;
+                /MP;
+                ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
+                ${DEFAULT_CXX_EXCEPTION_HANDLING}
+            )
+            target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
+        elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+            target_compile_options(${PROJECT_NAME} PRIVATE
+                $<$<CONFIG:Debug>:
+                    /MDd
+                >
+                $<$<CONFIG:Release>:
+                    /O3;
+                    /Oi;
+                    /Gy;
+                    /MD
+                >
+                /STACK:16777216
+                /permissive-;
+                /bigobj
+                /MP;
                 /w;
-                /Od;
-                /MDd
-            >
-            $<$<CONFIG:Release>:
-                /Oi;
-                /Gy;
-                /W3;
-                /MD
-            >
-            /bigobj
-            /STACK:16777216
-            /permissive-;
-            /MP;
-            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
-        )
-        target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
-    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /MDd
-            >
-            $<$<CONFIG:Release>:
-                /O2;
-                /Oi;
-                /Gy;
-                /MD
-            >
-            /STACK:16777216
-            /permissive-;
-            /bigobj
-            /MP;
-            /w;
-            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
-        )
+                ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
+                ${DEFAULT_CXX_EXCEPTION_HANDLING}
+            )
+            endif()
+        if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+            target_link_options(${PROJECT_NAME} PRIVATE
+                $<$<CONFIG:Debug>:
+                    /INCREMENTAL
+                >
+                $<$<CONFIG:Release>:
+                    /OPT:REF;
+                    /OPT:ICF;
+                    /INCREMENTAL:NO;
+                    /FORCE:MULTIPLE
+                >
+                /bigobj
+                /STACK:16777216
+                /MANIFEST:NO;
+                /DEBUG;
+                /SUBSYSTEM:CONSOLE
+            )
+        elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+            target_link_options(${PROJECT_NAME} PRIVATE
+                $<$<CONFIG:Release>:
+                    /OPT:REF;
+                    /OPT:ICF;
+                    /INCREMENTAL:NO;
+                    /FORCE:MULTIPLE
+                >
+                /bigobj
+                /STACK:16777216
+                /MANIFEST:NO;
+                /DEBUG;
+                /SUBSYSTEM:CONSOLE
+            )
         endif()
-    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /INCREMENTAL
-            >
-            $<$<CONFIG:Release>:
-                /OPT:REF;
-                /OPT:ICF;
-                /INCREMENTAL:NO;
-                /FORCE:MULTIPLE
-            >
-            /bigobj
-            /STACK:16777216
-            /MANIFEST:NO;
-            /DEBUG;
-            /SUBSYSTEM:CONSOLE
-        )
-    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-        target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Release>:
-                /OPT:REF;
-                /OPT:ICF;
-                /INCREMENTAL:NO;
-                /FORCE:MULTIPLE
-            >
-            /bigobj
-            /STACK:16777216
-            /MANIFEST:NO;
-            /DEBUG;
-            /SUBSYSTEM:CONSOLE
-        )
+    endif()
+
+    if(MSVC)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
     endif()
 endif()
 
 # Fetch Dependencies
-
-if(MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
-endif()
 
 if(NOT USE_STANDALONE AND EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
     FetchContent_Declare(
@@ -176,6 +204,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE N64Graphics)
 # Link StormLib
 
 if (BUILD_STORMLIB)
+    set(STORM_BUILD_TESTS OFF)
     set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
     add_subdirectory(${STORMLIB_DIR})
     target_link_libraries(${PROJECT_NAME} PRIVATE storm)
