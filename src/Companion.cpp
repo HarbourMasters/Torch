@@ -44,6 +44,7 @@
 #include "factories/sm64/WaterDropletFactory.h"
 #endif
 
+#ifdef MK64_SUPPORT
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
@@ -52,7 +53,9 @@
 #include "factories/mk64/DrivingBehaviour.h"
 #include "factories/mk64/ItemCurve.h"
 #include "factories/mk64/CourseMetadata.h"
+#endif
 
+#ifdef SF64_SUPPORT
 #include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
@@ -63,6 +66,7 @@
 #include "factories/sf64/EnvironmentFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
+#endif
 
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/naudio/v0/BankFactory.h"

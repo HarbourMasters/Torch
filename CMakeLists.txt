@@ -167,10 +167,11 @@ else()
             /SUBSYSTEM:CONSOLE
         )
     endif()
+
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
 endif()
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
 
 # Fetch Dependencies
 
@@ -203,6 +204,9 @@ if (BUILD_STORMLIB)
     set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
     add_subdirectory(${STORMLIB_DIR})
     target_link_libraries(${PROJECT_NAME} PRIVATE storm)
+    if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+        target_compile_definitions(storm PRIVATE -D_POSIX_C_SOURCE=200809L)
+    endif()
 endif()
 
 # Link YamlCpp
@@ -232,12 +236,9 @@ if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES
     include(../cmake/HandleCompilerRT.cmake)
     find_compiler_rt_library(builtins CLANG_RT_BUILTINS_LIBRARY)
     get_filename_component(LIBDIR "${CLANG_RT_BUILTINS_LIBRARY}" DIRECTORY)
-    if(IS_DIRECTORY "${LIBDIR}")
+    if(USE_STANDALONE AND IS_DIRECTORY "${LIBDIR}")
         target_link_libraries(storm ${CLANG_RT_BUILTINS_LIBRARY})
     endif()
-endif()
-if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
-    target_compile_definitions(storm PRIVATE -D_POSIX_C_SOURCE=200809L)
 endif()
 
 if(NOT USE_STANDALONE)
