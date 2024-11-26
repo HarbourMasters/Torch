@@ -112,7 +112,7 @@ else()
             /permissive-;
             /MP;
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
+            ${DEFAULT_CXX_EXCEPTION_HANDLING};
         )
         target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
@@ -134,7 +134,8 @@ else()
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
             ${DEFAULT_CXX_EXCEPTION_HANDLING}
         )
-        endif()
+    endif()
+
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_link_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
@@ -170,6 +171,10 @@ else()
 
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
+
+    if(USE_STANDALONE)
+        target_link_options(${PROJECT_NAME} PRIVATE "STORMLIB_NO_AUTO_LINK;")
+    endif()
 endif()
 
 
