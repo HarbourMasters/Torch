@@ -192,7 +192,7 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
 
         write << "\n";
     }
-    return offset + isize * byteSize;
+    return offset + compressedSize;
 }
 
 ExportResult CompressedTextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
