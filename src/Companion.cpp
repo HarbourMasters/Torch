@@ -889,7 +889,7 @@ void Companion::ProcessFile(YAML::Node root) {
                 if(gap < 0) {
                     stream << "// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << std::abs(gap) << "\n";
                     SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
-                } else if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
+                } else if(gap < 0x10 && gap >= alignment && end % alignment == 0 && this->gEnablePadGen) {
                     SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
                     SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
                     const auto padfile = this->gCurrentDirectory.filename().string();
