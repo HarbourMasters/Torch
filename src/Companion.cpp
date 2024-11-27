@@ -907,7 +907,7 @@ void Companion::ProcessFile(YAML::Node root) {
                     } else {
                         stream << "\n";
                     }
-                } else if(gap > 0x10) {
+                } else if(gap >= 0x10) {
                     stream << "// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
                 }
             }
