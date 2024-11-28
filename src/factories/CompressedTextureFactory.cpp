@@ -118,10 +118,12 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
     // Allocate worse case size
     uint8_t* compressedData;
     size_t compressedSize;
+    size_t worstSize;
 
     switch (texture->mCompressionType) {
         case CompressionType::MIO0:
-            compressedData = static_cast<uint8_t*>(malloc(MIO0_HEADER_LENGTH + ((data.size()+7)/8) + data.size()));
+            worstSize = MIO0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+            compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
             compressedSize = mio0_encode(data.data(), data.size(), compressedData);
             break;
         default:
