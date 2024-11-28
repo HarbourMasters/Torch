@@ -48,7 +48,7 @@ ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr
     *replacement += ".aiff";
 
     auto aifc = LUS::BinaryWriter();
-    AudioConverter::SampleToAIFC(data.get(), aifc);
+    AudioConverter::SampleV1ToAIFC(data.get(), aifc);
     auto cnv = aifc.ToVector();
 
     if(!cnv.empty()){

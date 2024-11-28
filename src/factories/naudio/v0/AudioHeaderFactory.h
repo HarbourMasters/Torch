@@ -2,6 +2,11 @@
 
 #include <factories/BaseFactory.h>
 
+class AudioAIFCExporter : public BaseExporter {
+public:
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement);
+};
+
 class AudioDummyExporter : public BaseExporter {
 public:
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override {
@@ -17,7 +22,7 @@ public:
     }
     std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Modding, AudioDummyExporter)
+            REGISTER(Modding, AudioAIFCExporter)
             REGISTER(Header, AudioDummyExporter)
             REGISTER(Binary, AudioDummyExporter)
             REGISTER(Code, AudioDummyExporter)

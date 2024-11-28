@@ -8,6 +8,7 @@
 #include <Companion.h>
 #include <cassert>
 #include <cstring>
+#include "hj/pyutils.h"
 
 void AIFCWriter::End(std::string chunk, LUS::BinaryWriter& writer) {
     auto buffer = writer.ToVector();
@@ -79,7 +80,92 @@ void SerializeF80(double num, LUS::BinaryWriter &writer) {
     writer.Write(low);
 }
 
-void AudioConverter::SampleToAIFC(NSampleData* sample, LUS::BinaryWriter &out) {
+void AudioConverter::SampleV0ToAIFC(AudioBankSample* sample, LUS::BinaryWriter &out) {
+    auto aifc = AIFCWriter();
+    auto data = sample->data;
+
+    uint32_t num_frames = data.size() * 16 / 9;
+    uint32_t sample_rate = -1;
+
+    if(sample->tunings.size() == 1){
+        sample_rate = 32000 * sample->tunings[0];
+    } else {
+        float tmin = PyUtils::min(sample->tunings);
+        float tmax = PyUtils::max(sample->tunings);
+
+        if(tmin <= 0.5f <= tmax){
+            sample_rate = 16000;
+        } else if(tmin <= 1.0f <= tmax){
+            sample_rate = 32000;
+        } else if(tmin <= 1.5f <= tmax){
+            sample_rate = 48000;
+        } else if(tmin <= 2.5f <= tmax){
+            sample_rate = 80000;
+        } else {
+            sample_rate = 16000 * (tmin + tmax);
+        }
+    }
+
+    int16_t num_channels = 1;
+    int16_t sample_size = 16;
+
+    // COMM Chunk
+    auto comm = aifc.Start();
+    comm.Write(num_channels);
+    comm.Write(num_frames);
+    comm.Write(sample_size);
+    SerializeF80(sample_rate, comm);
+    comm.Write(AIFCMagicValues::VAPC);
+    comm.Write((char*) "\x0bVADPCM ~4-1", 12);
+    aifc.End("COMM", comm);
+
+    // INST Chunk
+    auto inst = aifc.Start();
+    for(size_t i = 0; i < 5; i++){
+        inst.Write((int32_t) 0);
+    }
+    aifc.End("INST", inst);
+
+    // VADPCMCODES Chunk
+    auto vcodes = aifc.Start();
+    vcodes.Write((char*) "stoc\x0bVADPCMCODES", 16);
+    vcodes.Write((int16_t) 1);
+    vcodes.Write((int16_t) sample->book.order);
+    vcodes.Write((int16_t) sample->book.npredictors);
+
+    for(auto page : sample->book.table){
+        vcodes.Write(page);
+    }
+    aifc.End("APPL", vcodes);
+
+    // SSND Chunk
+    auto ssnd = aifc.Start();
+    ssnd.Write((uint64_t) 0);
+    ssnd.Write((char*) data.data(), data.size());
+    aifc.End("SSND", ssnd);
+
+    // VADPCMLOOPS
+    if(sample->loop.count != 0){
+        auto vloops = aifc.Start();
+        vloops.Write((char*) "stoc\x0bVADPCMLOOPS", 16);
+        vloops.Write((uint16_t) 1);
+        vloops.Write((uint16_t) 1);
+        vloops.Write(sample->loop.start);
+        vloops.Write(sample->loop.end);
+        vloops.Write(sample->loop.count);
+
+        if(sample->loop.state.has_value()){
+            for(auto state : sample->loop.state.value()){
+                vcodes.Write(state);
+            }
+        }
+        aifc.End("APPL", vloops);
+    }
+
+    aifc.Close(out);
+}
+
+void AudioConverter::SampleV1ToAIFC(NSampleData* sample, LUS::BinaryWriter &out) {
     auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(sample->loop)->data.value());
     auto book = std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(sample->book)->data.value());
     auto entry = AudioContext::tableData[AudioTableType::SAMPLE_TABLE]->entries[sample->sampleBankId];
