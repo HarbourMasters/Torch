@@ -165,20 +165,17 @@ endif()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/binarytools)
 add_dependencies(${PROJECT_NAME} BinaryTools)
-target_link_libraries(${PROJECT_NAME} PRIVATE BinaryTools)
 
 # Link n64graphics
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/n64graphics)
 add_dependencies(${PROJECT_NAME} N64Graphics)
-target_link_libraries(${PROJECT_NAME} PRIVATE N64Graphics)
 
 # Link StormLib
 
 if (BUILD_STORMLIB)
     set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
     add_subdirectory(${STORMLIB_DIR})
-    target_link_libraries(${PROJECT_NAME} PRIVATE storm)
 endif()
 
 # Link YamlCpp
@@ -193,7 +190,8 @@ FetchContent_Declare(
 )
 set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)
+
+#Link Spdlog
 
 FetchContent_Declare(
     spdlog
@@ -202,7 +200,18 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(spdlog)
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+
+# Link TinyXML2
+set(tinyxml2_BUILD_TESTING OFF)
+FetchContent_Declare(
+    tinyxml2
+    GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
+    GIT_TAG 10.0.0
+    OVERRIDE_FIND_PACKAGE
+)
+FetchContent_MakeAvailable(tinyxml2)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog tinyxml2 yaml-cpp storm N64Graphics BinaryTools)
 
 if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
     include(../cmake/HandleCompilerRT.cmake)
