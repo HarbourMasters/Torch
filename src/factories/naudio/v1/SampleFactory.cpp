@@ -76,7 +76,7 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     root->SetAttribute("Codec", AudioContext::GetCodecStr(entry->codec));
     root->SetAttribute("Medium", AudioContext::GetMediumStr(entry->medium));
     root->SetAttribute("Unk", entry->unk);
-    // root->SetAttribute("Relocated", entry->isRelocated);
+    root->SetAttribute("Tuning", entry->tuning);
 
     tinyxml2::XMLElement* adpcmLoop = sample.NewElement("ADPCMLoop");
     adpcmLoop->SetAttribute("Start", loop->start);
@@ -119,7 +119,7 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
 std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto parent = GetSafeNode<uint32_t>(node, "parent");
-    auto tuning = GetSafeNode<float>(node, "tuning", 1.0f);
+    auto tuning = GetSafeNode<float>(node, "tuning", 0.0f);
     auto sampleRate = GetSafeNode<uint32_t>(node, "sampleRate", 0);
     auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
 

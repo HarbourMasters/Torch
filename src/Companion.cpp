@@ -1230,9 +1230,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
 
     auto entry = std::make_tuple(output, node);
     this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = entry;
-
-
-
+    
     return entry;
 }
 
@@ -1417,7 +1415,6 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     const auto offset = GetSafeNode<uint32_t>(asset, "offset");
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
     const auto decl = this->GetNodeByAddr(offset);
-
 
     if(decl.has_value()) {
         return std::get<1>(decl.value());

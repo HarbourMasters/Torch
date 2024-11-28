@@ -62,8 +62,9 @@ TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t pa
     node["parent"] = parent;
     node["offset"] = parent + sampleAddr;
     node["tuning"] = tuning;
+    SPDLOG_INFO("Tuning {}", tuning);
     node["sampleBankId"] = sampleBankId;
-    node["symbol"] = StringHelper::Sprintf("%d_Sample_P_%X_B_%d", parent + sampleAddr, parent, sampleBankId);
+    // node["symbol"] = StringHelper::Sprintf("%d_Sample_P_%X_B_%d", parent + sampleAddr, parent, sampleBankId);
     Companion::Instance->AddAsset(node);
 
     return { parent + sampleAddr, sampleBankId, tuning };
