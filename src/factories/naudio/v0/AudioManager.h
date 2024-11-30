@@ -129,6 +129,7 @@ public:
     std::string& get_sample(uint32_t id);
     AudioBankSample get_aifc(int32_t index);
     std::map<uint32_t, Bank> get_banks();
+    std::vector<SampleBank*> get_loaded_banks();
     std::vector<AudioBankSample*> get_samples();
     uint32_t get_index(AudioBankSample* bank);
 private:

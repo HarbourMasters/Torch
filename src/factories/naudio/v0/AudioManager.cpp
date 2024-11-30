@@ -545,6 +545,10 @@ std::map<uint32_t, Bank> AudioManager::get_banks() {
     return this->banks;
 }
 
+std::vector<SampleBank*> AudioManager::get_loaded_banks() {
+    return this->loaded_tbl.banks;
+}
+
 std::vector<AudioBankSample*> AudioManager::get_samples() {
     std::vector<AudioBankSample*> samples;
     for(auto &bank : this->loaded_tbl.banks){

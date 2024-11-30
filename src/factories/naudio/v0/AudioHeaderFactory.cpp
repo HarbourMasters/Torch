@@ -6,6 +6,7 @@
 #include "spdlog/spdlog.h"
 #include <factories/naudio/v1/AudioConverter.h>
 
+/*
 ExportResult AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) {
 
     auto samples = AudioManager::Instance->get_samples();
@@ -26,11 +27,16 @@ ExportResult AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IPar
         aifc.Close();
         aiff.Finish(file);
         file.close();
-        SPDLOG_INFO("Exported {}", dpath + "_bank_" + std::to_string(temp) + ".aiff");
+        // SPDLOG_INFO("Exported {}", dpath + "_bank_" + std::to_string(temp) + ".aiff");
+
+        SPDLOG_INFO("sample_{}:", temp);
+        SPDLOG_INFO("  type: NAUDIO:V0:SAMPLE");
+        SPDLOG_INFO("  id: {}\n", temp);
     }
 
     return std::nullopt;
 }
+*/
 
 std::optional<std::shared_ptr<IParsedData>> AudioHeaderFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
     AudioManager::Instance->initialize(buffer, data);

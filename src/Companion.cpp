@@ -573,7 +573,7 @@ void Companion::ProcessFile(YAML::Node root) {
 
                 if(assetNode["type"]){
                     const auto type = GetSafeNode<std::string>(assetNode, "type");
-                    if(type == "SAMPLE"){
+                    if(type == "NAUDIO:V0:SAMPLE"){
                         AudioManager::Instance->bind_sample(assetNode, output);
                     }
                 }
@@ -597,10 +597,9 @@ void Companion::ProcessFile(YAML::Node root) {
             auto output = (this->gCurrentDirectory / entryName).string();
             std::replace(output.begin(), output.end(), '\\', '/');
 
-
             if(node["type"]){
                 const auto type = GetSafeNode<std::string>(node, "type");
-                if(type == "SAMPLE"){
+                if(type == "NAUDIO:V0:SAMPLE"){
                     AudioManager::Instance->bind_sample(node, output);
                 }
             }
