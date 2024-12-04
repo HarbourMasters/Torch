@@ -198,7 +198,6 @@ add_dependencies(${PROJECT_NAME} N64Graphics)
 target_link_libraries(${PROJECT_NAME} PRIVATE N64Graphics)
 
 # Link StormLib
-
 if (BUILD_STORMLIB)
     set(STORM_BUILD_TESTS OFF)
     set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
@@ -221,16 +220,25 @@ FetchContent_Declare(
 )
 set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)
+if(NOT USE_STANDALONE)
+	target_compile_definitions(yaml-cpp PRIVATE YAML_CPP_STATIC_DEFINE)
+endif()
 
-FetchContent_Declare(
-    spdlog
-    GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG 7e635fca68d014934b4af8a1cf874f63989352b7
-)
+if(USE_STANDALONE)
+	FetchContent_Declare(
+		spdlog
+		GIT_REPOSITORY https://github.com/gabime/spdlog.git
+		GIT_TAG 7e635fca68d014934b4af8a1cf874f63989352b7
+	)
 
-FetchContent_MakeAvailable(spdlog)
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+	FetchContent_MakeAvailable(spdlog)
+	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+else()
+	find_package(spdlog REQUIRED)
+	target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
+endif()
 
 if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
     include(../cmake/HandleCompilerRT.cmake)
