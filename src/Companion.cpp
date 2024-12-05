@@ -1110,13 +1110,14 @@ void Companion::Process() {
             entries.push_back(key);
         }
     }
-
+#ifdef USE_STANDALONE
     if(cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
             this->ParseEnums(file);
         }
     }
+#endif
 
     if(cfg["logging"]){
         auto level = cfg["logging"].as<std::string>();
