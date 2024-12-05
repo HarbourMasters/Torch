@@ -96,6 +96,7 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
     set(CMAKE_CXX_FLAGS "-Wno-narrowing")
 else()
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_compile_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
@@ -110,7 +111,6 @@ else()
                 /${LINK_TYPE}
             >
             /bigobj
-            /STACK:16777216
             /permissive-;
             /MP;
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
@@ -128,7 +128,6 @@ else()
                 /Gy;
                 /${LINK_TYPE}
             >
-            /STACK:16777216
             /permissive-;
             /bigobj
             /MP;
@@ -149,7 +148,6 @@ else()
                 /FORCE:MULTIPLE
             >
             /bigobj
-            /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
             /SUBSYSTEM:CONSOLE
@@ -163,7 +161,6 @@ else()
                 /FORCE:MULTIPLE
             >
             /bigobj
-            /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
             /SUBSYSTEM:CONSOLE
