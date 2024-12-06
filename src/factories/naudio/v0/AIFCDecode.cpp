@@ -9,8 +9,8 @@
 #include <cstdlib>
 #include <cstdarg>
 #include <stdexcept>
-#include "binarytools/BinaryWriter.h"
-#include "BinaryReader.h"
+#include "lib/binarytools/BinaryWriter.h"
+#include "lib/binarytools/BinaryReader.h"
 
 typedef signed char s8;
 typedef short s16;

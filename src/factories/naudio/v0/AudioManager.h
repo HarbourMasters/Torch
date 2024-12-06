@@ -5,7 +5,7 @@
 #include <string>
 #include <iostream>
 #include <yaml-cpp/yaml.h>
-#include "binarytools/BinaryWriter.h"
+#include "lib/binarytools/BinaryWriter.h"
 #include <variant>
 #include <optional>
 

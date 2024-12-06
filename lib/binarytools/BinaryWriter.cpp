@@ -1,5 +1,5 @@
-#include "BinaryWriter.h"
-#include "MemoryStream.h"
+#include "./BinaryWriter.h"
+#include "./MemoryStream.h"
 #include <iostream>
 
 LUS::BinaryWriter::BinaryWriter() {

@@ -12,9 +12,9 @@ extern "C" {
 
 std::unordered_map<uint32_t, DataChunk*> gCachedChunks;
 
-DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32_t offset, const CompressionType type) {
+DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32_t offset, const CompressionType type, bool ignoreCache) {
 
-    if(gCachedChunks.contains(offset)){
+    if(!ignoreCache && gCachedChunks.contains(offset)){
         return gCachedChunks[offset];
     }
 

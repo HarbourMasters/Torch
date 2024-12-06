@@ -5,6 +5,15 @@ include(FetchContent)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 11)
 
+# Set build options
+option(USE_STANDALONE "Build as a standalone executable" ON)
+option(BUILD_STORMLIB "Build with StormLib support" ON)
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+
+option(BUILD_SM64 "Build with Super Mario 64 support" ON)
+option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
+option(BUILD_SF64 "Build with Star Fox 64 support" ON)
+
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
 ################################################################################
@@ -20,27 +29,26 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     endif()
 endif()
 
+if(USE_STANDALONE)
+    # Link libgfxd
+    # Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
+    FetchContent_Declare(
+        libgfxd
+        GIT_REPOSITORY https://github.com/glankk/libgfxd.git
+        GIT_TAG 96fd3b849f38b3a7c7b7f3ff03c5921d328e6cdf
+    )
 
-# Link libgfxd
-# Because libgfxd is not a CMake project, we have to manually fetch it and add it to the build
+    FetchContent_GetProperties(libgfxd)
 
-FetchContent_Declare(
-    libgfxd
-    GIT_REPOSITORY https://github.com/glankk/libgfxd.git
-    GIT_TAG 96fd3b849f38b3a7c7b7f3ff03c5921d328e6cdf
-)
-
-FetchContent_GetProperties(libgfxd)
-
-if(NOT libgfxd_POPULATED)
-    FetchContent_Populate(libgfxd)
-    include_directories(${libgfxd_SOURCE_DIR})
-    set(LGFXD_SRC gfxd.c uc_f3d.c uc_f3db.c uc_f3dex.c uc_f3dexb.c uc_f3dex2.c)
-    foreach (LGFXD_FILE ${LGFXD_SRC})
-        list(APPEND LGFXD_FILES "${libgfxd_SOURCE_DIR}/${LGFXD_FILE}")
-    endforeach()
+    if(NOT libgfxd_POPULATED)
+        FetchContent_Populate(libgfxd)
+        include_directories(${libgfxd_SOURCE_DIR})
+        set(LGFXD_SRC gfxd.c uc_f3d.c uc_f3db.c uc_f3dex.c uc_f3dexb.c uc_f3dex2.c)
+        foreach (LGFXD_FILE ${LGFXD_SRC})
+            list(APPEND LGFXD_FILES "${libgfxd_SOURCE_DIR}/${LGFXD_FILE}")
+        endforeach()
+    endif()
 endif()
-
 # Source files
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -50,18 +58,37 @@ file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURREN
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/**/*.c)
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
-option(USE_STANDALONE "Build as a standalone executable" ON)
-option(BUILD_STORMLIB "Build with StormLib support" ON)
+if(BUILD_SM64)
+    add_definitions(-DSM64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/sm64/*")
+endif()
 
-#add_compile_options(-fsanitize=address)
-#add_link_options(-fsanitize=address)
+if(BUILD_SF64)
+    add_definitions(-DSF64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/sf64/*")
+endif()
+
+if(BUILD_MK64)
+    add_definitions(-DMK64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/mk64/*")
+endif()
+
+if(ENABLE_ASAN)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif()
 
 # Build
 if (USE_STANDALONE)
     add_definitions(-DSTANDALONE)
     add_executable(${PROJECT_NAME} ${SRC_DIR})
+	set(LINK_TYPE "MD")
 else()
-    add_library(${PROJECT_NAME} SHARED ${SRC_DIR})
+    add_library(${PROJECT_NAME} STATIC ${SRC_DIR})
+	set(LINK_TYPE "MT")
 endif()
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -69,39 +96,38 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
     set(CMAKE_CXX_FLAGS "-Wno-narrowing")
 else()
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_compile_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
                 /w;
                 /Od;
-                /MDd
+                /${LINK_TYPE}d
             >
             $<$<CONFIG:Release>:
-                /Oi;
+                /O3;
                 /Gy;
                 /W3;
-                /MD
+                /${LINK_TYPE}
             >
             /bigobj
-            /STACK:16777216
             /permissive-;
             /MP;
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
+            ${DEFAULT_CXX_EXCEPTION_HANDLING};
         )
         target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         target_compile_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
-                /MDd
+                /${LINK_TYPE}d
             >
             $<$<CONFIG:Release>:
-                /O2;
+                /O3;
                 /Oi;
                 /Gy;
-                /MD
+                /${LINK_TYPE}
             >
-            /STACK:16777216
             /permissive-;
             /bigobj
             /MP;
@@ -109,7 +135,8 @@ else()
             ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
             ${DEFAULT_CXX_EXCEPTION_HANDLING}
         )
-        endif()
+    endif()
+
     if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
         target_link_options(${PROJECT_NAME} PRIVATE
             $<$<CONFIG:Debug>:
@@ -122,7 +149,6 @@ else()
                 /FORCE:MULTIPLE
             >
             /bigobj
-            /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
             /SUBSYSTEM:CONSOLE
@@ -136,20 +162,22 @@ else()
                 /FORCE:MULTIPLE
             >
             /bigobj
-            /STACK:16777216
             /MANIFEST:NO;
             /DEBUG;
             /SUBSYSTEM:CONSOLE
         )
     endif()
-endif()
 
-# Fetch Dependencies
-
-if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
+
+    if(USE_STANDALONE)
+        target_link_options(${PROJECT_NAME} PRIVATE "STORMLIB_NO_AUTO_LINK;")
+    endif()
 endif()
+
+
+# Fetch Dependencies
 
 if(NOT USE_STANDALONE AND EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
     FetchContent_Declare(
@@ -174,11 +202,14 @@ add_dependencies(${PROJECT_NAME} N64Graphics)
 target_link_libraries(${PROJECT_NAME} PRIVATE N64Graphics)
 
 # Link StormLib
-
 if (BUILD_STORMLIB)
+    set(STORM_BUILD_TESTS OFF)
     set(STORMLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/StormLib)
     add_subdirectory(${STORMLIB_DIR})
     target_link_libraries(${PROJECT_NAME} PRIVATE storm)
+    if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+        target_compile_definitions(storm PRIVATE -D_POSIX_C_SOURCE=200809L)
+    endif()
 endif()
 
 # Link YamlCpp
@@ -193,27 +224,33 @@ FetchContent_Declare(
 )
 set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp)
+if(NOT USE_STANDALONE)
+	target_compile_definitions(yaml-cpp PRIVATE YAML_CPP_STATIC_DEFINE)
+endif()
 
-FetchContent_Declare(
-    spdlog
-    GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG 7e635fca68d014934b4af8a1cf874f63989352b7
-)
+if(USE_STANDALONE)
+	FetchContent_Declare(
+		spdlog
+		GIT_REPOSITORY https://github.com/gabime/spdlog.git
+		GIT_TAG 7e635fca68d014934b4af8a1cf874f63989352b7
+	)
 
-FetchContent_MakeAvailable(spdlog)
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+	FetchContent_MakeAvailable(spdlog)
+	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+else()
+	find_package(spdlog REQUIRED)
+	target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
+endif()
 
 if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
     include(../cmake/HandleCompilerRT.cmake)
     find_compiler_rt_library(builtins CLANG_RT_BUILTINS_LIBRARY)
     get_filename_component(LIBDIR "${CLANG_RT_BUILTINS_LIBRARY}" DIRECTORY)
-    if(IS_DIRECTORY "${LIBDIR}")
+    if(USE_STANDALONE AND IS_DIRECTORY "${LIBDIR}")
         target_link_libraries(storm ${CLANG_RT_BUILTINS_LIBRARY})
     endif()
-endif()
-if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
-    target_compile_definitions(storm PRIVATE -D_POSIX_C_SOURCE=200809L)
 endif()
 
 if(NOT USE_STANDALONE)

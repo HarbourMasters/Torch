@@ -27,6 +27,7 @@
 #include "factories/ViewportFactory.h"
 #include "factories/CompressedTextureFactory.h"
 
+#ifdef SM64_SUPPORT
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
 #include "factories/sm64/CollisionFactory.h"
@@ -42,7 +43,9 @@
 #include "factories/sm64/PaintingMapFactory.h"
 #include "factories/sm64/TrajectoryFactory.h"
 #include "factories/sm64/WaterDropletFactory.h"
+#endif
 
+#ifdef MK64_SUPPORT
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
@@ -51,7 +54,9 @@
 #include "factories/mk64/DrivingBehaviour.h"
 #include "factories/mk64/ItemCurve.h"
 #include "factories/mk64/CourseMetadata.h"
+#endif
 
+#ifdef SF64_SUPPORT
 #include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
@@ -62,6 +67,7 @@
 #include "factories/sf64/EnvironmentFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
+#endif
 
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/naudio/v0/BankFactory.h"
@@ -79,13 +85,13 @@
 #include "factories/naudio/v1/BookFactory.h"
 #include "factories/naudio/v1/SequenceFactory.h"
 
+#include "preprocess/CompTool.h"
+
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
-
-#define ABS(x) ((x) < 0 ? -(x) : (x))
 
 void Companion::Init(const ExportType type) {
 
@@ -108,7 +114,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("VP", std::make_shared<ViewportFactory>());
     this->RegisterFactory("COMPRESSED_TEXTURE", std::make_shared<CompressedTextureFactory>());
 
-    // SM64 specific
+#ifdef SM64_SUPPORT
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
@@ -124,8 +130,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:PAINTING_MAP", std::make_shared<SM64::PaintingMapFactory>());
     this->RegisterFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactory>());
     this->RegisterFactory("SM64:WATER_DROPLET", std::make_shared<SM64::WaterDropletFactory>());
+#endif
 
-    // MK64 specific
+#ifdef MK64_SUPPORT
     this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
     this->RegisterFactory("MK64:TRACK_WAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
@@ -134,8 +141,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
     this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
     this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
+#endif
 
-    // SF64 specific
+#ifdef SF64_SUPPORT
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
     this->RegisterFactory("SF64:SKELETON", std::make_shared<SF64::SkeletonFactory>());
     this->RegisterFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>());
@@ -146,6 +154,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
     this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
     this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
+#endif
 
     // NAudio specific
     this->RegisterFactory("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
@@ -1007,14 +1016,51 @@ void Companion::Process() {
             SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
             return;
         }
+
         this->gConfig.parseMode = ParseMode::Default;
     } else {
         this->gConfig.parseMode = ParseMode::Directory;
     }
 
     auto rom = !isDirectoryMode ? config[this->gCartridge->GetHash()] : config;
-    auto cfg = rom["config"];
 
+    if(rom["preprocess"]) {
+        auto preprocess = rom["preprocess"];
+        for(auto job = preprocess.begin(); job != preprocess.end(); job++) {
+            auto name = job->first.as<std::string>();
+            auto item = job->second;
+            auto method = GetSafeNode<std::string>(item, "method");
+            if (method == "mio0-comptool") {
+                auto type = GetSafeNode<std::string>(item, "type");
+                auto target = GetSafeNode<std::string>(item, "target");
+                auto restart = GetSafeNode<bool>(item, "restart");
+
+                if (type == "decompress") {
+                    this->gRomData = CompTool::Decompress(this->gRomData);
+                    this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
+                    this->gCartridge->Initialize();
+
+                    auto hash = this->gCartridge->GetHash();
+
+                    SPDLOG_INFO("ROM decompressed to {}", hash);
+
+                    if (hash != target) {
+                        throw std::runtime_error("Hash mismatch");
+                    }
+
+                    if(restart){
+                        rom = config[this->gCartridge->GetHash()];
+                    }
+                } else {
+                    throw std::runtime_error("Only decompression is supported");
+                }
+            } else {
+                throw std::runtime_error("Invalid preprocess method");
+            }
+        }
+    }
+
+    auto cfg = rom["config"];
     if(!cfg) {
         SPDLOG_ERROR("No config found for {}", !isDirectoryMode ? this->gCartridge->GetHash() : GetSafeNode<std::string>(config, "folder"));
         return;
@@ -1104,13 +1150,14 @@ void Companion::Process() {
             entries.push_back(key);
         }
     }
-
+#ifdef USE_STANDALONE
     if(cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
             this->ParseEnums(file);
         }
     }
+#endif
 
     if(cfg["logging"]){
         auto level = cfg["logging"].as<std::string>();

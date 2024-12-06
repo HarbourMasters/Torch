@@ -20,9 +20,11 @@ class DListBinaryExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+#ifdef STANDALONE
 class DListCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
+#endif
 
 class DListFactory : public BaseFactory {
 public:
@@ -31,7 +33,9 @@ public:
         return {
             REGISTER(Header, DListHeaderExporter)
             REGISTER(Binary, DListBinaryExporter)
+        #ifdef STANDALONE
             REGISTER(Code, DListCodeExporter)
+        #endif
         };
     }
     uint32_t GetAlignment() override {

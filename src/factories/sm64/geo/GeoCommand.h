@@ -5,7 +5,7 @@
 #include <string>
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
-#include <binarytools/BinaryWriter.h>
+#include <lib/binarytools/BinaryWriter.h>
 #include <types/Vec3D.h>
 
 enum class GeoOpcode {

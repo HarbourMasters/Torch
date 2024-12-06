@@ -34,7 +34,7 @@
 
 #define gDPFillWideRectangle(pkt, ulx, uly, lrx, lry)                           \
 {                                                                           \
-    Gfx *_g0 = (Gfx*)(pkt), *_g1 = (Gfx*)(pkt);                             \
+    N64Gfx *_g0 = (N64Gfx*)(pkt), *_g1 = (N64Gfx*)(pkt);                             \
     _g0->words.w0 = _SHIFTL(G_FILLWIDERECT, 24, 8) | _SHIFTL((lrx), 2, 22); \
     _g0->words.w1 = _SHIFTL((lry), 2, 22);                                  \
     _g1->words.w0 = _SHIFTL((ulx), 2, 22);                                  \
@@ -43,7 +43,7 @@
 
 #define gSPWideTextureRectangle(pkt, xl, yl, xh, yh, tile, s, t, dsdx, dtdy)   \
 {                                                                          \
-    Gfx *_g0 = (Gfx*)(pkt), *_g1 = (Gfx*)(pkt), *_g2 = (Gfx*)(pkt);        \
+    N64Gfx *_g0 = (N64Gfx*)(pkt), *_g1 = (N64Gfx*)(pkt), *_g2 = (N64Gfx*)(pkt);        \
                                                                             \
     _g0->words.w0 = _SHIFTL(G_TEXRECT_WIDE, 24, 8) | _SHIFTL((xh), 0, 24); \
     _g0->words.w1 = _SHIFTL((yh), 0, 24);                                  \
@@ -68,7 +68,7 @@
 
 #define gSPExtraGeometryMode(pkt, c, s)                                                 \
 _DW({                                                                               \
-    Gfx* _g = (Gfx*)(pkt);                                                          \
+    N64Gfx* _g = (N64Gfx*)(pkt);                                                          \
                                                                                     \
     _g->words.w0 = _SHIFTL(G_EXTRAGEOMETRYMODE, 24, 8) | _SHIFTL(~(u32)(c), 0, 24); \
     _g->words.w1 = (u32)(s);                                                        \
@@ -79,7 +79,7 @@ _DW({                                                                           
 
 #define __gSPInvalidateTexCache(pkt, addr)              \
     _DW({                                               \
-        Gfx* _g = (Gfx*)(pkt);                          \
+        N64Gfx* _g = (N64Gfx*)(pkt);                          \
                                                         \
         _g->words.w0 = _SHIFTL(G_INVALTEXCACHE, 24, 8); \
         _g->words.w1 = addr;                            \
@@ -90,7 +90,7 @@ _DW({                                                                           
 
 #define gsSPSetFB(pkt, fb)                      \
     {                                           \
-        Gfx* _g = (Gfx*)(pkt);                  \
+        N64Gfx* _g = (N64Gfx*)(pkt);                  \
                                                 \
         _g->words.w0 = _SHIFTL(G_SETFB, 24, 8); \
         _g->words.w1 = fb;                      \
@@ -98,7 +98,7 @@ _DW({                                                                           
 
 #define gsSPResetFB(pkt)                          \
     {                                             \
-        Gfx* _g = (Gfx*)(pkt);                    \
+        N64Gfx* _g = (N64Gfx*)(pkt);                    \
                                                   \
         _g->words.w0 = _SHIFTL(G_RESETFB, 24, 8); \
         _g->words.w1 = 0;                         \
@@ -106,7 +106,7 @@ _DW({                                                                           
 
 #define gSPGrayscale(pkt, state)                       \
     {                                                  \
-        Gfx* _g = (Gfx*)(pkt);                         \
+        N64Gfx* _g = (N64Gfx*)(pkt);                         \
                                                        \
         _g->words.w0 = _SHIFTL(G_SETGRAYSCALE, 24, 8); \
         _g->words.w1 = state;                          \
@@ -117,7 +117,7 @@ _DW({                                                                           
 
 #define gSPDisableFiltering(pkt, state)                       \
     {                                                  \
-        Gfx* _g = (Gfx*)(pkt);                         \
+        N64Gfx* _g = (N64Gfx*)(pkt);                         \
                                                        \
         _g->words.w0 = _SHIFTL(G_SETFILTERING, 24, 8); \
         _g->words.w1 = state;                          \
@@ -130,7 +130,7 @@ _DW({                                                                           
     { _SHIFTL(G_TRI1_OTR, 24, 8) | __gsSP1Triangle_w1f(v0, v1, v2, flag), 0 }
 
 #define gsSPVertexOTR(v, n, v0) \
-    { (_SHIFTL(G_VTX_OTR_HASH, 24, 8) | _SHIFTL((n), 12, 8) | _SHIFTL((v0) + (n), 1, 7)), (uintptr_t)(v) }
+    { (_SHIFTL(G_VTX_OTR_HASH, 24, 8) | _SHIFTL((n), 12, 8) | _SHIFTL((v0) + (n), 1, 7)), (uint32_t)(v) }
 
 #define gsSPRawOpcode(opcode) \
     { _SHIFTL(opcode, 24, 8), 0 }
@@ -139,42 +139,42 @@ _DW({                                                                           
     {{									\
         _SHIFTL(G_SETTIMG_OTR_HASH, 24, 8) | _SHIFTL(fmt, 21, 3) |			\
         _SHIFTL(siz, 19, 2) | _SHIFTL((width)-1, 0, 12),		\
-        (uintptr_t)(i)						\
+        (uint32_t)(i)						\
     }}
 
 #define gsSPBranchListOTRHash(dl) \
     {{									\
         (_SHIFTL((G_DL_OTR_HASH), 24, 8) | _SHIFTL((0x01), 16, 8) | 			\
          _SHIFTL((0), 1, 16)), 						\
-            (uintptr_t)(dl)						\
+            (uint32_t)(dl)						\
     }}
 
 #define gsSPBranchListOTRFilePath(dl) \
     {{									\
         (_SHIFTL((G_DL_OTR_FILEPATH), 24, 8) | _SHIFTL((0x01), 16, 8) | 			\
          _SHIFTL((0), 0, 16)), 						\
-            (uintptr_t)(dl)						\
+            (uint32_t)(dl)						\
     }}
 
 #define gsSPDisplayListOTRHash(dl) \
     {{									\
         (_SHIFTL((G_DL_OTR_HASH), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
          _SHIFTL((0), 0, 16)), 						\
-            (uintptr_t)(dl)						\
+            (uint32_t)(dl)						\
     }}
 
 #define gsSPDisplayListOTRIndex(dl) \
     {{                                  \
         (_SHIFTL((G_DL_OTR_INDEX), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
          _SHIFTL((0), 0, 16)), 						\
-            (uintptr_t)((SEGMENT_NUMBER(dl) << 24) | ((SEGMENT_OFFSET(dl) / 8) & 0x00FFFFFF))	\
+            (uint32_t)((SEGMENT_NUMBER(dl) << 24) | ((SEGMENT_OFFSET(dl) / 8) & 0x00FFFFFF))	\
     }}
 
 #define gsSPDisplayListOTRFilePath(dl) \
     {{									\
         (_SHIFTL((G_DL_OTR_FILEPATH), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\
          _SHIFTL((0), 0, 16)), 						\
-            (uintptr_t)(dl)						\
+            (uint32_t)(dl)						\
     }}
 #define gDPSetGrayscaleColor(pkt, r, g, b, lerp) DPRGBColor(pkt, G_SETINTENSITY, r, g, b, lerp)
 #define gsDPSetGrayscaleColor(r, g, b, a) sDPRGBColor(G_SETINTENSITY, r, g, b, a)
