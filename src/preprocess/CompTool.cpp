@@ -3,6 +3,7 @@
 #include "lib/binarytools/BinaryWriter.h"
 #include "lib/binarytools/BinaryReader.h"
 #include <fstream>
+#include <cstring>
 
 uint32_t CompTool::FindFileTable(std::vector<uint8_t>& rom) {
     uint8_t query_one[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x50, 0x00, 0x00, 0x00, 0x00 };
