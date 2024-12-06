@@ -84,6 +84,8 @@
 #include "factories/naudio/v1/BookFactory.h"
 #include "factories/naudio/v1/SequenceFactory.h"
 
+#include "preprocess/CompTool.h"
+
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
@@ -1013,14 +1015,51 @@ void Companion::Process() {
             SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
             return;
         }
+
         this->gConfig.parseMode = ParseMode::Default;
     } else {
         this->gConfig.parseMode = ParseMode::Directory;
     }
 
     auto rom = !isDirectoryMode ? config[this->gCartridge->GetHash()] : config;
-    auto cfg = rom["config"];
 
+    if(rom["preprocess"]) {
+        auto preprocess = rom["preprocess"];
+        for(auto job = preprocess.begin(); job != preprocess.end(); job++) {
+            auto name = job->first.as<std::string>();
+            auto item = job->second;
+            auto method = GetSafeNode<std::string>(item, "method");
+            if (method == "mio0-comptool") {
+                auto type = GetSafeNode<std::string>(item, "type");
+                auto target = GetSafeNode<std::string>(item, "target");
+                auto restart = GetSafeNode<bool>(item, "restart");
+
+                if (type == "decompress") {
+                    this->gRomData = CompTool::Decompress(this->gRomData);
+                    this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
+                    this->gCartridge->Initialize();
+
+                    auto hash = this->gCartridge->GetHash();
+
+                    SPDLOG_INFO("ROM decompressed to {}", hash);
+
+                    if (hash != target) {
+                        throw std::runtime_error("Hash mismatch");
+                    }
+
+                    if(restart){
+                        rom = config[this->gCartridge->GetHash()];
+                    }
+                } else {
+                    throw std::runtime_error("Only decompression is supported");
+                }
+            } else {
+                throw std::runtime_error("Invalid preprocess method");
+            }
+        }
+    }
+
+    auto cfg = rom["config"];
     if(!cfg) {
         SPDLOG_ERROR("No config found for {}", !isDirectoryMode ? this->gCartridge->GetHash() : GetSafeNode<std::string>(config, "folder"));
         return;
