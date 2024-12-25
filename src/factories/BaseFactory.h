@@ -11,9 +11,12 @@
 #include <variant>
 #include <optional>
 #include <yaml-cpp/yaml.h>
+#include <filesystem>
 #include <strhash64/StrHash64.h>
 #include "lib/binarytools/BinaryWriter.h"
 #include "lib/binarytools/BinaryReader.h"
+
+namespace fs = std::filesystem;
 
 #define REGISTER(type, c) { ExportType::type, std::make_shared<c>() },
 
@@ -37,7 +40,8 @@ enum class ExportType {
     Header,
     Code,
     Binary,
-    Modding
+    Modding,
+    XML
 };
 
 template<typename T>

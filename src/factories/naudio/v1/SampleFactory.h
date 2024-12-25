@@ -36,6 +36,10 @@ class NSampleModdingExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+class NSampleXMLExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
 class NSampleFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -45,6 +49,7 @@ public:
             REGISTER(Binary, NSampleBinaryExporter)
             REGISTER(Code, NSampleCodeExporter)
             REGISTER(Modding, NSampleModdingExporter)
+            REGISTER(XML, NSampleXMLExporter)
         };
     }
     bool SupportModdedAssets() override { return true; }

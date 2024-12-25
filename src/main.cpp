@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
     std::string target;
     std::string folder;
     bool otrMode = false;
+    bool xmlMode = false;
     bool debug = false;
 
     app.require_subcommand();
@@ -98,11 +99,16 @@ int main(int argc, char *argv[]) {
         }
     });
 
+    modding_export->add_flag("-x,--xml", xmlMode, "XML Mode");
     modding_export->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
     modding_export->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, false, debug);
-        instance->Init(ExportType::Modding);
+        if (xmlMode) {
+            instance->Init(ExportType::XML);
+        } else {
+            instance->Init(ExportType::Modding);
+        }
     });
 
     try {
