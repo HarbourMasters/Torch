@@ -2,6 +2,7 @@
 
 #include <factories/BaseFactory.h>
 #include <factories/naudio/v1/SampleFactory.h>
+#include <factories/naudio/v0/AudioManager.h>
 
 enum AIFCMagicValues {
     FORM = (uint32_t) 0x464f524d,
@@ -15,7 +16,8 @@ enum AIFCMagicValues {
 
 class AudioConverter {
 public:
-    static void SampleToAIFC(NSampleData* tSample, LUS::BinaryWriter &out);
+    static void SampleV0ToAIFC(AudioBankSample* entry, LUS::BinaryWriter &out);
+    static void SampleV1ToAIFC(NSampleData* tSample, LUS::BinaryWriter &out);
 };
 
 struct AIFCChunk {

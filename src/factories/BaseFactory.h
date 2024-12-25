@@ -56,10 +56,12 @@ std::optional<T> GetNode(YAML::Node& node, const std::string& key) {
 template<typename T>
 T GetSafeNode(YAML::Node& node, const std::string& key) {
     if(!node[key]) {
+        auto dump = YAML::Dump(node);
+
         if (node["symbol"]) {
-            throw std::runtime_error("Yaml asset missing the '" + key + "' node for '" + node["symbol"].as<std::string>() + "'");
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node for '" + node["symbol"].as<std::string>() + "'\nProblematic YAML:\n" + dump);
         } else {
-            throw std::runtime_error("Yaml asset missing the '" + key + "' node");
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node\nProblematic YAML:\n" + dump);
         }
     }
 

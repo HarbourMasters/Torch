@@ -128,9 +128,11 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         for (size_t i = 0; i < numDrums; ++i) {
             uint32_t drumOffset;
             memcpy(&drumOffset, rawData + drumBaseAddr + i * 4, 4);
-            drumOffset = BSWAP32(drumOffset);
-            assert(drumOffset != 0);
-            drumOffsets.push_back(drumOffset);
+            if(drumOffset == 0){
+                continue;
+            }
+
+            drumOffsets.push_back(BSWAP32(drumOffset));
         }
     } else {
         assert(drumBaseAddr == 0);
@@ -382,7 +384,14 @@ AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vec
     uint32_t loop = reader.ReadUInt32();
     uint32_t book = reader.ReadUInt32();
     uint32_t sampleSize = reader.ReadUInt32();
-    assert(zero == 0);
+
+    SPDLOG_INFO("Zero: 0x{:X}", zero);
+    SPDLOG_INFO("Addr: 0x{:X}", addr);
+    SPDLOG_INFO("Loop: 0x{:X}", loop);
+    SPDLOG_INFO("Book: 0x{:X}", book);
+    SPDLOG_INFO("Sample Size: {}", sampleSize);
+
+    // assert(zero == 0);
     assert(loop != 0);
     assert(book != 0);
 
@@ -479,154 +488,6 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
     }
 }
 
-void serialize_f80(double num, LUS::BinaryWriter &writer) {
-    // Convert the input double to an uint64_t
-    std::uint64_t f64;
-    std::memcpy(&f64, &num, sizeof(double));
-
-    std::uint64_t f64_sign_bit = f64 & (std::uint64_t) pow(2, 63);
-    if (num == 0.0) {
-        if (f64_sign_bit) {
-            writer.Write(0x80000000);
-        } else {
-            writer.Write(0x00000000);
-        }
-    }
-
-    std::uint64_t exponent = ((f64 ^ f64_sign_bit) >> 52);
-
-    assert(exponent != 0);
-    assert(exponent != 0x7FF);
-
-    exponent -= 1023;
-    uint64_t f64_mantissa_bits = f64 & (uint64_t) pow(2, 52) - 1;
-    uint64_t f80_sign_bit = f64_sign_bit << (80 - 64);
-    uint64_t f80_exponent = (exponent + 0x3FFF) << 64;
-    uint64_t f80_mantissa_bits = (uint64_t) pow(2, 63) | (f64_mantissa_bits << (63 - 52));
-    uint64_t f80 = f80_sign_bit | f80_exponent | f80_mantissa_bits;
-
-    // Split the f80 representation into two parts (high and low)
-    uint16_t high = BSWAP16((uint16_t) f80 >> 64);
-    writer.Write((char*) &high, 2);
-    uint64_t low = BSWAP64(f80 & ((uint64_t) pow(2, 64) - 1));
-    writer.Write((char*) &low, 8);
-}
-
-#define START_SECTION(section) \
-    { \
-    out.Write((uint32_t) BSWAP32(section)); \
-    LUS::BinaryWriter tmp = LUS::BinaryWriter(); \
-    tmp.SetEndianness(Torch::Endianness::Big);     \
-
-#define START_CUSTOM_SECTION(section) \
-    {                                 \
-    LUS::BinaryWriter tmp = LUS::BinaryWriter(); \
-    tmp.SetEndianness(Torch::Endianness::Big);     \
-    out.Write((uint32_t) BSWAP32(AIFC::MagicValues::AAPL)); \
-    tmp.Write(AIFC::MagicValues::stoc); \
-    tmp.Write(section, false);                 \
-
-#define END_SECTION() \
-    auto odata = tmp.ToVector(); \
-    size_t size = odata.size();  \
-    len += ALIGN(size, 2) + 8;   \
-    out.Write((uint32_t) BSWAP32((uint32_t) size)); \
-    out.Write(odata.data(), odata.size()); \
-    if(size % 2){                \
-        out.WriteByte(0);        \
-    }                            \
-    }                            \
-
-void AudioManager::write_aifc(AudioBankSample* entry, LUS::BinaryWriter &out) {
-    int16_t num_channels = 1;
-    auto data = entry->data;
-    size_t len = 0;
-    assert(data.size() % 9 == 0);
-    if(data.size() % 2 == 1){
-        data.push_back('\0');
-    }
-    uint32_t num_frames = data.size() * 16 / 9;
-    int16_t sample_size = 16;
-
-    uint32_t sample_rate = -1;
-    if(entry->tunings.size() == 1){
-        sample_rate = 32000 * entry->tunings[0];
-    } else {
-        float tmin = PyUtils::min(entry->tunings);
-        float tmax = PyUtils::max(entry->tunings);
-
-        if(tmin <= 0.5f <= tmax){
-            sample_rate = 16000;
-        } else if(tmin <= 1.0f <= tmax){
-            sample_rate = 32000;
-        } else if(tmin <= 1.5f <= tmax){
-            sample_rate = 48000;
-        } else if(tmin <= 2.5f <= tmax){
-            sample_rate = 80000;
-        } else {
-            sample_rate = 16000 * (tmin + tmax);
-        }
-    }
-
-    out.Write((uint32_t) BSWAP32(AIFC::MagicValues::FORM));
-    // This should be where the size is, but we need to write it later
-    out.Write((uint32_t) 0);
-    out.Write((uint32_t) BSWAP32(AIFC::MagicValues::AIFC));
-
-    START_SECTION(AIFC::MagicValues::COMM);
-
-    tmp.Write((uint16_t) num_channels);
-    tmp.Write((uint32_t) num_frames);
-
-    tmp.Write((uint16_t) sample_size);
-    serialize_f80(sample_rate, tmp);
-    tmp.Write(AIFC::MagicValues::VAPC);
-    tmp.Write("\x0bVADPCM ~4-1", false);
-
-    END_SECTION();
-
-    START_SECTION(AIFC::MagicValues::INST)
-    tmp.Write(std::string(20, '\0'), false);
-    END_SECTION();
-
-    START_CUSTOM_SECTION("\x0bVADPCMCODES")
-    tmp.Write((uint16_t) 1);
-    tmp.Write((uint16_t) entry->book.order);
-    tmp.Write((uint16_t) entry->book.npredictors);
-
-    for(auto x : entry->book.table){
-        tmp.Write((int16_t) x);
-    }
-    END_SECTION();
-
-    START_SECTION(AIFC::MagicValues::SSND)
-    uint32_t zero = 0;
-    tmp.Write((char*) &zero, 4);
-    tmp.Write((char*) &zero, 4);
-    tmp.Write((char*) data.data(), data.size());
-    END_SECTION();
-
-    if(entry->loop.count != 0){
-        START_CUSTOM_SECTION("\x0bVADPCMLOOPS")
-        uint16_t one = BSWAP16(1);
-        tmp.Write(reinterpret_cast<char*>(&one), 2);
-        tmp.Write(reinterpret_cast<char*>(&one), 2);
-        tmp.Write(entry->loop.start);
-        tmp.Write(entry->loop.end);
-        tmp.Write(entry->loop.count);
-        for(size_t i = 0; i < 16; i++){
-            int16_t loop = BSWAP16(entry->loop.state.value()[i]);
-            tmp.Write(reinterpret_cast<char*>(&loop), 2);
-        }
-        END_SECTION();
-    }
-
-    len += 4;
-    out.Seek(4, LUS::SeekOffsetType::Start);
-    out.Write((uint32_t) BSWAP32(len));
-
-}
-
 void AudioManager::bind_sample(YAML::Node& node, const std::string& path){
     auto id = GetSafeNode<uint32_t>(node, "id");
     sample_table[id] = path;
@@ -639,6 +500,7 @@ std::string& AudioManager::get_sample(uint32_t id) {
     return sample_table[id];
 }
 
+/*
 void AudioManager::create_aifc(int32_t index, LUS::BinaryWriter &out) {
     int32_t idx = -1;
     for(auto &sample_bank : this->loaded_tbl.banks){
@@ -653,6 +515,7 @@ void AudioManager::create_aifc(int32_t index, LUS::BinaryWriter &out) {
         }
     }
 }
+*/
 
 AudioBankSample AudioManager::get_aifc(int32_t index) {
     int32_t idx = 0;
@@ -680,4 +543,21 @@ uint32_t AudioManager::get_index(AudioBankSample* entry) {
 
 std::map<uint32_t, Bank> AudioManager::get_banks() {
     return this->banks;
+}
+
+std::vector<SampleBank*> AudioManager::get_loaded_banks() {
+    return this->loaded_tbl.banks;
+}
+
+std::vector<AudioBankSample*> AudioManager::get_samples() {
+    std::vector<AudioBankSample*> samples;
+    for(auto &bank : this->loaded_tbl.banks){
+        for(auto &entry : bank->entries){
+            // Avoid duplicates
+            if(std::find(samples.begin(), samples.end(), entry.second) == samples.end()){
+                samples.push_back(entry.second);
+            }
+        }
+    }
+    return samples;
 }

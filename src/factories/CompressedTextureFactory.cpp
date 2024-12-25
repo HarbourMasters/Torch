@@ -1,4 +1,4 @@
-#include "TextureFactory.h"
+#include "CompressedTextureFactory.h"
 #include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -8,6 +8,7 @@
 extern "C" {
 #include "n64graphics/n64graphics.h"
 #include "BaseFactory.h"
+#include <libmio0/mio0.h>
 }
 
 static bool isTable = false;
@@ -27,7 +28,13 @@ static const std::unordered_map <std::string, TextureFormat> sTextureFormats = {
     { "TLUT",   { TextureType::TLUT, 16 } },
 };
 
-ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+static const std::unordered_map <std::string, CompressionType> sCompressionTypes = {
+    { "MIO0", CompressionType::MIO0 },
+    { "YAY0", CompressionType::YAY0 },
+    { "YAZ0", CompressionType::YAZ0 },
+};
+
+ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
@@ -56,21 +63,21 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
                 tableEntries.clear();
             }
         } else {
-            write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << isize << "];\n";
+            write << "extern " << "u8 " << name << "[][" << isize << "];\n";
         }
     } else {
         if(isOTR){
             write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         } else {
-            write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
+            write << "extern " << "u8 " << symbol << "[];\n";
         }
     }
 
     return std::nullopt;
 }
 
-ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
-    auto texture = std::static_pointer_cast<TextureData>(raw);
+ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    auto texture = std::static_pointer_cast<CompressedTextureData>(raw);
     auto data = texture->mBuffer;
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -104,10 +111,44 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
     }
     imgstream << std::endl;
 
-    if (!Companion::Instance->IsUsingIndividualIncludes()){
-        std::ofstream file(dpath + ".inc.c", std::ios::binary);
-        file << imgstream.str();
+    std::ofstream file(dpath + ".inc.c", std::ios::binary);
+    file << imgstream.str();
+    file.close();
+
+    // Allocate worse case size
+    uint8_t* compressedData;
+    size_t compressedSize;
+    size_t worstSize;
+
+    switch (texture->mCompressionType) {
+        case CompressionType::MIO0:
+            worstSize = MIO0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+            compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
+            compressedSize = mio0_encode(data.data(), data.size(), compressedData);
+            break;
+        default:
+            // UNIMPLEMENTED
+            throw std::runtime_error("Unsupported Compressed Texture Type");
+            break;
+    }
+    if (compressedData) {
+        std::ostringstream compressedStream;
+
+        for (size_t i = 0; i < compressedSize; i++) {
+            if (i % 16 == 0 && i != 0) {
+                compressedStream << std::endl;
+            }
+
+            compressedStream << "0x";
+            compressedStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(compressedData[i]);
+            compressedStream << ", ";
+        }
+        compressedStream << std::endl;
+
+        std::ofstream file(dpath + ".incbin.c", std::ios::binary);
+        file << compressedStream.str();
         file.close();
+        free(compressedData);
     }
 
     const auto searchTable = Companion::Instance->SearchTable(offset);
@@ -124,15 +165,13 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         }
 
         if(start == offset){
-            write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << isize << "] = {\n";
+            write << "u8 " << name << "[][" << isize << "] = {\n";
         }
 
         write << tab_t << "{\n";
-        if (!Companion::Instance->IsUsingIndividualIncludes()){
-            write << tab_t << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
-        } else {
-            write << imgstream.str();
-        }
+
+        write << tab_t << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".incbin.c\"\n";
+
         write << tab_t << "},\n";
 
         if(end == offset){
@@ -142,13 +181,10 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
             }
         }
     } else {
-        write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol  << "[] = {\n";
+        write << "u8 " << symbol  << "[] = {\n";
 
-        if (!Companion::Instance->IsUsingIndividualIncludes()){
-            write << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
-        } else {
-            write << imgstream.str();
-        }
+        write << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".incbin.c\"\n";
+
         write << "};\n";
 
         const auto sz = data.size();
@@ -158,13 +194,15 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
 
         write << "\n";
     }
-    return offset + isize * byteSize;
+    return offset + compressedSize;
 }
 
-ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult CompressedTextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
-    auto texture = std::static_pointer_cast<TextureData>(raw);
+    auto texture = std::static_pointer_cast<CompressedTextureData>(raw);
     auto data = texture->mBuffer;
+
+    // TODO: Recompress?
 
     WriteHeader(writer, Torch::ResourceType::Texture, 0);
 
@@ -182,8 +220,8 @@ ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     return std::nullopt;
 }
 
-ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
-    auto texture = std::static_pointer_cast<TextureData>(data);
+ExportResult CompressedTextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+    auto texture = std::static_pointer_cast<CompressedTextureData>(data);
     auto format = texture->mFormat;
     uint8_t* raw = new uint8_t[TextureUtils::CalculateTextureSize(format.type, texture->mWidth, texture->mHeight) * 2];
     int size = 0;
@@ -260,14 +298,47 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
     return std::nullopt;
 }
 
+std::string getcomptype(CompressionType type) {
+    switch (type) {
+        case CompressionType::MIO0:
+            return "MIO0";
+        case CompressionType::YAY0:
+            return "YAY0";
+        case CompressionType::YAZ0:
+            return "YAZ0";
+        default:
+            break;
+    }
 
-std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    return "None";
+}
+
+std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
     auto symbol = GetSafeNode<std::string>(node, "symbol");
     uint32_t width;
     uint32_t height;
     uint32_t size;
+    auto compression = GetSafeNode<std::string>(node, "compression");
+    CompressionType compressionType;
+    if (!sCompressionTypes.contains(compression)) {
+        SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
+                      Please add one of the following compression types\n\
+                      MIO0, YAY0 (Unsupported), YAZ0 (Unsupported)", offset);
+        return std::nullopt;
+    }
+    compressionType = sCompressionTypes.at(compression);
+
+    CompressionType realCompressionType = Decompressor::GetCompressionType(buffer, Decompressor::TranslateAddr(offset, false));
+
+    if (realCompressionType != compressionType) {
+        SPDLOG_ERROR("Compressed Texture entry at {:X} in yaml uses mismatching compression type\n\
+                      Passed In {}, expected {}", offset, getcomptype(compressionType), getcomptype(realCompressionType));
+        return std::nullopt;
+    }
+
+    DataChunk* uncompressedData = Decompressor::Decode(buffer, Decompressor::TranslateAddr(offset, false), compressionType);
 
     std::transform(format.begin(), format.end(), format.begin(), ::toupper);
 
@@ -310,13 +381,13 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         Companion::Instance->AddAsset(tlutNode);
     }
     size = GetSafeNode<uint32_t>(node, "size", TextureUtils::CalculateTextureSize(sTextureFormats.at(format).type, width, height));
-    auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
+
     std::vector<uint8_t> result;
 
     if(fmt.type == TextureType::GrayscaleAlpha1bpp){
-        result = TextureUtils::alloc_ia8_text_from_i1(reinterpret_cast<uint16_t*>(segment.data), 8, 16);
+        result = TextureUtils::alloc_ia8_text_from_i1(reinterpret_cast<uint16_t*>(uncompressedData->data), 8, 16);
     } else {
-        result = std::vector(segment.data, segment.data + segment.size);
+        result = std::vector(uncompressedData->data, uncompressedData->data + uncompressedData->size);
     }
 
     SPDLOG_INFO("Texture: {}", format);
@@ -337,15 +408,24 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         return std::nullopt;
     }
 
-    return std::make_shared<TextureData>(fmt, width, height, result);
+    return std::make_shared<CompressedTextureData>(fmt, width, height, result, compressionType);
 }
 
-std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto format = GetSafeNode<std::string>(node, "format");
     int width;
     int height;
     uint32_t size;
     auto offset = GetSafeNode<uint32_t>(node, "offset");
+    auto compression = GetSafeNode<std::string>(node, "compression");
+    CompressionType compressionType;
+    if (!sCompressionTypes.contains(compression)) {
+        SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
+                      Please add one of the following compression types\n\
+                      MIO0, YAY0 (Unsupported), YAZ0 (Unsupported)", offset);
+        return std::nullopt;
+    }
+    compressionType = sCompressionTypes.at(compression);
 
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
@@ -454,5 +534,5 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
         return std::nullopt;
     }
 
-    return std::make_shared<TextureData>(fmt, width, height, result);
+    return std::make_shared<CompressedTextureData>(fmt, width, height, result, compressionType);
 }

@@ -1,5 +1,25 @@
 #include "SampleFactory.h"
 
+#include <vector>
+#include "Companion.h"
+#include "AIFCDecode.h"
+#include "spdlog/spdlog.h"
+#include <factories/naudio/v1/AudioConverter.h>
+
+ExportResult SampleModdingExporter::Export(std::ostream& writer, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+   auto sample = std::static_pointer_cast<SampleData>(raw);
+   *replacement += ".aiff";
+
+    LUS::BinaryWriter aifc = LUS::BinaryWriter();
+    AudioConverter::SampleV0ToAIFC(&sample->mSample, aifc);
+    
+    LUS::BinaryWriter aiff = LUS::BinaryWriter();
+    write_aiff(aifc.ToVector(), aiff);
+    aifc.Close();
+    aiff.Finish(writer);
+    return std::nullopt;
+}
+
 ExportResult SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto sample = std::static_pointer_cast<SampleData>(raw)->mSample;

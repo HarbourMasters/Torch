@@ -25,6 +25,7 @@
 #include "factories/Vec3sFactory.h"
 #include "factories/AssetArrayFactory.h"
 #include "factories/ViewportFactory.h"
+#include "factories/CompressedTextureFactory.h"
 
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
@@ -78,6 +79,8 @@
 #include "factories/naudio/v1/BookFactory.h"
 #include "factories/naudio/v1/SequenceFactory.h"
 
+#include "preprocess/CompTool.h"
+
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
@@ -105,6 +108,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("ARRAY", std::make_shared<GenericArrayFactory>());
     this->RegisterFactory("ASSET_ARRAY", std::make_shared<AssetArrayFactory>());
     this->RegisterFactory("VP", std::make_shared<ViewportFactory>());
+    this->RegisterFactory("COMPRESSED_TEXTURE", std::make_shared<CompressedTextureFactory>());
 
     // SM64 specific
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
@@ -559,13 +563,12 @@ void Companion::ProcessFile(YAML::Node root) {
     for(auto asset = root.begin(); asset != root.end(); ++asset){
         auto node = asset->second;
         auto entryName = asset->first.as<std::string>();
-
         auto output = (this->gCurrentDirectory / entryName).string();
         std::replace(output.begin(), output.end(), '\\', '/');
 
         if(node["type"]){
             const auto type = GetSafeNode<std::string>(node, "type");
-            if(type == "SAMPLE"){
+            if(type == "NAUDIO:V0:SAMPLE"){
                 AudioManager::Instance->bind_sample(node, output);
             }
         }
@@ -845,7 +848,7 @@ void Companion::ProcessFile(YAML::Node root) {
                 if(gap < 0) {
                     stream << "// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << std::abs(gap) << "\n";
                     SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
-                } else if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
+                } else if(gap < 0x10 && gap >= alignment && end % alignment == 0 && this->gEnablePadGen) {
                     SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
                     SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
                     const auto padfile = this->gCurrentDirectory.filename().string();
@@ -863,7 +866,7 @@ void Companion::ProcessFile(YAML::Node root) {
                     } else {
                         stream << "\n";
                     }
-                } else if(gap > 0x10) {
+                } else if(gap >= 0x10) {
                     stream << "// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
                 }
             }
@@ -970,8 +973,44 @@ void Companion::Process() {
     }
 
     auto rom = !isDirectoryMode ? config[this->gCartridge->GetHash()] : config;
-    auto cfg = rom["config"];
 
+    if(rom["preprocess"]) {
+        auto preprocess = rom["preprocess"];
+        for(auto job = preprocess.begin(); job != preprocess.end(); job++) {
+            auto name = job->first.as<std::string>();
+            auto item = job->second;
+            auto method = GetSafeNode<std::string>(item, "method");
+            if (method == "mio0-comptool") {
+                auto type = GetSafeNode<std::string>(item, "type");
+                auto target = GetSafeNode<std::string>(item, "target");
+                auto restart = GetSafeNode<bool>(item, "restart");
+
+                if (type == "decompress") {
+                    this->gRomData = CompTool::Decompress(this->gRomData);
+                    this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
+                    this->gCartridge->Initialize();
+
+                    auto hash = this->gCartridge->GetHash();
+
+                    SPDLOG_INFO("ROM decompressed to {}", hash);
+
+                    if (hash != target) {
+                        throw std::runtime_error("Hash mismatch");
+                    }
+
+                    if(restart){
+                        rom = config[this->gCartridge->GetHash()];
+                    }
+                } else {
+                    throw std::runtime_error("Only decompression is supported");
+                }
+            } else {
+                throw std::runtime_error("Invalid preprocess method");
+            }
+        }
+    }
+
+    auto cfg = rom["config"];
     if(!cfg) {
         SPDLOG_ERROR("No config found for {}", !isDirectoryMode ? this->gCartridge->GetHash() : GetSafeNode<std::string>(config, "folder"));
         return;
