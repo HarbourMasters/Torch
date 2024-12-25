@@ -114,7 +114,7 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     auto buffer = AudioContext::data[AudioTableType::SAMPLE_TABLE];
     auto sampleData = buffer.data() + tableEntry.addr + entry->sampleAddr;
     std::vector<char> data(sampleData, sampleData + entry->size);
-    Companion::Instance->RegisterCompanionFile(path.filename(), data);
+    Companion::Instance->RegisterCompanionFile(path.filename().string(), data);
 
     return std::nullopt;
 }
