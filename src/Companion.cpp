@@ -1418,7 +1418,7 @@ std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNo
 
 void Companion::RegisterCompanionFile(const std::string path, std::vector<char> data) {
     this->gCompanionFiles[path] = data;
-    SPDLOG_INFO("Registered companion file {}", path);
+    SPDLOG_TRACE("Registered companion file {}", path);
 }
 
 std::string Companion::NormalizeAsset(const std::string& name) const {
