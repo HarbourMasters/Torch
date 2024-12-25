@@ -2,7 +2,6 @@
 #include "utils/Decompressor.h"
 #include "Companion.h"
 #include "EnvelopeFactory.h"
-#include "SampleFactory.h"
 #include <tinyxml2.h>
 
 ExportResult InstrumentHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {

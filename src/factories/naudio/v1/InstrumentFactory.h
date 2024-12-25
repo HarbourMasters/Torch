@@ -39,7 +39,6 @@ public:
             REGISTER(Header, InstrumentHeaderExporter)
             REGISTER(Binary, InstrumentBinaryExporter)
             REGISTER(Code, InstrumentCodeExporter)
-            REGISTER(XML, InstrumentXMLExporter)
         };
     }
 

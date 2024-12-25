@@ -62,7 +62,6 @@ ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr
 }
 
 ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    auto aiff = LUS::BinaryWriter();
     auto entry = std::static_pointer_cast<NSampleData>(raw);
     auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(entry->loop)->data.value());
     auto book = std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(entry->book)->data.value());
@@ -73,19 +72,23 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
 
     tinyxml2::XMLDocument sample;
     tinyxml2::XMLElement* root = sample.NewElement("Sample");
+    root->SetAttribute("Version", 0);
     root->SetAttribute("Codec", AudioContext::GetCodecStr(entry->codec));
     root->SetAttribute("Medium", AudioContext::GetMediumStr(entry->medium));
-    root->SetAttribute("Unk", entry->unk);
+    root->SetAttribute("bit26", entry->unk);
     root->SetAttribute("Tuning", entry->tuning);
+    root->SetAttribute("Size", entry->size);
+    root->SetAttribute("Relocated", 0);
+    root->SetAttribute("Path", path.c_str());
 
     tinyxml2::XMLElement* adpcmLoop = sample.NewElement("ADPCMLoop");
     adpcmLoop->SetAttribute("Start", loop->start);
     adpcmLoop->SetAttribute("End", loop->end);
     adpcmLoop->SetAttribute("Count", loop->count);
     if (loop->count != 0) {
-        for (size_t i = 0; i < 16; i++) {
+        for (auto& state : loop->predictorState) {
             tinyxml2::XMLElement* loopEntry = adpcmLoop->InsertNewChildElement("Predictor");
-            loopEntry->SetAttribute("State", loop->predictorState[i]);
+            loopEntry->SetAttribute("State", state);
             adpcmLoop->InsertEndChild(loopEntry);
         }
     }
@@ -95,9 +98,9 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     adpcmBook->SetAttribute("Order", book->order);
     adpcmBook->SetAttribute("Npredictors", book->numPredictors);
 
-    for (size_t i = 0; i < book->book.size(); i++) {
+    for (auto& page : book->book) {
         tinyxml2::XMLElement* bookEntry = adpcmBook->InsertNewChildElement("Book");
-        bookEntry->SetAttribute("Page", book->book[i]);
+        bookEntry->SetAttribute("Page", page);
         adpcmBook->InsertEndChild(bookEntry);
     }
     root->InsertEndChild(adpcmBook);
