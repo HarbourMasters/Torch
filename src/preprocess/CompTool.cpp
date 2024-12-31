@@ -52,7 +52,7 @@ std::pair<uint32_t, uint32_t> CompTool::CalculateCRCs(LUS::BinaryWriter& decompF
         t1 += (t5 ^ d);
     }
 
-    return std::make_pair((uint32_t)(t6 ^ t4 ^ t3), (uint32_t)(t5 ^ t2 ^ t1));
+    return std::make_pair(t6 ^ t4 ^ t3, t5 ^ t2 ^ t1);
 }
 
 std::vector<uint8_t> CompTool::Decompress(std::vector<uint8_t> rom){
