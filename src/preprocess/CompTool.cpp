@@ -42,7 +42,7 @@ std::pair<uint32_t, uint32_t> CompTool::CalculateCRCs(LUS::BinaryWriter& decompF
         uint32_t r = ROL(d, d & 0x1F);
 
         if ((t6 + d) < t6) {
-            t4 = (t4 + 1);
+            t4++;
         }
 
         t3 ^= d;
