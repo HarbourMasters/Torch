@@ -184,12 +184,12 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009418.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"gCpuCurveTargetSpeed.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
             file << "{ ";
-            for (const auto size : m.D_0D009418) {
+            for (const auto size : m.gCpuCurveTargetSpeed) {
                 file << size << ", ";
             }
             file << "},\n";
@@ -197,12 +197,12 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009568.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"gCpuNormalTargetSpeed.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
             file << "{ ";
-            for (const auto& size : m.D_0D009568) {
+            for (const auto& size : m.gCpuNormalTargetSpeed) {
                 file << size << ", ";
             }
             file << "},\n";
@@ -223,12 +223,12 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009808.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"gCpuOffTrackTargetSpeed.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
             file << "{ ";
-            for (const auto& size : m.D_0D009808) {
+            for (const auto& size : m.gCpuOffTrackTargetSpeed) {
                 file << size << ", ";
             }
             file << "},\n";
@@ -351,20 +351,20 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
             data.pathSizes.push_back(size.as<uint16_t>());
         }
 
-        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009418")) {
-            data.D_0D009418.push_back(value.as<std::string>());
+        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "gCpuCurveTargetSpeed")) {
+            data.gCpuCurveTargetSpeed.push_back(value.as<std::string>());
         }
 
-        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009568")) {
-            data.D_0D009568.push_back(value.as<std::string>());
+        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "gCpuNormalTargetSpeed")) {
+            data.gCpuNormalTargetSpeed.push_back(value.as<std::string>());
         }
 
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D0096B8")) {
             data.D_0D0096B8.push_back(value.as<std::string>());
         }
         SPDLOG_INFO("MIDDLE");
-        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009808")) {
-            data.D_0D009808.push_back(value.as<std::string>());
+        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "gCpuOffTrackTargetSpeed")) {
+            data.gCpuOffTrackTargetSpeed.push_back(value.as<std::string>());
         }
 
         for (const auto& str : GetSafeNode<YAML::Node>(metadata, "path_table")) {
