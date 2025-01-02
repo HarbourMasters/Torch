@@ -63,6 +63,8 @@
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
 
+#include "factories/fzerox/CourseFactory.h"
+
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/naudio/v0/BankFactory.h"
 #include "factories/naudio/v0/SampleFactory.h"
@@ -148,6 +150,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
     this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
     this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
+
+    // F-Zero X specific
+    this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
 
     // NAudio specific
     this->RegisterFactory("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
