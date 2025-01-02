@@ -11,6 +11,7 @@
 #define TRACK_SEGMENT_FORM_MASK 0x38000
 #define TRACK_SEGMENT_FLAG_CONTINUE 0x40000000
 
+#define FORMAT_HEX(x, w) std::hex << std::setfill('0') << std::setw(w) << x
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
 
 uint32_t FZX::CourseData::CalculateChecksum(void) {
@@ -72,11 +73,11 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     write << fourSpaceTab << "0x" << std::hex << std::uppercase << course->CalculateChecksum() << std::dec << ", /* Checksum */\n";
     write << fourSpaceTab << (int32_t)course->mFlag << ", /* Flag */\n";
 
-    write << fourSpaceTab << "\"" << course->mFileName;
+    write << fourSpaceTab << "\"" << course->mFileName << std::hex;
     for (size_t i = 0; i < 22 - course->mFileName.length(); i++) {
-        write << "\\0";
+        write << "\\x" << FORMAT_HEX((uint32_t)(uint8_t)course->mFileNameExtra.at(i), 2);
     }
-    write << "\", /* File Name */\n";
+    write << std::dec << "\", /* File Name */\n";
 
     write << fourSpaceTab << "{ /* Control Points */\n";
 
@@ -85,7 +86,7 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
             Vec3f pos(controlPointInfo.controlPoint.pos.x, controlPointInfo.controlPoint.pos.y, controlPointInfo.controlPoint.pos.z);
-            write << "{ { " << FORMAT_FLOAT(pos, 6, 1) << "}, ";
+            write << "{ { " << FORMAT_FLOAT(pos, 6, 4) << "}, ";
             write << controlPointInfo.controlPoint.radiusLeft << ", ";
             write << controlPointInfo.controlPoint.radiusRight << ", ";
             write << "0x" << std::hex << controlPointInfo.controlPoint.trackSegmentInfo << std::dec;
@@ -265,6 +266,9 @@ ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_
     writer.Write(course->CalculateChecksum());
     writer.Write(course->mFlag);
     writer.Write(course->mFileName);
+    for (const auto extra : course->mFileNameExtra) {
+        writer.Write(extra);
+    }
     for (const auto& controlPointInfo : course->mControlPointInfos) {
         writer.Write(controlPointInfo.controlPoint.pos.x);
         writer.Write(controlPointInfo.controlPoint.pos.y);
@@ -307,6 +311,11 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
     }
 
     std::string fileName(nameBuffer);
+    std::vector<int8_t> fileNameExtra;
+    for (int32_t i = fileName.length(); i < ARRAY_COUNT(nameBuffer); i++) {
+        fileNameExtra.push_back(nameBuffer[i]);
+    }
+
     std::vector<ControlPointInfo> controlPointInfos;
 
     for (int8_t i = 0; i < controlPointCount; i++) {
@@ -342,5 +351,5 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
         controlPointInfos.push_back(controlPointInfo);
     }
 
-    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, controlPointInfos);
+    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, fileNameExtra, controlPointInfos);
 }
