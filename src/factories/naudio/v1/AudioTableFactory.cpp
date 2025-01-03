@@ -135,6 +135,10 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         auto sd3 = reader.ReadInt16();
         uint64_t crc = 0;
 
+        auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3, crc };
+        entries.push_back(entry);
+        AudioContext::tables[type][addr] = entry;
+
         switch (type) {
             case AudioTableType::FONT_TABLE: {
                 YAML::Node font;
@@ -166,10 +170,6 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                 }
             }
         }
-
-        auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3, crc };
-        entries.push_back(entry);
-        AudioContext::tables[type][addr] = entry;
     }
 
     auto table = std::make_shared<AudioTableData>(bmedium, offset, type, entries);
