@@ -1,11 +1,12 @@
 #include "EnvironmentFactory.h"
 #include "spdlog/spdlog.h"
-
+#include <tinyxml2.h>
 #include "Companion.h"
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
 #define VALUE_TO_ENUM(val, enumname, fallback) (Companion::Instance->GetEnumFromValue(enumname, val).value_or("/*" + std::string(fallback) + " */ " + std::to_string(val)));
+#define VALUE_TO_XML_ENUM(val, enumname, fallback) (Companion::Instance->GetEnumFromValue(enumname, val).value_or(std::to_string(val)))
 
 SF64::EnvironmentData::EnvironmentData(int32_t type, int32_t ground, uint16_t bgColor, uint16_t seqId, int32_t fogR, int32_t fogG, int32_t fogB, int32_t fogN, int32_t fogF, Vec3f lightDir, int32_t lightR, int32_t lightG, int32_t lightB, int32_t ambR, int32_t ambG, int32_t ambB): mType(type), mGround(ground), mBgColor(bgColor), mSeqId(seqId), mFogR(fogR), mFogG(fogG), mFogB(fogB), mFogN(fogN), mFogF(fogF), mLightDir(lightDir), mLightR(lightR), mLightG(lightG), mLightB(lightB), mAmbR(ambR), mAmbG(ambG), mAmbB(ambB) {
 
@@ -84,6 +85,84 @@ ExportResult SF64::EnvironmentBinaryExporter::Export(std::ostream &write, std::s
     writer.Write(environment->mAmbB);
 
     writer.Finish(write);
+    return std::nullopt;
+}
+
+void AppendNode(tinyxml2::XMLDocument& doc, tinyxml2::XMLElement* root, const std::string& name, const std::string value) {
+    auto node = doc.NewElement(name.c_str());
+    node->SetText(value.c_str());
+    root->InsertEndChild(node);
+}
+
+void AppendSeqNode(tinyxml2::XMLDocument& doc, tinyxml2::XMLElement* root, uint16_t id) {
+    auto node = doc.NewElement("Sequence");
+    if (id == 0xFFFF) {
+        node->SetAttribute("ID", "SEQ_ID_UNK");
+        node->SetAttribute("Flag", "0");
+    } else {
+        bool flag = id < 0x8000;
+        if(!flag) {
+            id &= 0x7FFF;
+        }
+        node->SetText(VALUE_TO_XML_ENUM(id, "BgmSeqIds", std::to_string(id)).c_str());
+        node->SetAttribute("Flag", flag ? "0" : "1");
+    }
+    root->InsertEndChild(node);
+}
+
+ExportResult SF64::EnvironmentXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto env = std::static_pointer_cast<SF64::EnvironmentData>(raw);
+
+    tinyxml2::XMLPrinter printer;
+    tinyxml2::XMLDocument environment;
+    tinyxml2::XMLElement* root = environment.NewElement("Environment");
+
+    *replacement += ".meta";
+
+    AppendNode(environment, root, "Type", VALUE_TO_XML_ENUM(env->mType, "LevelType", "LEVELTYPE_UNK"));
+    AppendNode(environment, root, "Ground", VALUE_TO_XML_ENUM(env->mGround, "GroundType", "GROUND_UNK"));
+    AppendSeqNode(environment, root, env->mSeqId);
+
+    {
+        auto item = environment.NewElement("Background");
+        item->SetAttribute("R", (env->mBgColor >> 10) & 0x1F);
+        item->SetAttribute("G", (env->mBgColor >> 5) & 0x1F);
+        item->SetAttribute("B", env->mBgColor & 0x1F);
+        root->InsertEndChild(item);
+    }
+    {
+        auto item = environment.NewElement("Fog");
+        item->SetAttribute("R", env->mFogR);
+        item->SetAttribute("G", env->mFogG);
+        item->SetAttribute("B", env->mFogB);
+        item->SetAttribute("Near", env->mFogN);
+        item->SetAttribute("Far", env->mFogF);
+        root->InsertEndChild(item);
+    }
+
+    {
+        auto item = environment.NewElement("Light");
+        item->SetAttribute("R", env->mLightR);
+        item->SetAttribute("G", env->mLightG);
+        item->SetAttribute("B", env->mLightB);
+        item->SetAttribute("xDir", env->mLightDir.x);
+        item->SetAttribute("yDir", env->mLightDir.y);
+        item->SetAttribute("zDir", env->mLightDir.z);
+        root->InsertEndChild(item);
+    }
+
+    {
+        auto item = environment.NewElement("Ambient");
+        item->SetAttribute("R", env->mAmbR);
+        item->SetAttribute("G", env->mAmbG);
+        item->SetAttribute("B", env->mAmbB);
+        root->InsertEndChild(item);
+    }
+
+    environment.InsertEndChild(root);
+    environment.Accept(&printer);
+    write.write(printer.CStr(), printer.CStrSize() - 1);
     return std::nullopt;
 }
 
