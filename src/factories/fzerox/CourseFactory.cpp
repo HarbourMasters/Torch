@@ -1,9 +1,12 @@
 #include "CourseFactory.h"
+#include "course/Course.h"
 
 #include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <types/Vec3D.h>
+
+#define CP_ENUMS_PER_LINE 4
 
 #define ARRAY_COUNT(arr) (int32_t)(sizeof(arr) / sizeof(arr[0]))
 
@@ -66,10 +69,14 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     write << "CourseData " << symbol << " = {\n";
 
     write << std::dec;
-    write << fourSpaceTab << (int32_t)course->mCreatorId << ", /* Creator Id */\n";
+    if (course->mCreatorId == CREATOR_NINTENDO) {
+        write << fourSpaceTab << "CREATOR_NINTENDO" << ", /* Creator Id */\n";
+    } else {
+        write << fourSpaceTab << (int32_t)course->mCreatorId << ", /* Creator Id */\n";
+    }
     write << fourSpaceTab << (int32_t)controlPointCount << ", /* Control Point Count */\n";
-    write << fourSpaceTab << (int32_t)course->mVenue << ", /* Venue */\n";
-    write << fourSpaceTab << (int32_t)course->mSkybox << ", /* Skybox */\n";
+    write << fourSpaceTab << static_cast<Venue>(course->mVenue) << ", /* Venue */\n";
+    write << fourSpaceTab << static_cast<Skybox>(course->mSkybox) << ", /* Skybox */\n";
     write << fourSpaceTab << "0x" << std::hex << std::uppercase << course->CalculateChecksum() << std::dec << ", /* Checksum */\n";
     write << fourSpaceTab << (int32_t)course->mFlag << ", /* Flag */\n";
 
@@ -119,13 +126,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Pit */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.pit << ", ";
+            write << static_cast<PitZone>(controlPointInfo.pit) << ", ";
         } else {
             write << "0, ";
         }
@@ -134,13 +141,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Dash */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.dash << ", ";
+            write << static_cast<DashZone>(controlPointInfo.dash) << ", ";
         } else {
             write << "0, ";
         }
@@ -149,13 +156,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Dirt */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.dirt << ", ";
+            write << static_cast<Dirt>(controlPointInfo.dirt) << ", ";
         } else {
             write << "0, ";
         }
@@ -164,13 +171,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Ice */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.ice << ", ";
+            write << static_cast<Ice>(controlPointInfo.ice) << ", ";
         } else {
             write << "0, ";
         }
@@ -179,13 +186,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Jump */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.jump << ", ";
+            write << static_cast<Jump>(controlPointInfo.jump) << ", ";
         } else {
             write << "0, ";
         }
@@ -194,13 +201,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Landmine */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.landmine << ", ";
+            write << static_cast<Landmine>(controlPointInfo.landmine) << ", ";
         } else {
             write << "0, ";
         }
@@ -209,13 +216,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Gate */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.gate << ", ";
+            write << static_cast<Gate>(controlPointInfo.gate) << ", ";
         } else {
             write << "0, ";
         }
@@ -224,13 +231,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Building */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.building << ", ";
+            write << static_cast<Building>(controlPointInfo.building) << ", ";
         } else {
             write << "0, ";
         }
@@ -239,13 +246,13 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ /* Sign */";
     for (size_t i = 0; i < 64; i++) {
-        if ((i % 16) == 0) {
+        if ((i % CP_ENUMS_PER_LINE) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
         }
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.sign << ", ";
+            write << static_cast<Sign>(controlPointInfo.sign) << ", ";
         } else {
             write << "0, ";
         }
