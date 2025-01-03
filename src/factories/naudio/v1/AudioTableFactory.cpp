@@ -170,6 +170,7 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
             }
         }
 
+        entry.crc = crc;
         AudioContext::tables[type][addr].crc = crc;
         entries.push_back(entry);
     }
