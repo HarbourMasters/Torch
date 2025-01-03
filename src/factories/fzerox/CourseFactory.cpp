@@ -29,7 +29,7 @@ uint32_t FZX::CourseData::CalculateChecksum(void) {
                    controlPointInfo.controlPoint.radiusLeft + ((5.5f + (0.8f * counter)) * controlPointInfo.controlPoint.radiusRight * 4.8f)) +
             trackSegmentInfo * (0xFE - counter) + controlPointInfo.bankAngle * (0x93DE - counter * 2);
         checksum += (controlPointInfo.pit * counter);
-        checksum += (controlPointInfo.boost * (counter + 0x10));
+        checksum += (controlPointInfo.dash * (counter + 0x10));
         checksum += (controlPointInfo.dirt * (counter + 0x80));
         checksum += (controlPointInfo.ice * (counter + 0x100));
         checksum += (controlPointInfo.jump * (counter + 0x800));
@@ -57,10 +57,10 @@ ExportResult FZX::CourseHeaderExporter::Export(std::ostream &write, std::shared_
     return std::nullopt;
 }
 
-ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto course = std::static_pointer_cast<CourseData>(raw);
+    const auto course = std::static_pointer_cast<CourseData>(raw);
     size_t controlPointCount = course->mControlPointInfos.size();
 
     write << "CourseData " << symbol << " = {\n";
@@ -74,8 +74,12 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     write << fourSpaceTab << (int32_t)course->mFlag << ", /* Flag */\n";
 
     write << fourSpaceTab << "\"" << course->mFileName << std::hex;
-    for (size_t i = 0; i < 22 - course->mFileName.length(); i++) {
-        write << "\\x" << FORMAT_HEX((uint32_t)(uint8_t)course->mFileNameExtra.at(i), 2);
+    for (int32_t i = 0; i < 22 - course->mFileName.length(); i++) {
+        if (i < (int32_t)course->mFileNameExtra.size() - 1) {
+            write << "\\x" << FORMAT_HEX((uint32_t)(uint8_t)course->mFileNameExtra.at(i), 2);
+        } else {
+            write << "\\x00";
+        }
     }
     write << std::dec << "\", /* File Name */\n";
 
@@ -128,7 +132,7 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     }
     write << "\n" << fourSpaceTab << "},\n";
 
-    write << fourSpaceTab << "{ /* Boost */";
+    write << fourSpaceTab << "{ /* Dash */";
     for (size_t i = 0; i < 64; i++) {
         if ((i % 16) == 0) {
             write << "\n" << fourSpaceTab << fourSpaceTab;
@@ -136,7 +140,7 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            write << (int32_t)controlPointInfo.boost << ", ";
+            write << (int32_t)controlPointInfo.dash << ", ";
         } else {
             write << "0, ";
         }
@@ -252,9 +256,9 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     return offset + sizeof(CourseRawData);
 }
 
-ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
-    auto course = std::static_pointer_cast<CourseData>(raw);
+    const auto course = std::static_pointer_cast<CourseData>(raw);
     int8_t controlPointCount = (int8_t)course->mControlPointInfos.size();
 
     WriteHeader(writer, Torch::ResourceType::CourseData, 0);
@@ -266,6 +270,7 @@ ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_
     writer.Write(course->CalculateChecksum());
     writer.Write(course->mFlag);
     writer.Write(course->mFileName);
+    writer.Write((uint32_t)course->mFileNameExtra.size());
     for (const auto extra : course->mFileNameExtra) {
         writer.Write(extra);
     }
@@ -278,7 +283,7 @@ ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_
         writer.Write(controlPointInfo.controlPoint.trackSegmentInfo);
         writer.Write(controlPointInfo.bankAngle);
         writer.Write(controlPointInfo.pit);
-        writer.Write(controlPointInfo.boost);
+        writer.Write(controlPointInfo.dash);
         writer.Write(controlPointInfo.dirt);
         writer.Write(controlPointInfo.ice);
         writer.Write(controlPointInfo.jump);
@@ -289,6 +294,119 @@ ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_
     }
 
     writer.Finish(write);
+    return std::nullopt;
+}
+
+ExportResult FZX::CourseModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+    const auto course = std::static_pointer_cast<CourseData>(raw);
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+
+    *replacement += ".yaml";
+
+    std::stringstream stream;
+    YAML::Emitter out;
+
+    out << YAML::BeginMap;
+    out << YAML::Key << symbol;
+    out << YAML::Value;
+    out.SetIndent(2);
+    out << YAML::BeginMap;
+    out << YAML::Key << "CreatorId";
+    out << YAML::Value << course->mCreatorId;
+    out << YAML::Key << "Venue";
+    out << YAML::Value << course->mVenue;
+    out << YAML::Key << "Skybox";
+    out << YAML::Value << course->mSkybox;
+    out << YAML::Key << "Flag";
+    out << YAML::Value << course->mFlag;
+    out << YAML::Key << "Name";
+    out << YAML::Value << course->mFileName;
+    if (course->mFileNameExtra.size() > 1) {
+        out << YAML::Key << "NameExtra";
+        out << YAML::Value << YAML::Flow << YAML::BeginSeq;
+        for (size_t i = 0; i < course->mFileNameExtra.size() - 1; i++) {
+            out << YAML::Hex << (uint32_t)(uint8_t)course->mFileNameExtra.at(i);
+        }
+        out << YAML::EndSeq << YAML::Block << YAML::Dec;
+    }
+
+    out << YAML::Key << "ControlPoints";
+    out << YAML::Value << YAML::BeginSeq;
+    for (const auto& controlPointInfo : course->mControlPointInfos) {
+        out << YAML::BeginMap;
+        out << YAML::Key << "PosX";
+        out << YAML::Value << controlPointInfo.controlPoint.pos.x;
+        out << YAML::Key << "PosY";
+        out << YAML::Value << controlPointInfo.controlPoint.pos.y;
+        out << YAML::Key << "PosZ";
+        out << YAML::Value << controlPointInfo.controlPoint.pos.z;
+        out << YAML::Key << "RadiusLeft";
+        out << YAML::Value << controlPointInfo.controlPoint.radiusLeft;
+        out << YAML::Key << "RadiusRight";
+        out << YAML::Value << controlPointInfo.controlPoint.radiusRight;
+        out << YAML::Key << "TrackSegmentInfo";
+        out << YAML::Value << YAML::Hex << controlPointInfo.controlPoint.trackSegmentInfo << YAML::Dec;
+
+        // Default to 0
+        if (controlPointInfo.bankAngle != 0) {
+            out << YAML::Key << "BankAngle";
+            out << YAML::Value << controlPointInfo.bankAngle;
+        }
+
+        // Remaining Default to -1
+
+        if (controlPointInfo.pit != -1) {
+            out << YAML::Key << "Pit";
+            out << YAML::Value << controlPointInfo.pit;
+        }
+
+        if (controlPointInfo.dash != -1) {
+            out << YAML::Key << "Dash";
+            out << YAML::Value << controlPointInfo.dash;
+        }
+
+        if (controlPointInfo.dirt != -1) {
+            out << YAML::Key << "Dirt";
+            out << YAML::Value << controlPointInfo.dirt;
+        }
+
+        if (controlPointInfo.ice != -1) {
+            out << YAML::Key << "Ice";
+            out << YAML::Value << controlPointInfo.ice;
+        }
+
+        if (controlPointInfo.jump != -1) {
+            out << YAML::Key << "Jump";
+            out << YAML::Value << controlPointInfo.jump;
+        }
+
+        if (controlPointInfo.landmine != -1) {
+            out << YAML::Key << "Landmine";
+            out << YAML::Value << controlPointInfo.landmine;
+        }
+
+        if (controlPointInfo.gate != -1) {
+            out << YAML::Key << "Gate";
+            out << YAML::Value << controlPointInfo.gate;
+        }
+
+        if (controlPointInfo.building != -1) {
+            out << YAML::Key << "Building";
+            out << YAML::Value << controlPointInfo.building;
+        }
+
+        if (controlPointInfo.sign != -1) {
+            out << YAML::Key << "Sign";
+            out << YAML::Value << controlPointInfo.sign;
+        }
+        out << YAML::EndMap;
+    }
+
+    out << YAML::EndMap;
+    out << YAML::EndMap;
+
+    write.write(out.c_str(), out.size());
+
     return std::nullopt;
 }
 
@@ -333,7 +451,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
         reader.Seek(0x5A0 + i * sizeof(int8_t), LUS::SeekOffsetType::Start);
         controlPointInfo.pit = reader.ReadInt8();
         reader.Seek(0x5E0 + i * sizeof(int8_t), LUS::SeekOffsetType::Start);
-        controlPointInfo.boost = reader.ReadInt8();
+        controlPointInfo.dash = reader.ReadInt8();
         reader.Seek(0x620 + i * sizeof(int8_t), LUS::SeekOffsetType::Start);
         controlPointInfo.dirt = reader.ReadInt8();
         reader.Seek(0x660 + i * sizeof(int8_t), LUS::SeekOffsetType::Start);
@@ -348,6 +466,108 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
         controlPointInfo.building = reader.ReadInt8();
         reader.Seek(0x7A0 + i * sizeof(int8_t), LUS::SeekOffsetType::Start);
         controlPointInfo.sign = reader.ReadInt8();
+        controlPointInfos.push_back(controlPointInfo);
+    }
+
+    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, fileNameExtra, controlPointInfos);
+}
+
+std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    YAML::Node assetNode;
+
+    try {
+        std::string text((char*) buffer.data(), buffer.size());
+        assetNode = YAML::Load(text.c_str());
+    } catch (YAML::ParserException& e) {
+        SPDLOG_ERROR("Failed to parse message data: {}", e.what());
+        SPDLOG_ERROR("{}", (char*) buffer.data());
+        return std::nullopt;
+    }
+
+    const auto info = assetNode.begin()->second;
+
+    int8_t creatorId = info["CreatorId"].as<int8_t>();
+    int8_t venue = info["Venue"].as<int8_t>();
+    int8_t skybox = info["Skybox"].as<int8_t>();
+    int8_t flag = info["Flag"].as<int8_t>();
+    std::string fileName = info["Name"].as<std::string>();
+    std::vector<int8_t> fileNameExtra;
+    if (info["NameExtra"]) {
+        auto nameExtra = info["NameExtra"];
+        for (YAML::iterator it = nameExtra.begin(); it != nameExtra.end(); ++it) {
+            fileNameExtra.push_back((int8_t)(*it).as<uint8_t>());
+        }
+    } 
+    std::vector<ControlPointInfo> controlPointInfos;
+
+    auto controlPoints = info["ControlPoints"];
+    for (YAML::iterator it = controlPoints.begin(); it != controlPoints.end(); ++it) {
+        const YAML::Node& controlPointNode = *it;
+        ControlPointInfo controlPointInfo;
+        controlPointInfo.controlPoint.pos.x = controlPointNode["PosX"].as<float>();
+        controlPointInfo.controlPoint.pos.y = controlPointNode["PosY"].as<float>();
+        controlPointInfo.controlPoint.pos.z = controlPointNode["PosZ"].as<float>();
+        controlPointInfo.controlPoint.radiusLeft = controlPointNode["RadiusLeft"].as<int16_t>();
+        controlPointInfo.controlPoint.radiusRight = controlPointNode["RadiusRight"].as<int16_t>();
+        controlPointInfo.controlPoint.trackSegmentInfo = controlPointNode["TrackSegmentInfo"].as<int32_t>();
+        if (controlPointNode["BankAngle"]) {
+            controlPointInfo.bankAngle = controlPointNode["BankAngle"].as<int16_t>();
+        } else {
+            controlPointInfo.bankAngle = 0;
+        }
+        if (controlPointNode["Pit"]) {
+            controlPointInfo.pit = controlPointNode["Pit"].as<int8_t>();
+        } else {
+            controlPointInfo.pit = -1;
+        }
+
+        if (controlPointNode["Dash"]) {
+            controlPointInfo.dash = controlPointNode["Dash"].as<int8_t>();
+        } else {
+            controlPointInfo.dash = -1;
+        }
+
+        if (controlPointNode["Dirt"]) {
+            controlPointInfo.dirt = controlPointNode["Dirt"].as<int8_t>();
+        } else {
+            controlPointInfo.dirt = -1;
+        }
+
+        if (controlPointNode["Ice"]) {
+            controlPointInfo.ice = controlPointNode["Ice"].as<int8_t>();
+        } else {
+            controlPointInfo.ice = -1;
+        }
+
+        if (controlPointNode["Jump"]) {
+            controlPointInfo.jump = controlPointNode["Jump"].as<int8_t>();
+        } else {
+            controlPointInfo.jump = -1;
+        }
+
+        if (controlPointNode["Landmine"]) {
+            controlPointInfo.landmine = controlPointNode["Landmine"].as<int8_t>();
+        } else {
+            controlPointInfo.landmine = -1;
+        }
+
+        if (controlPointNode["Gate"]) {
+            controlPointInfo.gate = controlPointNode["Gate"].as<int8_t>();
+        } else {
+            controlPointInfo.gate = -1;
+        }
+
+        if (controlPointNode["Building"]) {
+            controlPointInfo.building = controlPointNode["Building"].as<int8_t>();
+        } else {
+            controlPointInfo.building = -1;
+        }
+
+        if (controlPointNode["Sign"]) {
+            controlPointInfo.sign = controlPointNode["Sign"].as<int8_t>();
+        } else {
+            controlPointInfo.sign = -1;
+        }
         controlPointInfos.push_back(controlPointInfo);
     }
 
