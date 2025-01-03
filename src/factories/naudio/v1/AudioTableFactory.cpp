@@ -136,7 +136,6 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         uint64_t crc = 0;
 
         auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3, crc };
-        entries.push_back(entry);
         AudioContext::tables[type][addr] = entry;
 
         switch (type) {
@@ -170,6 +169,9 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                 }
             }
         }
+
+        AudioContext::tables[type][addr].crc = crc;
+        entries.push_back(entry);
     }
 
     auto table = std::make_shared<AudioTableData>(bmedium, offset, type, entries);
