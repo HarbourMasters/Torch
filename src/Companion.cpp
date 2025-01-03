@@ -1255,7 +1255,6 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
 
     auto entry = std::make_tuple(output, node);
     this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = entry;
-    this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, true);
     auto dResult = this->ParseNode(node, output);
     if(dResult.has_value()) {
         this->gParseResults[this->gCurrentFile].push_back(dResult.value());
