@@ -282,23 +282,6 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
         return std::nullopt;
     }
 
-    for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
-        if(snd.second) {
-            continue;
-        }
-        std::string doutput = (this->gCurrentDirectory / fst).string();
-        std::replace(doutput.begin(), doutput.end(), '\\', '/');
-        this->gAssetDependencies[this->gCurrentFile][fst].second = true;
-        auto dResult = this->ParseNode(snd.first, doutput);
-        if(dResult.has_value()) {
-            this->gParseResults[this->gCurrentFile].push_back(dResult.value());
-        }
-        spdlog::set_pattern(regular);
-        SPDLOG_INFO("------------------------------------------------");
-        spdlog::set_pattern(line);
-    }
-
-
     SPDLOG_INFO("Processed {}", name);
 
     return ParseResultData {
@@ -1267,13 +1250,19 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
         return std::nullopt;
     }
 
-    this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, false);
-
     auto output = (this->gCurrentDirectory / name).string();
     std::replace(output.begin(), output.end(), '\\', '/');
 
     auto entry = std::make_tuple(output, node);
     this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = entry;
+    this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, true);
+    auto dResult = this->ParseNode(node, output);
+    if(dResult.has_value()) {
+        this->gParseResults[this->gCurrentFile].push_back(dResult.value());
+    }
+    spdlog::set_pattern(regular);
+    SPDLOG_INFO("------------------------------------------------");
+    spdlog::set_pattern(line);
     
     return entry;
 }
