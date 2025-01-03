@@ -52,9 +52,12 @@ set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
 option(USE_STANDALONE "Build as a standalone executable" ON)
 option(BUILD_STORMLIB "Build with StormLib support" ON)
+option(BUILD_ASAN "Build with AddressSanitizer" OFF)
 
-#add_compile_options(-fsanitize=address)
-#add_link_options(-fsanitize=address)
+if (BUILD_ASAN)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif()
 
 # Build
 if (USE_STANDALONE)
@@ -69,86 +72,46 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
     set(CMAKE_CXX_FLAGS "-Wno-narrowing")
 else()
-    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /w;
-                /Od;
-                /MDd
-            >
-            $<$<CONFIG:Release>:
-                /Oi;
-                /Gy;
-                /W3;
-                /MD
-            >
-            /bigobj
-            /STACK:16777216
-            /permissive-;
-            /MP;
-            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
-        )
-        target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
-    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /MDd
-            >
-            $<$<CONFIG:Release>:
-                /O2;
-                /Oi;
-                /Gy;
-                /MD
-            >
-            /STACK:16777216
-            /permissive-;
-            /bigobj
-            /MP;
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        $<$<CONFIG:Debug>:
             /w;
-            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
-        )
-        endif()
-    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /INCREMENTAL
-            >
-            $<$<CONFIG:Release>:
-                /OPT:REF;
-                /OPT:ICF;
-                /INCREMENTAL:NO;
-                /FORCE:MULTIPLE
-            >
-            /bigobj
-            /STACK:16777216
-            /MANIFEST:NO;
-            /DEBUG;
-            /SUBSYSTEM:CONSOLE
-        )
-    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-        target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Release>:
-                /OPT:REF;
-                /OPT:ICF;
-                /INCREMENTAL:NO;
-                /FORCE:MULTIPLE
-            >
-            /bigobj
-            /STACK:16777216
-            /MANIFEST:NO;
-            /DEBUG;
-            /SUBSYSTEM:CONSOLE
-        )
-    endif()
+            /Od;
+            /ZI;
+            /MDd
+        >
+        $<$<CONFIG:Release>:
+            /Oi;
+            /Gy;
+            /W3;
+            /MD
+        >
+        /bigobj
+        /permissive-;
+        /MP;
+        ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
+        ${DEFAULT_CXX_EXCEPTION_HANDLING}
+    )
+    target_link_options(${PROJECT_NAME} PRIVATE
+        $<$<CONFIG:Debug>:
+            /INCREMENTAL
+        >
+        $<$<CONFIG:Release>:
+            /OPT:REF;
+            /OPT:ICF;
+            /INCREMENTAL:NO;
+            /FORCE:MULTIPLE
+        >
+        /bigobj
+        /MANIFEST:NO;
+        /DEBUG;
+        /SUBSYSTEM:CONSOLE
+    )
 endif()
 
 # Fetch Dependencies
 
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
 endif()
 
 if(NOT USE_STANDALONE AND EXISTS "/mnt/c/WINDOWS/system32/wsl.exe")
@@ -226,8 +189,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
 endif()
 
 if(NOT USE_STANDALONE)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${PROJECT_NAME} PUBLIC ${yaml-cpp_SOURCE_DIR}/include)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${yaml-cpp_SOURCE_DIR}/include)
 endif()

@@ -93,7 +93,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageLookupFactory::parse(st
         entry["autogen"] = true;
         SPDLOG_INFO("Message ID: {} Ptr: {:X} Offset: {:X}", id, ptr, (SEGMENT_NUMBER(offset) << 24) | (ptr - vram));
 
-        Companion::Instance->RegisterAsset(output, entry);
+        Companion::Instance->AddAsset(entry);
         message.push_back({id, ptr});
         id = reader.ReadInt32();
         ptr = reader.ReadInt32();
