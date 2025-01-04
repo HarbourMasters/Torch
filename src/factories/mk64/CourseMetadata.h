@@ -28,10 +28,10 @@ namespace MK64 {
         uint32_t steeringSensitivity;
         std::vector<BombKartSpawns> bombKartSpawns;
         std::vector<uint16_t> pathSizes;
-        std::vector<std::string> D_0D009418;
-        std::vector<std::string> D_0D009568;
+        std::vector<std::string> gCpuCurveTargetSpeed;
+        std::vector<std::string> gCpuNormalTargetSpeed;
         std::vector<std::string> D_0D0096B8;
-        std::vector<std::string> D_0D009808;
+        std::vector<std::string> gCpuOffTrackTargetSpeed;
         std::vector<std::string> pathTable;
         std::vector<std::string> pathTableUnknown;
         std::vector<uint16_t> skyColors;
