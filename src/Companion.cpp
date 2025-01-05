@@ -1449,7 +1449,12 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     const auto decl = this->GetNodeByAddr(offset);
 
     if(decl.has_value()) {
-        return std::get<1>(decl.value());
+        auto found = std::get<1>(decl.value());
+        if(GetSafeNode<std::string>(found, "type") != type) {
+            SPDLOG_ERROR("Asset clash detected {} vs {} at 0x{:X}", type, GetSafeNode<std::string>(found, "type"), offset);
+        }
+
+        return found;
     }
 
     auto rom = this->GetRomData();
