@@ -42,67 +42,6 @@ ExportResult InstrumentBinaryExporter::Export(std::ostream &write, std::shared_p
     return std::nullopt;
 }
 
-ExportResult InstrumentXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    auto writer = LUS::BinaryWriter();
-    auto instrument = std::static_pointer_cast<InstrumentData>(raw);
-
-    auto envelopeData = std::static_pointer_cast<EnvelopeData>(Companion::Instance->GetParseDataByAddr(instrument->envelope)->data.value());
-
-    auto path = fs::path(*replacement);
-
-    *replacement += ".meta";
-
-    tinyxml2::XMLDocument inst;
-    tinyxml2::XMLElement* root = inst.NewElement("Instrument");
-    root->SetAttribute("NormalRangeLo", instrument->normalRangeLo);
-    root->SetAttribute("NormalRangeHi", instrument->normalRangeLo);
-    root->SetAttribute("ReleaseRate", instrument->adsrDecayIndex);
-
-    tinyxml2::XMLElement* envelopes = inst.NewElement("Envelopes");
-    for(auto& point : envelopeData->points){
-        tinyxml2::XMLElement* pointEntry = envelopes->InsertNewChildElement("Point");
-        pointEntry->SetAttribute("Delay", point.delay);
-        pointEntry->SetAttribute("Arg", point.arg);
-        envelopes->InsertEndChild(pointEntry);
-    }
-
-    auto lowSample = instrument->lowPitchTunedSample;
-    auto normSample = instrument->normalPitchTunedSample;
-    auto highSample = instrument->highPitchTunedSample;
-
-    if(lowSample.sample != 0 && lowSample.tuning != 0.0f){
-        tinyxml2::XMLElement* low = inst.NewElement("LowPitchSample");
-        low->SetAttribute("Tuning", lowSample.tuning);
-        low->SetAttribute("Path", std::get<std::string>(Companion::Instance->GetNodeByAddr(lowSample.sample).value()).c_str());
-
-        root->InsertEndChild(low);
-    }
-
-    if(normSample.sample != 0 && normSample.tuning != 0.0f) {
-        tinyxml2::XMLElement* normal = inst.NewElement("NormalPitchSample");
-        normal->SetAttribute("Tuning", normSample.tuning);
-        normal->SetAttribute("Path", std::get<std::string>(Companion::Instance->GetNodeByAddr(normSample.sample).value()).c_str());
-
-        root->InsertEndChild(normal);
-    }
-
-    if(highSample.sample != 0 && highSample.tuning != 0.0f) {
-        tinyxml2::XMLElement* high = inst.NewElement("HighPitchSample");
-        high->SetAttribute("Tuning", highSample.tuning);
-        high->SetAttribute("Path", std::get<std::string>(Companion::Instance->GetNodeByAddr(highSample.sample).value()).c_str());
-
-        root->InsertEndChild(high);
-    }
-
-    inst.InsertEndChild(root);
-
-    tinyxml2::XMLPrinter printer;
-    inst.Accept(&printer);
-    write.write(printer.CStr(), printer.CStrSize() - 1);
-
-    return std::nullopt;
-}
-
 std::optional<std::shared_ptr<IParsedData>> InstrumentFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto parent = GetSafeNode<uint32_t>(node, "parent");
@@ -124,7 +63,7 @@ std::optional<std::shared_ptr<IParsedData>> InstrumentFactory::parse(std::vector
     envelope["offset"] = envAddr;
     instrument->envelope = envAddr;
     Companion::Instance->AddAsset(envelope);
-
+    
     instrument->lowPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
     instrument->normalPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
     instrument->highPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
