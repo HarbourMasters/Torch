@@ -6,6 +6,37 @@
 
 #define CREATOR_NINTENDO 4
 
+#define TRACK_TYPE_NONE 0x3F
+#define TRACK_TYPE_MASK 0x3F
+
+#define TRACK_SHAPE_ROAD 0x0
+#define TRACK_SHAPE_WALLED_ROAD 0x40
+#define TRACK_SHAPE_PIPE 0x80
+#define TRACK_SHAPE_CYLINDER 0xC0
+#define TRACK_SHAPE_HALF_PIPE 0x100
+#define TRACK_SHAPE_TUNNEL 0x140
+#define TRACK_SHAPE_AIR 0x180
+#define TRACK_SHAPE_BORDERLESS_ROAD 0x1C0
+
+#define TRACK_SHAPE_MASK 0x1C0
+
+#define TRACK_JOIN_PREVIOUS 0x200
+#define TRACK_JOIN_NEXT 0x400
+#define TRACK_JOIN_MASK 0x600
+
+#define TRACK_FORM_STRAIGHT 0x00008000
+#define TRACK_FORM_LEFT 0x00010000
+#define TRACK_FORM_RIGHT 0x00018000
+#define TRACK_FORM_S 0x00020000
+#define TRACK_FORM_S_FLIPPED 0x00028000
+
+#define TRACK_FORM_MASK 0x00038000
+
+#define TRACK_FLAG_8000000 0x8000000
+#define TRACK_FLAG_JOINABLE 0x10000000
+#define TRACK_FLAG_20000000 0x20000000
+#define TRACK_FLAG_CONTINUOUS 0x40000000
+
 namespace FZX {
 enum class Venue {
     /*  0 */ VENUE_MUTE_CITY,
@@ -109,6 +140,57 @@ enum class Sign {
     /*  2 */ SIGN_2,
     /*  3 */ SIGN_NINTEX,
     /*  4 */ SIGN_OVERHEAD,
+};
+
+enum class Road {
+    /* 0 */ ROAD_START_LINE,
+    /* 1 */ ROAD_1,
+    /* 2 */ ROAD_2,
+    /* 3 */ ROAD_3,
+    /* 4 */ ROAD_4,
+    /* 5 */ ROAD_5,
+    /* 6 */ ROAD_6,
+    /* 7 */ ROAD_7,
+};
+
+enum class WalledRoad {
+    /* 0 */ WALLED_ROAD_0,
+    /* 1 */ WALLED_ROAD_1,
+    /* 2 */ WALLED_ROAD_2,
+};
+
+enum class Pipe {
+    /* 0 */ PIPE_0,
+    /* 1 */ PIPE_1,
+    /* 2 */ PIPE_2,
+    /* 3 */ PIPE_3,
+};
+
+enum class Cylinder {
+    /* 0 */ CYLINDER_0,
+    /* 1 */ CYLINDER_1,
+    /* 2 */ CYLINDER_2,
+    /* 3 */ CYLINDER_3,
+};
+
+enum class HalfPipe {
+    /* 0 */ HALF_PIPE_0,
+    /* 1 */ HALF_PIPE_1,
+    /* 2 */ HALF_PIPE_2,
+    /* 3 */ HALF_PIPE_3,
+};
+
+enum class Tunnel {
+    /* 0 */ TUNNEL_0,
+    /* 1 */ TUNNEL_1,
+    /* 2 */ TUNNEL_2,
+    /* 3 */ TUNNEL_3,
+};
+
+enum class BorderlessRoad {
+    /* 0 */ BORDERLESS_ROAD_0,
+    /* 1 */ BORDERLESS_ROAD_1,
+    /* 2 */ BORDERLESS_ROAD_2,
 };
 
 inline std::ostream& operator<<(std::ostream& out, const Venue& venue) {
@@ -400,4 +482,144 @@ inline std::ostream& operator<<(std::ostream& out, const Sign& sign) {
     }
     return out << output;
 }
+
+inline std::ostream& operator<<(std::ostream& out, const Road& road) {
+    std::string output;
+    switch (road) {
+        case Road::ROAD_START_LINE:
+            output = "ROAD_START_LINE";
+            break;
+        case Road::ROAD_1:
+            output = "ROAD_1";
+            break;
+        case Road::ROAD_2:
+            output = "ROAD_2";
+            break;
+        case Road::ROAD_3:
+            output = "ROAD_3";
+            break;
+        case Road::ROAD_4:
+            output = "ROAD_4";
+            break;
+        case Road::ROAD_5:
+            output = "ROAD_5";
+            break;
+        case Road::ROAD_6:
+            output = "ROAD_6";
+            break;
+        case Road::ROAD_7:
+            output = "ROAD_7";
+            break;
+    }
+    return out << output;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const WalledRoad& walledRoad) {
+    std::string output;
+    switch (walledRoad) {
+        case WalledRoad::WALLED_ROAD_0:
+            output = "WALLED_ROAD_0";
+            break;
+        case WalledRoad::WALLED_ROAD_1:
+            output = "WALLED_ROAD_1";
+            break;
+        case WalledRoad::WALLED_ROAD_2:
+            output = "WALLED_ROAD_2";
+            break;
+    }
+    return out << output;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const Pipe& pipe) {
+    std::string output;
+    switch (pipe) {
+        case Pipe::PIPE_0:
+            output = "PIPE_0";
+            break;
+        case Pipe::PIPE_1:
+            output = "PIPE_1";
+            break;
+        case Pipe::PIPE_2:
+            output = "PIPE_2";
+            break;
+        case Pipe::PIPE_3:
+            output = "PIPE_3";
+            break;
+    }
+    return out << output;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const Cylinder& cylinder) {
+    std::string output;
+    switch (cylinder) {
+        case Cylinder::CYLINDER_0:
+            output = "CYLINDER_0";
+            break;
+        case Cylinder::CYLINDER_1:
+            output = "CYLINDER_1";
+            break;
+        case Cylinder::CYLINDER_2:
+            output = "CYLINDER_2";
+            break;
+        case Cylinder::CYLINDER_3:
+            output = "CYLINDER_3";
+            break;
+    }
+    return out << output;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const HalfPipe& halfPipe) {
+    std::string output;
+    switch (halfPipe) {
+        case HalfPipe::HALF_PIPE_0:
+            output = "HALF_PIPE_0";
+            break;
+        case HalfPipe::HALF_PIPE_1:
+            output = "HALF_PIPE_1";
+            break;
+        case HalfPipe::HALF_PIPE_2:
+            output = "HALF_PIPE_2";
+            break;
+        case HalfPipe::HALF_PIPE_3:
+            output = "HALF_PIPE_3";
+            break;
+    }
+    return out << output;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const Tunnel& tunnel) {
+    std::string output;
+    switch (tunnel) {
+        case Tunnel::TUNNEL_0:
+            output = "TUNNEL_0";
+            break;
+        case Tunnel::TUNNEL_1:
+            output = "TUNNEL_1";
+            break;
+        case Tunnel::TUNNEL_2:
+            output = "TUNNEL_2";
+            break;
+        case Tunnel::TUNNEL_3:
+            output = "TUNNEL_3";
+            break;
+    }
+    return out << output;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const BorderlessRoad& borderlessRoad) {
+    std::string output;
+    switch (borderlessRoad) {
+        case BorderlessRoad::BORDERLESS_ROAD_0:
+            output = "BORDERLESS_ROAD_0";
+            break;
+        case BorderlessRoad::BORDERLESS_ROAD_1:
+            output = "BORDERLESS_ROAD_1";
+            break;
+        case BorderlessRoad::BORDERLESS_ROAD_2:
+            output = "BORDERLESS_ROAD_2";
+            break;
+    }
+    return out << output;
+}
+
 }

@@ -10,10 +10,6 @@
 
 #define ARRAY_COUNT(arr) (int32_t)(sizeof(arr) / sizeof(arr[0]))
 
-#define TRACK_SEGMENT_JOINT_MASK 0x600
-#define TRACK_SEGMENT_FORM_MASK 0x38000
-#define TRACK_SEGMENT_FLAG_CONTINUE 0x40000000
-
 #define FORMAT_HEX(x, w) std::hex << std::setfill('0') << std::setw(w) << x
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
 
@@ -23,9 +19,9 @@ uint32_t FZX::CourseData::CalculateChecksum(void) {
 
     for (const auto& controlPointInfo : mControlPointInfos) {
         int32_t trackSegmentInfo = controlPointInfo.controlPoint.trackSegmentInfo;
-        trackSegmentInfo &= ~TRACK_SEGMENT_JOINT_MASK;
-        trackSegmentInfo &= ~TRACK_SEGMENT_FORM_MASK;
-        trackSegmentInfo &= ~TRACK_SEGMENT_FLAG_CONTINUE;
+        trackSegmentInfo &= ~TRACK_JOIN_MASK;
+        trackSegmentInfo &= ~TRACK_FORM_MASK;
+        trackSegmentInfo &= ~TRACK_FLAG_CONTINUOUS;
 
         checksum += (int32_t) ((controlPointInfo.controlPoint.pos.x + ((1.1f + (0.7f * counter)) * controlPointInfo.controlPoint.pos.y)) +
                    ((2.2f + (1.2f * counter)) * controlPointInfo.controlPoint.pos.z * (4.4f + (0.9f * counter))) +
@@ -99,8 +95,173 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
             Vec3f pos(controlPointInfo.controlPoint.pos.x, controlPointInfo.controlPoint.pos.y, controlPointInfo.controlPoint.pos.z);
             write << "{ { " << FORMAT_FLOAT(pos, 6, 4) << "}, ";
             write << controlPointInfo.controlPoint.radiusLeft << ", ";
-            write << controlPointInfo.controlPoint.radiusRight << ", ";
-            write << "0x" << std::hex << controlPointInfo.controlPoint.trackSegmentInfo << std::dec;
+            write << controlPointInfo.controlPoint.radiusRight << ",\n";
+            write << fourSpaceTab << fourSpaceTab << "  ";
+            int32_t trackSegmentInfo = controlPointInfo.controlPoint.trackSegmentInfo;
+            bool hasFlags = false;
+            if (trackSegmentInfo & TRACK_FLAG_20000000) {
+                if (hasFlags) {
+                    write << " | ";
+                }
+                write << "TRACK_FLAG_20000000";
+                hasFlags = true;
+                trackSegmentInfo &= ~TRACK_FLAG_20000000;
+            }
+
+            if (trackSegmentInfo & TRACK_FLAG_JOINABLE) {
+                if (hasFlags) {
+                    write << " | ";
+                }
+                write << "TRACK_FLAG_JOINABLE";
+                hasFlags = true;
+                trackSegmentInfo &= ~TRACK_FLAG_JOINABLE;
+            }
+
+            if (trackSegmentInfo & TRACK_FLAG_8000000) {
+                if (hasFlags) {
+                    write << " | ";
+                }
+                write << "TRACK_FLAG_8000000";
+                hasFlags = true;
+                trackSegmentInfo &= ~TRACK_FLAG_8000000;
+            }
+
+            switch (trackSegmentInfo & TRACK_FORM_MASK) {
+                case TRACK_FORM_STRAIGHT:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_FORM_STRAIGHT";
+                    break;
+                case TRACK_FORM_LEFT:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_FORM_LEFT";
+                    break;
+                case TRACK_FORM_RIGHT:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_FORM_RIGHT";
+                    break;
+                case TRACK_FORM_S:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_FORM_S";
+                    break;
+                case TRACK_FORM_S_FLIPPED:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_FORM_S_FLIPPED";
+                    break;
+            }
+            trackSegmentInfo &= ~TRACK_FORM_MASK;
+
+            switch (trackSegmentInfo & TRACK_SHAPE_MASK) {
+                case TRACK_SHAPE_ROAD:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_SHAPE_ROAD";
+                    trackSegmentInfo &= ~TRACK_SHAPE_MASK;
+                    if ((trackSegmentInfo & TRACK_TYPE_MASK) == TRACK_TYPE_NONE) {
+                        write << " | TRACK_TYPE_NONE";
+                    } else {
+                        write << " | " << static_cast<Road>(trackSegmentInfo & TRACK_TYPE_MASK);
+                    }
+                    break;
+                case TRACK_SHAPE_WALLED_ROAD:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_SHAPE_WALLED_ROAD";
+                    trackSegmentInfo &= ~TRACK_SHAPE_MASK;
+                    if ((trackSegmentInfo & TRACK_TYPE_MASK) == TRACK_TYPE_NONE) {
+                        write << " | TRACK_TYPE_NONE";
+                    } else {
+                        write << " | " << static_cast<WalledRoad>(trackSegmentInfo & TRACK_TYPE_MASK);
+                    }
+                    break;
+                case TRACK_SHAPE_PIPE:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_SHAPE_PIPE";
+                    trackSegmentInfo &= ~TRACK_SHAPE_MASK;
+                    if ((trackSegmentInfo & TRACK_TYPE_MASK) == TRACK_TYPE_NONE) {
+                        write << " | TRACK_TYPE_NONE";
+                    } else {
+                        write << " | " << static_cast<Pipe>(trackSegmentInfo & TRACK_TYPE_MASK);
+                    }
+                    break;
+                case TRACK_SHAPE_CYLINDER:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_SHAPE_CYLINDER";
+                    trackSegmentInfo &= ~TRACK_SHAPE_MASK;
+                    if ((trackSegmentInfo & TRACK_TYPE_MASK) == TRACK_TYPE_NONE) {
+                        write << " | TRACK_TYPE_NONE";
+                    } else {
+                        write << " | " << static_cast<Cylinder>(trackSegmentInfo & TRACK_TYPE_MASK);
+                    }
+                    break;
+                case TRACK_SHAPE_HALF_PIPE:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_SHAPE_HALF_PIPE";
+                    trackSegmentInfo &= ~TRACK_SHAPE_MASK;
+                    if ((trackSegmentInfo & TRACK_TYPE_MASK) == TRACK_TYPE_NONE) {
+                        write << " | TRACK_TYPE_NONE";
+                    } else {
+                        write << " | " << static_cast<HalfPipe>(trackSegmentInfo & TRACK_TYPE_MASK);
+                    }
+                    break;
+                case TRACK_SHAPE_TUNNEL:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_SHAPE_TUNNEL";
+                    trackSegmentInfo &= ~TRACK_SHAPE_MASK;
+                    if ((trackSegmentInfo & TRACK_TYPE_MASK) == TRACK_TYPE_NONE) {
+                        write << " | TRACK_TYPE_NONE";
+                    } else {
+                        write << " | " << static_cast<Tunnel>(trackSegmentInfo & TRACK_TYPE_MASK);
+                    }
+                    break;
+                case TRACK_SHAPE_AIR:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_SHAPE_AIR";
+                    trackSegmentInfo &= ~TRACK_SHAPE_MASK;
+                    if ((trackSegmentInfo & TRACK_TYPE_MASK) == TRACK_TYPE_NONE) {
+                        write << " | TRACK_TYPE_NONE";
+                    }
+                    break;
+                case TRACK_SHAPE_BORDERLESS_ROAD:
+                    if (hasFlags) {
+                        write << " | ";
+                    }
+                    write << "TRACK_SHAPE_BORDERLESS_ROAD";
+                    trackSegmentInfo &= ~TRACK_SHAPE_MASK;
+                    if ((trackSegmentInfo & TRACK_TYPE_MASK) == TRACK_TYPE_NONE) {
+                        write << " | TRACK_TYPE_NONE";
+                    } else {
+                        write << " | " << static_cast<BorderlessRoad>(trackSegmentInfo & TRACK_TYPE_MASK);
+                    }
+                    break;
+            }
+            trackSegmentInfo &= ~TRACK_TYPE_MASK;
+
+            if (trackSegmentInfo != 0) {
+                SPDLOG_WARN("Invalid Track Segment Information Found: 0x{:X}", trackSegmentInfo);
+            }
+
             write << " },\n";
 
         } else {
