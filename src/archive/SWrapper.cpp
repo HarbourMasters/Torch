@@ -9,14 +9,20 @@
 namespace fs = std::filesystem;
 
 SWrapper::SWrapper(const std::string& path) {
-    if(fs::exists(path)) {
-        fs::remove(path);
+    mPath = path;
+}
+
+int32_t SWrapper::CreateArchive() {
+    if(fs::exists(mPath)) {
+        fs::remove(mPath);
     }
 
-    if(!SFileCreateArchive(path.c_str(), MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_ARCHIVE_V2, 16 * 1024, &this->hMpq)){
-        SPDLOG_ERROR("Failed to create archive {} with error code {}", path, GetLastError());
-        return;
+    if(!SFileCreateArchive(mPath.c_str(), MPQ_CREATE_LISTFILE | MPQ_CREATE_ATTRIBUTES | MPQ_CREATE_ARCHIVE_V2, 16 * 1024, &this->hMpq)){
+        SPDLOG_ERROR("Failed to create archive {} with error code {}", mPath, GetLastError());
+        return -1;
     }
+
+    return 0;
 }
 
 bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
@@ -70,10 +76,14 @@ bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
     return true;
 }
 
-void SWrapper::Close() {
+int32_t SWrapper::Close(void) {
     if(this->hMpq == nullptr) {
         SPDLOG_ERROR("Archive already closed");
-        return;
+        return -1;
     }
-    SFileCloseArchive(this->hMpq);
+    if (SFileCloseArchive(this->hMpq)) {
+        SPDLOG_ERROR("Error closing archive");
+        return -1;
+    }
+    return 0;
 }
