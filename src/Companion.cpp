@@ -2,7 +2,8 @@
 
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
-#include "storm/SWrapper.h"
+#include "archive/SWrapper.h"
+#include "archive/ZWrapper.h"
 #include "spdlog/spdlog.h"
 #include "hj/sha1.h"
 
@@ -1022,7 +1023,18 @@ void Companion::Process() {
     this->gConfig.moddingPath = modding_path;
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
-            this->gConfig.outputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : "generic.otr";
+            std::string extension = "";
+            switch (this->gConfig.otrMode) {
+                case ArchiveType::OTR:
+                    extension = ".otr";
+                    break;
+                case ArchiveType::O2R:
+                    extension = ".o2r";
+                    break;
+                default:
+                    throw std::runtime_error("Invalid archive type for export type Binary");
+            }
+            this->gConfig.outputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
             break;
         }
         case ExportType::Header: {
@@ -1138,7 +1150,24 @@ void Companion::Process() {
     }
 
     AudioManager::Instance = new AudioManager();
-    auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
+    BinaryWrapper* wrapper = nullptr;
+
+    if (this->gConfig.exporterType == ExportType::Binary) {
+        switch (this->gConfig.otrMode) {
+            case ArchiveType::OTR:
+                wrapper = new SWrapper(this->gConfig.outputPath);
+                break;
+            case ArchiveType::O2R:
+                wrapper = new ZWrapper(this->gConfig.outputPath);
+                break;
+            default:
+                throw std::runtime_error("Invalid archive type for export type Binary");
+        }
+    }
+
+    if (wrapper) {
+        wrapper->CreateArchive();
+    }
     this->gCurrentWrapper = wrapper;
 
     auto vWriter = LUS::BinaryWriter();
@@ -1201,7 +1230,7 @@ void Companion::Process() {
     Instance = nullptr;
 }
 
-void Companion::Pack(const std::string& folder, const std::string& output) {
+void Companion::Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode) {
 
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
@@ -1225,14 +1254,25 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
         files[entry.path().generic_string()] = data;
     }
 
-    auto wrapper = SWrapper(output);
+    std::unique_ptr<BinaryWrapper> wrapper;
+    switch (otrMode) {
+        case ArchiveType::OTR:
+            wrapper.reset(new SWrapper(output));
+            break;
+        case ArchiveType::O2R:
+            wrapper.reset(new ZWrapper(output));
+            break;
+        default:
+            throw std::runtime_error("Invalid archive type for export type Binary");
+    }
+    wrapper->CreateArchive();
 
     for(auto& [path, data] : files){
         std::string normalized = path;
         std::replace(normalized.begin(), normalized.end(), '\\', '/');
         // Remove parent folder
         normalized = normalized.substr(folder.length() + 1);
-        wrapper.CreateFile(normalized, data);
+        wrapper->CreateFile(normalized, data);
         SPDLOG_INFO("> Added {}", normalized);
     }
 
@@ -1242,7 +1282,7 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
     SPDLOG_INFO("------------------------------------------------");
 
-    wrapper.Close();
+    wrapper->Close();
 }
 
 std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(const std::string& name, YAML::Node& node) {

@@ -8,7 +8,7 @@
 #include <tinyxml2.h>
 #include <regex>
 
-#include "storm/SWrapper.h"
+#include "archive/SWrapper.h"
 
 #define CLAMP_MAX(val, max) (((val) < (max)) ? (val) : (max))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))

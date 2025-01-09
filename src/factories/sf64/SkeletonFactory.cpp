@@ -5,7 +5,7 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
-#include "storm/SWrapper.h"
+#include "archive/SWrapper.h"
 
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 // #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
