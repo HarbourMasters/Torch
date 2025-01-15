@@ -670,12 +670,12 @@ void Companion::ProcessFile(YAML::Node root) {
                 stream.clear();
                 exporter->get()->Export(stream, data, result.name, result.node, &result.name);
                 auto data = stream.str();
-                this->gCurrentWrapper->CreateFile(result.name, std::vector(data.begin(), data.end()));
+                this->gCurrentWrapper->AddFile(result.name, std::vector(data.begin(), data.end()));
 
                 for(auto& entry : this->gCompanionFiles){
                     auto output = (this->gCurrentDirectory / entry.first).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
-                    this->gCurrentWrapper->CreateFile(output, entry.second);
+                    this->gCurrentWrapper->AddFile(output, entry.second);
                 }
 
                 break;
@@ -1222,7 +1222,7 @@ void Companion::Process() {
 
     if(wrapper != nullptr) {
         SPDLOG_INFO("Writing version file");
-        wrapper->CreateFile("version", vWriter.ToVector());
+        wrapper->AddFile("version", vWriter.ToVector());
         vWriter.Close();
         wrapper->Close();
     }
@@ -1287,7 +1287,7 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
         std::replace(normalized.begin(), normalized.end(), '\\', '/');
         // Remove parent folder
         normalized = normalized.substr(folder.length() + 1);
-        wrapper->CreateFile(normalized, data);
+        wrapper->AddFile(normalized, data);
         SPDLOG_INFO("> Added {}", normalized);
     }
 

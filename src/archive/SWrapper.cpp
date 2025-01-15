@@ -29,7 +29,7 @@ int32_t SWrapper::CreateArchive() {
 #endif
 }
 
-bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
+bool SWrapper::AddFile(const std::string& path, std::vector<char> data) {
 #ifndef USE_STORMLIB
     throw std::runtime_error("StormLib is not enabled. Cannot create file");
 #else

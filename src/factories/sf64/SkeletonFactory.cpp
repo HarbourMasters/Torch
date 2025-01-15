@@ -140,7 +140,7 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
         limbWriter.Finish(stream);
 
         auto data = stream.str();
-        wrapper->CreateFile(entryName + "_limb_" + std::to_string(limb.mIndex), std::vector(data.begin(), data.end()));
+        wrapper->AddFile(entryName + "_limb_" + std::to_string(limb.mIndex), std::vector(data.begin(), data.end()));
     }
 
     // Export Skeleton
