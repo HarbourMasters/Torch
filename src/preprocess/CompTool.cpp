@@ -3,6 +3,7 @@
 #include "lib/binarytools/BinaryWriter.h"
 #include "lib/binarytools/BinaryReader.h"
 #include <fstream>
+#include <cstring>
 
 uint32_t CompTool::FindFileTable(std::vector<uint8_t>& rom) {
     uint8_t query_one[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x50, 0x00, 0x00, 0x00, 0x00 };
@@ -19,6 +20,39 @@ uint32_t CompTool::FindFileTable(std::vector<uint8_t>& rom) {
     }
 
     throw std::runtime_error("Failed to find file table");
+}
+
+#define ROL(i, b) ((i << (b)) | (i >> (32 - (b))))
+
+std::pair<uint32_t, uint32_t> CompTool::CalculateCRCs(LUS::BinaryWriter& decompFile)
+{
+    uint32_t start = 0x1000;
+    uint32_t end = 0x101000;
+    LUS::BinaryReader readFile(decompFile.GetStream());
+    uint32_t t1, t2, t3, t4, t5, t6;
+
+    // Todo: Implement other bootcodes
+    t1 = t2 = t3 = t4 = t5 = t6 = sCrcSeed;
+
+    readFile.SetEndianness(Torch::Endianness::Big);
+    readFile.Seek(start, LUS::SeekOffsetType::Start);
+
+    for (size_t i = start; i < end; i += sizeof(uint32_t)) {
+        uint32_t d = readFile.ReadUInt32();
+        uint32_t r = ROL(d, d & 0x1F);
+
+        if ((t6 + d) < t6) {
+            t4++;
+        }
+
+        t3 ^= d;
+        t6 += d;
+        t2 ^= ((t2 > d) ? r : (t6 ^ d));
+        t5 += r;
+        t1 += (t5 ^ d);
+    }
+
+    return std::make_pair(t6 ^ t4 ^ t3, t5 ^ t2 ^ t1);
 }
 
 std::vector<uint8_t> CompTool::Decompress(std::vector<uint8_t> rom){
@@ -77,9 +111,12 @@ std::vector<uint8_t> CompTool::Decompress(std::vector<uint8_t> rom){
         count++;
     }
 
+    auto crcs = CompTool::CalculateCRCs(decompfile);
+
     decompfile.Seek(0x10, LUS::SeekOffsetType::Start);
-    decompfile.Write(0xA7D5F194); // CRC1
-    decompfile.Write(0xFE3DF761); // CRC2
+
+    decompfile.Write(crcs.first); // CRC1
+    decompfile.Write(crcs.second); // CRC2
 
     auto result = decompfile.ToVector();
     return { (uint8_t*) result.data(), (uint8_t*) result.data() + result.size() };

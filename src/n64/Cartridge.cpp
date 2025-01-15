@@ -10,6 +10,7 @@ void N64::Cartridge::Initialize() {
     this->gRomCRC = BSWAP32(reader.ReadUInt32());
     reader.Seek(0x20, LUS::SeekOffsetType::Start);
     this->gGameTitle = std::string(reader.ReadCString());
+    this->gGameTitle.pop_back(); // Remove null terminator
     reader.Seek(0x3E, LUS::SeekOffsetType::Start);
     uint8_t country = reader.ReadUByte();
     this->gVersion = reader.ReadUByte();

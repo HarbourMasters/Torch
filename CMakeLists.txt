@@ -76,7 +76,11 @@ else()
     list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/mk64/*")
 endif()
 
-if(ENABLE_ASAN)
+option(USE_STANDALONE "Build as a standalone executable" ON)
+option(BUILD_STORMLIB "Build with StormLib support" ON)
+option(BUILD_ASAN "Build with AddressSanitizer" OFF)
+
+if (BUILD_ASAN)
     add_compile_options(-fsanitize=address)
     add_link_options(-fsanitize=address)
 endif()
@@ -96,80 +100,43 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
     set(CMAKE_CXX_FLAGS "-Wno-narrowing")
 else()
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
-    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /w;
-                /Od;
-                /${LINK_TYPE}d
-            >
-            $<$<CONFIG:Release>:
-                /O3;
-                /Gy;
-                /W3;
-                /${LINK_TYPE}
-            >
-            /bigobj
-            /permissive-;
-            /MP;
-            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING};
-        )
-        target_compile_options(${PROJECT_NAME} PRIVATE  $<$<CONFIG:Debug>:/ZI;>)
-    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /${LINK_TYPE}d
-            >
-            $<$<CONFIG:Release>:
-                /O3;
-                /Oi;
-                /Gy;
-                /${LINK_TYPE}
-            >
-            /permissive-;
-            /bigobj
-            /MP;
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        $<$<CONFIG:Debug>:
             /w;
-            ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
-            ${DEFAULT_CXX_EXCEPTION_HANDLING}
-        )
-    endif()
-
-    if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:
-                /INCREMENTAL
-            >
-            $<$<CONFIG:Release>:
-                /OPT:REF;
-                /OPT:ICF;
-                /INCREMENTAL:NO;
-                /FORCE:MULTIPLE
-            >
-            /bigobj
-            /MANIFEST:NO;
-            /DEBUG;
-            /SUBSYSTEM:CONSOLE
-        )
-    elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
-        target_link_options(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Release>:
-                /OPT:REF;
-                /OPT:ICF;
-                /INCREMENTAL:NO;
-                /FORCE:MULTIPLE
-            >
-            /bigobj
-            /MANIFEST:NO;
-            /DEBUG;
-            /SUBSYSTEM:CONSOLE
-        )
-    endif()
+            /Od;
+            /ZI;
+            /MDd
+        >
+        $<$<CONFIG:Release>:
+            /Oi;
+            /Gy;
+            /W3;
+            /MD
+        >
+        /bigobj
+        /permissive-;
+        /MP;
+        ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
+        ${DEFAULT_CXX_EXCEPTION_HANDLING}
+    )
+    target_link_options(${PROJECT_NAME} PRIVATE
+        $<$<CONFIG:Debug>:
+            /INCREMENTAL
+        >
+        $<$<CONFIG:Release>:
+            /OPT:REF;
+            /OPT:ICF;
+            /INCREMENTAL:NO;
+            /FORCE:MULTIPLE
+        >
+        /bigobj
+        /MANIFEST:NO;
+        /DEBUG;
+        /SUBSYSTEM:CONSOLE
+    )
+endif()
 
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:16777216")
 
     if(USE_STANDALONE)
         target_link_options(${PROJECT_NAME} PRIVATE "STORMLIB_NO_AUTO_LINK;")
@@ -193,13 +160,11 @@ endif()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/binarytools)
 add_dependencies(${PROJECT_NAME} BinaryTools)
-target_link_libraries(${PROJECT_NAME} PRIVATE BinaryTools)
 
 # Link n64graphics
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/n64graphics)
 add_dependencies(${PROJECT_NAME} N64Graphics)
-target_link_libraries(${PROJECT_NAME} PRIVATE N64Graphics)
 
 # Link StormLib
 if (BUILD_STORMLIB)
@@ -244,6 +209,18 @@ else()
 	target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 endif()
 
+# Link TinyXML2
+set(tinyxml2_BUILD_TESTING OFF)
+FetchContent_Declare(
+    tinyxml2
+    GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
+    GIT_TAG 10.0.0
+    OVERRIDE_FIND_PACKAGE
+)
+FetchContent_MakeAvailable(tinyxml2)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog tinyxml2 yaml-cpp storm N64Graphics BinaryTools)
+
 if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
     include(../cmake/HandleCompilerRT.cmake)
     find_compiler_rt_library(builtins CLANG_RT_BUILTINS_LIBRARY)
@@ -254,8 +231,8 @@ if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES
 endif()
 
 if(NOT USE_STANDALONE)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${PROJECT_NAME} PUBLIC ${yaml-cpp_SOURCE_DIR}/include)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+    target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${yaml-cpp_SOURCE_DIR}/include)
 endif()

@@ -1,6 +1,8 @@
 #include "InstrumentFactory.h"
 #include "utils/Decompressor.h"
 #include "Companion.h"
+#include "EnvelopeFactory.h"
+#include <tinyxml2.h>
 
 ExportResult InstrumentHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -61,7 +63,7 @@ std::optional<std::shared_ptr<IParsedData>> InstrumentFactory::parse(std::vector
     envelope["offset"] = envAddr;
     instrument->envelope = envAddr;
     Companion::Instance->AddAsset(envelope);
-
+    
     instrument->lowPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
     instrument->normalPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
     instrument->highPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);

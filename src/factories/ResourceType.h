@@ -61,6 +61,9 @@ enum class ResourceType {
     Hitbox = 0x48544258,       // HTBX
     ObjectInit = 0x4F42494E,   // OBIN
 
+    // F-ZERO X
+    CourseData = 0x58435253,   // XCRS
+
     // NAudio v0
     Bank = 0x42414E4B,         // BANK
     Sample = 0x41554643,       // AIFC

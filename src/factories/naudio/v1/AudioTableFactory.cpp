@@ -124,7 +124,6 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
     SPDLOG_INFO("addr: {}", baddr);
 
     std::vector<AudioTableEntry> entries;
-    auto parent = AudioContext::tableOffsets[AudioTableType::SEQ_TABLE];
 
     for(size_t i = 0; i < count; i++){
         auto addr = reader.ReadUInt32();
@@ -136,17 +135,28 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         auto sd3 = reader.ReadInt16();
         uint64_t crc = 0;
 
+        auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3, crc };
+        AudioContext::tables[type][addr] = entry;
+
         switch (type) {
             case AudioTableType::FONT_TABLE: {
                 YAML::Node font;
                 font["type"] = "NAUDIO:V1:SOUND_FONT";
                 font["offset"] = addr;
+                font["id"] = (uint32_t) i;
+                font["medium"] = (int32_t) medium;
+                font["policy"] = (int32_t) policy;
+                font["sd1"] = (int32_t) sd1;
+                font["sd2"] = (int32_t) sd2;
+                font["sd3"] = (int32_t) sd3;
+
                 Companion::Instance->AddAsset(font);
                 std::string path = font["vpath"].as<std::string>();
                 crc = CRC64(path.c_str());
                 break;
             }
             case AudioTableType::SEQ_TABLE: {
+                auto parent = AudioContext::tableOffsets[AudioTableType::SEQ_TABLE];
                 if(size != 0){
                     YAML::Node seq;
                     seq["type"] = "BLOB";
@@ -160,9 +170,9 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
             }
         }
 
-        auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3, crc };
+        entry.crc = crc;
+        AudioContext::tables[type][addr].crc = crc;
         entries.push_back(entry);
-        AudioContext::tables[type][addr] = entry;
     }
 
     auto table = std::make_shared<AudioTableData>(bmedium, offset, type, entries);

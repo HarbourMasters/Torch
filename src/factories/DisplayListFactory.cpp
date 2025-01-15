@@ -545,6 +545,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                         light = true;
                     }
                     break;
+                default:
+                    throw std::runtime_error("Unsupported GBI version");
             }
 
             if(light){

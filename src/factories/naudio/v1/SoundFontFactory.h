@@ -24,6 +24,10 @@ class SoundFontCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+class SoundFontXMLExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
 class SoundFontFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -32,6 +36,7 @@ public:
             REGISTER(Header, SoundFontHeaderExporter)
             REGISTER(Binary, SoundFontBinaryExporter)
             REGISTER(Code, SoundFontCodeExporter)
+            REGISTER(XML, SoundFontXMLExporter)
         };
     }
 

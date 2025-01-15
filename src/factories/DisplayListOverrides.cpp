@@ -181,7 +181,7 @@ int Viewport(uint32_t ptr) {
         return 1;
     }
 
-    SPDLOG_WARN("Could not find viewport to override at 0x{:X}", ptr);
+    SPDLOG_TRACE("Could not find viewport to override at 0x{:X}", ptr);
     return 0;
 }
 #endif
@@ -192,7 +192,7 @@ std::optional<std::tuple<std::string, YAML::Node>> GetVtxOverlap(uint32_t ptr){
         return mVtxOverlaps[ptr];
     }
 
-    SPDLOG_INFO("Failed to find overlap for ptr 0x{:X}", ptr);
+    SPDLOG_TRACE("Failed to find overlap for ptr 0x{:X}", ptr);
 
     return std::nullopt;
 }

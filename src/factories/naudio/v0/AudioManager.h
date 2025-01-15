@@ -12,19 +12,6 @@
 #define NONE 0xFFFF
 #define ALIGN(val, al) (size_t) ((val + (al - 1)) & -al)
 
-namespace AIFC {
-    enum MagicValues {
-        FORM = 0x464f524d,
-        AIFC = 0x41494643,
-        COMM = 0x434f4d4d,
-        INST = 0x494e5354,
-        VAPC = 0x56415043,
-        SSND = 0x53534e44,
-        AAPL = 0x4150504c,
-        stoc = 0x73746f63,
-    };
-}
-
 struct Entry {
     uint32_t offset;
     uint32_t length;
@@ -139,12 +126,12 @@ public:
     static AudioManager* Instance;
     void initialize(std::vector<uint8_t>& buffer, YAML::Node& data);
     void bind_sample(YAML::Node& node, const std::string& path);
-    void create_aifc(int32_t index, LUS::BinaryWriter& writer);
     std::string& get_sample(uint32_t id);
     AudioBankSample get_aifc(int32_t index);
     std::map<uint32_t, Bank> get_banks();
+    std::vector<SampleBank*> get_loaded_banks();
+    std::vector<AudioBankSample*> get_samples();
     uint32_t get_index(AudioBankSample* bank);
-
 private:
     std::map<uint32_t, Bank> banks;
     std::map<AudioBankSample*, uint32_t> sampleMap;
@@ -161,6 +148,4 @@ private:
     static std::vector<AdsrEnvelope> parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank);
     static Bank parse_ctl(CTLHeader header, std::vector<uint8_t> data, SampleBank* bank, uint32_t index);
     static TBLFile parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& entries);
-
-    static void write_aifc(AudioBankSample* entry, LUS::BinaryWriter& writer);
 };
