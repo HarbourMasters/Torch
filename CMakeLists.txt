@@ -76,11 +76,7 @@ else()
     list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/mk64/*")
 endif()
 
-option(USE_STANDALONE "Build as a standalone executable" ON)
-option(BUILD_STORMLIB "Build with StormLib support" ON)
-option(BUILD_ASAN "Build with AddressSanitizer" OFF)
-
-if (BUILD_ASAN)
+if(ENABLE_ASAN)
     add_compile_options(-fsanitize=address)
     add_link_options(-fsanitize=address)
 endif()
@@ -105,13 +101,13 @@ else()
             /w;
             /Od;
             /ZI;
-            /MDd
+            /${LINK_TYPE}d
         >
         $<$<CONFIG:Release>:
-            /Oi;
+            /O3;
             /Gy;
             /W3;
-            /MD
+            /${LINK_TYPE}
         >
         /bigobj
         /permissive-;
