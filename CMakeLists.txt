@@ -129,7 +129,6 @@ else()
         >
         /bigobj
         /permissive-;
-        STORMLIB_NO_AUTO_LINK;
         /MP;
         ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
         ${DEFAULT_CXX_EXCEPTION_HANDLING}
@@ -147,10 +146,10 @@ else()
         /bigobj;
         /MANIFEST:NO;
         /DEBUG;
-        STORMLIB_NO_AUTO_LINK;
         /SUBSYSTEM:CONSOLE
     )
 
+    add_definitions(-DSTORMLIB_NO_AUTO_LINK)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
