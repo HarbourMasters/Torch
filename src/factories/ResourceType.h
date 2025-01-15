@@ -24,20 +24,20 @@ enum class ResourceType {
     GenericArray = 0x47415252, // GARR
 
     // SM64
-    Anim = 0x414E494D,         // ANIM
-    SDialog = 0x53444C47,      // SDLG
-    Dictionary = 0x44494354,   // DICT
-    GeoLayout = 0x47454F20,    // GEO
-    Collision = 0x434F4C20,    // COL
-    Movtex = 0x4D4F5654,       // MOVT
-    MovtexQuad = 0x4D4F5651,   // MOVQ
+    Anim = 0x414E494D,       // ANIM
+    SDialog = 0x53444C47,    // SDLG
+    Dictionary = 0x44494354, // DICT
+    GeoLayout = 0x47454F20,  // GEO
+    Collision = 0x434F4C20,  // COL
+    Movtex = 0x4D4F5654,     // MOVT
+    MovtexQuad = 0x4D4F5651, // MOVQ
 
     // MK64
-    CourseVertex = 0x43565458, // CVTX
-    TrackSection = 0x5343544E, // SCTN
-    Waypoints = 0x57505453,    // WPTS
-    Metadata  = 0x4D444154,    // MDAT
-    SpawnData = 0x53444154,    // SDAT
+    CourseVertex = 0x43565458,     // CVTX
+    TrackSection = 0x5343544E,     // SCTN
+    Paths = 0x57505453,            // WPTS
+    Metadata = 0x4D444154,         // MDAT
+    SpawnData = 0x53444154,        // SDAT
     DrivingBehaviour = 0x44424856, // DBHV
 
     // SF64
