@@ -7,11 +7,11 @@
 
 class SWrapper : public BinaryWrapper {
 public:
-    SWrapper(const std::string& path);
+    explicit SWrapper(const std::string& path);
 
-    int32_t CreateArchive(void);
-    bool CreateFile(const std::string& path, std::vector<char> data);
-    int32_t Close(void);
+    int32_t CreateArchive(void) override;
+    bool CreateFile(const std::string& path, std::vector<char> data) override;
+    int32_t Close(void) override;
 private:
     HANDLE hMpq{};
 };

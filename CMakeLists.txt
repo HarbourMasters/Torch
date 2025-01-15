@@ -164,24 +164,6 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(spdlog)
 
-# Link LibZip
-
-set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
-set(BUILD_TOOLS OFF)
-set(BUILD_REGRESS OFF)
-set(BUILD_EXAMPLES OFF)
-set(BUILD_DOC OFF)
-set(BUILD_OSSFUZZ OFF)
-set(BUILD_SHARED_LIBS OFF)
-FetchContent_Declare(
-    libzip
-    GIT_REPOSITORY https://github.com/nih-at/libzip.git
-    GIT_TAG v1.10.1
-    OVERRIDE_FIND_PACKAGE
-)
-FetchContent_MakeAvailable(libzip)
-target_include_directories(${PROJECT_NAME} PRIVATE ${libzip_SOURCE_DIR}/lib ${libzip_BINARY_DIR})
-
 # Link TinyXML2
 set(tinyxml2_BUILD_TESTING OFF)
 FetchContent_Declare(
@@ -192,7 +174,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tinyxml2)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog tinyxml2 yaml-cpp storm N64Graphics BinaryTools libzip::zip)
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog tinyxml2 yaml-cpp storm N64Graphics BinaryTools)
 
 if((CMAKE_SYSTEM_NAME MATCHES "Windows") AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
     include(../cmake/HandleCompilerRT.cmake)
