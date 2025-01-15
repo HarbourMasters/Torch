@@ -70,8 +70,11 @@
 #include "factories/sf64/TriangleFactory.h"
 #endif
 
+#ifdef FZERO_SUPPORT
 #include "factories/fzerox/CourseFactory.h"
+#endif
 
+#ifdef NAUDIO_SUPPORT
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/naudio/v0/BankFactory.h"
 #include "factories/naudio/v0/SampleFactory.h"
@@ -87,6 +90,7 @@
 #include "factories/naudio/v1/LoopFactory.h"
 #include "factories/naudio/v1/BookFactory.h"
 #include "factories/naudio/v1/SequenceFactory.h"
+#endif
 
 #include "preprocess/CompTool.h"
 
@@ -159,10 +163,11 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
 #endif
 
-    // F-Zero X specific
+#ifdef FZERO_SUPPORT
     this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
+#endif
 
-    // NAudio specific
+#ifdef NAUDIO_SUPPORT
     this->RegisterFactory("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
     this->RegisterFactory("NAUDIO:V0:SEQUENCE", std::make_shared<SequenceFactory>());
     this->RegisterFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactory>());
@@ -178,6 +183,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
+#endif
 
     this->Process();
 }

@@ -13,6 +13,8 @@ option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(BUILD_SM64 "Build with Super Mario 64 support" ON)
 option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
 option(BUILD_SF64 "Build with Star Fox 64 support" ON)
+option(BUILD_FZERO "Build with F-Zero X support" ON)
+option(BUILD_NAUDIO "Build with NAudio support" ON)
 
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
@@ -74,6 +76,18 @@ if(BUILD_MK64)
     add_definitions(-DMK64_SUPPORT)
 else()
     list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/mk64/*")
+endif()
+
+if(BUILD_FZERO)
+    add_definitions(-DFZERO_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/fzerox/*")
+endif()
+
+if(BUILD_NAUDIO)
+    add_definitions(-DNAUDIO_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/naudio/*")
 endif()
 
 if(ENABLE_ASAN)

@@ -90,7 +90,7 @@ ExportResult DListHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
         return std::nullopt;
     }
 
-    write << "extern N64Gfx " << symbol << "[];\n";
+    write << "extern Gfx " << symbol << "[];\n";
     return std::nullopt;
 }
 
@@ -157,7 +157,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
         }
 
         if(start == offset){
-            gfxd_puts(("N64Gfx " + name + "[][" + std::to_string(isize / 2) + "] = {\n").c_str());
+            gfxd_puts(("Gfx " + name + "[][" + std::to_string(isize / 2) + "] = {\n").c_str());
             gfxd_puts("\t{\n");
         } else {
             gfxd_puts("\t{\n");
@@ -168,7 +168,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
             write << fourSpaceTab << "}\n";
             write << "};\n";
             if (Companion::Instance->IsDebug()) {
-                write << "// count: " << std::to_string(sz / 8) << " N64Gfx\n";
+                write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
             }else {
                 write << "\n";
             }
@@ -176,13 +176,13 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
             write << fourSpaceTab << "},\n";
         }
     } else {
-        gfxd_puts(("N64Gfx " + symbol + "[] = {\n").c_str());
+        gfxd_puts(("Gfx " + symbol + "[] = {\n").c_str());
         gfxd_execute();
         write << std::string(out);
         write << "};\n";
 
         if (Companion::Instance->IsDebug()) {
-            write << "// count: " << std::to_string(sz / 8) << " N64Gfx\n";
+            write << "// count: " << std::to_string(sz / 8) << " Gfx\n";
         } else {
             write << "\n";
         }
