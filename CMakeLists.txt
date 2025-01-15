@@ -240,7 +240,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tinyxml2)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE spdlog tinyxml2 yaml-cpp N64Graphics BinaryTools)
+target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2 yaml-cpp N64Graphics BinaryTools)
 
 if(NOT USE_STANDALONE)
     target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
