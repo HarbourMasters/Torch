@@ -129,6 +129,7 @@ else()
         >
         /bigobj
         /permissive-;
+        STORMLIB_NO_AUTO_LINK;
         /MP;
         ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
         ${DEFAULT_CXX_EXCEPTION_HANDLING}
@@ -143,17 +144,14 @@ else()
             /INCREMENTAL:NO;
             /FORCE:MULTIPLE
         >
-        /bigobj
+        /bigobj;
         /MANIFEST:NO;
         /DEBUG;
+        STORMLIB_NO_AUTO_LINK;
         /SUBSYSTEM:CONSOLE
     )
 
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
-    if(USE_STANDALONE)
-        target_link_options(${PROJECT_NAME} PRIVATE "STORMLIB_NO_AUTO_LINK;")
-    endif()
 endif()
 
 
