@@ -1507,9 +1507,9 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
         auto found = std::get<1>(decl.value());
         if(GetSafeNode<std::string>(found, "type") != type) {
             SPDLOG_ERROR("Asset clash detected {} vs {} at 0x{:X}", type, GetSafeNode<std::string>(found, "type"), offset);
+        } else {
+            return found;
         }
-
-        return found;
     }
 
     auto rom = this->GetRomData();
