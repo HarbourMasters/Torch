@@ -8,10 +8,10 @@
 #include <miniz/zip_file.hpp>
 
 namespace fs = std::filesystem;
-miniz_cpp::zip_file mZip;
 
 ZWrapper::ZWrapper(const std::string& path) {
-    mPath = path;
+    this->mPath = path;
+    this->mZip = new miniz_cpp::zip_file;
 }
 
 int32_t ZWrapper::CreateArchive() {
@@ -34,11 +34,11 @@ bool ZWrapper::AddFile(const std::string& path, std::vector<char> data) {
         stream.close();
     }
 
-    mZip.writebytes(path, data);
+    this->mZip->writebytes(path, data);
     return true;
 }
 
 int32_t ZWrapper::Close(void) {
-    mZip.save(this->mPath);
+    this->mZip->save(this->mPath);
     return 0;
 }
