@@ -1115,7 +1115,7 @@ void Companion::Process() {
             entries.push_back(key);
         }
     }
-#ifdef USE_STANDALONE
+#ifdef STANDALONE
     if(cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
