@@ -19,7 +19,7 @@ int32_t ZWrapper::CreateArchive() {
     return 0;
 }
 
-bool ZWrapper::CreateFile(const std::string& path, std::vector<char> data) {
+bool ZWrapper::AddFile(const std::string& path, std::vector<char> data) {
     char* fileData = data.data();
     size_t fileSize = data.size();
 

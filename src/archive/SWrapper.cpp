@@ -13,6 +13,9 @@ SWrapper::SWrapper(const std::string& path) {
 }
 
 int32_t SWrapper::CreateArchive() {
+#ifndef USE_STORMLIB
+    throw std::runtime_error("StormLib is not enabled. Cannot create archive");
+#else
     if(fs::exists(mPath)) {
         fs::remove(mPath);
     }
@@ -23,9 +26,13 @@ int32_t SWrapper::CreateArchive() {
     }
 
     return 0;
+#endif
 }
 
-bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
+bool SWrapper::AddFile(const std::string& path, std::vector<char> data) {
+#ifndef USE_STORMLIB
+    throw std::runtime_error("StormLib is not enabled. Cannot create file");
+#else
     if(Companion::Instance != nullptr && Companion::Instance->IsDebug()){
         SPDLOG_INFO("Creating debug file: debug/{}", path);
         std::string dpath = "debug/" + path;
@@ -74,9 +81,13 @@ bool SWrapper::CreateFile(const std::string& path, std::vector<char> data) {
     }
 
     return true;
+#endif
 }
 
 int32_t SWrapper::Close(void) {
+#ifndef USE_STORMLIB
+    throw std::runtime_error("StormLib is not enabled. Cannot close archive");
+#else
     if(this->hMpq == nullptr) {
         SPDLOG_ERROR("Archive already closed");
         return -1;
@@ -86,4 +97,5 @@ int32_t SWrapper::Close(void) {
         return -1;
     }
     return 0;
+#endif
 }

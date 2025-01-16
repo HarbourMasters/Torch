@@ -299,7 +299,7 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
         cmdWriter.Finish(stream);
 
         auto data = stream.str();
-        wrapper->CreateFile(entryName + "_cmd_" + std::to_string(ptrCount), std::vector(data.begin(), data.end()));
+        wrapper->AddFile(entryName + "_cmd_" + std::to_string(ptrCount), std::vector(data.begin(), data.end()));
 
         std::ostringstream cmdName;
         cmdName << entryName << "_cmd_" << std::dec << ptrCount;

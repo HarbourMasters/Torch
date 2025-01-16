@@ -11,7 +11,7 @@
 #include "hj/zip.h"
 #include "hj/pyutils.h"
 #include "spdlog/spdlog.h"
-#include "binarytools/BinaryReader.h"
+#include "lib/binarytools/BinaryReader.h"
 #include "spdlog/spdlog.h"
 
 std::unordered_map<std::string, uint32_t> name_table;

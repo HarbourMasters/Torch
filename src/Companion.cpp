@@ -28,6 +28,7 @@
 #include "factories/ViewportFactory.h"
 #include "factories/CompressedTextureFactory.h"
 
+#ifdef SM64_SUPPORT
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
 #include "factories/sm64/CollisionFactory.h"
@@ -43,7 +44,9 @@
 #include "factories/sm64/PaintingMapFactory.h"
 #include "factories/sm64/TrajectoryFactory.h"
 #include "factories/sm64/WaterDropletFactory.h"
+#endif
 
+#ifdef MK64_SUPPORT
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
@@ -52,7 +55,9 @@
 #include "factories/mk64/DrivingBehaviour.h"
 #include "factories/mk64/ItemCurve.h"
 #include "factories/mk64/CourseMetadata.h"
+#endif
 
+#ifdef SF64_SUPPORT
 #include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
@@ -63,9 +68,13 @@
 #include "factories/sf64/EnvironmentFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
+#endif
 
+#ifdef FZERO_SUPPORT
 #include "factories/fzerox/CourseFactory.h"
+#endif
 
+#ifdef NAUDIO_SUPPORT
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/naudio/v0/BankFactory.h"
 #include "factories/naudio/v0/SampleFactory.h"
@@ -81,6 +90,7 @@
 #include "factories/naudio/v1/LoopFactory.h"
 #include "factories/naudio/v1/BookFactory.h"
 #include "factories/naudio/v1/SequenceFactory.h"
+#endif
 
 #include "preprocess/CompTool.h"
 
@@ -89,8 +99,6 @@ namespace fs = std::filesystem;
 
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
-
-#define ABS(x) ((x) < 0 ? -(x) : (x))
 
 void Companion::Init(const ExportType type) {
 
@@ -113,7 +121,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("VP", std::make_shared<ViewportFactory>());
     this->RegisterFactory("COMPRESSED_TEXTURE", std::make_shared<CompressedTextureFactory>());
 
-    // SM64 specific
+#ifdef SM64_SUPPORT
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
@@ -129,8 +137,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:PAINTING_MAP", std::make_shared<SM64::PaintingMapFactory>());
     this->RegisterFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactory>());
     this->RegisterFactory("SM64:WATER_DROPLET", std::make_shared<SM64::WaterDropletFactory>());
+#endif
 
-    // MK64 specific
+#ifdef MK64_SUPPORT
     this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
     this->RegisterFactory("MK64:TRACK_WAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
@@ -139,8 +148,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
     this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
     this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
+#endif
 
-    // SF64 specific
+#ifdef SF64_SUPPORT
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
     this->RegisterFactory("SF64:SKELETON", std::make_shared<SF64::SkeletonFactory>());
     this->RegisterFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>());
@@ -151,11 +161,13 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
     this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
     this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
+#endif
 
-    // F-Zero X specific
+#ifdef FZERO_SUPPORT
     this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
+#endif
 
-    // NAudio specific
+#ifdef NAUDIO_SUPPORT
     this->RegisterFactory("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
     this->RegisterFactory("NAUDIO:V0:SEQUENCE", std::make_shared<SequenceFactory>());
     this->RegisterFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactory>());
@@ -171,6 +183,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
+#endif
 
     this->Process();
 }
@@ -657,12 +670,12 @@ void Companion::ProcessFile(YAML::Node root) {
                 stream.clear();
                 exporter->get()->Export(stream, data, result.name, result.node, &result.name);
                 auto data = stream.str();
-                this->gCurrentWrapper->CreateFile(result.name, std::vector(data.begin(), data.end()));
+                this->gCurrentWrapper->AddFile(result.name, std::vector(data.begin(), data.end()));
 
                 for(auto& entry : this->gCompanionFiles){
                     auto output = (this->gCurrentDirectory / entry.first).string();
                     std::replace(output.begin(), output.end(), '\\', '/');
-                    this->gCurrentWrapper->CreateFile(output, entry.second);
+                    this->gCurrentWrapper->AddFile(output, entry.second);
                 }
 
                 break;
@@ -956,6 +969,7 @@ void Companion::Process() {
             SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
             return;
         }
+
         this->gConfig.parseMode = ParseMode::Default;
     } else {
         this->gConfig.parseMode = ParseMode::Directory;
@@ -1101,13 +1115,14 @@ void Companion::Process() {
             entries.push_back(key);
         }
     }
-
+#ifdef STANDALONE
     if(cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
             this->ParseEnums(file);
         }
     }
+#endif
 
     if(cfg["logging"]){
         auto level = cfg["logging"].as<std::string>();
@@ -1207,7 +1222,7 @@ void Companion::Process() {
 
     if(wrapper != nullptr) {
         SPDLOG_INFO("Writing version file");
-        wrapper->CreateFile("version", vWriter.ToVector());
+        wrapper->AddFile("version", vWriter.ToVector());
         vWriter.Close();
         wrapper->Close();
     }
@@ -1272,7 +1287,7 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
         std::replace(normalized.begin(), normalized.end(), '\\', '/');
         // Remove parent folder
         normalized = normalized.substr(folder.length() + 1);
-        wrapper->CreateFile(normalized, data);
+        wrapper->AddFile(normalized, data);
         SPDLOG_INFO("> Added {}", normalized);
     }
 

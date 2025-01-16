@@ -11,7 +11,7 @@ public:
     virtual ~BinaryWrapper() = default;
 
     virtual int32_t CreateArchive(void) = 0;
-    virtual bool CreateFile(const std::string& path, std::vector<char> data) = 0;
+    virtual bool AddFile(const std::string& path, std::vector<char> data) = 0;
     virtual int32_t Close(void) = 0;
 protected:
     std::mutex mMutex;

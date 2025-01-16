@@ -1,6 +1,6 @@
 #include "Cartridge.h"
 
-#include "binarytools/BinaryReader.h"
+#include "lib/binarytools/BinaryReader.h"
 #include <Companion.h>
 
 void N64::Cartridge::Initialize() {
