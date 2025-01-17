@@ -72,11 +72,14 @@ int main(int argc, char *argv[]) {
     header->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
     header->add_flag("-o,--otr", otrModeSelected, "OTR/O2R Mode");
 
-    if (otrModeSelected) {
-        otrMode = ArchiveType::OTR;
-    }
 
     header->parse_complete_callback([&] {
+        if (otrModeSelected) {
+            otrMode = ArchiveType::OTR;
+        } else {
+            otrMode = ArchiveType::None;
+        }
+
         const auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
         instance->Init(ExportType::Header);
     });
@@ -110,14 +113,24 @@ int main(int argc, char *argv[]) {
     const auto modding_import = modding_root->add_subcommand("import", "Import - Import modified files to generate C code\n");
     const auto modding_export = modding_root->add_subcommand("export", "Export - Export modified files to a folder\n");
 
-    modding_import->add_option("mode", mode, "code, binary or header")->required();
+    modding_import->add_option("mode", mode, "code, otr, o2r or header")->required();
     modding_import->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
     modding_import->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, true);
+        ArchiveType otrMode;
+
+        if (mode == "otr") {
+            otrMode = ArchiveType::OTR;
+        } else if (mode == "o2r") {
+            otrMode = ArchiveType::O2R;
+        } else {
+            otrMode = ArchiveType::None;
+        }
+
+        const auto instance = Companion::Instance = new Companion(filename, otrMode, debug, true);
         if (mode == "code") {
             instance->Init(ExportType::Code);
-        } else if (mode == "binary") {
+        } else if (mode == "otr" || mode == "o2r") {
             instance->Init(ExportType::Binary);
         } else if (mode == "header") {
             instance->Init(ExportType::Header);

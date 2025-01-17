@@ -1100,7 +1100,7 @@ void Companion::Process() {
         };
     }
 
-    if(this->gConfig.exporterType == ExportType::Code && this->gConfig.modding) {
+    if((this->gConfig.exporterType == ExportType::Code || this->gConfig.exporterType == ExportType::Binary) && this->gConfig.modding) {
         this->ParseModdingConfig();
     }
 
