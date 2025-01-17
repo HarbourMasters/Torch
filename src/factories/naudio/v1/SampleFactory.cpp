@@ -28,10 +28,10 @@ ExportResult NSampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     auto data = std::static_pointer_cast<NSampleData>(raw);
 
     WriteHeader(writer, Torch::ResourceType::Sample, 1);
-    writer.Write(data->codec);
-    writer.Write(data->medium);
-    writer.Write(data->unk);
-    writer.Write(data->size);
+    writer.Write((uint8_t) data->codec);
+    writer.Write((uint8_t) data->medium);
+    writer.Write((uint8_t) data->unk);
+    writer.Write((uint32_t) data->size);
 
     writer.Write(AudioContext::GetPathByAddr(data->loop));
     writer.Write(AudioContext::GetPathByAddr(data->book));
@@ -63,8 +63,6 @@ ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr
 
 ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto entry = std::static_pointer_cast<NSampleData>(raw);
-    auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(entry->loop)->data.value());
-    auto book = std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(entry->book)->data.value());
 
     auto path = fs::path(*replacement);
 
@@ -81,29 +79,35 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     root->SetAttribute("Relocated", 0);
     root->SetAttribute("Path", path.c_str());
 
-    tinyxml2::XMLElement* adpcmLoop = sample.NewElement("ADPCMLoop");
-    adpcmLoop->SetAttribute("Start", loop->start);
-    adpcmLoop->SetAttribute("End", loop->end);
-    adpcmLoop->SetAttribute("Count", loop->count);
-    if (loop->count != 0) {
-        for (auto& state : loop->predictorState) {
-            tinyxml2::XMLElement* loopEntry = adpcmLoop->InsertNewChildElement("Predictor");
-            loopEntry->SetAttribute("State", state);
-            adpcmLoop->InsertEndChild(loopEntry);
+    if(entry->loop != 0) {
+        auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(entry->loop)->data.value());
+        tinyxml2::XMLElement* adpcmLoop = sample.NewElement("ADPCMLoop");
+        adpcmLoop->SetAttribute("Start", loop->start);
+        adpcmLoop->SetAttribute("End", loop->end);
+        adpcmLoop->SetAttribute("Count", loop->count);
+        if (loop->count != 0) {
+            for (auto& state : loop->predictorState) {
+                tinyxml2::XMLElement* loopEntry = adpcmLoop->InsertNewChildElement("Predictor");
+                loopEntry->SetAttribute("State", state);
+                adpcmLoop->InsertEndChild(loopEntry);
+            }
         }
+        root->InsertEndChild(adpcmLoop);
     }
-    root->InsertEndChild(adpcmLoop);
+    
+    if(entry->book != 0) {
+        auto book = std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(entry->book)->data.value());
+        tinyxml2::XMLElement* adpcmBook = sample.NewElement("ADPCMBook");
+        adpcmBook->SetAttribute("Order", book->order);
+        adpcmBook->SetAttribute("Npredictors", book->numPredictors);
 
-    tinyxml2::XMLElement* adpcmBook = sample.NewElement("ADPCMBook");
-    adpcmBook->SetAttribute("Order", book->order);
-    adpcmBook->SetAttribute("Npredictors", book->numPredictors);
-
-    for (auto& page : book->book) {
-        tinyxml2::XMLElement* bookEntry = adpcmBook->InsertNewChildElement("Book");
-        bookEntry->SetAttribute("Page", page);
-        adpcmBook->InsertEndChild(bookEntry);
+        for (auto& page : book->book) {
+            tinyxml2::XMLElement* bookEntry = adpcmBook->InsertNewChildElement("Book");
+            bookEntry->SetAttribute("Page", page);
+            adpcmBook->InsertEndChild(bookEntry);
+        }
+        root->InsertEndChild(adpcmBook);
     }
-    root->InsertEndChild(adpcmBook);
     sample.InsertEndChild(root);
 
     tinyxml2::XMLPrinter printer;
@@ -139,19 +143,27 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     sample->unk = (flags >> 22) & 0x01;
     sample->size = flags;
 
-    auto loopAddr = entry.addr + reader.ReadUInt32();
-    YAML::Node loop;
-    loop["type"] = "NAUDIO:V1:ADPCM_LOOP";
-    loop["offset"] = loopAddr;
-    sample->loop = loopAddr;
-    Companion::Instance->AddAsset(loop);
+    auto loopAddr = reader.ReadUInt32();
+    auto bookAddr = reader.ReadUInt32();
 
-    auto bookAddr = entry.addr + reader.ReadUInt32();
-    YAML::Node book;
-    book["type"] = "NAUDIO:V1:ADPCM_BOOK";
-    book["offset"] = bookAddr;
+    if(loopAddr != 0){
+        loopAddr += entry.addr;
+        YAML::Node loop;
+        loop["type"] = "NAUDIO:V1:ADPCM_LOOP";
+        loop["offset"] = loopAddr;
+        Companion::Instance->AddAsset(loop);
+    }
+
+    if(bookAddr != 0){
+        bookAddr += entry.addr;
+        YAML::Node book;
+        book["type"] = "NAUDIO:V1:ADPCM_BOOK";
+        book["offset"] = bookAddr;
+        Companion::Instance->AddAsset(book);
+    }
+
+    sample->loop = loopAddr;
     sample->book = bookAddr;
-    Companion::Instance->AddAsset(book);
 
     sample->sampleAddr = addr;
     sample->tuning = tuning;

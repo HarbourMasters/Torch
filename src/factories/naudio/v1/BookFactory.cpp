@@ -46,10 +46,6 @@ std::optional<std::shared_ptr<IParsedData>> ADPCMBookFactory::parse(std::vector<
     book->numPredictors = reader.ReadInt32();
     size_t length = 8 * book->order * book->numPredictors;
 
-    if(length > 0x40){
-        return std::nullopt;
-    }
-
     for(size_t i = 0; i < length; i++){
         book->book.push_back(reader.ReadInt16());
     }
