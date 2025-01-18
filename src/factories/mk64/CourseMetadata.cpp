@@ -341,9 +341,9 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         data.cupIndex = GetSafeNode<int32_t>(metadata, "cup_index");
         data.courseLength = GetSafeNode<std::string>(metadata, "course_length");
 
-        data.kartAIBehaviourLUT = GetSafeNode<std::string>(metadata, "kart_ai_behaviour_ptr");
-        data.kartAIMaximumSeparation = GetSafeNode<std::string>(metadata, "kart_ai_maximum_separation");
-        data.kartAIMinimumSeparation = GetSafeNode<std::string>(metadata, "kart_ai_minimum_separation");
+        data.kartAIBehaviourLUT = GetSafeNode<std::string>(metadata, "cpu_behaviour_ptr");
+        data.kartAIMaximumSeparation = GetSafeNode<std::string>(metadata, "cpu_maximum_separation");
+        data.kartAIMinimumSeparation = GetSafeNode<std::string>(metadata, "cpu_minimum_separation");
 
         data.D_800DCBB4 = GetSafeNode<std::string>(metadata, "D_800DCBB4");
         data.steeringSensitivity = GetSafeNode<uint32_t>(metadata, "cpu_steering_sensitivity");
