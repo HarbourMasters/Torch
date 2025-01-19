@@ -24,10 +24,10 @@ ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream &write, std::shar
 
     auto quadData = std::static_pointer_cast<SM64::MovtexQuadData>(raw);
 
-    write << "const struct MovtexQuadCollection " << symbol << "[] = {";
+    write << "const struct MovtexQuadCollection " << symbol << "[] = {\n";
 
     for (auto &quad: quadData->mMovtexQuads) {
-        write << "{" << quad.first << ", ";
+        write << fourSpaceTab << "{" << quad.first << ", ";
         if (quad.second == 0) {
             write << "NULL";
         } else {
@@ -44,7 +44,7 @@ ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream &write, std::shar
         write << "},\n";
     }
 
-    write << "\n};\n";
+    write << "};\n";
 
     if (Companion::Instance->IsDebug()) {
         write << "// MovtexQuad count: " << quadData->mMovtexQuads.size() << "\n";
@@ -57,7 +57,7 @@ ExportResult SM64::MovtexQuadBinaryExporter::Export(std::ostream &write, std::sh
     auto writer = LUS::BinaryWriter();
     auto quadData = std::static_pointer_cast<SM64::MovtexQuadData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::MovtexQuad, 0);
+    WriteHeader(writer, Torch::ResourceType::MovtexQuad, 0);
     writer.Write((uint32_t) quadData->mMovtexQuads.size());
 
     for (auto &quad: quadData->mMovtexQuads) {
@@ -72,9 +72,10 @@ ExportResult SM64::MovtexQuadBinaryExporter::Export(std::ostream &write, std::sh
                 writer.Write(hash);
             } else {
                 SPDLOG_WARN("Could not find movtex at 0x{:X}", quad.second);
+                writer.Write(0);
+                throw std::runtime_error("PANIC");
             }
         }
-        write << "},\n";
     }
 
     writer.Finish(write);
@@ -87,19 +88,22 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MovtexQuadFactory::parse(std::
     const auto count = GetSafeNode<size_t>(node, "count");
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<std::pair<int16_t, uint32_t>> movtexQuads;
 
     for (size_t i = 0; i < count; ++i) {
         auto id = reader.ReadInt16();
+        auto pad = reader.ReadInt16();
         auto movtexPtr = reader.ReadUInt32();
         movtexQuads.emplace_back(std::make_pair(id, movtexPtr));
 
-        YAML::Node movtexNode;
-        movtexNode["type"] = "SM64:MOVTEX";
-        movtexNode["offset"] = movtexPtr;
-        movtexNode["quad"] = true;
-        Companion::Instance->AddAsset(movtexNode);
+        if (movtexPtr != 0) {
+            YAML::Node movtexNode;
+            movtexNode["type"] = "SM64:MOVTEX";
+            movtexNode["offset"] = movtexPtr;
+            movtexNode["quad"] = true;
+            Companion::Instance->AddAsset(movtexNode);
+        }
     }
 
     return std::make_shared<SM64::MovtexQuadData>(movtexQuads);

@@ -48,11 +48,11 @@ ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_p
     auto hitbox = std::static_pointer_cast<SF64::HitboxData>(raw);
     auto index = 0;
     auto count = hitbox->mData[index++];
-    auto hasType2 = false;
+    auto hasRot = false;
 
     for(int type : hitbox->mTypes) {
         if(type == 2) {
-            hasType2 = true;
+            hasRot = true;
             break;
         }
     }
@@ -61,7 +61,7 @@ ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_p
     write << fourSpaceTab << count << ",\n";
 
     for(int i = 0; i < (int)count; i++) {
-        if(hitbox->mTypes[i]  == 4) {
+        if(hitbox->mTypes[i] == 4) {
             write << fourSpaceTab << "HITBOX_WHOOSH,     ";
             index++;
         } else if (hitbox->mTypes[i] == 3) {
@@ -78,7 +78,7 @@ ExportResult SF64::HitboxCodeExporter::Export(std::ostream &write, std::shared_p
         } else {
             write << " /* HITBOX_STANDARD */ ";
         }
-        if(hasType2 && hitbox->mTypes[i] != 2) {
+        if(hasRot && hitbox->mTypes[i] != 2) {
             for(int j = 0; j < 7; j++) {
                 write << fourSpaceTab;
             }
@@ -99,7 +99,7 @@ ExportResult SF64::HitboxBinaryExporter::Export(std::ostream &write, std::shared
     auto hitbox = std::static_pointer_cast<SF64::HitboxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Hitbox, 0);
+    WriteHeader(writer, Torch::ResourceType::Hitbox, 0);
 
     auto count = hitbox->mData.size();
     writer.Write((uint32_t) count);
@@ -116,7 +116,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::HitboxFactory::parse(std::vect
     std::vector<int> types;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0x10000);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     data.push_back(reader.ReadFloat());
     count = data[0];

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include <factories/BaseFactory.h>
 #include "collision/SpecialPresetNames.h"
 #include "collision/SurfaceTerrains.h"
 

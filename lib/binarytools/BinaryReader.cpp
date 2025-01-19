@@ -1,5 +1,5 @@
-#include "BinaryReader.h"
-#include "MemoryStream.h"
+#include "./BinaryReader.h"
+#include "./MemoryStream.h"
 #include <cmath>
 #include <stdexcept>
 #include <locale>
@@ -24,11 +24,11 @@ void LUS::BinaryReader::Close() {
     mStream->Close();
 }
 
-void LUS::BinaryReader::SetEndianness(Endianness endianness) {
+void LUS::BinaryReader::SetEndianness(Torch::Endianness endianness) {
     this->mEndianness = endianness;
 }
 
-LUS::Endianness LUS::BinaryReader::GetEndianness() const {
+Torch::Endianness LUS::BinaryReader::GetEndianness() const {
     return mEndianness;
 }
 
@@ -59,7 +59,7 @@ int8_t LUS::BinaryReader::ReadInt8() {
 int16_t LUS::BinaryReader::ReadInt16() {
     int16_t result = 0;
     mStream->Read((char*)&result, sizeof(int16_t));
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         result = BSWAP16(result);
     }
     return result;
@@ -70,7 +70,7 @@ int32_t LUS::BinaryReader::ReadInt32() {
 
     mStream->Read((char*)&result, sizeof(int32_t));
 
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         result = BSWAP32(result);
     }
 
@@ -86,7 +86,7 @@ uint16_t LUS::BinaryReader::ReadUInt16() {
 
     mStream->Read((char*)&result, sizeof(uint16_t));
 
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         result = BSWAP16(result);
     }
 
@@ -98,7 +98,7 @@ uint32_t LUS::BinaryReader::ReadUInt32() {
 
     mStream->Read((char*)&result, sizeof(uint32_t));
 
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         result = BSWAP32(result);
     }
 
@@ -110,7 +110,7 @@ uint64_t LUS::BinaryReader::ReadUInt64() {
 
     mStream->Read((char*)&result, sizeof(uint64_t));
 
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         result = BSWAP64(result);
     }
 
@@ -121,7 +121,7 @@ unsigned short LUS::BinaryReader::ReadUShort() {
     unsigned short result = 0;
     mStream->Read((char*)&result, sizeof(unsigned short));
 
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         result = BSWAP16(result);
     }
 
@@ -132,7 +132,7 @@ short LUS::BinaryReader::ReadShort() {
     short result = 0;
     mStream->Read((char*)&result, sizeof(short));
 
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         result = BSWAP16(result);
     }
 
@@ -144,7 +144,7 @@ float LUS::BinaryReader::ReadFloat() {
 
     mStream->Read((char*)&result, sizeof(float));
 
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         float tmp;
         char* dst = (char*)&tmp;
         char* src = (char*)&result;
@@ -167,7 +167,7 @@ double LUS::BinaryReader::ReadDouble() {
 
     mStream->Read((char*)&result, sizeof(double));
 
-    if (mEndianness != Endianness::Native) {
+    if (mEndianness != Torch::Endianness::Native) {
         double tmp;
         char* dst = (char*)&tmp;
         char* src = (char*)&result;

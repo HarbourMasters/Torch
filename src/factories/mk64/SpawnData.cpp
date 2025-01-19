@@ -48,7 +48,7 @@ ExportResult MK64::SpawnDataBinaryExporter::Export(std::ostream &write, std::sha
     auto spawns = std::static_pointer_cast<SpawnDataData>(raw)->mSpawns;
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::SpawnData, 0);
+    WriteHeader(writer, Torch::ResourceType::SpawnData, 0);
     writer.Write((uint32_t) spawns.size());
     for(auto s : spawns) {
         writer.Write(s.x);
@@ -67,7 +67,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::SpawnDataFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(MK64::ActorSpawnData));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<MK64::ActorSpawnData> spawns;
 
     for(size_t i = 0; i < count; i++) {

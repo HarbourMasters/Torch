@@ -3,11 +3,14 @@
 #include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
+#include <regex>
+#include <sstream>
+#include <tinyxml2.h>
 
-#define END_CODE 0x0
-#define NEWLINE_CODE 0x1
-#define SPC 15
-#define CLF 16
+#define END_CODE 0
+#define NEWLINE_CODE 1
+#define NXT_CODE 15
+#define CLF_CODE 16
 #define CUP 17
 #define CRT 18
 #define CDN 19
@@ -49,6 +52,21 @@ std::unordered_map<std::string, std::string> ASCIITable = {
     { "CLN", ":" }, { "PIP", "| " }
 };
 
+std::vector<std::string> gASCIIFullTable = {
+    "\0", "\n", "{NP:2}", "{NP:3}", "{NP:4}", "{NP:5}", "{NP:6}", "{NP:7}",
+    "{PRI:0}", "{PRI:1}", "{PRI:2}", "{PRI:3}", " ", "{HSP}", "{QSP}", "{NXT}",
+    "{C:<}", "{C:^}", "{C:>}", "{C:v}", "^", "<", "v", ">",
+    "A", "B", "C", "D", "E", "F", "G", "H",
+    "I", "J", "K", "L", "M", "N", "O", "P",
+    "Q", "R", "S", "T", "U", "V", "W", "X",
+    "Y", "Z", "a", "b", "c", "d", "e", "f",
+    "g", "h", "i", "j", "k", "l", "m", "n",
+    "o", "p", "q", "r", "s", "t", "u", "v",
+    "w", "x", "y", "z", "!", "?", "-", ",",
+    ".", "0", "1", "2", "3", "4", "5", "6",
+    "7", "8", "9", "'", "(", ")", ":", "|",
+};
+
 ExportResult SF64::MessageHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
@@ -61,48 +79,13 @@ ExportResult SF64::MessageHeaderExporter::Export(std::ostream &write, std::share
     return std::nullopt;
 }
 
-void TextToStream(std::ostream& stream, int charCode) {
-    std::string enumCode = gCharCodeEnums[charCode];
-
-    if(enumCode.starts_with("_")){
-        stream << enumCode.substr(1);
-        return;
-    }
-
-    if(ASCIITable.contains(enumCode)){
-        stream << ASCIITable[enumCode];
-    }
-}
-
 ExportResult SF64::MessageCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto message = std::static_pointer_cast<MessageData>(raw)->mMessage;
+    auto mesgStr = std::static_pointer_cast<MessageData>(raw)->mMesgStr;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    write << "// ";
-    bool lastWasSpace = false;
-    for (int i = 0; i < message.size(); ++i) {
-        const auto charCode = message[i];
-        std::string enumCode = gCharCodeEnums[charCode];
-
-        if(enumCode.find("SP") != std::string::npos){
-            if (lastWasSpace){
-                continue;
-            }
-            if (!enumCode.empty() && enumCode.back() != ' ') {
-                write << " ";
-                lastWasSpace = true;
-            }
-        } else {
-            lastWasSpace = false;
-        }
-
-        TextToStream(write,charCode );
-        if(message[i] == NEWLINE_CODE && i != message.size() - 2){
-            write << "\n// ";
-        }
-    }
-    write << "\n";
+    write << "// " << std::regex_replace(mesgStr, std::regex(R"(\n)"), "\n// ") << "\n";
 
     write << "u16 " << symbol << "[] = {\n" << fourSpaceTab;
     for (int i = 0; i < message.size(); ++i) {
@@ -128,7 +111,7 @@ ExportResult SF64::MessageBinaryExporter::Export(std::ostream &write, std::share
     auto writer = LUS::BinaryWriter();
     const auto data = std::static_pointer_cast<MessageData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Message, 0);
+    WriteHeader(writer, Torch::ResourceType::Message, 0);
 
     auto count = data->mMessage.size();
     writer.Write(static_cast<uint32_t>(count));
@@ -139,19 +122,176 @@ ExportResult SF64::MessageBinaryExporter::Export(std::ostream &write, std::share
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    std::vector<uint16_t> message;
+ExportResult SF64::MessageModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> raw, std::string&entryName, YAML::Node&node, std::string* replacement) {
+    const auto data = std::static_pointer_cast<MessageData>(raw);
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    *replacement += ".yml";
 
-    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
-    LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    auto count = data->mMessage.size();
+    std::stringstream stream;
+    YAML::Emitter out;
+    out << YAML::BeginMap;
+    out << YAML::Key << symbol;
+    out << YAML::Value << YAML::BeginSeq;
 
-    bool processing = true;
-    while(processing){
-        uint16_t c = reader.ReadUInt16();
-        message.push_back(c);
-        processing = c != END_CODE;
+    for(size_t i = 0; i < count; i++) {
+        if(data->mMessage[i] == NEWLINE_CODE){
+            stream << "\0";
+            out << stream.str();
+            stream.str("");
+        } else {
+            stream << gASCIIFullTable[data->mMessage[i]];
+        }
     }
 
-    return std::make_shared<MessageData>(message);
+    out << YAML::EndSeq << YAML::EndMap;
+    write.write(out.c_str(), out.size());
+
+    return std::nullopt;
+}
+
+ExportResult SF64::MessageXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    const auto data = std::static_pointer_cast<MessageData>(raw);
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    *replacement += ".meta";
+
+    tinyxml2::XMLPrinter printer;
+    tinyxml2::XMLDocument message;
+    tinyxml2::XMLElement* root = message.NewElement("Message");
+    tinyxml2::XMLElement* line = message.NewElement("Line");
+    std::string str;
+
+    for(size_t i = 0; i < data->mMessage.size(); i++) {
+        if(data->mMessage[i] == NEWLINE_CODE){
+            line->SetText(str.c_str());
+            root->InsertEndChild(line);
+            line = message.NewElement("Line");
+            str.clear();
+        } else {
+            str += gASCIIFullTable[data->mMessage[i]];
+        }
+    }
+
+    message.InsertEndChild(root);
+    message.Accept(&printer);
+    write.write(printer.CStr(), printer.CStrSize() - 1);
+    return std::nullopt;
+}
+
+std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    std::vector<uint16_t> message;
+    std::ostringstream mesgStr;
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+    LUS::BinaryReader reader(segment.data, segment.size);
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    uint16_t c;
+    std::string whitespace = "";
+    do {
+        c = reader.ReadUInt16();
+        message.push_back(c);
+
+        std::string enumCode = gCharCodeEnums[c];
+        if((enumCode.find("SP") != std::string::npos) && whitespace.empty()) {
+            whitespace = " ";
+        }
+        if(c == NEWLINE_CODE) {
+            whitespace += "\n";
+        }
+        if (c >= CLF_CODE) {
+            mesgStr << whitespace;
+            whitespace = "";
+        }
+        if(enumCode.starts_with("_")){
+            mesgStr << enumCode.substr(1);
+        } else if(ASCIITable.contains(enumCode)){
+            mesgStr << ASCIITable[enumCode];
+        }
+
+    } while(c != END_CODE);
+
+    return std::make_shared<MessageData>(message, mesgStr.str());
+}
+
+std::optional<uint16_t> getCharByCode(const std::string& code) {
+    auto it = std::find(gASCIIFullTable.begin(), gASCIIFullTable.end(), code) - gASCIIFullTable.begin();
+    if(it < gASCIIFullTable.size()){
+        return it;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) {
+    std::vector<uint16_t> message;
+    std::ostringstream mesgStr;
+    std::string whitespace = "";
+
+    YAML::Node node;
+
+    try {
+        std::string text((char*) buffer.data(), buffer.size());
+        node = YAML::Load(text.c_str());
+    } catch (YAML::ParserException& e) {
+        SPDLOG_ERROR("Failed to parse message data: {}", e.what());
+        SPDLOG_ERROR("{}", (char*) buffer.data());
+        return std::nullopt;
+    }
+
+    std::regex fmt("\\(([^)]+)\\)");
+
+    std::vector<std::string> lines = node.begin()->second.as<std::vector<std::string>>();
+    for(auto& line : lines){
+        for(size_t i = 0; i < line.size(); i++){
+            char c = line[i];
+            std::string enumCode;
+            if(c == '{' && line.substr(i).find('}') != std::string::npos){
+                auto code = line.substr(i, line.substr(i).find('}') + 1);
+                auto opcode = getCharByCode(code);
+                if(opcode.has_value()){
+                    auto x = opcode.value();
+                    message.push_back(x);
+                    i += line.substr(i).find('}');
+                    enumCode = gCharCodeEnums[x];
+                } else {
+                    SPDLOG_WARN("Unknown character: {}", code);
+                }
+            } else {
+                auto code = getCharByCode(std::string(1, c));
+                if(code.has_value()){
+                    auto x = code.value();
+                    message.push_back(x);
+                    enumCode = gCharCodeEnums[x];
+                } else {
+                    SPDLOG_WARN("Unknown character: {}", c);
+                }
+            }
+
+            if(!enumCode.empty()) {
+                if(enumCode.find("SP") != std::string::npos && whitespace.empty()) {
+                    whitespace = " ";
+                }
+                if(c == NEWLINE_CODE) {
+                    whitespace += "\n";
+                }
+                if (c >= CLF_CODE) {
+                    mesgStr << whitespace;
+                    whitespace = "";
+                }
+                if(enumCode.starts_with("_")){
+                    mesgStr << enumCode.substr(1);
+                } else if(ASCIITable.contains(enumCode)){
+                    mesgStr << ASCIITable[enumCode];
+                }
+            }
+        }
+
+        if(line != lines.back()){
+            message.push_back(NEWLINE_CODE);
+            mesgStr << "\n";
+        }
+    }
+
+    message.push_back(END_CODE);
+
+    return std::make_shared<MessageData>(message, mesgStr.str());
 }

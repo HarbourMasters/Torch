@@ -16,13 +16,14 @@ SF64::ColPolyData::ColPolyData(std::vector<SF64::CollisionPoly> polys, std::vect
 
 ExportResult SF64::ColPolyHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
-    write << "extern CollisionPoly " << symbol << "[];\n";
+    write << "extern CollisionPoly " << symbol << "[" << std::dec << colpolys->mPolys.size() << "];\n";
     return std::nullopt;
 }
 
@@ -66,7 +67,7 @@ ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::share
     auto writer = LUS::BinaryWriter();
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::ColPoly, 0);
+    WriteHeader(writer, Torch::ResourceType::ColPoly, 0);
 
     writer.Write((uint32_t) colpolys->mPolys.size());
 
@@ -99,7 +100,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
     int meshSize = 0;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(SF64::CollisionPoly));
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for(int i = 0; i < count; i++) {
         int16_t v0 = reader.ReadInt16();

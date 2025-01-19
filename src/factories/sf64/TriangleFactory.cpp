@@ -15,13 +15,14 @@ SF64::TriangleData::TriangleData(std::vector<Vec3s> tris, std::vector<YAML::Node
 
 ExportResult SF64::TriangleHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto triData = std::static_pointer_cast<SF64::TriangleData>(raw);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
-    write << "extern Triangle " << symbol << "[];\n";
+    write << "extern Triangle " << symbol << "[" << std::dec << triData->mTris.size() << "];\n";
     return std::nullopt;
 }
 
@@ -55,7 +56,7 @@ ExportResult SF64::TriangleBinaryExporter::Export(std::ostream &write, std::shar
     auto writer = LUS::BinaryWriter();
     auto triData = std::static_pointer_cast<TriangleData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Vec3s, 0);
+    WriteHeader(writer, Torch::ResourceType::Vec3s, 0);
     writer.Write((uint32_t) triData->mTris.size());
 
     for(Vec3s tri : triData->mTris) {
@@ -78,7 +79,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::TriangleFactory::parse(std::ve
     int meshSize = 0;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(Vec3s));
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for(int i = 0; i < count; i++) {
         Vec3s tri;

@@ -34,11 +34,6 @@ ExportResult IncludeCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
     return std::nullopt;
 }
 
-ExportResult IncludeBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    throw std::runtime_error("Include factory should not be used for otr/o2r mode.");
-    return std::nullopt;
-}
-
 std::optional<std::shared_ptr<IParsedData>> IncludeFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
 
     SPDLOG_INFO("parsing INC");

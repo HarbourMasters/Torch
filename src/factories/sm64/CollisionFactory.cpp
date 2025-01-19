@@ -164,7 +164,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
     }
     if (collision->mSurfaces.size()) {
         write << fourSpaceTab;
-        write << "COL_TRI_STOP()";
+        write << "COL_TRI_STOP()\n";
         ++count;
     }
 
@@ -231,7 +231,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
     }
 
     write << fourSpaceTab;
-    write << "COL_END()";
+    write << "COL_END()\n";
     ++count;
 
     write << "};\n";
@@ -258,26 +258,26 @@ ExportResult SM64::CollisionHeaderExporter::Export(std::ostream &write, std::sha
 ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto collision = std::static_pointer_cast<Collision>(data).get();
 
-    auto writer = LUS::BinaryWriter();
+    std::vector<int16_t> commands;
 
-    writer.Write((int16_t)COL_INIT());
+    commands.push_back((int16_t)COL_INIT());
 
     // Vertices
     if (collision->mVertices.size() > 0) {
-        writer.Write((int16_t)COL_VERTEX_INIT(collision->mVertices.size()));
+        commands.push_back((int16_t)COL_VERTEX_INIT(collision->mVertices.size()));
     }
     for (auto &vertex : collision->mVertices) {
-        writer.Write(vertex.x);
-        writer.Write(vertex.y);
-        writer.Write(vertex.z);
+        commands.push_back(vertex.x);
+        commands.push_back(vertex.y);
+        commands.push_back(vertex.z);
     }
 
     // Surfaces
     for (auto &surface : collision->mSurfaces) {
         // size check is probably not necessary here
         if (surface.tris.size() > 0) {
-            writer.Write((int16_t)surface.surfaceType);
-            writer.Write((int16_t)surface.tris.size());
+            commands.push_back((int16_t)surface.surfaceType);
+            commands.push_back((int16_t)surface.tris.size());
         }
         bool hasForce = false;
         switch (surface.surfaceType) {
@@ -294,55 +294,54 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
                 break;
         }
         for (auto &tri : surface.tris) {
-            writer.Write(tri.x);
-            writer.Write(tri.y);
-            writer.Write(tri.z);
+            commands.push_back(tri.x);
+            commands.push_back(tri.y);
+            commands.push_back(tri.z);
             if (hasForce) {
-                writer.Write(tri.force);
+                commands.push_back(tri.force);
             }
         }
     }
-    if (collision->mSurfaces.size()) {
-        writer.Write((int16_t)COL_TRI_STOP());
+    if (!collision->mSurfaces.empty()) {
+        commands.push_back((int16_t)COL_TRI_STOP());
     }
 
     // Special Objects
     if (collision->mSpecialObjects.size() > 0) {
-        writer.Write((int16_t)TERRAIN_LOAD_OBJECTS);
-        writer.Write((int16_t)collision->mSpecialObjects.size());
+        commands.push_back((int16_t)TERRAIN_LOAD_OBJECTS);
+        commands.push_back((int16_t)collision->mSpecialObjects.size());
     }
     for (auto &specialObject : collision->mSpecialObjects) {
-        writer.Write((int16_t)specialObject.presetId);
-        writer.Write(specialObject.x);
-        writer.Write(specialObject.y);
-        writer.Write(specialObject.z);
+        commands.push_back((int16_t)specialObject.presetId);
+        commands.push_back(specialObject.x);
+        commands.push_back(specialObject.y);
+        commands.push_back(specialObject.z);
         for (int16_t extraParam : specialObject.extraParams) {
-            writer.Write(extraParam);
+            commands.push_back(extraParam);
         }
     }
 
     // Environment Region Boxes
     if (collision->mEnvRegionBoxes.size() > 0) {
-        writer.Write((int16_t)TERRAIN_LOAD_ENVIRONMENT);
-        writer.Write((int16_t)collision->mEnvRegionBoxes.size());
+        commands.push_back((int16_t)TERRAIN_LOAD_ENVIRONMENT);
+        commands.push_back((int16_t)collision->mEnvRegionBoxes.size());
     }
     for (auto &envRegionBox : collision->mEnvRegionBoxes) {
-        writer.Write(envRegionBox.id);
-        writer.Write(envRegionBox.x1);
-        writer.Write(envRegionBox.z1);
-        writer.Write(envRegionBox.x2);
-        writer.Write(envRegionBox.z2);
-        writer.Write(envRegionBox.height);
+        commands.push_back(envRegionBox.id);
+        commands.push_back(envRegionBox.x1);
+        commands.push_back(envRegionBox.z1);
+        commands.push_back(envRegionBox.x2);
+        commands.push_back(envRegionBox.z2);
+        commands.push_back(envRegionBox.height);
     }
 
-    std::vector<char> buffer = writer.ToVector();
-    writer.Close();
+    commands.push_back((int16_t) COL_END());
 
     LUS::BinaryWriter output = LUS::BinaryWriter();
-    WriteHeader(output, LUS::ResourceType::Collision, 0);
+    WriteHeader(output, Torch::ResourceType::Collision, 0);
 
-    output.Write(static_cast<uint32_t>(buffer.size()));
-    output.Write(buffer.data(), buffer.size());
+    output.Write(static_cast<uint32_t>(commands.size()));
+    output.Write((char*) commands.data(), commands.size() * sizeof(int16_t));
     output.Finish(write);
     output.Close();
     return std::nullopt;
@@ -357,7 +356,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::CollisionFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     auto cmd = segment.data;
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     while (processing) {
         int16_t terrainLoadType = reader.ReadInt16();

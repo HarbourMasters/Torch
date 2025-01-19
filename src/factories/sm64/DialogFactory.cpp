@@ -6,7 +6,7 @@ ExportResult SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared
     auto writer = LUS::BinaryWriter();
     auto dialog = std::static_pointer_cast<DialogData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::SDialog, 0);
+    WriteHeader(writer, Torch::ResourceType::SDialog, 0);
     writer.Write((uint32_t) dialog->mUnused);
     writer.Write((int8_t) dialog->mLinesPerBox);
     writer.Write((int16_t) dialog->mLeftOffset);
@@ -22,7 +22,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vect
     auto [root, segment] = Decompressor::AutoDecode(node, buffer);
 
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     // Validate this
     // reader.Seek(mio0, LUS::SeekOffsetType::Start);
 

@@ -1,8 +1,7 @@
-#ifndef ENDIANESS_H
-#define ENDIANESS_H
+#pragma once
 
 #ifdef __cplusplus
-namespace LUS {
+namespace Torch {
 enum class Endianness {
     Little = 0,
     Big = 1,
@@ -83,6 +82,4 @@ enum class Endianness {
 #define LE16SWAP_CONST(x) (x)
 #define LE32SWAP_CONST(x) (x)
 #define LE64SWAP_CONST(x) (x)
-#endif
-
 #endif

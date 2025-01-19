@@ -73,7 +73,7 @@ ExportResult FloatBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
     auto f = std::static_pointer_cast<FloatData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Float, 0);
+    WriteHeader(writer, Torch::ResourceType::Float, 0);
     writer.Write((uint32_t) f->mFloats.size());
     for(auto fl : f->mFloats) {
         writer.Write(fl);
@@ -89,7 +89,7 @@ std::optional<std::shared_ptr<IParsedData>> FloatFactory::parse(std::vector<uint
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(float));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<float> floats;
 
     for(size_t i = 0; i < count; i++) {

@@ -60,7 +60,7 @@ ExportResult Vec3sBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
     auto writer = LUS::BinaryWriter();
     auto vecData = std::static_pointer_cast<Vec3sData>(raw);
 
-    WriteHeader(writer, LUS::ResourceType::Vec3s, 0);
+    WriteHeader(writer, Torch::ResourceType::Vec3s, 0);
     writer.Write((uint32_t) vecData->mVecs.size());
 
     for(Vec3s v : vecData->mVecs) {
@@ -79,7 +79,7 @@ std::optional<std::shared_ptr<IParsedData>> Vec3sFactory::parse(std::vector<uint
     const auto count = GetSafeNode<int>(node, "count");
     auto [root, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(Vec3s));
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for(int i = 0; i < count; i++) {
         auto vx = reader.ReadInt16();

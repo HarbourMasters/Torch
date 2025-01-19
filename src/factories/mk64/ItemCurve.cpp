@@ -28,7 +28,8 @@ ExportResult MK64::ItemCurveCodeExporter::Export(std::ostream &write, std::share
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
+        // We will ignore the overriden index_size for now...
 
         if(start == offset){
             write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << name << "[][" << items.size() << "] = {\n";
@@ -82,7 +83,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::ItemCurveFactory::parse(std::v
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, (10 * 10) * sizeof(uint8_t));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<uint8_t> items;
 
     // Each array is size of 10*10.

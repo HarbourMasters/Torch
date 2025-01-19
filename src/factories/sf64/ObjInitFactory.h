@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include <factories/BaseFactory.h>
 #include "types/Vec3D.h"
 
 namespace SF64 {
@@ -33,6 +33,10 @@ class ObjInitCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+class ObjInitXMLExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
 class ObjInitFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -41,7 +45,9 @@ public:
             REGISTER(Header, ObjInitHeaderExporter)
             REGISTER(Binary, ObjInitBinaryExporter)
             REGISTER(Code, ObjInitCodeExporter)
+            REGISTER(XML, ObjInitXMLExporter)
         };
     }
+    bool SupportModdedAssets() override { return true; }
 };
 }

@@ -5,7 +5,7 @@ ExportResult SM64::TextBinaryExporter::Export(std::ostream &write, std::shared_p
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
-    WriteHeader(writer, LUS::ResourceType::Blob, 0);
+    WriteHeader(writer, Torch::ResourceType::Blob, 0);
     writer.Write((uint32_t) data.size());
     writer.Write((char*) data.data(), data.size());
     writer.Finish(write);

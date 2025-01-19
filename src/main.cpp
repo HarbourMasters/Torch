@@ -2,8 +2,9 @@
 #include "CLI11.hpp"
 #include "Companion.h"
 
-#ifdef STANDALONE
 Companion* Companion::Instance;
+
+#ifdef STANDALONE
 
 int main(int argc, char *argv[]) {
     CLI::App app{"Torch - [T]orch is [O]ur [R]esource [C]onversion [H]elper\n\
@@ -14,7 +15,10 @@ int main(int argc, char *argv[]) {
     std::string filename;
     std::string target;
     std::string folder;
-    bool otrMode = false;
+    std::string archive;
+    ArchiveType otrMode = ArchiveType::None;
+    bool otrModeSelected = false;
+    bool xmlMode = false;
     bool debug = false;
 
     app.require_subcommand();
@@ -26,7 +30,18 @@ int main(int argc, char *argv[]) {
     otr->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
 
     otr->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, true, debug);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::OTR, debug);
+        instance->Init(ExportType::Binary);
+    });
+
+    /* Generate an O2R */
+    const auto o2r = app.add_subcommand("o2r", "O2R - Generates an o2r\n");
+
+    o2r->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    o2r->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
+
+    o2r->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::O2R, debug);
         instance->Init(ExportType::Binary);
     });
 
@@ -37,7 +52,7 @@ int main(int argc, char *argv[]) {
     code->add_flag("-v,--verbose", debug, "Verbose Debug Mode; adds offsets to C code");
 
     code->parse_complete_callback([&]() {
-        const auto instance = Companion::Instance = new Companion(filename, false, debug);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug);
         instance->Init(ExportType::Code);
     });
 
@@ -47,7 +62,7 @@ int main(int argc, char *argv[]) {
     binary->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
     binary->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, false, debug);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug);
         instance->Init(ExportType::Binary);
     });
 
@@ -55,22 +70,39 @@ int main(int argc, char *argv[]) {
     const auto header = app.add_subcommand("header", "Header - Generates headers only\n");
 
     header->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
-    header->add_flag("-o,--otr", otrMode, "OTR Mode");
+    header->add_flag("-o,--otr", otrModeSelected, "OTR/O2R Mode");
+
 
     header->parse_complete_callback([&] {
+        if (otrModeSelected) {
+            otrMode = ArchiveType::OTR;
+        } else {
+            otrMode = ArchiveType::None;
+        }
+
         const auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
         instance->Init(ExportType::Header);
     });
 
-    /* Pack an otr from a folder */
-    const auto pack = app.add_subcommand("pack", "Pack - Packs an otr from a folder\n");
+    /* Pack an archive from a folder */
+    const auto pack = app.add_subcommand("pack", "Pack - Packs an archive from a folder\n");
 
     pack->add_option("<folder>", folder, "Generate OTR from a directory of assets")->required()->check(CLI::ExistingDirectory);
-    pack->add_option("<target>", target, "OTR output destination")->required();
+    pack->add_option("<target>", target, "Archive output destination")->required();
+    pack->add_option("<archive-type>", archive, "Archive type: otr or o2r")->required();
 
+    
     pack->parse_complete_callback([&] {
+        if (archive == "otr") {
+            otrMode = ArchiveType::OTR;
+        } else if (archive == "o2r") {
+            otrMode = ArchiveType::O2R;
+        } else {
+            std::cout << "Invalid archive type" << std::endl;
+        }
+
         if (!folder.empty()) {
-            Companion::Pack(folder, target);
+            Companion::Pack(folder, target, otrMode);
         } else {
             std::cout << "The folder is empty" << std::endl;
         }
@@ -81,14 +113,24 @@ int main(int argc, char *argv[]) {
     const auto modding_import = modding_root->add_subcommand("import", "Import - Import modified files to generate C code\n");
     const auto modding_export = modding_root->add_subcommand("export", "Export - Export modified files to a folder\n");
 
-    modding_import->add_option("mode", mode, "code, binary or header")->required();
+    modding_import->add_option("mode", mode, "code, otr, o2r or header")->required();
     modding_import->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
     modding_import->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, false, debug, true);
+        ArchiveType otrMode;
+
+        if (mode == "otr") {
+            otrMode = ArchiveType::OTR;
+        } else if (mode == "o2r") {
+            otrMode = ArchiveType::O2R;
+        } else {
+            otrMode = ArchiveType::None;
+        }
+
+        const auto instance = Companion::Instance = new Companion(filename, otrMode, debug, true);
         if (mode == "code") {
             instance->Init(ExportType::Code);
-        } else if (mode == "binary") {
+        } else if (mode == "otr" || mode == "o2r") {
             instance->Init(ExportType::Binary);
         } else if (mode == "header") {
             instance->Init(ExportType::Header);
@@ -97,11 +139,16 @@ int main(int argc, char *argv[]) {
         }
     });
 
+    modding_export->add_flag("-x,--xml", xmlMode, "XML Mode");
     modding_export->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
     modding_export->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, false, debug);
-        instance->Init(ExportType::Modding);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug);
+        if (xmlMode) {
+            instance->Init(ExportType::XML);
+        } else {
+            instance->Init(ExportType::Modding);
+        }
     });
 
     try {

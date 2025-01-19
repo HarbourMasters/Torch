@@ -25,13 +25,14 @@ SF64::AnimData::AnimData(int16_t frameCount, int16_t limbCount, uint32_t dataOff
 
 ExportResult SF64::AnimHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
+    auto anim = std::static_pointer_cast<SF64::AnimData>(raw);
 
     if(Companion::Instance->IsOTRMode()){
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
-    write << "extern Animation " << symbol << ";\n";
+    write << "extern Animation " << symbol << "; // frames: " << std::dec << anim->mFrameCount << ", limbs: " << anim->mLimbCount + 1 << "\n";
     return std::nullopt;
 }
 
@@ -103,7 +104,7 @@ ExportResult SF64::AnimBinaryExporter::Export(std::ostream &write, std::shared_p
     auto anim = std::static_pointer_cast<SF64::AnimData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::AnimData, 0);
+    WriteHeader(writer, Torch::ResourceType::AnimData, 0);
     writer.Write(anim->mFrameCount);
     writer.Write(anim->mLimbCount);
 
@@ -135,7 +136,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0xC);
     LUS::BinaryReader reader(segment.data, segment.size);
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     int16_t frameCount = reader.ReadInt16();
     int16_t limbCount = reader.ReadInt16();
     uint32_t dataOffset = reader.ReadUInt32();
@@ -146,7 +147,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
 
     auto [__, keySegment] = Decompressor::AutoDecode(keyNode, buffer, sizeof(SF64::JointKey) * (limbCount + 1));
     LUS::BinaryReader keyReader(keySegment.data, keySegment.size);
-    keyReader.SetEndianness(LUS::Endianness::Big);
+    keyReader.SetEndianness(Torch::Endianness::Big);
 
     for(int i = 0; i <= limbCount; i++) {
         auto xLen = keyReader.ReadUInt16();
@@ -174,7 +175,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::AnimFactory::parse(std::vector
     dataCount = std::max(dataCount, maxIndex + 1);
     auto [___, dataSegment] = Decompressor::AutoDecode(dataNode, buffer, sizeof(uint16_t) * dataCount);
     LUS::BinaryReader dataReader(dataSegment.data, dataSegment.size);
-    dataReader.SetEndianness(LUS::Endianness::Big);
+    dataReader.SetEndianness(Torch::Endianness::Big);
 
     for(int i = 0; i < dataCount; i++) {
         frameData.push_back(dataReader.ReadUInt16());

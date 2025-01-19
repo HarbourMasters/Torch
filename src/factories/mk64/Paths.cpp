@@ -6,8 +6,8 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
 
-ExportResult MK64::WaypointHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
-                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult MK64::PathHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {
@@ -15,27 +15,27 @@ ExportResult MK64::WaypointHeaderExporter::Export(std::ostream& write, std::shar
         return std::nullopt;
     }
 
-    write << "extern TrackPathPoint " << symbol << "[];\n";
+    write << "extern TrackPath " << symbol << "[];\n";
     return std::nullopt;
 }
 
-ExportResult MK64::WaypointCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
-                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
-    auto pathPoint = std::static_pointer_cast<WaypointData>(raw)->mPaths;
+ExportResult MK64::PathCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
+    auto paths = std::static_pointer_cast<PathData>(raw)->mPaths;
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    write << "TrackPathPoint " << symbol << "[] = {\n";
+    write << "TrackPath " << symbol << "[] = {\n";
 
-    for (int i = 0; i < pathPoint.size(); ++i) {
-        auto x = pathPoint[i].posX;
-        auto y = pathPoint[i].posY;
-        auto z = pathPoint[i].posZ;
+    for (int i = 0; i < paths.size(); ++i) {
+        auto x = paths[i].posX;
+        auto y = paths[i].posY;
+        auto z = paths[i].posZ;
 
         // Track segment
-        auto seg = pathPoint[i].trackSegment;
+        auto seg = paths[i].trackSegment;
 
-        if (i <= pathPoint.size() - 1) {
+        if (i <= paths.size() - 1) {
             write << fourSpaceTab;
         }
 
@@ -44,17 +44,17 @@ ExportResult MK64::WaypointCodeExporter::Export(std::ostream& write, std::shared
     }
     write << "};\n";
 
-    return offset + pathPoint.size() * sizeof(MK64::TrackPathPoint);
+    return offset + paths.size() * sizeof(MK64::TrackPath);
 }
 
-ExportResult MK64::WaypointBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
-                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
-    auto pathPoint = std::static_pointer_cast<WaypointData>(raw)->mPaths;
+ExportResult MK64::PathBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
+    auto paths = std::static_pointer_cast<PathData>(raw)->mPaths;
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Paths, 0);
-    writer.Write((uint32_t) pathPoint.size());
-    for (auto w : pathPoint) {
+    WriteHeader(writer, Torch::ResourceType::Paths, 0);
+    writer.Write((uint32_t) paths.size());
+    for (auto w : paths) {
         writer.Write(w.posX);
         writer.Write(w.posY);
         writer.Write(w.posZ);
@@ -69,10 +69,10 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PathsFactory::parse(std::vecto
     auto count = GetSafeNode<size_t>(node, "count");
 
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
-    LUS::BinaryReader reader(segment.data, count * sizeof(MK64::TrackPathPoint));
+    LUS::BinaryReader reader(segment.data, count * sizeof(MK64::TrackPath));
 
-    reader.SetEndianness(LUS::Endianness::Big);
-    std::vector<MK64::TrackPathPoint> pathPoint;
+    reader.SetEndianness(Torch::Endianness::Big);
+    std::vector<MK64::TrackPath> paths;
 
     for (size_t i = 0; i < count; i++) {
         auto x = reader.ReadInt16();
@@ -80,8 +80,8 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PathsFactory::parse(std::vecto
         auto z = reader.ReadInt16();
         auto trackSegment = reader.ReadUInt16();
 
-        pathPoint.push_back(MK64::TrackPathPoint({ x, y, z, trackSegment }));
+        paths.push_back(MK64::TrackPath({ x, y, z, trackSegment }));
     }
 
-    return std::make_shared<WaypointData>(pathPoint);
+    return std::make_shared<PathData>(paths);
 }

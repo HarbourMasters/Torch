@@ -1,6 +1,7 @@
 #include "ObjInitFactory.h"
 #include "utils/Decompressor.h"
 #include "Companion.h"
+#include <tinyxml2.h>
 
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 #define FLOAT(x, w) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(1) << x << "f"
@@ -49,7 +50,7 @@ ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::share
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
 
-    WriteHeader(writer, LUS::ResourceType::ObjectInit, 0);
+    WriteHeader(writer, Torch::ResourceType::ObjectInit, 0);
     auto count = data.size();
     writer.Write((uint32_t) count);
     for(size_t i = 0; i < data.size(); i++) {
@@ -66,11 +67,41 @@ ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::share
     return std::nullopt;
 }
 
+ExportResult SF64::ObjInitXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto data = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
+
+    tinyxml2::XMLPrinter printer;
+    tinyxml2::XMLDocument objects;
+    tinyxml2::XMLElement* root = objects.NewElement("ObjectList");
+
+    *replacement += ".meta";
+
+    for(auto & i : data) {
+        tinyxml2::XMLElement* obj = root->InsertNewChildElement("ObjInit");
+        auto enumName = Companion::Instance->GetEnumFromValue("ObjectId", i.id).value_or(std::to_string(i.id));
+
+        obj->SetAttribute("ID", enumName.c_str());
+        obj->SetAttribute("xPos", i.xPos);
+        obj->SetAttribute("yPos", i.yPos);
+        obj->SetAttribute("zPos1", i.zPos1);
+        obj->SetAttribute("zPos2", i.zPos2);
+        obj->SetAttribute("xRot", i.rot.x);
+        obj->SetAttribute("yRot", i.rot.y);
+        obj->SetAttribute("zRot", i.rot.z);
+        root->InsertEndChild(obj);
+    }
+
+    objects.InsertEndChild(root);
+    objects.Accept(&printer);
+    write.write(printer.CStr(), printer.CStrSize() - 1);
+    return std::nullopt;
+}
+
 std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
 
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<ObjectInit> objects;
     bool terminator = false;
 

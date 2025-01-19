@@ -20,7 +20,8 @@ ExportResult VtxHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPar
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
+        // We will ignore the overriden index_size for now...
 
         if(start != offset){
             return std::nullopt;
@@ -41,7 +42,7 @@ ExportResult VtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
     if(searchTable.has_value()){
-        const auto [name, start, end, mode] = searchTable.value();
+        const auto [name, start, end, mode, index_size] = searchTable.value();
 
 
         if(start == offset){
@@ -124,7 +125,7 @@ ExportResult VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPar
     auto vtx = std::static_pointer_cast<VtxData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::Vertex, 0);
+    WriteHeader(writer, Torch::ResourceType::Vertex, 0);
     writer.Write((uint32_t) vtx->mVtxs.size());
     for(auto v : vtx->mVtxs) {
         writer.Write(v.ob[0]);
@@ -149,7 +150,7 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, count * sizeof(VtxRaw));
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<VtxRaw> vertices;
 
     for(size_t i = 0; i < count; i++) {

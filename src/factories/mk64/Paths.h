@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include <factories/BaseFactory.h>
 
 namespace MK64 {
 
-struct TrackPathPoint {
+struct TrackWaypoint {
     int16_t posX;
     int16_t posY;
     int16_t posZ;
@@ -13,9 +13,9 @@ struct TrackPathPoint {
 
 class WaypointData : public IParsedData {
   public:
-    std::vector<TrackPathPoint> mPaths;
+    std::vector<TrackWaypoint> mWaypoints;
 
-    explicit WaypointData(std::vector<TrackPathPoint> pathPoint) : mPaths(pathPoint) {
+    explicit WaypointData(std::vector<TrackWaypoint> paths) : mWaypoints(paths) {
     }
 };
 
@@ -34,7 +34,7 @@ class WaypointCodeExporter : public BaseExporter {
                         YAML::Node& node, std::string* replacement) override;
 };
 
-class PathsFactory : public BaseFactory {
+class WaypointsFactory : public BaseFactory {
   public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override {

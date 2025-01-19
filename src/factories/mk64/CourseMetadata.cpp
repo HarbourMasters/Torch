@@ -3,6 +3,7 @@
 #include "Companion.h"
 #include "spdlog/spdlog.h"
 #include <algorithm>
+#include <filesystem>
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
@@ -22,6 +23,11 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream& write, std::
 
     std::ofstream file;
     auto outDir = GetSafeNode<std::string>(node, "out_directory") + "/";
+
+    // Check if the output directory exists, and create it if it doesn't.
+    if (!std::filesystem::exists(outDir)) {
+        std::filesystem::create_directory(outDir);
+    }
 
     file.open(outDir + "gCourseNames.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
@@ -303,14 +309,73 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream& write, std::
 ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                                         std::string& entryName, YAML::Node& node,
                                                         std::string* replacement) {
-    // auto metadata = std::static_pointer_cast<MetadataData>(raw)->mMetadata;
-    // auto writer = LUS::BinaryWriter();
+    auto properties = std::static_pointer_cast<MetadataData>(raw);
+    auto writer = LUS::BinaryWriter();
 
-    throw std::runtime_error("CourseMetadata not implemented for OTR");
+    WriteHeader(writer, Torch::ResourceType::CourseProperties, 0);
+    writer.Write((uint32_t) properties->mMetadata.size());
 
-    // WriteHeader(writer, LUS::ResourceType::Metadata, 0);
-    // writer.Write((uint32_t) metadata.size());
-    // writer.Finish(write);
+    for (auto m : properties->mMetadata) {
+        writer.Write(m.id);
+        writer.Write(m.name);
+        writer.Write(m.debugName);
+        writer.Write(m.cup);
+        writer.Write(m.cupIndex);
+        writer.Write(m.courseLength);
+        writer.Write(m.kartAIBehaviourLUT);
+        writer.Write(m.kartAIMaximumSeparation);
+        writer.Write(m.kartAIMinimumSeparation);
+        writer.Write(m.D_800DCBB4);
+        writer.Write(m.steeringSensitivity);
+
+        for (auto b : m.bombKartSpawns) {
+            writer.Write(b.waypointIndex);
+            writer.Write(b.startingState);
+            writer.Write(b.unk_04);
+            writer.Write(b.x);
+            writer.Write(b.z);
+            writer.Write(b.unk10);
+            writer.Write(b.unk14);
+        }
+
+        for (auto p : m.pathSizes) {
+            writer.Write(p);
+        }
+
+        for (auto s : m.D_0D009418) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.D_0D009568) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.D_0D0096B8) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.D_0D009808) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.pathTable) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.pathTableUnknown) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.skyColors) {
+            writer.Write(s);
+        }
+
+        for (auto s : m.skyColors2) {
+            writer.Write(s);
+        }
+    }
+
+    writer.Finish(write);
     return std::nullopt;
 }
 

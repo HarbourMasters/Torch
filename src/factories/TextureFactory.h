@@ -1,26 +1,7 @@
 #pragma once
 
 #include "BaseFactory.h"
-
-enum class TextureType {
-    Error,
-    RGBA32bpp,
-    RGBA16bpp,
-    Palette4bpp,
-    Palette8bpp,
-    Grayscale4bpp,
-    Grayscale8bpp,
-    GrayscaleAlpha4bpp,
-    GrayscaleAlpha8bpp,
-    GrayscaleAlpha16bpp,
-    GrayscaleAlpha1bpp,
-    TLUT
-};
-
-struct TextureFormat {
-    TextureType type;
-    uint32_t depth;
-};
+#include "utils/TextureUtils.h"
 
 class TextureData : public IParsedData {
 public:

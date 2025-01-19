@@ -28,7 +28,6 @@ public:
         return {
             REGISTER(Code, IncludeCodeExporter)
             REGISTER(Header, IncludeHeaderExporter)
-            REGISTER(Binary, IncludeBinaryExporter)
         };
     }
     uint32_t GetAlignment() override {

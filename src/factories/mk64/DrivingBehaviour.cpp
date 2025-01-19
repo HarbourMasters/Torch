@@ -67,7 +67,7 @@ ExportResult MK64::DrivingBehaviourBinaryExporter::Export(std::ostream& write, s
     auto bhv = std::static_pointer_cast<DrivingData>(raw);
     auto writer = LUS::BinaryWriter();
 
-    WriteHeader(writer, LUS::ResourceType::DrivingBehaviour, 0);
+    WriteHeader(writer, Torch::ResourceType::DrivingBehaviour, 0);
     writer.Write((uint32_t) bhv->mBhvs.size());
     for (auto b : bhv->mBhvs) {
         writer.Write(b.waypoint1);
@@ -84,7 +84,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::DrivingBehaviourFactory::parse
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
 
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
     std::vector<BhvRaw> behaviours;
 
     while (1) {

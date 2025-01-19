@@ -11,9 +11,12 @@
 #include <variant>
 #include <optional>
 #include <yaml-cpp/yaml.h>
+#include <filesystem>
 #include <strhash64/StrHash64.h>
-#include <binarytools/BinaryWriter.h>
-#include <binarytools/BinaryReader.h>
+#include "lib/binarytools/BinaryWriter.h"
+#include "lib/binarytools/BinaryReader.h"
+
+namespace fs = std::filesystem;
 
 #define REGISTER(type, c) { ExportType::type, std::make_shared<c>() },
 
@@ -23,7 +26,7 @@
 #define IS_SEGMENTED(x) ((SEGMENT_NUMBER(x) > 0) && (SEGMENT_NUMBER(x) < 0x20))
 #define ASSET_PTR(x) (IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : (x))
 
-#define tab "\t"
+#define tab_t "\t"
 #define fourSpaceTab "    "
 
 struct OffsetEntry {
@@ -37,7 +40,8 @@ enum class ExportType {
     Header,
     Code,
     Binary,
-    Modding
+    Modding,
+    XML
 };
 
 template<typename T>
@@ -52,10 +56,12 @@ std::optional<T> GetNode(YAML::Node& node, const std::string& key) {
 template<typename T>
 T GetSafeNode(YAML::Node& node, const std::string& key) {
     if(!node[key]) {
+        auto dump = YAML::Dump(node);
+
         if (node["symbol"]) {
-            throw std::runtime_error("Yaml asset missing the '" + key + "' node for '" + node["symbol"].as<std::string>() + "'");
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node for '" + node["symbol"].as<std::string>() + "'\nProblematic YAML:\n" + dump);
         } else {
-            throw std::runtime_error("Yaml asset missing the '" + key + "' node");
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node\nProblematic YAML:\n" + dump);
         }
     }
 
@@ -82,7 +88,7 @@ public:
 class BaseExporter {
 public:
     virtual ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) = 0;
-    static void WriteHeader(LUS::BinaryWriter& write, LUS::ResourceType resType, int32_t version);
+    static void WriteHeader(LUS::BinaryWriter& write, Torch::ResourceType resType, int32_t version);
 };
 
 class BaseFactory {
@@ -101,6 +107,9 @@ public:
     virtual bool SupportModdedAssets() {
         return false;
     }
+    virtual bool HasModdedDependencies() {
+        return false;
+    }
     virtual uint32_t GetAlignment() {
         return 4;
     }
@@ -108,5 +117,7 @@ public:
         return std::nullopt;
     }
 private:
-    virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() = 0;
+    virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() {
+        return {};
+    }
 };

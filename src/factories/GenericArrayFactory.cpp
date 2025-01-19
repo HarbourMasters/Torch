@@ -270,8 +270,8 @@ ExportResult ArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
     ArrayType arrayType = arrayTypeMap.at(type);
 
-    WriteHeader(writer, LUS::ResourceType::GenericArray, 0);
-    
+    WriteHeader(writer, Torch::ResourceType::GenericArray, 0);
+
     writer.Write(static_cast<uint32_t>(arrayType));
     writer.Write((uint32_t) array->mData.size());
 
@@ -340,6 +340,13 @@ ExportResult ArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 writer.Write(z);
                 break;
             }
+            case ArrayType::Vec3iu: {
+                auto [x, y, z] = std::get<Vec3iu>(datum);
+                writer.Write(x);
+                writer.Write(y);
+                writer.Write(z);
+                break;
+            }
             case ArrayType::Vec4f: {
                 auto [x, y, z, w] = std::get<Vec4f>(datum);
                 writer.Write(x);
@@ -379,14 +386,13 @@ std::optional<std::shared_ptr<IParsedData>> GenericArrayFactory::parse(std::vect
 
     auto [root, segment] = Decompressor::AutoDecode(node, buffer, count * typeSize);
     LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(LUS::Endianness::Big);
+    reader.SetEndianness(Torch::Endianness::Big);
 
     for (int i = 0; i < count; i++) {
         switch (arrayType) {
             case ArrayType::u8: {
                 uint8_t x = reader.ReadUByte();
                 data.emplace_back(x);
-                SPDLOG_INFO("HERE");
                 break;
             }
             case ArrayType::s8: {

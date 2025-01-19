@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include <factories/BaseFactory.h>
 #include "geo/GeoCommand.h"
 #include <vector>
 #include <variant>
@@ -39,6 +39,8 @@ class GeoBinaryExporter : public BaseExporter {
 
 class GeoLayoutFactory : public BaseFactory {
 public:
+    GeoLayoutFactory();
+
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {

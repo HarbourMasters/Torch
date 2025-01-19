@@ -4,15 +4,18 @@
 #include "DisplayListFactory.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
-
-#include <gfxd.h>
 #include <string>
+
+#ifdef STANDALONE
+#include <gfxd.h>
+#endif
 
 namespace GFXDOverride {
 
 std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>> mVtxOverlaps;
 
-void Triangle2(const Gfx* gfx) {
+#ifdef STANDALONE
+void Triangle2(const N64Gfx* gfx) {
     auto w0 = gfx->words.w0;
     auto w1 = gfx->words.w1;
 
@@ -32,7 +35,7 @@ void Triangle2(const Gfx* gfx) {
     gfxd_puts(")");
 }
 
-void Quadrangle(const Gfx* gfx) {
+void Quadrangle(const N64Gfx* gfx) {
     auto w1 = gfx->words.w1;
 
     auto v1 = std::to_string( ((w1 >> 16) & 0xFF) / 2 );
@@ -57,7 +60,7 @@ int Vtx(uint32_t ptr, int32_t num) {
 
         auto offset = GetSafeNode<uint32_t>(node, "offset");
         auto count = GetSafeNode<uint32_t>(node, "count");
-        auto idx = (ptr - offset) / sizeof(Vtx_t);
+        auto idx = (ptr - offset) / sizeof(N64Vtx_t);
 
         SPDLOG_INFO("Replaced Vtx Overlapped: 0x{:X} Symbol: {}", ptr, symbol);
         gfxd_puts("&");
@@ -167,13 +170,29 @@ int DisplayList(uint32_t ptr) {
     return 0;
 }
 
+int Viewport(uint32_t ptr) {
+    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+
+    if(dec.has_value()){
+        auto node = std::get<1>(dec.value());
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
+        SPDLOG_INFO("Found Viewport: 0x{:X} Symbol: {}", ptr, symbol);
+        gfxd_puts(("&" + symbol).c_str());
+        return 1;
+    }
+
+    SPDLOG_TRACE("Could not find viewport to override at 0x{:X}", ptr);
+    return 0;
+}
+#endif
+
 std::optional<std::tuple<std::string, YAML::Node>> GetVtxOverlap(uint32_t ptr){
     if(mVtxOverlaps.contains(ptr)){
         SPDLOG_INFO("Found overlap for ptr 0x{:X}", ptr);
         return mVtxOverlaps[ptr];
     }
 
-    SPDLOG_INFO("Failed to find overlap for ptr 0x{:X}", ptr);
+    SPDLOG_TRACE("Failed to find overlap for ptr 0x{:X}", ptr);
 
     return std::nullopt;
 }

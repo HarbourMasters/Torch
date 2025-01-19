@@ -2,8 +2,18 @@
 
 #include "BaseFactory.h"
 
+union MtxS {
+    struct {
+        uint16_t intPart[4][4];
+        uint16_t fracPart[4][4];
+    };
+    int32_t mint[4][4];
+    long long int forc_structure_alignment;
+};
+
 struct MtxRaw {
     float mtx[16];
+    MtxS mt;
 };
 
 class MtxData : public IParsedData {
