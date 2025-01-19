@@ -23,29 +23,13 @@ enum class ResourceType {
     Viewport = 0x4F565054,     // OVPT
 
     // SM64
-<<<<<<< HEAD
-    Anim = 0x414E494D,       // ANIM
-    SDialog = 0x53444C47,    // SDLG
-    Dictionary = 0x44494354, // DICT
-    GeoLayout = 0x47454F20,  // GEO
-    Collision = 0x434F4C20,  // COL
-    Movtex = 0x4D4F5654,     // MOVT
-    MovtexQuad = 0x4D4F5651, // MOVQ
-
-    // MK64
-    CourseVertex = 0x43565458,     // CVTX
-    TrackSection = 0x5343544E,     // SCTN
-    Paths = 0x57505453,            // WPTS
-    Metadata = 0x4D444154,         // MDAT
-    SpawnData = 0x53444154,        // SDAT
-=======
     Anim = 0x414E494D,           // ANIM
     BehaviorScript = 0x42485653, // BHVS
     SDialog = 0x53444C47,        // SDLG
     Dictionary = 0x44494354,     // DICT
     GeoLayout = 0x47454F20,      // GEO
     Collision = 0x434F4C20,      // COL
-    LevelScript = 0x4C564C53,    // LVLS 
+    LevelScript = 0x4C564C53,    // LVLS
     MacroObject = 0x4D41434F,    // MACO
     Movtex = 0x4D4F5654,         // MOVT
     MovtexQuad = 0x4D4F5651,     // MOVQ
@@ -58,11 +42,10 @@ enum class ResourceType {
     CourseProperties = 0x43505459, // CPTY
     CourseVertex = 0x43565458,     // CVTX
     TrackSection = 0x5343544E,     // SCTN
-    Waypoints = 0x57505453,        // WPTS
-    Metadata  = 0x4D444154,        // MDAT
+    Paths = 0x57505453,            // WPTS
+    Metadata = 0x4D444154,         // MDAT
     SpawnData = 0x53444154,        // SDAT
     UnkSpawnData = 0x55534454,     // USDT
->>>>>>> upstream/main
     DrivingBehaviour = 0x44424856, // DBHV
 
     // SF64
@@ -79,20 +62,20 @@ enum class ResourceType {
     ObjectInit = 0x4F42494E,   // OBIN
 
     // F-ZERO X
-    CourseData = 0x58435253,   // XCRS
+    CourseData = 0x58435253, // XCRS
 
     // NAudio v0
-    Bank = 0x42414E4B,         // BANK
-    Sample = 0x41554643,       // AIFC
-    Sequence = 0x53455143,     // SEQC
+    Bank = 0x42414E4B,     // BANK
+    Sample = 0x41554643,   // AIFC
+    Sequence = 0x53455143, // SEQC
 
     // NAudio v1
-    SoundFont = 0x53464E54,    // SFNT
-    Drum = 0x4452554D,         // DRUM
-    Instrument = 0x494E5354,   // INST
-    AdpcmLoop = 0x4150434C,    // APCL
-    AdpcmBook = 0x41504342,    // APCB
-    Envelope = 0x45564C50,     // EVLP
-    AudioTable = 0x4154424C    // ATBL
+    SoundFont = 0x53464E54,  // SFNT
+    Drum = 0x4452554D,       // DRUM
+    Instrument = 0x494E5354, // INST
+    AdpcmLoop = 0x4150434C,  // APCL
+    AdpcmBook = 0x41504342,  // APCB
+    Envelope = 0x45564C50,   // EVLP
+    AudioTable = 0x4154424C  // ATBL
 };
-} // namespace LUS
+} // namespace Torch

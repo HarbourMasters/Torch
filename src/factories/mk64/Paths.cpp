@@ -15,7 +15,7 @@ ExportResult MK64::PathHeaderExporter::Export(std::ostream& write, std::shared_p
         return std::nullopt;
     }
 
-    write << "extern TrackPath " << symbol << "[];\n";
+    write << "extern TrackPathPoint " << symbol << "[];\n";
     return std::nullopt;
 }
 
@@ -25,7 +25,7 @@ ExportResult MK64::PathCodeExporter::Export(std::ostream& write, std::shared_ptr
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
-    write << "TrackPath " << symbol << "[] = {\n";
+    write << "TrackPathPoint " << symbol << "[] = {\n";
 
     for (int i = 0; i < paths.size(); ++i) {
         auto x = paths[i].posX;

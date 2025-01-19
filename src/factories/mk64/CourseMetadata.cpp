@@ -342,11 +342,11 @@ ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream& write, std
             writer.Write(p);
         }
 
-        for (auto s : m.D_0D009418) {
+        for (auto s : m.cpu_CurveTargetSpeed) {
             writer.Write(s);
         }
 
-        for (auto s : m.D_0D009568) {
+        for (auto s : m.cpu_NormalTargetSpeed) {
             writer.Write(s);
         }
 
@@ -354,7 +354,7 @@ ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream& write, std
             writer.Write(s);
         }
 
-        for (auto s : m.D_0D009808) {
+        for (auto s : m.cpu_OffTrackTargetSpeed) {
             writer.Write(s);
         }
 
