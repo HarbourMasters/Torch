@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include <factories/BaseFactory.h>
 
 namespace SM64 {
 class AnimationData : public IParsedData {

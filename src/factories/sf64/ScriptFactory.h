@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include <factories/BaseFactory.h>
 
 namespace SF64 {
 
@@ -27,15 +27,21 @@ class ScriptCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+class ScriptXMLExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
 class ScriptFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
+            REGISTER(XML, ScriptXMLExporter)
             REGISTER(Code, ScriptCodeExporter)
             REGISTER(Header, ScriptHeaderExporter)
             REGISTER(Binary, ScriptBinaryExporter)
         };
     }
+    bool SupportModdedAssets() override { return true; }
 };
 }

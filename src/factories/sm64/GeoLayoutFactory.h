@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../BaseFactory.h"
+#include <factories/BaseFactory.h>
 #include "geo/GeoCommand.h"
 #include <vector>
 #include <variant>

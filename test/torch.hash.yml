@@ -1,0 +1,14 @@
+sf64/us/ast_tables.yaml:
+  hash: d9bdec9158d17171b170d4e57e9d474068bfc80e
+  extracted:
+    Header: true
+    Code: false
+    Binary: false
+    Modding: false
+sf64/us/ast_bank.yaml:
+  hash: f71943d7829a89ed3065630b3d5c3ca60440c238
+  extracted:
+    Header: false
+    Code: false
+    Binary: false
+    Modding: false

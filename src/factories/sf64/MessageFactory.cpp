@@ -5,6 +5,7 @@
 #include "Companion.h"
 #include <regex>
 #include <sstream>
+#include <tinyxml2.h>
 
 #define END_CODE 0
 #define NEWLINE_CODE 1
@@ -146,6 +147,34 @@ ExportResult SF64::MessageModdingExporter::Export(std::ostream&write, std::share
     out << YAML::EndSeq << YAML::EndMap;
     write.write(out.c_str(), out.size());
 
+    return std::nullopt;
+}
+
+ExportResult SF64::MessageXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    const auto data = std::static_pointer_cast<MessageData>(raw);
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+    *replacement += ".meta";
+
+    tinyxml2::XMLPrinter printer;
+    tinyxml2::XMLDocument message;
+    tinyxml2::XMLElement* root = message.NewElement("Message");
+    tinyxml2::XMLElement* line = message.NewElement("Line");
+    std::string str;
+
+    for(size_t i = 0; i < data->mMessage.size(); i++) {
+        if(data->mMessage[i] == NEWLINE_CODE){
+            line->SetText(str.c_str());
+            root->InsertEndChild(line);
+            line = message.NewElement("Line");
+            str.clear();
+        } else {
+            str += gASCIIFullTable[data->mMessage[i]];
+        }
+    }
+
+    message.InsertEndChild(root);
+    message.Accept(&printer);
+    write.write(printer.CStr(), printer.CStrSize() - 1);
     return std::nullopt;
 }
 

@@ -3,6 +3,7 @@
 #include "utils/Decompressor.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
+#include <tinyxml2.h>
 
 ExportResult SF64::MessageLookupHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -42,6 +43,36 @@ ExportResult SF64::MessageLookupCodeExporter::Export(std::ostream &write, std::s
 
     write << "\n};\n";
     return offset + table.size() * sizeof(uint16_t);
+}
+
+ExportResult SF64::MessageLookupXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto table = std::static_pointer_cast<MessageTable>(raw)->mTable;
+    const auto symbol = GetSafeNode(node, "symbol", entryName);
+
+    tinyxml2::XMLPrinter printer;
+    tinyxml2::XMLDocument lookup;
+    tinyxml2::XMLElement* root = lookup.NewElement("MessageTable");
+    root->SetAttribute("Size", (int) table.size());
+
+    *replacement += ".meta";
+
+    for (auto m : table) {
+        auto item = lookup.NewElement("Entry");
+        auto dec = Companion::Instance->GetNodeByAddr(m.ptr);
+        std::string ref = "None";
+
+        if(dec.has_value()){
+            ref = std::get<0>(dec.value());
+        }
+
+        item->SetAttribute("Ref", ref.c_str());
+        root->InsertEndChild(item);
+    }
+
+    lookup.InsertEndChild(root);
+    lookup.Accept(&printer);
+    write.write(printer.CStr(), printer.CStrSize() - 1);
+    return std::nullopt;
 }
 
 ExportResult SF64::MessageLookupBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -93,7 +124,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageLookupFactory::parse(st
         entry["autogen"] = true;
         SPDLOG_INFO("Message ID: {} Ptr: {:X} Offset: {:X}", id, ptr, (SEGMENT_NUMBER(offset) << 24) | (ptr - vram));
 
-        Companion::Instance->RegisterAsset(output, entry);
+        Companion::Instance->AddAsset(entry);
         message.push_back({id, ptr});
         id = reader.ReadInt32();
         ptr = reader.ReadInt32();

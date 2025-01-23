@@ -5,7 +5,7 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
-#include "storm/SWrapper.h"
+#include "archive/SWrapper.h"
 
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 // #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
@@ -111,9 +111,8 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
 
         auto limbWriter = LUS::BinaryWriter();
         WriteHeader(limbWriter, Torch::ResourceType::Limb, 0);
-        bool hasDList = limb.mDList != 0 && (SEGMENT_NUMBER(limb.mDList) == SEGMENT_NUMBER(limb.mAddr));
 
-        if(hasDList){
+        if(limb.mDList != 0){
             auto dec = Companion::Instance->GetNodeByAddr(limb.mDList);
             if (dec.has_value()){
                 std::string path = std::get<0>(dec.value());
@@ -141,7 +140,7 @@ ExportResult SF64::SkeletonBinaryExporter::Export(std::ostream &write, std::shar
         limbWriter.Finish(stream);
 
         auto data = stream.str();
-        wrapper->CreateFile(entryName + "_limb_" + std::to_string(limb.mIndex), std::vector(data.begin(), data.end()));
+        wrapper->AddFile(entryName + "_limb_" + std::to_string(limb.mIndex), std::vector(data.begin(), data.end()));
     }
 
     // Export Skeleton

@@ -11,9 +11,12 @@
 #include <variant>
 #include <optional>
 #include <yaml-cpp/yaml.h>
+#include <filesystem>
 #include <strhash64/StrHash64.h>
 #include "lib/binarytools/BinaryWriter.h"
 #include "lib/binarytools/BinaryReader.h"
+
+namespace fs = std::filesystem;
 
 #define REGISTER(type, c) { ExportType::type, std::make_shared<c>() },
 
@@ -37,7 +40,8 @@ enum class ExportType {
     Header,
     Code,
     Binary,
-    Modding
+    Modding,
+    XML
 };
 
 template<typename T>
@@ -52,10 +56,12 @@ std::optional<T> GetNode(YAML::Node& node, const std::string& key) {
 template<typename T>
 T GetSafeNode(YAML::Node& node, const std::string& key) {
     if(!node[key]) {
+        auto dump = YAML::Dump(node);
+
         if (node["symbol"]) {
-            throw std::runtime_error("Yaml asset missing the '" + key + "' node for '" + node["symbol"].as<std::string>() + "'");
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node for '" + node["symbol"].as<std::string>() + "'\nProblematic YAML:\n" + dump);
         } else {
-            throw std::runtime_error("Yaml asset missing the '" + key + "' node");
+            throw std::runtime_error("Yaml asset missing the '" + key + "' node\nProblematic YAML:\n" + dump);
         }
     }
 
@@ -111,5 +117,7 @@ public:
         return std::nullopt;
     }
 private:
-    virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() = 0;
+    virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() {
+        return {};
+    }
 };

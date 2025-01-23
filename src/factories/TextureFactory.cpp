@@ -10,10 +10,10 @@ extern "C" {
 #include "BaseFactory.h"
 }
 
-bool isTable = false;
-std::vector<std::string> tableEntries;
+static bool isTable = false;
+static std::vector<std::string> tableEntries;
 
-static const std::unordered_map <std::string, TextureFormat> gTextureFormats = {
+static const std::unordered_map <std::string, TextureFormat> sTextureFormats = {
     { "RGBA16", { TextureType::RGBA16bpp, 16 } },
     { "RGBA32", { TextureType::RGBA32bpp, 32 } },
     { "CI4",    { TextureType::Palette4bpp, 4 } },
@@ -26,60 +26,6 @@ static const std::unordered_map <std::string, TextureFormat> gTextureFormats = {
     { "IA16",   { TextureType::GrayscaleAlpha16bpp, 16 } },
     { "TLUT",   { TextureType::TLUT, 16 } },
 };
-
-size_t CalculateTextureSize(TextureType type, uint32_t width, uint32_t height) {
-    switch (type) {
-        // 4 bytes per pixel
-        case TextureType::RGBA32bpp:
-            return width * height * 4;
-        // 2 bytes per pixel
-        case TextureType::TLUT:
-        case TextureType::RGBA16bpp:
-        case TextureType::GrayscaleAlpha16bpp:
-            return width * height * 2;
-        // 1 byte per pixel
-        case TextureType::Grayscale8bpp:
-        case TextureType::Palette8bpp:
-        case TextureType::GrayscaleAlpha8bpp:
-        // TODO: We need to validate this MegaMech
-        case TextureType::GrayscaleAlpha1bpp:
-            return width * height;
-        // 1/2 byte per pixel
-        case TextureType::Palette4bpp:
-        case TextureType::Grayscale4bpp:
-        case TextureType::GrayscaleAlpha4bpp:
-            return (width * height) / 2;
-        default:
-            return 0;
-    }
-}
-
-std::vector<uint8_t> alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
-    int32_t inPos;
-    uint16_t bitMask;
-    int16_t outPos = 0;
-    const auto out = new uint8_t[width * height];
-
-    for (int32_t inPos = 0; inPos < (width * height) / 16; inPos++) {
-        uint16_t bitMask = 0x8000;
-
-        while (bitMask != 0) {
-            if (BSWAP16(in[inPos]) & bitMask) {
-                out[outPos] = 0xFF;
-            } else {
-                out[outPos] = 0x00;
-            }
-
-            bitMask /= 2;
-            outPos++;
-        }
-    }
-
-    auto result = std::vector(out, out + width * height);
-    delete[] out;
-
-    return result;
-}
 
 ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
@@ -239,7 +185,7 @@ ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<
 ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
     auto texture = std::static_pointer_cast<TextureData>(data);
     auto format = texture->mFormat;
-    uint8_t* raw = new uint8_t[CalculateTextureSize(format.type, texture->mWidth, texture->mHeight) * 2];
+    uint8_t* raw = new uint8_t[TextureUtils::CalculateTextureSize(format.type, texture->mWidth, texture->mHeight) * 2];
     int size = 0;
 
     auto ext = GetSafeNode<std::string>(node, "format");
@@ -332,11 +278,11 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         return std::nullopt;
     }
 
-    if(!gTextureFormats.contains(format)) {
+    if(!sTextureFormats.contains(format)) {
         return std::nullopt;
     }
 
-    TextureFormat fmt = gTextureFormats.at(format);
+    TextureFormat fmt = sTextureFormats.at(format);
 
     if(fmt.type == TextureType::TLUT){
         width = GetSafeNode<uint32_t>(node, "colors");
@@ -363,12 +309,12 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         }
         Companion::Instance->AddAsset(tlutNode);
     }
-    size = GetSafeNode<uint32_t>(node, "size", CalculateTextureSize(gTextureFormats.at(format).type, width, height));
+    size = GetSafeNode<uint32_t>(node, "size", TextureUtils::CalculateTextureSize(sTextureFormats.at(format).type, width, height));
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
     std::vector<uint8_t> result;
 
     if(fmt.type == TextureType::GrayscaleAlpha1bpp){
-        result = alloc_ia8_text_from_i1(reinterpret_cast<uint16_t*>(segment.data), 8, 16);
+        result = TextureUtils::alloc_ia8_text_from_i1(reinterpret_cast<uint16_t*>(segment.data), 8, 16);
     } else {
         result = std::vector(segment.data, segment.data + segment.size);
     }
@@ -408,11 +354,11 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
         return std::nullopt;
     }
 
-    if(!gTextureFormats.contains(format)) {
+    if(!sTextureFormats.contains(format)) {
         return std::nullopt;
     }
 
-    TextureFormat fmt = gTextureFormats.at(format);
+    TextureFormat fmt = sTextureFormats.at(format);
     if(fmt.type == TextureType::TLUT){
         width = GetSafeNode<uint32_t>(node, "colors");
         height = 1;

@@ -2,7 +2,8 @@
 
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
-#include "storm/SWrapper.h"
+#include "archive/SWrapper.h"
+#include "archive/ZWrapper.h"
 #include "spdlog/spdlog.h"
 #include "hj/sha1.h"
 
@@ -11,10 +12,6 @@
 #include <iostream>
 #include <filesystem>
 
-#include "factories/BankFactory.h"
-#include "factories/AudioHeaderFactory.h"
-#include "factories/SampleFactory.h"
-#include "factories/SequenceFactory.h"
 #include "factories/GenericArrayFactory.h"
 #include "factories/VtxFactory.h"
 #include "factories/MtxFactory.h"
@@ -29,7 +26,9 @@
 #include "factories/Vec3sFactory.h"
 #include "factories/AssetArrayFactory.h"
 #include "factories/ViewportFactory.h"
+#include "factories/CompressedTextureFactory.h"
 
+#ifdef SM64_SUPPORT
 #include "factories/sm64/AnimationFactory.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
 #include "factories/sm64/CollisionFactory.h"
@@ -45,7 +44,9 @@
 #include "factories/sm64/PaintingMapFactory.h"
 #include "factories/sm64/TrajectoryFactory.h"
 #include "factories/sm64/WaterDropletFactory.h"
+#endif
 
+#ifdef MK64_SUPPORT
 #include "factories/mk64/CourseVtx.h"
 #include "factories/mk64/Waypoints.h"
 #include "factories/mk64/TrackSections.h"
@@ -54,7 +55,9 @@
 #include "factories/mk64/DrivingBehaviour.h"
 #include "factories/mk64/ItemCurve.h"
 #include "factories/mk64/CourseMetadata.h"
+#endif
 
+#ifdef SF64_SUPPORT
 #include "factories/sf64/ColPolyFactory.h"
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
@@ -65,14 +68,37 @@
 #include "factories/sf64/EnvironmentFactory.h"
 #include "factories/sf64/ObjInitFactory.h"
 #include "factories/sf64/TriangleFactory.h"
+#endif
+
+#ifdef FZERO_SUPPORT
+#include "factories/fzerox/CourseFactory.h"
+#endif
+
+#ifdef NAUDIO_SUPPORT
+#include "factories/naudio/v0/AudioHeaderFactory.h"
+#include "factories/naudio/v0/BankFactory.h"
+#include "factories/naudio/v0/SampleFactory.h"
+#include "factories/naudio/v0/SequenceFactory.h"
+
+#include "factories/naudio/v1/AudioContext.h"
+#include "factories/naudio/v1/SoundFontFactory.h"
+#include "factories/naudio/v1/AudioTableFactory.h"
+#include "factories/naudio/v1/InstrumentFactory.h"
+#include "factories/naudio/v1/SampleFactory.h"
+#include "factories/naudio/v1/DrumFactory.h"
+#include "factories/naudio/v1/EnvelopeFactory.h"
+#include "factories/naudio/v1/LoopFactory.h"
+#include "factories/naudio/v1/BookFactory.h"
+#include "factories/naudio/v1/SequenceFactory.h"
+#endif
+
+#include "preprocess/CompTool.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
-
-#define ABS(x) ((x) < 0 ? -(x) : (x))
 
 void Companion::Init(const ExportType type) {
 
@@ -88,17 +114,14 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("INC", std::make_shared<IncludeFactory>());
     this->RegisterFactory("LIGHTS", std::make_shared<LightsFactory>());
     this->RegisterFactory("GFX", std::make_shared<DListFactory>());
-    this->RegisterFactory("AUDIO:HEADER", std::make_shared<AudioHeaderFactory>());
-    this->RegisterFactory("SEQUENCE", std::make_shared<SequenceFactory>());
-    this->RegisterFactory("SAMPLE", std::make_shared<SampleFactory>());
-    this->RegisterFactory("BANK", std::make_shared<BankFactory>());
     this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
     this->RegisterFactory("VEC3S", std::make_shared<Vec3sFactory>());
     this->RegisterFactory("ARRAY", std::make_shared<GenericArrayFactory>());
     this->RegisterFactory("ASSET_ARRAY", std::make_shared<AssetArrayFactory>());
     this->RegisterFactory("VP", std::make_shared<ViewportFactory>());
+    this->RegisterFactory("COMPRESSED_TEXTURE", std::make_shared<CompressedTextureFactory>());
 
-    // SM64 specific
+#ifdef SM64_SUPPORT
     this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
     this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
     this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
@@ -114,8 +137,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SM64:PAINTING_MAP", std::make_shared<SM64::PaintingMapFactory>());
     this->RegisterFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactory>());
     this->RegisterFactory("SM64:WATER_DROPLET", std::make_shared<SM64::WaterDropletFactory>());
+#endif
 
-    // MK64 specific
+#ifdef MK64_SUPPORT
     this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
     this->RegisterFactory("MK64:TRACK_WAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
@@ -124,8 +148,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
     this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
     this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
+#endif
 
-    // SF64 specific
+#ifdef SF64_SUPPORT
     this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
     this->RegisterFactory("SF64:SKELETON", std::make_shared<SF64::SkeletonFactory>());
     this->RegisterFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>());
@@ -136,6 +161,29 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
     this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
     this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
+#endif
+
+#ifdef FZERO_SUPPORT
+    this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
+#endif
+
+#ifdef NAUDIO_SUPPORT
+    this->RegisterFactory("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
+    this->RegisterFactory("NAUDIO:V0:SEQUENCE", std::make_shared<SequenceFactory>());
+    this->RegisterFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactory>());
+    this->RegisterFactory("NAUDIO:V0:BANK", std::make_shared<BankFactory>());
+
+    this->RegisterFactory("NAUDIO:V1:AUDIO_SETUP", std::make_shared<AudioContextFactory>());
+    this->RegisterFactory("NAUDIO:V1:AUDIO_TABLE", std::make_shared<AudioTableFactory>());
+    this->RegisterFactory("NAUDIO:V1:SOUND_FONT", std::make_shared<SoundFontFactory>());
+    this->RegisterFactory("NAUDIO:V1:INSTRUMENT", std::make_shared<InstrumentFactory>());
+    this->RegisterFactory("NAUDIO:V1:DRUM", std::make_shared<DrumFactory>());
+    this->RegisterFactory("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactory>());
+    this->RegisterFactory("NAUDIO:V1:ENVELOPE", std::make_shared<EnvelopeFactory>());
+    this->RegisterFactory("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
+    this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
+    this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
+#endif
 
     this->Process();
 }
@@ -247,23 +295,6 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
         SPDLOG_ERROR("Failed to process {}", name);
         return std::nullopt;
     }
-
-    for (auto [fst, snd] : this->gAssetDependencies[this->gCurrentFile]) {
-        if(snd.second) {
-            continue;
-        }
-        std::string doutput = (this->gCurrentDirectory / fst).string();
-        std::replace(doutput.begin(), doutput.end(), '\\', '/');
-        this->gAssetDependencies[this->gCurrentFile][fst].second = true;
-        auto dResult = this->ParseNode(snd.first, doutput);
-        if(dResult.has_value()) {
-            this->gParseResults[this->gCurrentFile].push_back(dResult.value());
-        }
-        spdlog::set_pattern(regular);
-        SPDLOG_INFO("------------------------------------------------");
-        spdlog::set_pattern(line);
-    }
-
 
     SPDLOG_INFO("Processed {}", name);
 
@@ -429,6 +460,7 @@ std::string ExportTypeToString(ExportType type) {
         case ExportType::Header: return "Header";
         case ExportType::Code: return "Code";
         case ExportType::Modding: return "Modding";
+        case ExportType::XML: return "XML";
         default:
             throw std::runtime_error("Invalid ExportType");
     }
@@ -533,67 +565,31 @@ void Companion::ProcessFile(YAML::Node root) {
     for(auto asset = root.begin(); asset != root.end(); ++asset){
         auto node = asset->second;
         auto entryName = asset->first.as<std::string>();
+        auto output = (this->gCurrentDirectory / entryName).string();
+        std::replace(output.begin(), output.end(), '\\', '/');
 
-        // Parse horizontal assets
-        if(node["files"]){
-            auto segment = node["segment"] ? node["segment"].as<uint8_t>() : -1;
-            const auto files = node["files"];
-            for (const auto& file : files) {
-                auto assetNode = file.as<YAML::Node>();
-                auto childName = assetNode["name"].as<std::string>();
-                auto output = (this->gCurrentDirectory / entryName / childName).string();
-                std::replace(output.begin(), output.end(), '\\', '/');
-
-                if(assetNode["type"]){
-                    const auto type = GetSafeNode<std::string>(assetNode, "type");
-                    if(type == "SAMPLE"){
-                        AudioManager::Instance->bind_sample(assetNode, output);
-                    }
-                }
-
-                if(!assetNode["offset"]) {
-                    continue;
-                }
-
-                if(segment != -1 || gCurrentSegmentNumber) {
-                    assetNode["offset"] = (segment << 24) | assetNode["offset"].as<uint32_t>();
-                }
-
-                if(!gCurrentVirtualPath.empty()) {
-                    node["path"] = gCurrentVirtualPath;
-                }
-
-                this->gAddrMap[this->gCurrentFile][assetNode["offset"].as<uint32_t>()] = std::make_tuple(output, assetNode);
+        if(node["type"]){
+            const auto type = GetSafeNode<std::string>(node, "type");
+            if(type == "NAUDIO:V0:SAMPLE"){
+                AudioManager::Instance->bind_sample(node, output);
             }
-        } else {
-
-            auto output = (this->gCurrentDirectory / entryName).string();
-            std::replace(output.begin(), output.end(), '\\', '/');
-
-
-            if(node["type"]){
-                const auto type = GetSafeNode<std::string>(node, "type");
-                if(type == "SAMPLE"){
-                    AudioManager::Instance->bind_sample(node, output);
-                }
-            }
-
-            if(!node["offset"])  {
-                continue;
-            }
-
-            if(gCurrentSegmentNumber) {
-                if (IS_SEGMENTED(node["offset"].as<uint32_t>()) == false) {
-                    node["offset"] = (gCurrentSegmentNumber << 24) | node["offset"].as<uint32_t>();
-                }
-            }
-
-            if(!gCurrentVirtualPath.empty()) {
-                node["path"] = gCurrentVirtualPath;
-            }
-
-            this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
         }
+
+        if(!node["offset"])  {
+            continue;
+        }
+
+        if(gCurrentSegmentNumber) {
+            if (IS_SEGMENTED(node["offset"].as<uint32_t>()) == false) {
+                node["offset"] = (gCurrentSegmentNumber << 24) | node["offset"].as<uint32_t>();
+            }
+        }
+
+        if(!gCurrentVirtualPath.empty()) {
+            node["path"] = gCurrentVirtualPath;
+        }
+
+        this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
     }
 
     // Stupid hack because the iteration broke the assets
@@ -631,53 +627,23 @@ void Companion::ProcessFile(YAML::Node root) {
             continue;
         }
 
-        // Parse horizontal assets
-        if(assetNode["files"]){
-            auto segment = assetNode["segment"] ? assetNode["segment"].as<uint8_t>() : -1;
-            auto files = assetNode["files"];
-            for (const auto& file : files) {
-                auto node = file.as<YAML::Node>();
-                auto childName = node["name"].as<std::string>();
-
-                if(!node["offset"]) {
-                    continue;
-                }
-
-                if(segment != -1 || gCurrentFileOffset) {
-                    node["offset"] = (segment << 24) | node["offset"].as<uint32_t>();
-                }
-
-                if(!gCurrentVirtualPath.empty()) {
-                    node["path"] = gCurrentVirtualPath;
-                }
-
-                auto output = (this->gCurrentDirectory / entryName / childName).string();
-                std::replace(output.begin(), output.end(), '\\', '/');
-                this->gConfig.segment.temporal.clear();
-                auto result = this->ParseNode(node, output);
-                if(result.has_value()) {
-                    this->gParseResults[this->gCurrentFile].push_back(result.value());
-                }
+        if(gCurrentFileOffset && assetNode["offset"]) {
+            const auto offset = assetNode["offset"].as<uint32_t>();
+            if (!IS_SEGMENTED(offset)) {
+                assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
             }
-        } else {
-            if(gCurrentFileOffset && assetNode["offset"]) {
-                const auto offset = assetNode["offset"].as<uint32_t>();
-                if (!IS_SEGMENTED(offset)) {
-                    assetNode["offset"] = (gCurrentSegmentNumber << 24) | offset;
-                }
-            }
+        }
 
-            if(!gCurrentVirtualPath.empty()) {
-                assetNode["path"] = gCurrentVirtualPath;
-            }
+        if(!gCurrentVirtualPath.empty()) {
+            assetNode["path"] = gCurrentVirtualPath;
+        }
 
-            std::string output = (this->gCurrentDirectory / entryName).string();
-            std::replace(output.begin(), output.end(), '\\', '/');
-            this->gConfig.segment.temporal.clear();
-            auto result = this->ParseNode(assetNode, output);
-            if(result.has_value()) {
-                this->gParseResults[this->gCurrentFile].push_back(result.value());
-            }
+        std::string output = (this->gCurrentDirectory / entryName).string();
+        std::replace(output.begin(), output.end(), '\\', '/');
+        this->gConfig.segment.temporal.clear();
+        auto result = this->ParseNode(assetNode, output);
+        if(result.has_value()) {
+            this->gParseResults[this->gCurrentFile].push_back(result.value());
         }
 
         spdlog::set_pattern(regular);
@@ -704,9 +670,17 @@ void Companion::ProcessFile(YAML::Node root) {
                 stream.clear();
                 exporter->get()->Export(stream, data, result.name, result.node, &result.name);
                 auto data = stream.str();
-                this->gCurrentWrapper->CreateFile(result.name, std::vector(data.begin(), data.end()));
+                this->gCurrentWrapper->AddFile(result.name, std::vector(data.begin(), data.end()));
+
+                for(auto& entry : this->gCompanionFiles){
+                    auto output = (this->gCurrentDirectory / entry.first).string();
+                    std::replace(output.begin(), output.end(), '\\', '/');
+                    this->gCurrentWrapper->AddFile(output, entry.second);
+                }
+
                 break;
             }
+            case ExportType::XML:
             case ExportType::Modding: {
                 stream.str("");
                 stream.clear();
@@ -723,12 +697,24 @@ void Companion::ProcessFile(YAML::Node root) {
                     create_directories(fs::path(dpath).parent_path());
                 }
 
-                SPDLOG_INFO(ogname);
                 this->gModdedAssetPaths[ogname] = result.name;
 
                 std::ofstream file(dpath, std::ios::binary);
                 file.write(data.c_str(), data.size());
                 file.close();
+
+                for(auto& entry : this->gCompanionFiles){
+                    auto cpath = (Instance->GetOutputPath() / this->gCurrentDirectory / entry.first).string();
+                    std::replace(cpath.begin(), cpath.end(), '\\', '/');
+                    if(!exists(fs::path(cpath).parent_path())){
+                        create_directories(fs::path(cpath).parent_path());
+                    }
+
+                    std::ofstream cfile(cpath, std::ios::binary);
+                    cfile.write(entry.second.data(), entry.second.size());
+                    cfile.close();
+                }
+
                 break;
             }
             default: {
@@ -736,6 +722,8 @@ void Companion::ProcessFile(YAML::Node root) {
                 break;
             }
         }
+
+        this->gCompanionFiles.clear();
 
         if(result.node["offset"]) {
             auto alignment = GetSafeNode<uint32_t>(result.node, "alignment", impl->GetAlignment());
@@ -782,7 +770,7 @@ void Companion::ProcessFile(YAML::Node root) {
 
     auto fsout = fs::path(this->gConfig.outputPath);
 
-    if(this->gConfig.exporterType == ExportType::Modding) {
+    if(this->gConfig.exporterType == ExportType::Modding || this->gConfig.exporterType == ExportType::XML) {
         fsout /= "modding.yml";
         YAML::Node modding;
 
@@ -862,7 +850,7 @@ void Companion::ProcessFile(YAML::Node root) {
                 if(gap < 0) {
                     stream << "// WARNING: Overlap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << std::abs(gap) << "\n";
                     SPDLOG_WARN("Overlap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
-                } else if(gap < 0x10 && gap >= alignment && end % 0x10 == 0 && this->gEnablePadGen) {
+                } else if(gap < 0x10 && gap >= alignment && end % alignment == 0 && this->gEnablePadGen) {
                     SPDLOG_WARN("Gap detected between 0x{:X} and 0x{:X} with size 0x{:X} on file {}", startptr, end, gap, this->gCurrentFile);
                     SPDLOG_WARN("Creating pad of 0x{:X} bytes", gap);
                     const auto padfile = this->gCurrentDirectory.filename().string();
@@ -880,7 +868,7 @@ void Companion::ProcessFile(YAML::Node root) {
                     } else {
                         stream << "\n";
                     }
-                } else if(gap > 0x10) {
+                } else if(gap >= 0x10) {
                     stream << "// WARNING: Gap detected between 0x" << std::hex << startptr << " and 0x" << end << " with size 0x" << gap << "\n";
                 }
             }
@@ -981,14 +969,51 @@ void Companion::Process() {
             SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
             return;
         }
+
         this->gConfig.parseMode = ParseMode::Default;
     } else {
         this->gConfig.parseMode = ParseMode::Directory;
     }
 
     auto rom = !isDirectoryMode ? config[this->gCartridge->GetHash()] : config;
-    auto cfg = rom["config"];
 
+    if(rom["preprocess"]) {
+        auto preprocess = rom["preprocess"];
+        for(auto job = preprocess.begin(); job != preprocess.end(); job++) {
+            auto name = job->first.as<std::string>();
+            auto item = job->second;
+            auto method = GetSafeNode<std::string>(item, "method");
+            if (method == "mio0-comptool") {
+                auto type = GetSafeNode<std::string>(item, "type");
+                auto target = GetSafeNode<std::string>(item, "target");
+                auto restart = GetSafeNode<bool>(item, "restart");
+
+                if (type == "decompress") {
+                    this->gRomData = CompTool::Decompress(this->gRomData);
+                    this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
+                    this->gCartridge->Initialize();
+
+                    auto hash = this->gCartridge->GetHash();
+
+                    SPDLOG_INFO("ROM decompressed to {}", hash);
+
+                    if (hash != target) {
+                        throw std::runtime_error("Hash mismatch");
+                    }
+
+                    if(restart){
+                        rom = config[this->gCartridge->GetHash()];
+                    }
+                } else {
+                    throw std::runtime_error("Only decompression is supported");
+                }
+            } else {
+                throw std::runtime_error("Invalid preprocess method");
+            }
+        }
+    }
+
+    auto cfg = rom["config"];
     if(!cfg) {
         SPDLOG_ERROR("No config found for {}", !isDirectoryMode ? this->gCartridge->GetHash() : GetSafeNode<std::string>(config, "folder"));
         return;
@@ -1012,7 +1037,18 @@ void Companion::Process() {
     this->gConfig.moddingPath = modding_path;
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
-            this->gConfig.outputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : "generic.otr";
+            std::string extension = "";
+            switch (this->gConfig.otrMode) {
+                case ArchiveType::OTR:
+                    extension = ".otr";
+                    break;
+                case ArchiveType::O2R:
+                    extension = ".o2r";
+                    break;
+                default:
+                    throw std::runtime_error("Invalid archive type for export type Binary");
+            }
+            this->gConfig.outputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
             break;
         }
         case ExportType::Header: {
@@ -1023,6 +1059,7 @@ void Companion::Process() {
             this->gConfig.outputPath = opath && opath["code"] ? opath["code"].as<std::string>() : "code";
             break;
         }
+        case ExportType::XML:
         case ExportType::Modding: {
             this->gConfig.outputPath = modding_path;
             break;
@@ -1063,7 +1100,7 @@ void Companion::Process() {
         };
     }
 
-    if(this->gConfig.exporterType == ExportType::Code && this->gConfig.modding) {
+    if((this->gConfig.exporterType == ExportType::Code || this->gConfig.exporterType == ExportType::Binary) && this->gConfig.modding) {
         this->ParseModdingConfig();
     }
 
@@ -1078,13 +1115,14 @@ void Companion::Process() {
             entries.push_back(key);
         }
     }
-
+#ifdef STANDALONE
     if(cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
             this->ParseEnums(file);
         }
     }
+#endif
 
     if(cfg["logging"]){
         auto level = cfg["logging"].as<std::string>();
@@ -1127,7 +1165,24 @@ void Companion::Process() {
     }
 
     AudioManager::Instance = new AudioManager();
-    auto wrapper = this->gConfig.exporterType == ExportType::Binary ? new SWrapper(this->gConfig.outputPath) : nullptr;
+    BinaryWrapper* wrapper = nullptr;
+
+    if (this->gConfig.exporterType == ExportType::Binary) {
+        switch (this->gConfig.otrMode) {
+            case ArchiveType::OTR:
+                wrapper = new SWrapper(this->gConfig.outputPath);
+                break;
+            case ArchiveType::O2R:
+                wrapper = new ZWrapper(this->gConfig.outputPath);
+                break;
+            default:
+                throw std::runtime_error("Invalid archive type for export type Binary");
+        }
+    }
+
+    if (wrapper) {
+        wrapper->CreateArchive();
+    }
     this->gCurrentWrapper = wrapper;
 
     auto vWriter = LUS::BinaryWriter();
@@ -1167,7 +1222,7 @@ void Companion::Process() {
 
     if(wrapper != nullptr) {
         SPDLOG_INFO("Writing version file");
-        wrapper->CreateFile("version", vWriter.ToVector());
+        wrapper->AddFile("version", vWriter.ToVector());
         vWriter.Close();
         wrapper->Close();
     }
@@ -1190,7 +1245,7 @@ void Companion::Process() {
     Instance = nullptr;
 }
 
-void Companion::Pack(const std::string& folder, const std::string& output) {
+void Companion::Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode) {
 
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
@@ -1214,14 +1269,25 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
         files[entry.path().generic_string()] = data;
     }
 
-    auto wrapper = SWrapper(output);
+    std::unique_ptr<BinaryWrapper> wrapper;
+    switch (otrMode) {
+        case ArchiveType::OTR:
+            wrapper.reset(new SWrapper(output));
+            break;
+        case ArchiveType::O2R:
+            wrapper.reset(new ZWrapper(output));
+            break;
+        default:
+            throw std::runtime_error("Invalid archive type for export type Binary");
+    }
+    wrapper->CreateArchive();
 
     for(auto& [path, data] : files){
         std::string normalized = path;
         std::replace(normalized.begin(), normalized.end(), '\\', '/');
         // Remove parent folder
         normalized = normalized.substr(folder.length() + 1);
-        wrapper.CreateFile(normalized, data);
+        wrapper->AddFile(normalized, data);
         SPDLOG_INFO("> Added {}", normalized);
     }
 
@@ -1231,7 +1297,7 @@ void Companion::Pack(const std::string& folder, const std::string& output) {
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
     SPDLOG_INFO("------------------------------------------------");
 
-    wrapper.Close();
+    wrapper->Close();
 }
 
 std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(const std::string& name, YAML::Node& node) {
@@ -1239,16 +1305,19 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
         return std::nullopt;
     }
 
-    this->gAssetDependencies[this->gCurrentFile][name] = std::make_pair(node, false);
-
     auto output = (this->gCurrentDirectory / name).string();
     std::replace(output.begin(), output.end(), '\\', '/');
 
     auto entry = std::make_tuple(output, node);
     this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = entry;
-
-
-
+    auto dResult = this->ParseNode(node, output);
+    if(dResult.has_value()) {
+        this->gParseResults[this->gCurrentFile].push_back(dResult.value());
+    }
+    spdlog::set_pattern(regular);
+    SPDLOG_INFO("------------------------------------------------");
+    spdlog::set_pattern(line);
+    
     return entry;
 }
 
@@ -1395,6 +1464,11 @@ std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNo
 
 }
 
+void Companion::RegisterCompanionFile(const std::string path, std::vector<char> data) {
+    this->gCompanionFiles[path] = data;
+    SPDLOG_TRACE("Registered companion file {}", path);
+}
+
 std::string Companion::NormalizeAsset(const std::string& name) const {
     auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;
     return path;
@@ -1429,9 +1503,13 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
     const auto decl = this->GetNodeByAddr(offset);
 
-
     if(decl.has_value()) {
-        return std::get<1>(decl.value());
+        auto found = std::get<1>(decl.value());
+        if(GetSafeNode<std::string>(found, "type") != type) {
+            SPDLOG_ERROR("Asset clash detected {} vs {} at 0x{:X}", type, GetSafeNode<std::string>(found, "type"), offset);
+        } else {
+            return found;
+        }
     }
 
     auto rom = this->GetRomData();
@@ -1451,6 +1529,9 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     } else {
         output = this->NormalizeAsset(typeId + "_" + Torch::to_hex(offset, false));
     }
+
+    std::replace(output.begin(), output.end(), ':', '_');
+
     asset["autogen"] = true;
     asset["symbol"] = output;
 

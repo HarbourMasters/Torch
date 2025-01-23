@@ -13,7 +13,7 @@
 #include "utils/Decompressor.h"
 #include "factories/TextureFactory.h"
 
-class SWrapper;
+class BinaryWrapper;
 namespace fs = std::filesystem;
 
 enum class ParseMode {
@@ -38,6 +38,12 @@ enum class GBIMinorVersion {
 enum class TableMode {
     Reference,
     Append
+};
+
+enum class ArchiveType {
+    None,
+    OTR,
+    O2R,
 };
 
 struct SegmentConfig {
@@ -79,7 +85,7 @@ struct TorchConfig {
     std::string moddingPath;
     ExportType exporterType;
     ParseMode parseMode;
-    bool otrMode;
+    ArchiveType otrMode;
     bool debug;
     bool modding;
 };
@@ -103,14 +109,14 @@ class Companion {
 public:
     static Companion* Instance;
 
-    explicit Companion(std::filesystem::path rom, const bool otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
+    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
         this->gRomPath = rom;
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
         this->gConfig.modding = modding;
     }
 
-    explicit Companion(std::vector<uint8_t> rom, const bool otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
+    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
         this->gRomData = rom;
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
@@ -123,11 +129,11 @@ public:
 
     void Process();
 
-    bool IsOTRMode() const { return this->gConfig.otrMode; }
+    bool IsOTRMode() const { return (this->gConfig.otrMode != ArchiveType::None); }
     bool IsDebug() const { return this->gConfig.debug; }
 
     N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
-    std::vector<uint8_t> GetRomData() { return this->gRomData; }
+    std::vector<uint8_t>& GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gConfig.outputPath; }
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
@@ -151,12 +157,13 @@ public:
     std::optional<Table> SearchTable(uint32_t addr);
 
     static std::string CalculateHash(const std::vector<uint8_t>& data);
-    static void Pack(const std::string& folder, const std::string& output);
+    static void Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode);
     std::string NormalizeAsset(const std::string& name) const;
     std::string RelativePath(const std::string& path) const;
+    void RegisterCompanionFile(const std::string path, std::vector<char> data);
 
     TorchConfig& GetConfig() { return this->gConfig; }
-    SWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
+    BinaryWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
@@ -174,7 +181,7 @@ private:
     std::shared_ptr<N64::Cartridge> gCartridge;
     std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
-    SWrapper* gCurrentWrapper;
+    BinaryWrapper* gCurrentWrapper;
 
     // Temporal Variables
     std::string gCurrentFile;
@@ -190,13 +197,13 @@ private:
     std::vector<std::string> gCurrentExternalFiles;
     std::unordered_set<std::string> gProcessedFiles;
 
+    std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
 
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
-    std::unordered_map<std::string, std::map<std::string, std::pair<YAML::Node, bool>>> gAssetDependencies;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
     void ProcessFile(YAML::Node root);
@@ -205,7 +212,7 @@ private:
     void ParseModdingConfig();
     void ParseCurrentFileConfig(YAML::Node node);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
-    void ExtractNode(YAML::Node& node, std::string& name, SWrapper* binary);
+    void ExtractNode(YAML::Node& node, std::string& name, BinaryWrapper* binary);
     void ProcessTables(YAML::Node& rom);
     void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
     std::optional<ParseResultData> ParseNode(YAML::Node& node, std::string& name);
