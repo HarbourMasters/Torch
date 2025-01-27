@@ -98,6 +98,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MacroFactory::parse(std::vecto
         entries.push_back(raw);
     }
 
+    entries.push_back(0x1E);
+
     /*
        std::vector<MacroObject> macroData;
        while (true) {
