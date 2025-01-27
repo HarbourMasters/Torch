@@ -370,7 +370,8 @@ enum class MacroPresets {
     macro_empty_362,
     macro_empty_363,
     macro_empty_364,
-    macro_empty_365
+    macro_empty_365,
+    macro_invalid = -1
 };
 
 inline std::ostream& operator<<(std::ostream& out, const MacroPresets& preset) {
