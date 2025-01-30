@@ -1195,7 +1195,7 @@ void Companion::Process() {
         vWriter.Write((uint32_t) 0);
     }
 
-    for (const auto & entry : fs::recursive_directory_iterator(this->gAssetPath)){
+    for (const auto & entry : Torch::getRecursiveEntries(this->gAssetPath)){
         if(entry.is_directory())  {
             continue;
         }
@@ -1258,7 +1258,7 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     std::unordered_map<std::string, std::vector<char>> files;
 
-    for (const auto & entry : fs::recursive_directory_iterator(folder)){
+    for (const auto & entry : Torch::getRecursiveEntries(folder)){
         if(entry.is_directory())  {
             continue;
         }
