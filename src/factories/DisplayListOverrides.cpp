@@ -71,7 +71,7 @@ int Vtx(uint32_t ptr, int32_t num) {
         return 1;
     }
 
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto dec = Companion::Instance->GetSafeNodeByAddr(ptr, "VTX");
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
@@ -86,7 +86,7 @@ int Vtx(uint32_t ptr, int32_t num) {
 }
 
 int Texture(uint32_t ptr, int32_t fmt, int32_t siz, int32_t width, int32_t height, int32_t pal) {
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto dec = Companion::Instance->GetSafeNodeByAddr(ptr, "TEXTURE");
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
@@ -101,7 +101,7 @@ int Texture(uint32_t ptr, int32_t fmt, int32_t siz, int32_t width, int32_t heigh
 }
 
 int Palette(uint32_t ptr, int32_t idx, int32_t count) {
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto dec = Companion::Instance->GetSafeNodeByAddr(ptr, "TEXTURE");
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
@@ -116,7 +116,7 @@ int Palette(uint32_t ptr, int32_t idx, int32_t count) {
 }
 
 int Lights(uint32_t ptr, int32_t count) {
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto dec = Companion::Instance->GetSafeNodeByAddr(ptr, "LIGHTS");
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
@@ -131,7 +131,7 @@ int Lights(uint32_t ptr, int32_t count) {
 }
 
 int Light(uint32_t ptr) {
-    auto res = Companion::Instance->GetNodeByAddr(ptr);
+    auto res = Companion::Instance->GetSafeNodeByAddr(ptr, "LIGHTS");
 
     if(res.has_value()){
         auto node = std::get<1>(res.value());
@@ -141,7 +141,7 @@ int Light(uint32_t ptr) {
         return 1;
     }
 
-    res = Companion::Instance->GetNodeByAddr(ptr - 0x8);
+    res = Companion::Instance->GetSafeNodeByAddr(ptr - 0x8, "LIGHTS");
 
     if(res.has_value()){
         auto node = std::get<1>(res.value());
@@ -156,7 +156,7 @@ int Light(uint32_t ptr) {
 }
 
 int DisplayList(uint32_t ptr) {
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto dec = Companion::Instance->GetSafeNodeByAddr(ptr, "GFX");
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
@@ -171,7 +171,7 @@ int DisplayList(uint32_t ptr) {
 }
 
 int Viewport(uint32_t ptr) {
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto dec = Companion::Instance->GetSafeNodeByAddr(ptr, "VP");
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
@@ -186,7 +186,7 @@ int Viewport(uint32_t ptr) {
 }
 
 int Matrix(uint32_t ptr) {
-    auto dec = Companion::Instance->GetNodeByAddr(ptr);
+    auto dec = Companion::Instance->GetSafeNodeByAddr(ptr, "MTX");
 
     if(dec.has_value()){
         auto node = std::get<1>(dec.value());
