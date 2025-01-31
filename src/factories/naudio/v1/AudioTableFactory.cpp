@@ -65,7 +65,7 @@ ExportResult AudioTableCodeExporter::Export(std::ostream &write, std::shared_ptr
         write << "// Count: " << table->entries.size() << "\n";
     }
 
-    return offset + 0x10 + (table->entries.size() * sizeof(AudioTableEntry));
+    return offset + 0x10 + (table->entries.size() * 0x10);
 }
 
 ExportResult AudioTableBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
