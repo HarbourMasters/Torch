@@ -4,6 +4,8 @@
 #include "endianness.h"
 #include "AudioDecompressor.h"
 
+#define C_M_PI 3.14159265358979323846f
+
 struct StupidDMAStruct {
     int16_t* unk_0;
     int32_t unk_4;
@@ -374,7 +376,7 @@ void AudioSynth_InverseDiscreteCosineTransform(float* buffer0, float* buffer1, i
         buf2half2 = &buffer2[half];
         buf2half3 = &buf2half2[half];
         var_fs0 = 0.0f;
-        temp_ft0 = M_PI / (float) (2 * size);
+        temp_ft0 = C_M_PI / (float) (2 * size);
         for (i = 0; i < half; i++) {
             *buf2half2++ = (cosf(var_fs0) - sinf(var_fs0)) * 0.707107f;
             *buf2half3++ = (cosf(var_fs0) + sinf(var_fs0)) * 0.707107f;
