@@ -182,7 +182,7 @@ ExportResult SoundFontXMLExporter::Export(std::ostream &write, std::shared_ptr<I
 
 std::optional<std::shared_ptr<IParsedData>> SoundFontFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].at(offset);
+    auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].entries[offset];
     auto reader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, entry.addr);
     auto font = std::make_shared<SoundFontData>();
 

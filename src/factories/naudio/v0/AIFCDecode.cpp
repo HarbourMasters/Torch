@@ -216,8 +216,8 @@ s32 readaifccodebook(LUS::BinaryReader& fhandle, s32 ****table, s16 *order, s16 
 }
 
 ALADPCMloop *readlooppoints(LUS::BinaryReader& reader, s16 *nloops) {
-    BSWAP16(*nloops);
     checked_fread(nloops, sizeof(s16), 1, reader);
+    BSWAP16(*nloops);
     auto *al = static_cast<ALADPCMloop *>(malloc(*nloops * sizeof(ALADPCMloop)));
     for (s32 i = 0; i < *nloops; i++) {
         checked_fread(&al[i], sizeof(ALADPCMloop), 1, reader);
@@ -505,7 +505,6 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
                             fail_parse("Unknown loop chunk version");
                         }
                         aloops = readlooppoints(reader, &nloops);
-                        BSWAP16(nloops);
                         if (nloops != 1) {
                             fail_parse("Only a single loop supported");
                         }
