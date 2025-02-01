@@ -14,18 +14,18 @@ struct StupidDMAStruct {
     int16_t unk18;
 };
 
-int16_t D_8014C1B4 = 0x1000;
-float D_80145D48[256];
-float D_80146148[256];
-float D_80146548[515];
-float D_80146D54;
-float D_80146D58;
-float D_80146D5C;
-float D_80146D60;
-float D_80146D64;
-float D_80146D68;
-float D_80146D6C;
-float D_80146D70;
+int16_t DFT_8014C1B4 = 0x1000;
+float DFT_80145D48[256];
+float DFT_80146148[256];
+float DFT_80146548[515];
+float DFT_80146D54;
+float DFT_80146D58;
+float DFT_80146D5C;
+float DFT_80146D60;
+float DFT_80146D64;
+float DFT_80146D68;
+float DFT_80146D6C;
+float DFT_80146D70;
 
 void func_80009124(int16_t** arg0) {
     int16_t* var_a1;
@@ -48,7 +48,7 @@ void func_80009124(int16_t** arg0) {
     var_a1 = *arg0;
 
     for (i = 255; i >= 0; i--) {
-        D_80145D48[i] = 0.0f;
+        DFT_80145D48[i] = 0.0f;
     }
     temp_v0 = *var_a1++;
     var_t3 = temp_v0 << 0x10;
@@ -73,7 +73,7 @@ void func_80009124(int16_t** arg0) {
                     for (var_s1 = 0; var_s1 < 4; var_s1++) {
                         temp_u1 = (var_s0 >> 0xC) & 0xF;
                         var_s0 <<= 4;
-                        D_80145D48[var_v1++] = ((temp_u1 & 7) - 4) << temp_a0;
+                        DFT_80145D48[var_v1++] = ((temp_u1 & 7) - 4) << temp_a0;
                         if (temp_u1 >= 8) {
                             goto case_1_break;
                         }
@@ -87,7 +87,7 @@ void func_80009124(int16_t** arg0) {
                     for (i = 0; i < 4; i++) {
                         temp_u1 = (var_s0 >> 0xC) & 0xF;
                         var_s0 <<= 4;
-                        D_80145D48[var_v1++] = (temp_u1 - 8) << temp_a0;
+                        DFT_80145D48[var_v1++] = (temp_u1 - 8) << temp_a0;
                     }
                 }
                 break;
@@ -96,14 +96,14 @@ void func_80009124(int16_t** arg0) {
                     var_s0 = *var_a1++;
                     temp_u1 = (var_s0 >> 8) & 0xFF;
                     temp_t5_4 = temp_u1 >> 6;
-                    D_80145D48[var_v1] = ((temp_u1 & 0x3F) - 0x20) << temp_a0;
+                    DFT_80145D48[var_v1] = ((temp_u1 & 0x3F) - 0x20) << temp_a0;
                     if (temp_t5_4 == 0) {
                         break;
                     }
                     var_v1 += temp_t5_4;
                     temp_u1 = var_s0 & 0xFF;
                     temp_t5_4 = temp_u1 >> 6;
-                    D_80145D48[var_v1] = ((temp_u1 & 0x3F) - 0x20) << temp_a0;
+                    DFT_80145D48[var_v1] = ((temp_u1 & 0x3F) - 0x20) << temp_a0;
                     if (temp_t5_4 == 0) {
                         break;
                     }
@@ -115,13 +115,13 @@ void func_80009124(int16_t** arg0) {
                     var_s0 = *var_a1++;
                     temp_u1 = (var_s0 >> 8) & 0xFF;
 
-                    D_80145D48[var_v1++] = ((temp_u1 & 0x7F) - 0x40) << temp_a0;
+                    DFT_80145D48[var_v1++] = ((temp_u1 & 0x7F) - 0x40) << temp_a0;
 
                     if (temp_u1 >= 0x80) {
                         break;
                     }
                     temp_u1 = var_s0 & 0xFF;
-                    D_80145D48[var_v1++] = ((temp_u1 & 0x7F) - 0x40) << temp_a0;
+                    DFT_80145D48[var_v1++] = ((temp_u1 & 0x7F) - 0x40) << temp_a0;
                     if (temp_u1 >= 0x80) {
                         break;
                     }
@@ -131,7 +131,7 @@ void func_80009124(int16_t** arg0) {
                 while (true) {
                     var_s0 = *var_a1++;
                     temp_t5_4 = var_s0 >> 0xC;
-                    D_80145D48[var_v1] = ((var_s0 & 0xFFF) - 0x800) << temp_a0;
+                    DFT_80145D48[var_v1] = ((var_s0 & 0xFFF) - 0x800) << temp_a0;
                     if (temp_t5_4 == 0) {
                         break;
                     }
@@ -142,7 +142,7 @@ void func_80009124(int16_t** arg0) {
                 while (true) {
                     var_s0 = *var_a1++;
                     temp_t5_4 = var_s0 >> 0xF;
-                    D_80145D48[var_v1] = ((var_s0 & 0x7FFF) - 0x4000) << temp_a0;
+                    DFT_80145D48[var_v1] = ((var_s0 & 0x7FFF) - 0x4000) << temp_a0;
                     if (temp_t5_4 == 1) {
                         break;
                     }
@@ -245,25 +245,25 @@ void AudioSynth_HartleyTransform(float* arg0, int32_t arg1, float* arg2) {
                         temp_a2 = temp_a1 + sp50;
                         temp_a3 = temp_a2 + sp50;
 
-                        D_80146D54 = *temp_a0;
-                        *temp_a0 = *temp_a2 + D_80146D54;
-                        D_80146D58 = *temp_a1;
+                        DFT_80146D54 = *temp_a0;
+                        *temp_a0 = *temp_a2 + DFT_80146D54;
+                        DFT_80146D58 = *temp_a1;
                         *temp_a1 = *temp_a1 + *temp_a3;
-                        D_80146D5C = *temp_a2;
-                        *temp_a2 = D_80146D54 - D_80146D5C + D_80146D58 - *temp_a3;
-                        *temp_a3 = D_80146D54 - D_80146D5C - D_80146D58 + *temp_a3;
+                        DFT_80146D5C = *temp_a2;
+                        *temp_a2 = DFT_80146D54 - DFT_80146D5C + DFT_80146D58 - *temp_a3;
+                        *temp_a3 = DFT_80146D54 - DFT_80146D5C - DFT_80146D58 + *temp_a3;
                         if (sp50 > 1) {
                             temp_a0 = arg0 + spCC + spB4;
                             temp_a1 = temp_a0 + sp50;
                             temp_a2 = temp_a1 + sp50;
                             temp_a3 = temp_a2 + sp50;
 
-                            D_80146D54 = *temp_a0;
-                            *temp_a0 = *temp_a2 + D_80146D54;
-                            D_80146D58 = *temp_a1;
-                            *temp_a1 = *temp_a3 + D_80146D58;
-                            *temp_a2 = (D_80146D54 - *temp_a2) * 1.414214f;
-                            *temp_a3 = (D_80146D58 - *temp_a3) * 1.414214f;
+                            DFT_80146D54 = *temp_a0;
+                            *temp_a0 = *temp_a2 + DFT_80146D54;
+                            DFT_80146D58 = *temp_a1;
+                            *temp_a1 = *temp_a3 + DFT_80146D58;
+                            *temp_a2 = (DFT_80146D54 - *temp_a2) * 1.414214f;
+                            *temp_a3 = (DFT_80146D58 - *temp_a3) * 1.414214f;
 
                             var_s0 = &arg2[spC0];
                             var_s1 = &var_s0[sp58];
@@ -280,28 +280,28 @@ void AudioSynth_HartleyTransform(float* arg0, int32_t arg1, float* arg2) {
                                 temp_b2 = temp_b1 + sp50;
                                 temp_b3 = temp_b2 + sp50;
 
-                                D_80146D54 = *temp_a0;
-                                D_80146D58 = *temp_a1;
-                                D_80146D5C = *temp_a2;
-                                D_80146D60 = *temp_a3;
+                                DFT_80146D54 = *temp_a0;
+                                DFT_80146D58 = *temp_a1;
+                                DFT_80146D5C = *temp_a2;
+                                DFT_80146D60 = *temp_a3;
 
-                                D_80146D64 = *temp_b0;
-                                D_80146D68 = *temp_b1;
-                                D_80146D6C = *temp_b2;
-                                D_80146D70 = *temp_b3;
+                                DFT_80146D64 = *temp_b0;
+                                DFT_80146D68 = *temp_b1;
+                                DFT_80146D6C = *temp_b2;
+                                DFT_80146D70 = *temp_b3;
 
-                                *temp_a0 = D_80146D54 + D_80146D5C;
-                                *temp_a1 = D_80146D58 + D_80146D60;
-                                *temp_a2 = ((D_80146D54 - D_80146D5C + D_80146D64 - D_80146D6C) * *var_s0) +
-                                           ((D_80146D60 - D_80146D58 + D_80146D68 - D_80146D70) * *var_s1);
-                                *temp_a3 = ((D_80146D54 - D_80146D5C - D_80146D64 + D_80146D6C) * *var_s2) -
-                                           ((D_80146D60 - D_80146D58 - D_80146D68 + D_80146D70) * *var_s3);
-                                *temp_b0 = D_80146D64 + D_80146D6C;
-                                *temp_b1 = D_80146D68 + D_80146D70;
-                                *temp_b2 = ((D_80146D54 - D_80146D5C + D_80146D64 - D_80146D6C) * *var_s1) -
-                                           ((D_80146D60 - D_80146D58 + D_80146D68 - D_80146D70) * *var_s0);
-                                *temp_b3 = ((D_80146D54 - D_80146D5C - D_80146D64 + D_80146D6C) * *var_s3) +
-                                           ((D_80146D60 - D_80146D58 - D_80146D68 + D_80146D70) * *var_s2);
+                                *temp_a0 = DFT_80146D54 + DFT_80146D5C;
+                                *temp_a1 = DFT_80146D58 + DFT_80146D60;
+                                *temp_a2 = ((DFT_80146D54 - DFT_80146D5C + DFT_80146D64 - DFT_80146D6C) * *var_s0) +
+                                           ((DFT_80146D60 - DFT_80146D58 + DFT_80146D68 - DFT_80146D70) * *var_s1);
+                                *temp_a3 = ((DFT_80146D54 - DFT_80146D5C - DFT_80146D64 + DFT_80146D6C) * *var_s2) -
+                                           ((DFT_80146D60 - DFT_80146D58 - DFT_80146D68 + DFT_80146D70) * *var_s3);
+                                *temp_b0 = DFT_80146D64 + DFT_80146D6C;
+                                *temp_b1 = DFT_80146D68 + DFT_80146D70;
+                                *temp_b2 = ((DFT_80146D54 - DFT_80146D5C + DFT_80146D64 - DFT_80146D6C) * *var_s1) -
+                                           ((DFT_80146D60 - DFT_80146D58 + DFT_80146D68 - DFT_80146D70) * *var_s0);
+                                *temp_b3 = ((DFT_80146D54 - DFT_80146D5C - DFT_80146D64 + DFT_80146D6C) * *var_s3) +
+                                           ((DFT_80146D60 - DFT_80146D58 - DFT_80146D68 + DFT_80146D70) * *var_s2);
                                 var_s0 += spC0;
                                 var_s1 += spC0;
                                 var_s2 += spC0;
@@ -323,9 +323,9 @@ void AudioSynth_HartleyTransform(float* arg0, int32_t arg1, float* arg2) {
 
             do {
                 for (spCC = var_a0 - 1; spCC < length; spCC += spA8) {
-                    D_80146D54 = arg0[spCC];
-                    arg0[spCC] = arg0[spCC + 1] + D_80146D54;
-                    arg0[spCC + 1] = D_80146D54 - arg0[spCC + 1];
+                    DFT_80146D54 = arg0[spCC];
+                    arg0[spCC] = arg0[spCC + 1] + DFT_80146D54;
+                    arg0[spCC + 1] = DFT_80146D54 - arg0[spCC + 1];
                 }
                 var_a0 = (spA8 * 2) - 1;
                 spA8 *= 4;
@@ -339,9 +339,9 @@ void AudioSynth_HartleyTransform(float* arg0, int32_t arg1, float* arg2) {
 
             for (spC8 = 1; spC8 < length; spC8++) {
                 if (spC8 < spB4) {
-                    D_80146D54 = arg0[spB4 - 1];
+                    DFT_80146D54 = arg0[spB4 - 1];
                     arg0[spB4 - 1] = *temp_a0;
-                    *temp_a0 = D_80146D54;
+                    *temp_a0 = DFT_80146D54;
                 }
                 temp_a0++;
                 spC0 = length >> 1;
@@ -438,26 +438,26 @@ void func_80009504(int16_t* arg0, StupidDMAStruct* arg1) {
         arg1->unk_0 = 0;
     }
 
-    arg1->unk18 += D_8014C1B4;
+    arg1->unk18 += DFT_8014C1B4;
 
     while (arg1->unk18 > 0x1000) {
         func_80009124(&arg1->unk_C);
         arg1->unk18 -= 0x1000;
     }
 
-    AudioSynth_InverseDiscreteCosineTransform(D_80145D48, D_80146148, 8, D_80146548);
+    AudioSynth_InverseDiscreteCosineTransform(DFT_80145D48, DFT_80146148, 8, DFT_80146548);
 
     for (i = 0; i < 256; i++) {
-        if (D_80145D48[i] > 32767.0f) {
-            D_80145D48[i] = 32767.0f;
+        if (DFT_80145D48[i] > 32767.0f) {
+            DFT_80145D48[i] = 32767.0f;
         }
-        if (D_80145D48[i] < -32767.0f) {
-            D_80145D48[i] = -32767.0f;
+        if (DFT_80145D48[i] < -32767.0f) {
+            DFT_80145D48[i] = -32767.0f;
         }
     }
 
     for (i = 0; i < 0x100; i++, arg0++) {
-        *arg0 = (int16_t) D_80145D48[i];
+        *arg0 = (int16_t) DFT_80145D48[i];
     }
 }
 
