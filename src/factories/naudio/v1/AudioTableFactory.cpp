@@ -159,7 +159,7 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                 auto parent = AudioContext::tables[AudioTableType::SEQ_TABLE].offset;
                 if(size != 0){
                     YAML::Node seq;
-                    seq["type"] = "BLOB";
+                    seq["type"] = "NAUDIO:V1:SEQUENCE";
                     seq["offset"] = parent + addr;
                     seq["size"] = size;
                     Companion::Instance->AddAsset(seq);

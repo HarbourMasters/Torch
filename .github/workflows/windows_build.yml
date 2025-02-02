@@ -18,7 +18,7 @@ jobs:
       - name: Create Package
         run: |
           mkdir torch-release
-          mv build/x64/Release/torch.exe torch-release/
+          mv Debug/torch.exe torch-release/
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
