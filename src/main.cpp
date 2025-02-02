@@ -115,6 +115,7 @@ int main(int argc, char *argv[]) {
 
     modding_import->add_option("mode", mode, "code, otr, o2r or header")->required();
     modding_import->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    modding_import->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
 
     modding_import->parse_complete_callback([&] {
         ArchiveType otrMode;
