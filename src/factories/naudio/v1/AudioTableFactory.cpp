@@ -82,7 +82,7 @@ ExportResult AudioTableBinaryExporter::Export(std::ostream &write, std::shared_p
             throw std::runtime_error("Fuck this thing");
         }
         if(entry.size == 0){
-            auto item = AudioContext::tables[AudioTableType::SEQ_TABLE].entries[entry.addr];
+            auto item = AudioContext::tables[AudioTableType::SEQ_TABLE].info->entries[entry.addr];
             writer.Write(item.crc);
         } else {
             writer.Write(entry.crc);
