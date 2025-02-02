@@ -70,3 +70,7 @@ std::optional<std::shared_ptr<IParsedData>> NSequenceFactory::parse(std::vector<
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
     return std::make_shared<RawBuffer>(segment.data, segment.size);
 }
+
+std::optional<std::shared_ptr<IParsedData>> NSequenceFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    return std::make_shared<RawBuffer>(buffer);
+}

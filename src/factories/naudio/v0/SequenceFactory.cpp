@@ -33,3 +33,7 @@ std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse(std::vector<u
     auto banks = data["banks"].as<std::vector<std::string>>();
     return std::make_shared<SequenceData>(id, size, buffer.data() + offset, banks);
 }
+
+std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    return std::make_shared<RawBuffer>(buffer);
+}
