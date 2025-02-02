@@ -44,6 +44,15 @@ ExportResult NSequenceCodeExporter::Export(std::ostream &write, std::shared_ptr<
     return offset + data.size();
 }
 
+ExportResult NSequenceModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
+    *replacement += ".m64";
+    writer.Write((char*) data.data(), data.size());
+    writer.Finish(write);
+    return std::nullopt;
+}
+
 ExportResult NSequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
