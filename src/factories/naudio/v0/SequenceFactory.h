@@ -1,6 +1,7 @@
 #pragma once
 
 #include <factories/BaseFactory.h>
+#include "types/RawBuffer.h"
 
 class SequenceData : public IParsedData {
 public:
