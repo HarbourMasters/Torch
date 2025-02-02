@@ -16,6 +16,16 @@ ExportResult SequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr
     return std::nullopt;
 }
 
+ExportResult SequenceModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    const auto sequence = std::static_pointer_cast<SequenceData>(raw);
+    *replacement += ".m64";
+    
+    writer.Write(reinterpret_cast<char*>(sequence->mBuffer.data()), sequence->mSize);
+    writer.Finish(write);
+    return std::nullopt;
+}
+
 std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
     auto id = data["id"].as<uint32_t>();
     auto size = data["size"].as<size_t>();
