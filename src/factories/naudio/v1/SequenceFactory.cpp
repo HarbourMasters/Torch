@@ -72,5 +72,5 @@ std::optional<std::shared_ptr<IParsedData>> NSequenceFactory::parse(std::vector<
 }
 
 std::optional<std::shared_ptr<IParsedData>> NSequenceFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    return std::make_shared<RawBuffer>(buffer);
+    return std::make_shared<RawBuffer>(buffer.data(), buffer.size());
 }

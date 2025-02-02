@@ -35,5 +35,5 @@ std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse(std::vector<u
 }
 
 std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    return std::make_shared<RawBuffer>(buffer);
+    return std::make_shared<RawBuffer>(buffer.data(), buffer.size());
 }
