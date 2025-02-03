@@ -177,17 +177,7 @@ void AudioConverter::SampleV1ToAIFC(NSampleData* sample, LUS::BinaryWriter &out)
     uint32_t sample_rate = sample->sampleRate;
 
     if(sample_rate == 0){
-        if (sample->tuning <= 0.5f) {
-            sample_rate = 16000;
-        } else if (sample->tuning <= 1.0f) {
-            sample_rate = 32000;
-        } else if (sample->tuning <= 1.5f) {
-            sample_rate = 48000;
-        } else if (sample->tuning <= 2.5f) {
-            sample_rate = 80000;
-        } else {
-            sample_rate = 32000 * sample->tuning;
-        }
+        sample_rate = 32000 * sample->tuning;
     }
 
     int16_t num_channels = 1;
