@@ -82,9 +82,6 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     auto entry = std::static_pointer_cast<NSampleData>(raw);
 
     auto path = fs::path(*replacement);
-
-    *replacement += ".meta";
-
     tinyxml2::XMLDocument sample;
     tinyxml2::XMLElement* root = sample.NewElement("Sample");
     root->SetAttribute("Version", 0);
@@ -94,7 +91,7 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     root->SetAttribute("Tuning", entry->tuning);
     root->SetAttribute("Size", entry->size);
     root->SetAttribute("Relocated", 0);
-    root->SetAttribute("Path", path.c_str());
+    root->SetAttribute("Path", (path.string() + "_data").c_str());
 
     if(entry->loop != 0) {
         auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(entry->loop)->data.value());
@@ -134,7 +131,7 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
     auto sampleData = table.buffer.data() + table.info->entries[entry->sampleBankId].addr + entry->sampleAddr;
     std::vector<char> data(sampleData, sampleData + entry->size);
-    Companion::Instance->RegisterCompanionFile(path.filename().string(), data);
+    Companion::Instance->RegisterCompanionFile(path.filename().string() + "_data", data);
 
     return std::nullopt;
 }
