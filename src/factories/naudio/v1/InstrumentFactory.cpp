@@ -47,7 +47,7 @@ std::optional<std::shared_ptr<IParsedData>> InstrumentFactory::parse(std::vector
     auto parent = GetSafeNode<uint32_t>(node, "parent");
     auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
 
-    auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].at(parent);
+    auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].entries[parent];
 
     auto reader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, offset);
 

@@ -44,6 +44,15 @@ ExportResult NSequenceCodeExporter::Export(std::ostream &write, std::shared_ptr<
     return offset + data.size();
 }
 
+ExportResult NSequenceModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+    auto writer = LUS::BinaryWriter();
+    auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
+    *replacement += ".m64";
+    writer.Write((char*) data.data(), data.size());
+    writer.Finish(write);
+    return std::nullopt;
+}
+
 ExportResult NSequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
@@ -57,9 +66,11 @@ ExportResult NSequenceBinaryExporter::Export(std::ostream &write, std::shared_pt
 }
 
 std::optional<std::shared_ptr<IParsedData>> NSequenceFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto entry = AudioContext::tables[AudioTableType::SEQ_TABLE].at(offset);
-    auto data = AudioContext::data[AudioTableType::SEQ_TABLE];
+    auto size = GetSafeNode<size_t>(node, "size");
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
+    return std::make_shared<RawBuffer>(segment.data, segment.size);
+}
 
-    return std::make_shared<RawBuffer>((uint8_t*) data.data() + entry.addr, entry.size);
+std::optional<std::shared_ptr<IParsedData>> NSequenceFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    return std::make_shared<RawBuffer>(buffer.data(), buffer.size());
 }

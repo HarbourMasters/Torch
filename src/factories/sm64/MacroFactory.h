@@ -23,6 +23,13 @@ public:
     MacroData(std::vector<MacroObject> macroData) : mMacroData(std::move(macroData)) {}
 };
 
+class MacroDataAlt : public IParsedData {
+public:
+    std::vector<int16_t> mMacroData;
+
+    MacroDataAlt(std::vector<int16_t> macroData) : mMacroData(std::move(macroData)) {}
+};
+
 class MacroHeaderExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
@@ -40,7 +47,7 @@ public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Code, MacroCodeExporter)
+//          REGISTER(Code, MacroCodeExporter)
             REGISTER(Header, MacroHeaderExporter)
             REGISTER(Binary, MacroBinaryExporter)
         };

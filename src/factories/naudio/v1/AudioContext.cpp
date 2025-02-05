@@ -3,12 +3,20 @@
 #include "Companion.h"
 #include "utils/StringHelper.h"
 
-std::unordered_map<AudioTableType, std::unordered_map<uint32_t, AudioTableEntry>> AudioContext::tables;
-std::unordered_map<AudioTableType, std::vector<uint8_t>> AudioContext::data;
-std::unordered_map<AudioTableType, std::shared_ptr<AudioTableData>> AudioContext::tableData;
-std::unordered_map<AudioTableType, uint32_t> AudioContext::tableOffsets;
+std::unordered_map<AudioTableType, TableEntry> AudioContext::tables;
+NAudioDrivers AudioContext::driver = NAudioDrivers::UNKNOWN;
 
 std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto driver = GetSafeNode<std::string>(node, "driver");
+
+    if(driver == "SF64") {
+        AudioContext::driver = NAudioDrivers::SF64;
+    } else if(driver == "FZEROX"){
+        AudioContext::driver = NAudioDrivers::FZEROX;
+    } else {
+        throw std::runtime_error("Unknown NAudio driver");
+    }
+
     auto seq = GetSafeNode<YAML::Node>(node, "audio_seq");
     auto seqSize = GetSafeNode<uint32_t>(seq, "size");
     auto seqOffset = GetSafeNode<uint32_t>(seq, "offset");
@@ -21,13 +29,13 @@ std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vect
     auto tableSize = GetSafeNode<uint32_t>(table, "size");
     auto tableOffset = GetSafeNode<uint32_t>(table, "offset");
 
-    AudioContext::data[AudioTableType::SEQ_TABLE] = std::vector<uint8_t>(buffer.begin() + seqOffset, buffer.begin() + seqOffset + seqSize);
-    AudioContext::data[AudioTableType::FONT_TABLE] = std::vector<uint8_t>(buffer.begin() + bankOffset, buffer.begin() + bankOffset + bankSize);
-    AudioContext::data[AudioTableType::SAMPLE_TABLE] = std::vector<uint8_t>(buffer.begin() + tableOffset, buffer.begin() + tableOffset + tableSize);
+    AudioContext::tables[AudioTableType::SEQ_TABLE].buffer = std::vector<uint8_t>(buffer.begin() + seqOffset, buffer.begin() + seqOffset + seqSize);
+    AudioContext::tables[AudioTableType::FONT_TABLE].buffer = std::vector<uint8_t>(buffer.begin() + bankOffset, buffer.begin() + bankOffset + bankSize);
+    AudioContext::tables[AudioTableType::SAMPLE_TABLE].buffer = std::vector<uint8_t>(buffer.begin() + tableOffset, buffer.begin() + tableOffset + tableSize);
 
-    AudioContext::tableOffsets[AudioTableType::SEQ_TABLE] = seqOffset;
-    AudioContext::tableOffsets[AudioTableType::FONT_TABLE] = bankOffset;
-    AudioContext::tableOffsets[AudioTableType::SAMPLE_TABLE] = tableOffset;
+    AudioContext::tables[AudioTableType::SEQ_TABLE].offset = seqOffset;
+    AudioContext::tables[AudioTableType::FONT_TABLE].offset = bankOffset;
+    AudioContext::tables[AudioTableType::SAMPLE_TABLE].offset = tableOffset;
 
     SPDLOG_INFO("Sequence Table 0x{:X}", seqOffset);
     SPDLOG_INFO("Sound Font Table 0x{:X}", bankOffset);
@@ -37,7 +45,7 @@ std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vect
 }
 
 LUS::BinaryReader AudioContext::MakeReader(AudioTableType type, uint32_t offset) {
-    auto entry = AudioContext::data[type];
+    auto entry = AudioContext::tables[type].buffer;
 
     LUS::BinaryReader reader(entry.data(), entry.size());
     reader.SetEndianness(Torch::Endianness::Big);

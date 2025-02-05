@@ -10,12 +10,21 @@ struct TunedSample {
     float tuning;
 };
 
+struct TableEntry {
+    std::shared_ptr<AudioTableData> info;
+    std::unordered_map<uint32_t, AudioTableEntry> entries;
+    std::vector<uint8_t> buffer;
+    uint32_t offset;
+};
+
+enum class NAudioDrivers {
+    SF64, FZEROX, UNKNOWN
+};
+
 class AudioContext {
 public:
-    static std::unordered_map<AudioTableType, std::unordered_map<uint32_t, AudioTableEntry>> tables;
-    static std::unordered_map<AudioTableType, std::shared_ptr<AudioTableData>> tableData;
-    static std::unordered_map<AudioTableType, std::vector<uint8_t>> data;
-    static std::unordered_map<AudioTableType, uint32_t> tableOffsets;
+    static std::unordered_map<AudioTableType, TableEntry> tables;
+    static NAudioDrivers driver;
 
     static LUS::BinaryReader MakeReader(AudioTableType type, uint32_t offset);
     static TunedSample LoadTunedSample(LUS::BinaryReader& reader, uint32_t parent, uint32_t sampleBankId);

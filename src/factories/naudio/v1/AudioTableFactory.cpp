@@ -65,7 +65,7 @@ ExportResult AudioTableCodeExporter::Export(std::ostream &write, std::shared_ptr
         write << "// Count: " << table->entries.size() << "\n";
     }
 
-    return offset + 0x10 + (table->entries.size() * sizeof(AudioTableEntry));
+    return offset + 0x10 + (table->entries.size() * 0x10);
 }
 
 ExportResult AudioTableBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -82,7 +82,7 @@ ExportResult AudioTableBinaryExporter::Export(std::ostream &write, std::shared_p
             throw std::runtime_error("Fuck this thing");
         }
         if(entry.size == 0){
-            auto item = AudioContext::tableData[AudioTableType::SEQ_TABLE]->entries[entry.addr];
+            auto item = AudioContext::tables[AudioTableType::SEQ_TABLE].info->entries[entry.addr];
             writer.Write(item.crc);
         } else {
             writer.Write(entry.crc);
@@ -136,7 +136,7 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         uint64_t crc = 0;
 
         auto entry = AudioTableEntry { addr, size, medium, policy, sd1, sd2, sd3, crc };
-        AudioContext::tables[type][addr] = entry;
+        AudioContext::tables[type].entries[addr] = entry;
 
         switch (type) {
             case AudioTableType::FONT_TABLE: {
@@ -156,14 +156,14 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                 break;
             }
             case AudioTableType::SEQ_TABLE: {
-                auto parent = AudioContext::tableOffsets[AudioTableType::SEQ_TABLE];
+                auto parent = AudioContext::tables[AudioTableType::SEQ_TABLE].offset;
                 if(size != 0){
                     YAML::Node seq;
-                    seq["type"] = "BLOB";
+                    seq["type"] = "NAUDIO:V1:SEQUENCE";
                     seq["offset"] = parent + addr;
                     seq["size"] = size;
                     Companion::Instance->AddAsset(seq);
-                    std::string path = seq["vpath"].as<std::string>();
+                    auto path = seq["vpath"].as<std::string>();
                     crc = CRC64(path.c_str());
                     break;
                 }
@@ -171,11 +171,11 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         }
 
         entry.crc = crc;
-        AudioContext::tables[type][addr].crc = crc;
+        AudioContext::tables[type].entries[addr].crc = crc;
         entries.push_back(entry);
     }
 
     auto table = std::make_shared<AudioTableData>(bmedium, offset, type, entries);
-    AudioContext::tableData[type] = table;
+    AudioContext::tables[type].info = table;
     return table;
 }

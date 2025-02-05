@@ -105,12 +105,17 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
 ExportResult MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto mtx = std::static_pointer_cast<MtxData>(raw);
     auto writer = LUS::BinaryWriter();
+    auto floats = GetSafeNode(node, "floats", false);
 
     WriteHeader(writer, Torch::ResourceType::Matrix, 0);
 
     for(size_t i = 0; i < 4; i++){
         for(size_t j = 0; j < 4; j++){
-            writer.Write((uint32_t) BSWAP32(mtx->mMtxs[0].mt.mint[i][j]));
+            if(floats){
+                writer.Write(mtx->mMtxs[0].mtx[i * 4 + j]);
+            } else {
+                writer.Write(mtx->mMtxs[0].mt.mint[i][j]);
+            }
         }
     }
     writer.Finish(write);

@@ -1194,7 +1194,7 @@ void Companion::Process() {
         vWriter.Write((uint32_t) 0);
     }
 
-    for (const auto& entry : fs::recursive_directory_iterator(this->gAssetPath)) {
+    for (const auto& entry : Torch::getRecursiveEntries(this->gAssetPath)) {
         if (entry.is_directory()) {
             continue;
         }
@@ -1257,7 +1257,7 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     std::unordered_map<std::string, std::vector<char>> files;
 
-    for (const auto& entry : fs::recursive_directory_iterator(folder)) {
+    for (const auto& entry : Torch::getRecursiveEntries(folder)) {
         if (entry.is_directory()) {
             continue;
         }
@@ -1395,6 +1395,24 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(cons
     }
 
     return this->gAddrMap[this->gCurrentFile][addr];
+}
+
+std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(const uint32_t addr, std::string type) {
+    auto node = this->GetNodeByAddr(addr);
+
+    if (!node.has_value()) {
+        return std::nullopt;
+    }
+
+    auto [name, n] = node.value();
+    auto n_type = GetSafeNode<std::string>(n, "type");
+
+    if (n_type != type) {
+        throw std::runtime_error("Requested node type does not match with the target node type at " +
+                                 Torch::to_hex(addr, false));
+    }
+
+    return node;
 }
 
 std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {

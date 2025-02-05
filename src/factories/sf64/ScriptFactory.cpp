@@ -53,8 +53,13 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 1: {
             auto f3 = arg1 & 0x7F;
             auto zmode = VALUE_TO_ENUM((arg1 >> 7) & 3, "EventModeZ", "EVOP_UNK");
-            waitframes = s2;
-            cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2;
+            
+            if(opcode == 0 && s2 == 1) {
+                cmd << "EVENT_UPDATE_SPEED(" << std::dec << f3 << ", " << zmode;
+            } else {
+                cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2;
+                waitframes = s2;
+            }
         } break;
         case 2:
             cmd << "EVENT_SET_BASE_ZVEL(" << std::dec << s2;
@@ -79,16 +84,24 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 20:
         case 21: {
             auto rotcmd = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
-            cmd << rotcmd.replace(0, 4, "EVENT") << "(" << std::dec << s2 << ", " << std::fixed << std::setprecision(1) <<  arg1 / 10.0f;
-            if(opcode < 16 && arg1 != 0) {
-                waitframes = std::ceil(10.0f * s2 / arg1);
+            if(opcode < 16 && s2 != 0) {
+                waitframes = std::ceil(10.0f * arg1 / s2);
+            }
+            if(opcode < 16 && (arg1 == s2 / 10) && arg1 != 0) {
+                cmd << rotcmd.replace(0, 4, "EVENT_UPDATE") << "(" << std::dec << arg1;
+                waitframes = 0;
+            } else {
+                cmd << rotcmd.replace(0, 4, "EVENT") << "(" << std::dec << arg1 << ", " << std::fixed << std::setprecision(1) <<  s2 / 10.0f;
+                if(arg1 == 0) {
+                    waitframes = 1;
+                }
             }
         } break;
         case 24:
-            cmd << "EVENT_SET_ROTATE(";
+            cmd << "EVENT_LOCAL_ROTATION(";
             break;
         case 25:
-            cmd << "EVENT_STOP_ROTATE(";
+            cmd << "EVENT_FREE_ROTATION(";
             break;
         case 40:
         case 41:
@@ -105,8 +118,12 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             cmd << "EVENT_SET_TARGET(" << teamId << ", " << std::dec << s2;
         } break;
         case 48:
-            waitframes = s2;
-            cmd << "EVENT_SET_WAIT(" << std::dec << s2;
+            if(s2 == 1) {
+                cmd << "EVENT_UPDATE_ACTOR(";
+            } else {
+                cmd << "EVENT_SET_WAIT(" << std::dec << s2;
+                waitframes = s2;
+            }
             break;
         case 56:
             cmd << "EVENT_SET_CALL(" << std::dec << s2 << ", " << arg1;
@@ -189,7 +206,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             if(s2 != 0) {
                 cmd << std::dec << s2 << ", ";
             }
-            cmd << ((arg1 < 200) ? "" : "EVENT_AI_CHANGE + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
+            cmd << ((arg1 < 200) ? "" : "EV_CHANGE_SCRIPT + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
             break;
         case 127:
             cmd << "EVENT_STOP_SCRIPT(";
@@ -203,8 +220,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         } break;
     }
     cmd << ")," << comment.str();
-    if(waitframes != 0) {
-        cmd << "\n          // wait " << waitframes << " frame" << ((waitframes != 1) ? "s" : "");
+    if(waitframes > 1) {
+        cmd << "\n          // wait " << waitframes << " frames";
+    } else if (waitframes == 1) {
+        cmd << "\n          // update actor";
     }
     return cmd.str();
 }

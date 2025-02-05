@@ -36,7 +36,7 @@ ExportResult SM64::MacroCodeExporter::Export(std::ostream &write, std::shared_pt
         }
 
         write << object.preset << ", ";
-        write << "CONVERT_YAW(" << object.yaw << "), ";
+        write << (object.yaw / 1.41) << ", ";
         write << object.posX << ", ";
         write << object.posY << ", ";
         write << object.posZ;
@@ -58,46 +58,70 @@ ExportResult SM64::MacroCodeExporter::Export(std::ostream &write, std::shared_pt
 
 ExportResult SM64::MacroBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
-    auto macro = std::static_pointer_cast<SM64::MacroData>(raw);
+    auto macro = std::static_pointer_cast<SM64::MacroDataAlt>(raw);
 
     WriteHeader(writer, Torch::ResourceType::MacroObject, 0);
 
     writer.Write((uint32_t) macro->mMacroData.size());
 
+    for(auto &entry : macro->mMacroData){
+        writer.Write(entry);
+    }
+    /*
     for (auto &object : macro->mMacroData) {
         writer.Write(static_cast<int16_t>(object.preset));
-        writer.Write((int16_t) std::round(object.yaw * 1.41));
+        writer.Write(object.yaw);
         writer.Write(object.posX);
         writer.Write(object.posY);
         writer.Write(object.posZ);
         writer.Write(object.behParam);
     }
-
+    */
+    
     writer.Finish(write);
     return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> SM64::MacroFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    std::vector<MacroObject> macroData;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
 
-    while (true) {
-        auto presetYaw = reader.ReadInt16();
-        if (presetYaw == 0x1E) {
+    std::vector<int16_t> entries;
+
+    while(true) {
+        int16_t raw = reader.ReadInt16();
+        if(raw == 0x1E){
             break;
         }
 
-        int16_t yaw = ((presetYaw >> 9) & 0x7F) << 1;
-        int16_t preset = (presetYaw & 0x1FF) - 0x1F;
-
-        auto posX = reader.ReadInt16();
-        auto posY = reader.ReadInt16();
-        auto posZ = reader.ReadInt16();
-        auto behParam = reader.ReadInt16();
-        macroData.emplace_back(static_cast<MacroPresets>(preset), yaw, posX, posY, posZ, behParam);
+        entries.push_back(raw);
     }
 
-    return std::make_shared<SM64::MacroData>(macroData);
+    entries.push_back(0x1E);
+
+    /*
+       std::vector<MacroObject> macroData;
+       while (true) {
+            int16_t presetID = reader.ReadInt16();
+
+            if(presetID < 0) {
+                break;
+            }
+
+            int16_t yRot = reader.ReadInt16();
+            int16_t xObj = reader.ReadInt16();
+            int16_t yObj = reader.ReadInt16();
+            int16_t zObj = reader.ReadInt16();
+            int16_t params = reader.ReadInt16();
+
+            macroData.emplace_back(static_cast<MacroPresets>(presetID), yRot, xObj, yObj, zObj, params);
+        }
+
+        macroData.emplace_back(MacroPresets::macro_invalid, -1, -1, -1, -1, -1);
+
+        return std::make_shared<SM64::MacroData>(macroData);
+    */
+
+    return std::make_shared<SM64::MacroDataAlt>(entries);
 }

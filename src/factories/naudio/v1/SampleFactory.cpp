@@ -4,6 +4,7 @@
 #include <tinyxml2.h>
 #include "LoopFactory.h"
 #include "BookFactory.h"
+#include <factories/sf64/audio/AudioDecompressor.h>
 #include <factories/naudio/v0/AIFCDecode.h>
 
 ExportResult NSampleHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
@@ -36,10 +37,8 @@ ExportResult NSampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     writer.Write(AudioContext::GetPathByAddr(data->loop));
     writer.Write(AudioContext::GetPathByAddr(data->book));
 
-    auto entry = AudioContext::tableData[AudioTableType::SAMPLE_TABLE]->entries[data->sampleBankId];
-    auto buffer = AudioContext::data[AudioTableType::SAMPLE_TABLE];
-
-    writer.Write((char*) buffer.data() + entry.addr + data->sampleAddr, data->size);
+    auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
+    writer.Write((char*) table.buffer.data() + table.info->entries[data->sampleBankId].addr + data->sampleAddr, data->size);
 
     writer.Finish(write);
     return std::nullopt;
@@ -48,16 +47,34 @@ ExportResult NSampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<
 ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto aiff = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<NSampleData>(raw);
-    *replacement += ".aiff";
 
-    auto aifc = LUS::BinaryWriter();
-    AudioConverter::SampleV1ToAIFC(data.get(), aifc);
-    auto cnv = aifc.ToVector();
+#ifdef SF64_SUPPORT
+    if(AudioContext::driver == NAudioDrivers::SF64 && data->codec == 2) {
+        *replacement += ".pcm";
+        auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
+        auto ptr = table.buffer.data() + table.info->entries[data->sampleBankId].addr + data->sampleAddr;
+        auto vec = std::vector<uint8_t>(ptr, ptr + data->size);
+        auto output = new int16_t[data->size * 2];
+        SF64::DecompressAudio(vec, output);
+        auto writer = LUS::BinaryWriter();
+        writer.Write((char*) output, data->size);
+        writer.Finish(write);
+    } else {
+#endif
+        *replacement += ".aiff";
+        auto aifc = LUS::BinaryWriter();
+        AudioConverter::SampleV1ToAIFC(data.get(), aifc);
+        auto cnv = aifc.ToVector();
 
-    if(!cnv.empty()){
-        write_aiff(cnv, aiff);
-        aiff.Finish(write);
+        if(!cnv.empty()){
+            write_aiff(cnv, aiff);
+            aiff.Finish(write);
+        }
+#ifdef SF64_SUPPORT
     }
+#endif
+
+
     return std::nullopt;
 }
 
@@ -65,9 +82,6 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     auto entry = std::static_pointer_cast<NSampleData>(raw);
 
     auto path = fs::path(*replacement);
-
-    *replacement += ".meta";
-
     tinyxml2::XMLDocument sample;
     tinyxml2::XMLElement* root = sample.NewElement("Sample");
     root->SetAttribute("Version", 0);
@@ -77,7 +91,7 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     root->SetAttribute("Tuning", entry->tuning);
     root->SetAttribute("Size", entry->size);
     root->SetAttribute("Relocated", 0);
-    root->SetAttribute("Path", path.c_str());
+    root->SetAttribute("Path", (path.string() + "_data").c_str());
 
     if(entry->loop != 0) {
         auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(entry->loop)->data.value());
@@ -114,11 +128,10 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     sample.Accept(&printer);
     write.write(printer.CStr(), printer.CStrSize() - 1);
 
-    auto tableEntry = AudioContext::tableData[AudioTableType::SAMPLE_TABLE]->entries[entry->sampleBankId];
-    auto buffer = AudioContext::data[AudioTableType::SAMPLE_TABLE];
-    auto sampleData = buffer.data() + tableEntry.addr + entry->sampleAddr;
+    auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
+    auto sampleData = table.buffer.data() + table.info->entries[entry->sampleBankId].addr + entry->sampleAddr;
     std::vector<char> data(sampleData, sampleData + entry->size);
-    Companion::Instance->RegisterCompanionFile(path.filename().string(), data);
+    Companion::Instance->RegisterCompanionFile(path.filename().string() + "_data", data);
 
     return std::nullopt;
 }
@@ -130,7 +143,7 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     auto sampleRate = GetSafeNode<uint32_t>(node, "sampleRate", 0);
     auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
 
-    auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].at(parent);
+    auto table = AudioContext::tables[AudioTableType::FONT_TABLE].entries[parent];
     auto reader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, offset);
 
     auto sample = std::make_shared<NSampleData>();
@@ -147,7 +160,7 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     auto bookAddr = reader.ReadUInt32();
 
     if(loopAddr != 0){
-        loopAddr += entry.addr;
+        loopAddr += table.addr;
         YAML::Node loop;
         loop["type"] = "NAUDIO:V1:ADPCM_LOOP";
         loop["offset"] = loopAddr;
@@ -155,7 +168,7 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     }
 
     if(bookAddr != 0){
-        bookAddr += entry.addr;
+        bookAddr += table.addr;
         YAML::Node book;
         book["type"] = "NAUDIO:V1:ADPCM_BOOK";
         book["offset"] = bookAddr;

@@ -39,7 +39,7 @@ ExportResult SM64::PaintingMapCodeExporter::Export(std::ostream &write, std::sha
 
     for (auto &group : paintingData->mPaintingGroups) {
         write << fourSpaceTab;
-        write << group.x << ", " << group.y << ", " << group.z << ", " << ",\n";
+        write << group.x << ", " << group.y << ", " << group.z << ",\n";
     }
 
     write << "};\n";

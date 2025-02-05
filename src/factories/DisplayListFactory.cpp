@@ -16,6 +16,7 @@
 std::unordered_map<std::string, uint8_t> gF3DTable = {
     { "G_VTX", 0x04 },
     { "G_DL", 0x06 },
+    { "G_MTX", 0x1 },
     { "G_ENDDL", 0xB8 },
     { "G_SETTIMG", 0xFD },
     { "G_MOVEMEM", 0x03 },
@@ -29,6 +30,7 @@ std::unordered_map<std::string, uint8_t> gF3DTable = {
 std::unordered_map<std::string, uint8_t> gF3DExTable = {
     { "G_VTX", 0x04 },
     { "G_DL", 0x06 },
+    { "G_MTX", 0x1 },
     { "G_ENDDL", 0xB8 },
     { "G_SETTIMG", 0xFD },
     { "G_MOVEMEM", 0x03 },
@@ -42,6 +44,7 @@ std::unordered_map<std::string, uint8_t> gF3DExTable = {
 std::unordered_map<std::string, uint8_t> gF3DEx2Table = {
     { "G_VTX", 0x01 },
     { "G_DL", 0xDE },
+    { "G_MTX", 0xDA },
     { "G_ENDDL", 0xDF },
     { "G_SETTIMG", 0xFD },
     { "G_MOVEMEM", 0xDC },
@@ -143,6 +146,7 @@ ExportResult DListCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     gfxd_lightsn_callback(GFXDOverride::Lights);
     gfxd_light_callback(GFXDOverride::Light);
     gfxd_vp_callback(GFXDOverride::Viewport);
+    gfxd_mtx_callback(GFXDOverride::Matrix);
     GFXDSetGBIVersion();
 
     if(searchTable.has_value()){
@@ -442,7 +446,6 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 N64Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
                 w0 = value.words.w0;
                 w1 = value.words.w1;
-            
 
                 writer.Write(w0);
                 writer.Write(w1);
@@ -460,6 +463,32 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
                 } else {
                     SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
                 }
+            }
+        }
+
+        if(opcode == GBI(G_MTX)) {
+            auto ptr = w1;
+            auto dec = Companion::Instance->GetNodeByAddr(ptr);
+
+            w0 &= 0x00FFFFFF;
+            w0 += G_MTX_OTR << 24;
+            w1 = 0;
+
+            writer.Write(w0);
+            writer.Write(w1);
+
+            if(dec.has_value()){
+                uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
+
+                if(hash == 0){
+                    throw std::runtime_error("Matrix hash is 0 for " + std::get<0>(dec.value()));
+                }
+
+                SPDLOG_INFO("Found matrix: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
+                w0 = hash >> 32;
+                w1 = hash & 0xFFFFFFFF;
+            } else {
+                SPDLOG_WARN("Could not find matrix at 0x{:X}", ptr);
             }
         }
 

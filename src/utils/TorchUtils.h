@@ -1,11 +1,13 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
-#include <algorithm>
 #include <cstdint>
+#include <algorithm>
+#include <filesystem>
 
 namespace Torch {
 template< typename T >
@@ -23,4 +25,6 @@ std::string to_hex(T number, const bool append0x = true) {
 }
 
 uint32_t translate(uint32_t offset);
+std::vector<std::filesystem::directory_entry> getRecursiveEntries(const std::filesystem::path baseDir);
+
 };
