@@ -34,9 +34,8 @@ public:
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
             REGISTER(Header, SoundFontHeaderExporter)
-            REGISTER(Binary, SoundFontBinaryExporter)
+            REGISTER(Binary, SoundFontXMLExporter)
             REGISTER(Code, SoundFontCodeExporter)
-            REGISTER(XML, SoundFontXMLExporter)
         };
     }
 
