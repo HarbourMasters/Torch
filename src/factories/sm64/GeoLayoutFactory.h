@@ -16,6 +16,7 @@ namespace SM64 {
 struct GeoCommand {
     GeoOpcode opcode;
     std::vector<GeoArgument> arguments;
+    bool skipped;
 };
 
 class GeoLayout : public IParsedData {
