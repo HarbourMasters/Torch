@@ -76,6 +76,7 @@ struct WriteEntry {
 struct GBIConfig {
     GBIVersion version = GBIVersion::f3d;
     GBIMinorVersion subversion = GBIMinorVersion::None;
+    bool useFloats = false;
 };
 
 struct TorchConfig {
