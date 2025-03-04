@@ -68,6 +68,8 @@ ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::s
     } else {
         if(isOTR){
             write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+            write << "#define _" << symbol << "_WIDTH 0x" << std::hex << texture->mWidth << std::dec << "\n";
+            write << "#define _" << symbol << "_HEIGHT 0x" << std::hex << texture->mHeight << std::dec << "\n";
         } else {
             write << "extern " << "u8 " << symbol << "[];\n";
             // Allocate worse case size
