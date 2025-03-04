@@ -1150,6 +1150,8 @@ void Companion::Process() {
         }
     }
 
+    this->gConfig.textureDefines = cfg["textures"] && (cfg["textures"].as<std::string>() == "ADDITIONAL_DEFINES");
+
     this->ParseHash();
 
     SPDLOG_INFO("------------------------------------------------");
