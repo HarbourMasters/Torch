@@ -38,7 +38,7 @@ ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::s
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
-    auto texture = std::static_pointer_cast<TextureData>(raw);
+    auto texture = std::static_pointer_cast<CompressedTextureData>(raw);
     auto data = texture->mBuffer;
     auto isOTR = Companion::Instance->IsOTRMode();
     size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
@@ -70,6 +70,25 @@ ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::s
             write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         } else {
             write << "extern " << "u8 " << symbol << "[];\n";
+            // Allocate worse case size
+            uint8_t* compressedData;
+            size_t compressedSize;
+            size_t worstSize;
+
+            switch (texture->mCompressionType) {
+                case CompressionType::MIO0:
+                    worstSize = MIO0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+                    compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
+                    compressedSize = mio0_encode(data.data(), data.size(), compressedData);
+                    break;
+                default:
+                    // UNIMPLEMENTED
+                    throw std::runtime_error("Unsupported Compressed Texture Type");
+                    break;
+            }
+            write << "#define _" << symbol << "_COMPRESSED_SIZE 0x" << std::hex << compressedSize << std::dec << "\n";
+            write << "#define _" << symbol << "_WIDTH 0x" << std::hex << texture->mWidth << std::dec << "\n";
+            write << "#define _" << symbol << "_HEIGHT 0x" << std::hex << texture->mHeight << std::dec << "\n";
         }
     }
 
