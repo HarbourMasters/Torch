@@ -733,6 +733,7 @@ void Companion::ProcessFile(YAML::Node root) {
                     result.node["offset"].as<uint32_t>(),
                     alignment,
                     stream.str(),
+                    GetNode<std::string>(result.node, "comment"),
                     std::nullopt
                 };
             } else {
@@ -743,6 +744,7 @@ void Companion::ProcessFile(YAML::Node root) {
                             result.node["offset"].as<uint32_t>(),
                             alignment,
                             stream.str(),
+                            GetNode<std::string>(result.node, "comment"),
                             std::get<size_t>(endptr.value())
                         };
                         break;
@@ -753,6 +755,7 @@ void Companion::ProcessFile(YAML::Node root) {
                             oentry.start,
                             alignment,
                             stream.str(),
+                            GetNode<std::string>(result.node, "comment"),
                             oentry.end
                         };
                         break;
@@ -830,6 +833,11 @@ void Companion::ProcessFile(YAML::Node root) {
         for (size_t i = 0; i < entries.size(); i++) {
             const auto result = entries[i];
             const auto hasSize = result.endptr.has_value();
+
+            if(result.comment.has_value()){
+                stream << "// " << result.comment.value() << "\n";
+            }
+
             if (hasSize && this->IsDebug()) {
                 stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.addr) << "\n";
             }
