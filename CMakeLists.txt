@@ -10,6 +10,7 @@ option(USE_STANDALONE "Build as a standalone executable" ON)
 option(BUILD_STORMLIB "Build with StormLib support" ON)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
+option(BUILD_BK64 "Build with Banjo Kazooie 64 support" ON)
 option(BUILD_SM64 "Build with Super Mario 64 support" ON)
 option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
 option(BUILD_SF64 "Build with Star Fox 64 support" ON)
