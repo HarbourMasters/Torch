@@ -85,6 +85,12 @@ else()
     list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/fzerox/*")
 endif()
 
+if(BUILD_BK64)
+    add_definitions(-DBK64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/bk64/*")
+endif()
+
 if(BUILD_NAUDIO)
     add_definitions(-DNAUDIO_SUPPORT)
 else()

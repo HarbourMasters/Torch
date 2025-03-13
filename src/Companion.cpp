@@ -201,7 +201,6 @@ void Companion::Init(const ExportType type) {
     //this->RegisterFactory("BK64:SPRITE", std::make_shared<BK64::SpriteFactory>());
 #endif
 
-
     this->Process();
 }
 

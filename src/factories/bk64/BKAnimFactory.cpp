@@ -1,4 +1,4 @@
-/* #include "BKModelFactory.h"
+#include "BKAnimFactory.h"
 #include "spdlog/spdlog.h"
 
 #include "Companion.h"
@@ -15,7 +15,7 @@ ExportResult AnimHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPa
         return std::nullopt;
     }
 
-    write << "extern BK64::Model " << symbol << ";\n";
+    write << "extern BK64::Anim " << symbol << ";\n";
 
     return std::nullopt;
 }
@@ -23,19 +23,19 @@ ExportResult AnimHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPa
 ExportResult AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto data = std::static_pointer_cast<ModelData>(raw);
+    auto data = std::static_pointer_cast<AnimData>(raw);
 
 }
 
-ExportResult BK64::ModelBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
 
 }
 
-std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> AnimFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto [root, segment] = Decompressor::AutoDecode(node, buffer, 0x1000);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
 
-    return std::make_shared<ModelData>();
+    return std::make_shared<AnimData>();
 }
-} */
+}
