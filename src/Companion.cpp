@@ -94,6 +94,7 @@
 
 #ifdef BK64_SUPPORT 
 #include "factories/bk64/BKModelFactory.h"
+#include "factories/bk64/BKAnimFactory.h"
 #endif
 
 #include "preprocess/CompTool.h"
@@ -190,7 +191,7 @@ void Companion::Init(const ExportType type) {
 #endif
 
 #ifdef BK64_SUPPORT
-    //this->RegisterFactory("BK64:ANIMATION", std::make_shared<BK64::AnimFactory>());
+    this->RegisterFactory("BK64:ANIMATION", std::make_shared<BK64::AnimFactory>());
     //this->RegisterFactory("BK64:DEMOINPUT", std::make_shared<BK64::DemoInputFactory>());
     //this->RegisterFactory("BK64:DIALOG", std::make_shared<BK64::DialogFactory>());
     //this->RegisterFactory("BK64:GRUNTYQUIZ", std::make_shared<BK64::GruntyQuizFactory>());

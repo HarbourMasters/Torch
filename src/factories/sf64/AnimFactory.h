@@ -3,7 +3,10 @@
 #include <factories/BaseFactory.h>
 
 namespace SF64 {
-
+/*
+D_TI1_7006F74:
+  { type: SF64:ANIM, offset: 0x7006F74, symbol: D_TI1_7006F74 }
+*/
 struct JointKey {
     uint16_t keys[6];
 };

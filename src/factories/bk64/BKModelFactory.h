@@ -61,8 +61,10 @@ class ModelFactory : public BaseFactory {
   public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
-        return { REGISTER(Code, ModelCodeExporter) REGISTER(Header, ModelHeaderExporter)
-                     REGISTER(Binary, ModelBinaryExporter) };
+        return { 
+          REGISTER(Code, ModelCodeExporter) 
+          REGISTER(Header, ModelHeaderExporter)
+          REGISTER(Binary, ModelBinaryExporter) };
     }
 };
 } // namespace BK64

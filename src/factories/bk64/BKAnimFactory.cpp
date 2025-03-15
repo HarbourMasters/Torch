@@ -25,10 +25,12 @@ ExportResult AnimCodeExporter::Export(std::ostream &write, std::shared_ptr<IPars
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto data = std::static_pointer_cast<AnimData>(raw);
 
+    return std::nullopt;
 }
 
-ExportResult AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult BK64::AnimBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
 
+    return std::nullopt;
 }
 
 std::optional<std::shared_ptr<IParsedData>> AnimFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
