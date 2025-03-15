@@ -3,7 +3,7 @@
 #include <factories/BaseFactory.h>
 
 namespace SF64 {
-/*
+/* example yaml entry
 D_TI1_7006F74:
   { type: SF64:ANIM, offset: 0x7006F74, symbol: D_TI1_7006F74 }
 */

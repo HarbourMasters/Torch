@@ -93,8 +93,9 @@
 #endif
 
 #ifdef BK64_SUPPORT 
-#include "factories/bk64/BKModelFactory.h"
-#include "factories/bk64/BKAnimFactory.h"
+//#include "factories/bk64/BKModelFactory.h"
+//#include "factories/bk64/BKAnimFactory.h"
+#include "factories/bk64/BKAssetFactory.h"
 #endif
 
 #include "preprocess/CompTool.h"
@@ -191,13 +192,14 @@ void Companion::Init(const ExportType type) {
 #endif
 
 #ifdef BK64_SUPPORT
-    this->RegisterFactory("BK64:ANIMATION", std::make_shared<BK64::AnimFactory>());
+    this->RegisterFactory("BK64:BINARY", std::make_shared<BK64::AssetFactory>());
+    //this->RegisterFactory("BK64:ANIMATION", std::make_shared<BK64::AnimFactory>());
     //this->RegisterFactory("BK64:DEMOINPUT", std::make_shared<BK64::DemoInputFactory>());
     //this->RegisterFactory("BK64:DIALOG", std::make_shared<BK64::DialogFactory>());
     //this->RegisterFactory("BK64:GRUNTYQUIZ", std::make_shared<BK64::GruntyQuizFactory>());
     //this->RegisterFactory("BK64:LEVELSETUP", std::make_shared<BK64::LevelSetupFactory>());
     //this->RegisterFactory("BK64:MIDI", std::make_shared<BK64::MidiFactory>());
-    this->RegisterFactory("BK64:MODEL", std::make_shared<BK64::ModelFactory>());
+    //this->RegisterFactory("BK64:MODEL", std::make_shared<BK64::ModelFactory>());
     //this->RegisterFactory("BK64:QUESTION", std::make_shared<BK64::QuestionFactory>());
     //this->RegisterFactory("BK64:SPRITE", std::make_shared<BK64::SpriteFactory>());
 #endif

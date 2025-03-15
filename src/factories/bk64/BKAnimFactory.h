@@ -1,4 +1,4 @@
-#pragma once
+/* #pragma once
 
 #include <factories/BaseFactory.h>
 
@@ -12,11 +12,11 @@ typedef union {
         int8_t unk2;           //padding?    0x0000/ [00 00]
     };
 } AnimationFileData; // represents the transformation on a given model bone
-/*Example (60f0.bin, Banjo's Backflip at address 0x0C):
+Example (60f0.bin, Banjo's Backflip at address 0x0C):
 C0 0F 15 E6
 At frame 15 (0xF), two bitwise parameters are set as true (if [d] = 1 and [e] = 1, 
 then the remaining two bits must return false to equal 0xC) and then the bone transforms by a factor of 87.59375 (0x15E6).
-*/
+
 
 typedef struct animation_file_elem_s {
     uint32_t unk0_15 : 12;  // internal bone ID being targeted 0x000 (A) [AAAb]
@@ -75,8 +75,10 @@ class AnimFactory : public BaseFactory {
         return { 
             REGISTER(Code, AnimCodeExporter) 
             REGISTER(Header, AnimHeaderExporter)
+                     
             REGISTER(Binary, AnimBinaryExporter) 
         };
     }
 };
 } // namespace BK64
+ */
