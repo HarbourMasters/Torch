@@ -7,34 +7,18 @@ namespace BK64 {
 class AssetData : public IParsedData {
   public:
 
-    enum class AssetType {
-        Animation,
-        Binary,
-        DemoInput,
-        Dialog,
-        GruntyQuestion,
-        LevelSetup,
-        Midi,
-        Model,
-        QuizQuestion,
-        Sprite  // Special case, needs extra handling in OG asset tool and starship, may not be needed here?
-    };
-
-    AssetType mType;
     int32_t mOffset; //(usv1.0 assets.bin rom offset = 0x5E90) + asset offset = address of asset
     std::vector<uint8_t> mRawBinary;
     bool mIsCompressed = false;
     int8_t mAssetFlag;
-    int mSize;
+    size_t mLength;
 
     AssetData() = default;
 
-    AssetData(int32_t offset, int size, std::vector<uint8_t> data, AssetType type, bool compressed, int8_t assetFlag) {
+    AssetData(int32_t offset, std::vector<uint8_t> data, int8_t assetFlag) {
         mOffset = offset;
-        mSize = size;
+        //mLength = size;
         mRawBinary = data;
-        mType = type;
-        mIsCompressed = compressed;
         mAssetFlag = assetFlag;
     }
 };
