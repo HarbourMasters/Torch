@@ -4,23 +4,20 @@
 
 namespace BK64 {
 
+
 class AssetData : public IParsedData {
   public:
 
     int32_t mOffset; //(usv1.0 assets.bin rom offset = 0x5E90) + asset offset = address of asset
-    std::vector<uint8_t> mRawBinary;
     bool mIsCompressed = false;
     int8_t mAssetFlag;
     size_t mLength;
+    //std::vector<uint8_t> mData;
+    std::string mSubType;
 
     AssetData() = default;
 
-    AssetData(int32_t offset, std::vector<uint8_t> data, int8_t assetFlag) {
-        mOffset = offset;
-        //mLength = size;
-        mRawBinary = data;
-        mAssetFlag = assetFlag;
-    }
+    //AssetData(int32_t offset, int8_t assetFlag, bool compressed, std::string subType)  : mOffset(offset), mAssetFlag(assetFlag), mIsCompressed(compressed), mSubType(subType) {}
 };
 
 class AssetHeaderExporter : public BaseExporter {
