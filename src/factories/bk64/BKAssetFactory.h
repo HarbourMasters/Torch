@@ -1,49 +1,48 @@
 #pragma once
 
-#include <factories/BaseFactory.h>
+#include "BaseFactory.h"
+#include "../types/RawBuffer.h"
+#include <unordered_map>
+#include <string>
 
-namespace BK64 {
-
-
-class AssetData : public IParsedData {
-  public:
-
-    int32_t mOffset; //(usv1.0 assets.bin rom offset = 0x5E90) + asset offset = address of asset
-    bool mIsCompressed = false;
-    int8_t mAssetFlag;
-    size_t mLength;
-    //std::vector<uint8_t> mData;
-    std::string mSubType;
-
-    AssetData() = default;
-
-    //AssetData(int32_t offset, int8_t assetFlag, bool compressed, std::string subType)  : mOffset(offset), mAssetFlag(assetFlag), mIsCompressed(compressed), mSubType(subType) {}
+class BinaryAssetData : public IParsedData {
+public:
+    std::vector<uint8_t> mBuffer;
+    std::string mSubtype;
+    bool mCompressed;
+    int mTFlag;
+    
+    BinaryAssetData(std::vector<uint8_t> buffer, const std::string& subtype, bool compressed, int tFlag) 
+        : mBuffer(std::move(buffer)), mSubtype(subtype), mCompressed(compressed), mTFlag(tFlag) {}
 };
 
-class AssetHeaderExporter : public BaseExporter {
-    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName,
-                        YAML::Node& node, std::string* replacement) override;
+class BinaryAssetHeaderExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class AssetBinaryExporter : public BaseExporter {
-    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName,
-                        YAML::Node& node, std::string* replacement) override;
+class BinaryAssetBinaryExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class AssetCodeExporter : public BaseExporter {
-    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName,
-                        YAML::Node& node, std::string* replacement) override;
+class BinaryAssetCodeExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class AssetFactory : public BaseFactory {
-  public:
+class BinaryAssetXMLExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
+class BinaryAssetFactory : public BaseFactory {
+public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
+    std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
-        return { 
-            REGISTER(Code, AssetCodeExporter) 
-            REGISTER(Header, AssetHeaderExporter)                     
-            REGISTER(Binary, AssetBinaryExporter) 
+        return {
+            REGISTER(Header, BinaryAssetHeaderExporter)
+            REGISTER(Binary, BinaryAssetBinaryExporter)
+            REGISTER(Code, BinaryAssetCodeExporter)
+            REGISTER(XML, BinaryAssetXMLExporter)
         };
     }
+    bool SupportModdedAssets() override { return true; }
 };
-} // namespace BK64
