@@ -72,6 +72,7 @@
 
 #ifdef FZERO_SUPPORT
 #include "factories/fzerox/CourseFactory.h"
+#include "factories/fzerox/GhostRecordFactory.h"
 #endif
 
 #ifdef NAUDIO_SUPPORT
@@ -165,6 +166,7 @@ void Companion::Init(const ExportType type) {
 
 #ifdef FZERO_SUPPORT
     this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
+    this->RegisterFactory("FZX:GHOST", std::make_shared<FZX::GhostRecordFactory>());
 #endif
 
 #ifdef NAUDIO_SUPPORT

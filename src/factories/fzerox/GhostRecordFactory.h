@@ -29,14 +29,36 @@ typedef struct GhostMachineInfo {
 
 class GhostRecordData : public IParsedData {
 public:
+    // Records
     uint16_t mGhostType;
-    int32_t mReplayChecksum;
     int32_t mCourseEncoding;
     int32_t mRaceTime;
+    uint16_t mUnk10;
     std::string mTrackName; // empty for normal tracks
     GhostMachineInfo mGhostMachineInfo;
+    
+    // Data
+    std::vector<int32_t> mLapTimes;
+    int32_t mReplayEnd;
+    uint32_t mReplaySize;
+    std::vector<int8_t> mReplayData;
 
-    GhostRecordData(uint16_t ghostType, int32_t replayChecksum, int32_t courseEncoding, int32_t raceTime, std::string trackName, GhostMachineInfo& ghostMachineInfo) : mGhostType(ghostType), mReplayChecksum(replayChecksum), mCourseEncoding(courseEncoding), mRaceTime(raceTime), mTrackName(trackName), mGhostMachineInfo(ghostMachineInfo) {}
+    GhostRecordData(uint16_t ghostType, int32_t courseEncoding, int32_t raceTime, uint16_t unk_10, std::string trackName, GhostMachineInfo& ghostMachineInfo, std::vector<int32_t> lapTimes, int32_t replayEnd, uint32_t replaySize, std::vector<int8_t> replayData) :
+        mGhostType(ghostType),
+        mCourseEncoding(courseEncoding),
+        mRaceTime(raceTime),
+        mUnk10(unk_10),
+        mTrackName(trackName),
+        mGhostMachineInfo(ghostMachineInfo),
+        mLapTimes(std::move(lapTimes)),
+        mReplayEnd(replayEnd),
+        mReplaySize(replaySize),
+        mReplayData(std::move(replayData)) {}
+
+    uint16_t Save_CalculateChecksum(void* data, int32_t size);
+    uint16_t CalculateRecordChecksum(void);
+    uint16_t CalculateDataChecksum(void);
+    int32_t CalculateReplayChecksum(void);
 };
 
 class GhostRecordHeaderExporter : public BaseExporter {
@@ -58,7 +80,7 @@ class GhostRecordModdingExporter : public BaseExporter {
 class GhostRecordFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
-    std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
+    // std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
             REGISTER(Code, GhostRecordCodeExporter)
