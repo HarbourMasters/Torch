@@ -155,7 +155,7 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
     write << "};\n\n";
 
 
-    write << "u8 " << symbol << "Data[] = {\n";
+    write << "s8 " << symbol << "Data[] = {\n";
 
     write << fourSpaceTab;
 
