@@ -70,12 +70,14 @@ struct WriteEntry {
     uint32_t addr;
     uint32_t alignment;
     std::string buffer;
+    std::optional<std::string> comment;
     std::optional<uint32_t> endptr;
 };
 
 struct GBIConfig {
     GBIVersion version = GBIVersion::f3d;
     GBIMinorVersion subversion = GBIMinorVersion::None;
+    bool useFloats = false;
 };
 
 struct TorchConfig {
@@ -88,6 +90,7 @@ struct TorchConfig {
     ArchiveType otrMode;
     bool debug;
     bool modding;
+    bool textureDefines;
 };
 
 struct ParseResultData {
@@ -114,6 +117,7 @@ public:
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
         this->gConfig.modding = modding;
+        this->gConfig.textureDefines = false;
     }
 
     explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
@@ -121,6 +125,7 @@ public:
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
         this->gConfig.modding = modding;
+        this->gConfig.textureDefines = false;
     }
 
     void Init(ExportType type);
@@ -131,6 +136,7 @@ public:
 
     bool IsOTRMode() const { return (this->gConfig.otrMode != ArchiveType::None); }
     bool IsDebug() const { return this->gConfig.debug; }
+    bool AddTextureDefines() const { return this->gConfig.textureDefines; }
 
     N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
     std::vector<uint8_t>& GetRomData() { return this->gRomData; }

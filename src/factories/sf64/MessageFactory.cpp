@@ -55,7 +55,7 @@ std::unordered_map<std::string, std::string> ASCIITable = {
 std::vector<std::string> gASCIIFullTable = {
     "\0", "\n", "{NP:2}", "{NP:3}", "{NP:4}", "{NP:5}", "{NP:6}", "{NP:7}",
     "{PRI:0}", "{PRI:1}", "{PRI:2}", "{PRI:3}", " ", "{HSP}", "{QSP}", "{NXT}",
-    "{C:<}", "{C:^}", "{C:>}", "{C:v}", "^", "<", "v", ">",
+    "{C:<}", "{C:^}", "{C:>}", "{C:v}", "{^}", "{<}", "{v}", "{>}",
     "A", "B", "C", "D", "E", "F", "G", "H",
     "I", "J", "K", "L", "M", "N", "O", "P",
     "Q", "R", "S", "T", "U", "V", "W", "X",
@@ -150,10 +150,9 @@ ExportResult SF64::MessageModdingExporter::Export(std::ostream&write, std::share
     return std::nullopt;
 }
 
-ExportResult SF64::MessageXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::MessageXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto data = std::static_pointer_cast<MessageData>(raw);
     const auto symbol = GetSafeNode(node, "symbol", entryName);
-    *replacement += ".meta";
 
     tinyxml2::XMLPrinter printer;
     tinyxml2::XMLDocument message;

@@ -503,12 +503,14 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& raw_buffer, YAML::Node& node) {
     const auto gbi = Companion::Instance->GetGBIVersion();
 
+    auto count = GetSafeNode<int32_t>(node, "count", -1);
     auto [_, segment] = Decompressor::AutoDecode(node, raw_buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
 
     std::vector<uint32_t> gfxs;
     auto processing = true;
+    size_t length = 0;
 
     while (processing){
         auto w0 = reader.ReadUInt32();
@@ -629,6 +631,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             } else {
                 SPDLOG_WARN("Found vtx at 0x{:X}", w1);
             }
+        }
+
+        if(count != -1 && length++ >= count){
+            break;
         }
 
         gfxs.push_back(w0);

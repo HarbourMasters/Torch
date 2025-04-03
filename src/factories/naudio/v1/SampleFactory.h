@@ -46,9 +46,10 @@ public:
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
             REGISTER(Header, NSampleHeaderExporter)
-            REGISTER(Binary, NSampleXMLExporter)
+            REGISTER(Binary, NSampleBinaryExporter)
             REGISTER(Code, NSampleCodeExporter)
             REGISTER(Modding, NSampleModdingExporter)
+            REGISTER(XML, NSampleXMLExporter)
         };
     }
     bool SupportModdedAssets() override { return true; }

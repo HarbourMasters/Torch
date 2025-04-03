@@ -105,7 +105,7 @@ ExportResult MtxCodeExporter::Export(std::ostream &write, std::shared_ptr<IParse
 ExportResult MtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto mtx = std::static_pointer_cast<MtxData>(raw);
     auto writer = LUS::BinaryWriter();
-    auto floats = GetSafeNode(node, "floats", false);
+    auto floats = Companion::Instance->GetConfig().gbi.useFloats;
 
     WriteHeader(writer, Torch::ResourceType::Matrix, 0);
 

@@ -735,6 +735,7 @@ void Companion::ProcessFile(YAML::Node root) {
                     result.node["offset"].as<uint32_t>(),
                     alignment,
                     stream.str(),
+                    GetNode<std::string>(result.node, "comment"),
                     std::nullopt
                 };
             } else {
@@ -745,6 +746,7 @@ void Companion::ProcessFile(YAML::Node root) {
                             result.node["offset"].as<uint32_t>(),
                             alignment,
                             stream.str(),
+                            GetNode<std::string>(result.node, "comment"),
                             std::get<size_t>(endptr.value())
                         };
                         break;
@@ -755,6 +757,7 @@ void Companion::ProcessFile(YAML::Node root) {
                             oentry.start,
                             alignment,
                             stream.str(),
+                            GetNode<std::string>(result.node, "comment"),
                             oentry.end
                         };
                         break;
@@ -832,6 +835,11 @@ void Companion::ProcessFile(YAML::Node root) {
         for (size_t i = 0; i < entries.size(); i++) {
             const auto result = entries[i];
             const auto hasSize = result.endptr.has_value();
+
+            if(result.comment.has_value()){
+                stream << "// " << result.comment.value() << "\n";
+            }
+
             if (hasSize && this->IsDebug()) {
                 stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.addr) << "\n";
             }
@@ -1034,6 +1042,7 @@ void Companion::Process() {
     this->gAssetPath = rom["path"].as<std::string>();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
+    auto gbi_floats = cfg["gbi_floats"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
 
     this->gConfig.moddingPath = modding_path;
@@ -1087,6 +1096,10 @@ void Companion::Process() {
         } else {
             SPDLOG_ERROR("Invalid GBI version");
             return;
+        }
+
+        if(gbi_floats) {
+            this->gConfig.gbi.useFloats = gbi_floats.as<bool>();
         }
     }
 
@@ -1146,6 +1159,8 @@ void Companion::Process() {
             throw std::runtime_error("Invalid logging level, please use TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL or OFF");
         }
     }
+
+    this->gConfig.textureDefines = cfg["textures"] && (cfg["textures"].as<std::string>() == "ADDITIONAL_DEFINES");
 
     this->ParseHash();
 
