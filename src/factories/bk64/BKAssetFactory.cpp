@@ -7,6 +7,7 @@
 #include <yaml-cpp/yaml.h>
 #include <cstring>
 
+namespace BK64 {
 ExportResult BinaryAssetHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
@@ -78,85 +79,54 @@ ExportResult BinaryAssetBinaryExporter::Export(std::ostream &write, std::shared_
     return std::nullopt;
 }
 
-ExportResult BinaryAssetXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
-    auto asset = std::static_pointer_cast<BinaryAssetData>(raw);
-    const auto symbol = GetSafeNode(node, "symbol", entryName);
-    
-    *replacement += ".meta";
-
-    // Build YAML metadata output
-    YAML::Emitter out;
-    out << YAML::BeginMap;
-    
-    out << YAML::Key << "BinaryAsset" << YAML::Value << YAML::BeginMap;
-    out << YAML::Key << "name" << YAML::Value << symbol;
-    out << YAML::Key << "size" << YAML::Value << asset->mBuffer.size();
-    out << YAML::Key << "subtype" << YAML::Value << asset->mSubtype;
-    out << YAML::Key << "compressed" << YAML::Value << (asset->mCompressed ? "true" : "false");
-    out << YAML::Key << "t_flag" << YAML::Value << asset->mTFlag;
-    out << YAML::EndMap;
-    
-    out << YAML::EndMap;
-    
-    write << out.c_str();
-    
-    return std::nullopt;
-}
-
 std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     // Extract the asset properties from the YAML node
     auto subtype = GetSafeNode<std::string>(node, "subtype", "");
-    auto compressed = GetSafeNode<bool>(node, "compressed", false);
+    auto fcompressed = GetSafeNode<int>(node, "compressed", 0);
+    bool compressed = fcompressed == 0 || fcompressed == 1;
+
     auto tFlag = GetSafeNode<int>(node, "t_flag", 0);
     
-    // Get size of the asset
+    // Get size of the compressed asset
     auto size = GetSafeNode<size_t>(node, "size");
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     
     // Create a pointer to the data at the specified offset
-    const u8* srcData = buffer.data() + ASSET_PTR(offset);
-    std::vector<uint8_t> decompressedData;
-    
-    // Handle the data based on whether it's compressed or not
-    if (compressed) {
-        // Handle Rare's custom compression
-        SPDLOG_INFO("Handling BK64 compressed asset at offset 0x{:X}", offset);
-        
-        // Create a RareZip decompressor
-        RareZip::Decompressor decompressor;
-        
-        // Get uncompressed size from the header
-        int uncompressedSize = RareZip::Decompressor::GetUncompressedSize(srcData);
-        SPDLOG_INFO("Expected uncompressed size: {}", uncompressedSize);
-        
-        // Decompress using rarezip
-        decompressedData = decompressor.Decompress(srcData, uncompressedSize);
-        
-        SPDLOG_INFO("Decompressed BK64 asset: {} bytes -> {} bytes", 
-                   size, decompressedData.size());
+    const uint8_t* srcData = buffer.data() + ASSET_PTR(offset);
+    std::vector<uint8_t> processedData;
+
+    printf("Processing compressed asset: size=%zu, offset=0x%x\n", size, ASSET_PTR(offset));
+
+    if (compressed) {        
+        try {
+            processedData = bk_unzip(srcData, size);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to decompress BK64 asset: {}", e.what());
+            
+            // Optional: If decompression fails, log the first few bytes
+            std::string firstBytes;
+            for (size_t i = 0; i < std::min(size, size_t(10)); ++i) {
+                firstBytes += fmt::format("{:02x} ", srcData[i]);
+            }
+            SPDLOG_ERROR("First bytes of failed asset: {}", firstBytes);
+            
+            return std::nullopt;
+        }
     } else {
-        // No decompression needed, just copy the data
-        SPDLOG_INFO("No decompression for asset at offset 0x{:X}", offset);
-        
-        decompressedData = std::vector<uint8_t>(srcData, srcData + size);
+        // If not compressed, use the data as-is
+        processedData = std::vector<uint8_t>(srcData, srcData + size);
     }
-    
+
     SPDLOG_INFO("Parsed binary asset: subtype={}, compressed={}, t_flag={}, size={}", 
-                subtype, compressed, tFlag, decompressedData.size());
-    
-    // Create the binary asset data
-    return std::make_shared<BinaryAssetData>(
-        decompressedData,
-        subtype,
-        compressed,
-        tFlag
-    );
+                subtype, compressed, tFlag, processedData.size());
+
+    return std::make_shared<BinaryAssetData>(processedData, subtype, compressed, tFlag);
 }
 
 std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
     // For modding, we take the raw buffer and properties
     auto subtype = GetSafeNode<std::string>(node, "subtype", "");
-    auto compressed = GetSafeNode<bool>(node, "compressed", false);
+    auto compressed = GetSafeNode<bool>(node, "compressed", 0);
     auto tFlag = GetSafeNode<int>(node, "t_flag", 0);
     
     // For compressed assets, we might want to handle compression here
@@ -164,3 +134,5 @@ std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse_modding(st
     
     return std::make_shared<BinaryAssetData>(buffer, subtype, compressed, tFlag);
 }
+
+} // namespace BK64

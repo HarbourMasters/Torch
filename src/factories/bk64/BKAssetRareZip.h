@@ -1,91 +1,60 @@
-#pragma once
+#ifndef BK_UNZIP_H
+#define BK_UNZIP_H
 
-#include <cstdint>
 #include <vector>
+#include <cstdint>
+#include <utility>
 
-// Type definitions to match original code
-typedef uint8_t u8;
-typedef int8_t s8;
-typedef uint16_t u16;
-typedef int16_t s16;
-typedef uint32_t u32;
-typedef int32_t s32;
-typedef uint64_t u64;
-typedef int64_t s64;
+namespace BK64{
 
-namespace RareZip {
+/**
+ * Decompresses a buffer with a Banjo-Kazooie header format
+ * 
+ * @param in_buffer Input compressed data with BK header (starting with 0x11, 0x72)
+ * @param in_size Size of the input buffer
+ * @return Decompressed data as vector of bytes
+ * @throws std::runtime_error if decompression fails or header is invalid
+ */
+std::vector<uint8_t> bk_unzip(const uint8_t* in_buffer, size_t in_size);
 
-// Constants
-#define COMP_HEADER_SIZE 6
-#define WSIZE 0x8000
-#define BMAX 16
-#define N_MAX 288
+/**
+ * Decompresses a raw compressed buffer without BK header
+ * The first 4 bytes of the buffer are expected to be the length of decompressed data
+ * 
+ * @param in_buffer Input compressed data with 4-byte length header
+ * @param in_size Size of the input buffer
+ * @return Decompressed data as vector of bytes
+ * @throws std::runtime_error if decompression fails
+ */
+std::vector<uint8_t> runzip(const uint8_t* in_buffer, size_t in_size);
 
-// These macros are used in the decompression algorithm
-#define NEXTBYTE() (compressionInputBuffer[inputBuffer++])
-#define NEEDBITS(n) {while(k<(n)){b|=((u32)NEXTBYTE())<<k;k+=8;}}
-#define DUMPBITS(n) {b>>=(n);k-=(n);}
+/**
+ * Decompresses a raw compressed buffer and returns any unused data
+ * 
+ * @param in_buffer Input compressed data with 4-byte length header
+ * @param in_size Size of the input buffer
+ * @return A pair of (decompressed data, unused data)
+ * @throws std::runtime_error if decompression fails
+ */
+std::pair<std::vector<uint8_t>, std::vector<uint8_t>> runzip_with_leftovers(
+    const uint8_t* in_buffer, size_t in_size);
 
-// Huffman table structure
-struct huft {
-    u8 e;                /* number of extra bits or operation */
-    u8 b;                /* number of bits in this code or subcode */
-    union {
-        u16 n;           /* literal, length base, or distance base */
-        struct huft *t;  /* pointer to next level of table */
-    } v;
-};
+/**
+ * Overloaded functions that accept std::vector input
+ */
+inline std::vector<uint8_t> bk_unzip(const std::vector<uint8_t>& in_buffer) {
+    return bk_unzip(in_buffer.data(), in_buffer.size());
+}
 
-// Main decompression class
-class Decompressor {
-public:
-    Decompressor();
-    
-    // Main decompression function
-    std::vector<u8> Decompress(const u8* src, size_t maxSize);
-    
-    // Helper function to get uncompressed size
-    static u32 GetUncompressedSize(const u8* src);
+inline std::vector<uint8_t> runzip(const std::vector<uint8_t>& in_buffer) {
+    return runzip(in_buffer.data(), in_buffer.size());
+}
 
-private:
-    // Tables and constants from the original code
-    u8 bitLengthCodeOrder[19]; 
-    u16 literalCopyLengths[31];
-    u8 literalExtraBits[31];
-    u16 distanceCopyOffsets[30];
-    u8 distanceExtraBits[30];
-    u16 compressionBitMask[17];
-    
-    // Variables used during decompression
-    s32 literalBits;
-    s32 distanceBits;
-    u8 *compressionInputBuffer;
-    u8 *outputBuffer;
-    u32 inputBuffer;
-    u32 writePointer;
-    struct huft *currentHuft;
-    u32 bitBuffer;
-    u32 compressionBitCount;
-    u32 compressionCRC1;
-    u32 compressionCRC2;
-    u32 huftCount;
-    
-    // Huffman table memory
-    std::vector<huft> huftMemory;
-    
-    // Core decompression functions
-    int BK_inflate();
-    int bk_inflate_block(int *e);
-    int bk_inflate_stored();
-    int bk_inflate_fixed();
-    int bk_inflate_dynamic();
-    int bk_inflate_codes(struct huft *tl, struct huft *td, s32 bl, s32 bd);
-    
-    // Updated function declaration that matches the parameter types expected by callers
-    int bk_huft_build(unsigned *b, unsigned n, unsigned s, u16 *d, u8 *e, struct huft **t, int *m);
-    
-    // Initialize tables and constants
-    void InitTables();
-};
+inline std::pair<std::vector<uint8_t>, std::vector<uint8_t>> runzip_with_leftovers(
+    const std::vector<uint8_t>& in_buffer) {
+    return runzip_with_leftovers(in_buffer.data(), in_buffer.size());
+}
 
-} // namespace RareZip
+} // namespace BK64
+
+#endif // BK_UNZIP_H

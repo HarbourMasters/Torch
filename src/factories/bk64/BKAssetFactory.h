@@ -1,9 +1,11 @@
 #pragma once
 
-#include "BaseFactory.h"
-#include "../types/RawBuffer.h"
+#include <factories/BaseFactory.h>
+#include <types/RawBuffer.h>
 #include <unordered_map>
 #include <string>
+
+namespace BK64 {
 
 class BinaryAssetData : public IParsedData {
 public:
@@ -28,10 +30,6 @@ class BinaryAssetCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class BinaryAssetXMLExporter : public BaseExporter {
-    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
-};
-
 class BinaryAssetFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -41,8 +39,9 @@ public:
             REGISTER(Header, BinaryAssetHeaderExporter)
             REGISTER(Binary, BinaryAssetBinaryExporter)
             REGISTER(Code, BinaryAssetCodeExporter)
-            REGISTER(XML, BinaryAssetXMLExporter)
         };
     }
     bool SupportModdedAssets() override { return true; }
 };
+
+} // namespace BK64
