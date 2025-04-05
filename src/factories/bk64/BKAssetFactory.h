@@ -13,9 +13,10 @@ public:
     std::string mSubtype;
     bool mCompressed;
     int mTFlag;
+    int mIndex;
     
-    BinaryAssetData(std::vector<uint8_t> buffer, const std::string& subtype, bool compressed, int tFlag) 
-        : mBuffer(std::move(buffer)), mSubtype(subtype), mCompressed(compressed), mTFlag(tFlag) {}
+    BinaryAssetData(std::vector<uint8_t> buffer, const std::string& subtype, int tFlag, int index) 
+        : mBuffer(std::move(buffer)), mSubtype(subtype), mTFlag(tFlag), mIndex(index) {}
 };
 
 class BinaryAssetHeaderExporter : public BaseExporter {

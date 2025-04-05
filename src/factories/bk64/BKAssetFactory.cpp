@@ -17,7 +17,6 @@ ExportResult BinaryAssetHeaderExporter::Export(std::ostream &write, std::shared_
     }
 
     write << "extern u8 " << symbol << "[];\n";
-    write << "extern size_t " << symbol << "_size;\n";
 
     return std::nullopt;
 }
@@ -34,8 +33,8 @@ ExportResult BinaryAssetCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << "// Binary Asset with properties:\n";
     write << "// - subtype: " << asset->mSubtype << "\n";
-    write << "// - compressed: " << (asset->mCompressed ? "true" : "false") << "\n";
     write << "// - t_flag: " << asset->mTFlag << "\n";
+    write << "// - index: " << asset->mIndex << "\n";
     write << "\n";
 
     write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[] = {\n" << tab_t;
@@ -63,13 +62,13 @@ ExportResult BinaryAssetBinaryExporter::Export(std::ostream &write, std::shared_
     auto asset = std::static_pointer_cast<BinaryAssetData>(raw);
 
     // Custom resource type
-    WriteHeader(writer, Torch::ResourceType::Blob, 2);
+    WriteHeader(writer, Torch::ResourceType::BKBinary, 1);
 
     // Write metadata
-    writer.Write((uint32_t) asset->mSubtype.size());
+    //writer.Write((uint32_t) asset->mSubtype.size());
     writer.Write(asset->mSubtype.c_str(), asset->mSubtype.size());
-    writer.Write((uint8_t) (asset->mCompressed ? 1 : 0));
     writer.Write((uint32_t) asset->mTFlag);
+    writer.Write((uint32_t) asset->mIndex);
 
     // Write buffer size and the actual buffer data
     writer.Write((uint32_t) asset->mBuffer.size());
@@ -84,8 +83,8 @@ std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse(std::vecto
     auto subtype = GetSafeNode<std::string>(node, "subtype", "");
     auto fcompressed = GetSafeNode<int>(node, "compressed", 0);
     bool compressed = fcompressed == 0 || fcompressed == 1;
-
     auto tFlag = GetSafeNode<int>(node, "t_flag", 0);
+    auto index = GetSafeNode<int>(node, "index", 0);
     
     // Get size of the compressed asset
     auto size = GetSafeNode<size_t>(node, "size");
@@ -117,22 +116,21 @@ std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse(std::vecto
         processedData = std::vector<uint8_t>(srcData, srcData + size);
     }
 
-    SPDLOG_INFO("Parsed binary asset: subtype={}, compressed={}, t_flag={}, size={}", 
-                subtype, compressed, tFlag, processedData.size());
+    SPDLOG_INFO("Parsed binary asset: subtype={}, t_flag={}, size={}, index={}", 
+                subtype, tFlag, processedData.size(), index);
 
-    return std::make_shared<BinaryAssetData>(processedData, subtype, compressed, tFlag);
+    return std::make_shared<BinaryAssetData>(processedData, subtype, tFlag, index);
 }
 
 std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    // For modding, we take the raw buffer and properties
     auto subtype = GetSafeNode<std::string>(node, "subtype", "");
     auto compressed = GetSafeNode<bool>(node, "compressed", 0);
     auto tFlag = GetSafeNode<int>(node, "t_flag", 0);
+    auto index = GetSafeNode<int>(node, "index", 0);
+
+    // for way later
     
-    // For compressed assets, we might want to handle compression here
-    // For now, we assume the input buffer is already in the format we want
-    
-    return std::make_shared<BinaryAssetData>(buffer, subtype, compressed, tFlag);
+    return std::make_shared<BinaryAssetData>(buffer, subtype, tFlag, index);
 }
 
 } // namespace BK64
