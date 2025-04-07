@@ -6,7 +6,7 @@
 #include "Companion.h"
 
 #define ARRAY_COUNT(arr) (int32_t)(sizeof(arr) / sizeof(arr[0]))
-#define ALIGN16(val) (((val) + 0xF) & ~0xF)
+#define ALIGN4(val) (((val) + 0x3) & ~0x3)
 
 uint16_t FZX::GhostRecordData::Save_CalculateChecksum(void* data, int32_t size) {
     uint8_t* dataPtr = (uint8_t*)data;
@@ -53,12 +53,17 @@ uint16_t FZX::GhostRecordData::CalculateDataChecksum(void) {
 int32_t FZX::GhostRecordData::CalculateReplayChecksum(void) {
     int32_t checksum = 0;
     int32_t i = 0;
+    int32_t sum = 0;
 
     for (auto dataByte : mReplayData) {
-        checksum += ((uint32_t)(uint8_t)dataByte) << ((3 - i) * 8);
+        sum += ((uint32_t)(uint8_t)dataByte) << ((3 - i) * 8);
 
         i++;
         i %= 4;
+        if (i == 0) {
+            checksum += sum;
+            sum = 0;
+        }
     }
 
     return checksum;
@@ -161,12 +166,12 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
 
     int32_t counter = 0;
     for (uint32_t i = 0; i < record->mReplaySize; i++) {
-        int32_t replayData = (int32_t)record->mReplayData.at(i);
+        int32_t replayData = (int8_t)record->mReplayData.at(i);
 
         if (replayData == -0x80) {
             write << "";
 
-            replayData = ((int32_t)record->mReplayData.at(i + 1) << 8) | (int32_t)record->mReplayData.at(i + 2);
+            replayData = (int16_t)(((uint32_t)(uint8_t)record->mReplayData.at(i + 1) << 8) | (uint8_t)record->mReplayData.at(i + 2));
             write << "REPLAY_DATA_LARGE(" << replayData << ")";
 
             i += 2;
@@ -188,7 +193,7 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
 
     write << "};\n\n";
 
-    return offset + 0x20 + 0x40 + ALIGN16(record->mReplaySize);
+    return offset + 0x20 + 0x40 + ALIGN4(record->mReplaySize);
 }
 
 ExportResult FZX::GhostRecordBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
