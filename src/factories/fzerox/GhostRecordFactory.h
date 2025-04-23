@@ -30,7 +30,9 @@ typedef struct GhostMachineInfo {
 class GhostRecordData : public IParsedData {
 public:
     // Records
+    uint16_t mRecordChecksum;
     uint16_t mGhostType;
+    int32_t mReplayChecksum;
     int32_t mCourseEncoding;
     int32_t mRaceTime;
     uint16_t mUnk10;
@@ -38,18 +40,22 @@ public:
     GhostMachineInfo mGhostMachineInfo;
     
     // Data
+    uint16_t mDataChecksum;
     std::vector<int32_t> mLapTimes;
     int32_t mReplayEnd;
     uint32_t mReplaySize;
     std::vector<int8_t> mReplayData;
 
-    GhostRecordData(uint16_t ghostType, int32_t courseEncoding, int32_t raceTime, uint16_t unk_10, std::string trackName, GhostMachineInfo& ghostMachineInfo, std::vector<int32_t> lapTimes, int32_t replayEnd, uint32_t replaySize, std::vector<int8_t> replayData) :
+    GhostRecordData(uint16_t recordChecksum, uint16_t ghostType, int32_t replayChecksum, int32_t courseEncoding, int32_t raceTime, uint16_t unk_10, std::string trackName, GhostMachineInfo& ghostMachineInfo, uint16_t dataChecksum, std::vector<int32_t> lapTimes, int32_t replayEnd, uint32_t replaySize, std::vector<int8_t> replayData) :
+        mRecordChecksum(recordChecksum),
         mGhostType(ghostType),
+        mReplayChecksum(replayChecksum),
         mCourseEncoding(courseEncoding),
         mRaceTime(raceTime),
         mUnk10(unk_10),
         mTrackName(trackName),
         mGhostMachineInfo(ghostMachineInfo),
+        mDataChecksum(dataChecksum),
         mLapTimes(std::move(lapTimes)),
         mReplayEnd(replayEnd),
         mReplaySize(replaySize),
@@ -80,7 +86,7 @@ class GhostRecordModdingExporter : public BaseExporter {
 class GhostRecordFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
-    // std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
+    std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
             REGISTER(Code, GhostRecordCodeExporter)
