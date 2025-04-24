@@ -80,7 +80,7 @@ enum class ResourceType {
     AudioTable = 0x4154424C,    // ATBL
 
     // BK64
-    //Animation = 0x00000000,
+    //Animation = 0x4D4E4142,     // BANM
     BKBinary = 0x4E494241,        // ABIN
     //DemoInput = 0x00000000,
     //Dialog = 0x00000000,
@@ -89,6 +89,6 @@ enum class ResourceType {
     //Midi = 0x00000000,
     //Model = 0x00000000,
     //QuizQuestion = 0x00000000,
-    //Sprite = 0x00000000
+    BKSprite = 0x50534B42         // BKSP
 };
 } // namespace LUS

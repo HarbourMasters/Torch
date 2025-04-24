@@ -7,7 +7,7 @@
 
 namespace BK64 {
 
-class BinaryAssetData : public IParsedData {
+class SpriteAssetData : public IParsedData {
 public:
     std::vector<uint8_t> mBuffer;
     std::string mSubtype;
@@ -15,31 +15,31 @@ public:
     int mTFlag;
     int mIndex;
     
-    BinaryAssetData(std::vector<uint8_t> buffer, const std::string& subtype, int tFlag, int index) 
+    SpriteAssetData(std::vector<uint8_t> buffer, const std::string& subtype, int tFlag, int index) 
         : mBuffer(std::move(buffer)), mSubtype(subtype), mTFlag(tFlag), mIndex(index) {}
 };
 
-class BinaryAssetHeaderExporter : public BaseExporter {
+class SpriteAssetHeaderExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class BinaryAssetBinaryExporter : public BaseExporter {
+class SpriteAssetBinaryExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class BinaryAssetCodeExporter : public BaseExporter {
+class SpriteAssetCodeExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
-class BinaryAssetFactory : public BaseFactory {
+class SpriteAssetFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
-            REGISTER(Header, BinaryAssetHeaderExporter)
-            REGISTER(Binary, BinaryAssetBinaryExporter)
-            REGISTER(Code, BinaryAssetCodeExporter)
+            REGISTER(Header, SpriteAssetHeaderExporter)
+            REGISTER(Binary, SpriteAssetBinaryExporter)
+            REGISTER(Code, SpriteAssetCodeExporter)
         };
     }
     bool SupportModdedAssets() override { return true; }

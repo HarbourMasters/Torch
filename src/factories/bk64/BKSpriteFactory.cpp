@@ -1,14 +1,13 @@
-#include "BKAssetFactory.h"
+#include "BKSpriteFactory.h"
 #include "BKAssetRareZip.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
-#include "utils/Decompressor.h"
 #include <iomanip>
 #include <yaml-cpp/yaml.h>
 #include <cstring>
 
 namespace BK64 {
-ExportResult BinaryAssetHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SpriteAssetHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if(Companion::Instance->IsOTRMode()){
@@ -21,17 +20,17 @@ ExportResult BinaryAssetHeaderExporter::Export(std::ostream &write, std::shared_
     return std::nullopt;
 }
 
-ExportResult BinaryAssetCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SpriteAssetCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto asset = std::static_pointer_cast<BinaryAssetData>(raw);
+    auto asset = std::static_pointer_cast<SpriteAssetData>(raw);
     
     if(Companion::Instance->IsOTRMode()){
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
 
-    write << "// Binary Asset with properties:\n";
+    write << "// Sprite Asset with properties:\n";
     write << "// - subtype: " << asset->mSubtype << "\n";
     write << "// - t_flag: " << asset->mTFlag << "\n";
     write << "// - index: " << asset->mIndex << "\n";
@@ -57,12 +56,12 @@ ExportResult BinaryAssetCodeExporter::Export(std::ostream &write, std::shared_pt
     return offset + asset->mBuffer.size();
 }
 
-ExportResult BinaryAssetBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SpriteAssetBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
     auto writer = LUS::BinaryWriter();
-    auto asset = std::static_pointer_cast<BinaryAssetData>(raw);
+    auto asset = std::static_pointer_cast<SpriteAssetData>(raw);
 
     // Custom resource type
-    WriteHeader(writer, Torch::ResourceType::BKBinary, 1);
+    WriteHeader(writer, Torch::ResourceType::BKSprite, 1);
 
     // Write metadata
     //writer.Write((uint32_t) asset->mSubtype.size());
@@ -70,15 +69,22 @@ ExportResult BinaryAssetBinaryExporter::Export(std::ostream &write, std::shared_
     writer.Write((uint32_t) asset->mTFlag);
     writer.Write((uint32_t) asset->mIndex);
 
-    // Write buffer size and the actual buffer data
+    // Write buffer size
     writer.Write((uint32_t) asset->mBuffer.size());
+
+    // Align to 8 bytes
+    uint32_t currentAddress = writer.GetBaseAddress();
+    currentAddress = (currentAddress + 7) & ~7;
+    writer.Seek(currentAddress, LUS::SeekOffsetType::Start);
+
+    // Write the actual buffer data
     writer.Write((char*) asset->mBuffer.data(), asset->mBuffer.size());
     
     writer.Finish(write);
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SpriteAssetFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     // Extract the asset properties from the YAML node
     auto subtype = GetSafeNode<std::string>(node, "subtype", "");
     auto fcompressed = GetSafeNode<int>(node, "compressed", 0);
@@ -98,7 +104,7 @@ std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse(std::vecto
 
     if (compressed) {        
         try {
-            processedData = bk_unzip(srcData, size); 
+            processedData = bk_unzip(srcData, size);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Failed to decompress BK64 asset: {}", e.what());
             
@@ -109,8 +115,9 @@ std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse(std::vecto
             }
             SPDLOG_ERROR("First bytes of failed asset: {}", firstBytes);
             SPDLOG_ERROR("Using original data as fallback.");
-            
-            return std::make_shared<BinaryAssetData>(std::vector<uint8_t>(srcData, srcData + size), subtype, tFlag, index);
+
+            processedData = std::vector<uint8_t>(srcData, srcData + size);
+            return std::make_shared<SpriteAssetData>(processedData, subtype, tFlag, index);
         }
     } else {
         // If not compressed, use the data as-is
@@ -120,10 +127,10 @@ std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse(std::vecto
     //SPDLOG_INFO("Parsed binary asset: subtype={}, t_flag={}, size={}, index={}", 
     //            subtype, tFlag, processedData.size(), index);
 
-    return std::make_shared<BinaryAssetData>(processedData, subtype, tFlag, index);
+    return std::make_shared<SpriteAssetData>(processedData, subtype, tFlag, index);
 }
 
-std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SpriteAssetFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto subtype = GetSafeNode<std::string>(node, "subtype", "");
     auto compressed = GetSafeNode<bool>(node, "compressed", 0);
     auto tFlag = GetSafeNode<int>(node, "t_flag", 0);
@@ -131,7 +138,7 @@ std::optional<std::shared_ptr<IParsedData>> BinaryAssetFactory::parse_modding(st
 
     // for way later
     
-    return std::make_shared<BinaryAssetData>(buffer, subtype, tFlag, index);
+    return std::make_shared<SpriteAssetData>(buffer, subtype, tFlag, index);
 }
 
 } // namespace BK64
