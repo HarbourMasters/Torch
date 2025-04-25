@@ -7,6 +7,7 @@
 #include <cstring>
 
 namespace BK64 {
+    
 ExportResult SpriteAssetHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
