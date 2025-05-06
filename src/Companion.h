@@ -156,6 +156,7 @@ public:
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);
     std::optional<std::vector<std::tuple<std::string, YAML::Node>>> GetNodesByType(const std::string& type);
+    std::string GetSymbolFromAddr(uint32_t addr, bool validZero = false);
 
     std::optional<std::uint32_t> GetFileOffset(void) const { return this->gCurrentFileOffset; };
     std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
