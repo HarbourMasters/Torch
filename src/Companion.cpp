@@ -1433,6 +1433,23 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(
 
 }
 
+std::string Companion::GetSymbolFromAddr(uint32_t address, bool validZero) {
+    auto dec = Companion::Instance->GetNodeByAddr(address);
+    std::ostringstream outSymbol;
+
+    if(address == 0 && !validZero) {
+        outSymbol << "NULL";
+    } else if (dec.has_value()) {
+        auto node = std::get<1>(dec.value());
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
+        outSymbol << "&" << symbol;
+    } else {
+        outSymbol << "0x" << std::uppercase << std::hex << address;
+    }
+
+    return outSymbol.str();
+}
+
 std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
     if(!this->gParseResults.contains(this->gCurrentFile)){
         for (auto &file : this->gCurrentExternalFiles) {
