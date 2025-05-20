@@ -65,7 +65,7 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
 
     write << "GeoLayout " << symbol << "[] = {\n";
 
-    for(auto& [opcode, arguments] : cmds) {
+    for(auto& [opcode, arguments, skip] : cmds) {
         bool commaFlag = false;
 
         if (opcode == GeoOpcode::OpenNode) {
@@ -170,7 +170,11 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
                 }
             }
         }
-        write << "),\n";
+        if(skip){
+            write << "), //! more close than open nodes\n";
+        } else {
+            write << "),\n";
+        }
         ++cmdCount;
     }
 
@@ -190,7 +194,10 @@ ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr
 
     auto writer = LUS::BinaryWriter();
 
-    for(auto& [opcode, arguments] : layout->commands) {
+    for(auto& [opcode, arguments, skip] : layout->commands) {
+        if(skip){
+            continue;
+        }
         writer.Write(static_cast<uint8_t>(opcode));
 
         for(auto& args : arguments) {
@@ -314,10 +321,12 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
     auto cmd = segment.data;
 
     bool processing = true;
+    int32_t openCount = 0;
     std::vector<GeoCommand> commands;
 
     while(processing) {
         auto opcode = static_cast<GeoOpcode>(cmd[0x00]);
+        auto skip = false;
 
         SPDLOG_INFO("Processing Command {}", opcode);
 
@@ -352,9 +361,18 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 processing = false;
                 break;
             }
-            case GeoOpcode::OpenNode:
+            case GeoOpcode::OpenNode: {
+                openCount++;
+                cmd += 0x04 << CMD_SIZE_SHIFT;
+                break;
+            }
             case GeoOpcode::CloseNode: {
                 cmd += 0x04 << CMD_SIZE_SHIFT;
+                if (openCount - 1 < 0) {
+                    skip = true;
+                } else {
+                    openCount--;
+                }
                 break;
             }
             case GeoOpcode::AssignAsView: {
@@ -690,7 +708,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
             }
         }
 
-        commands.push_back({ opcode, arguments });
+        commands.push_back({ opcode, arguments, skip });
     }
 
     return std::make_shared<GeoLayout>(commands);

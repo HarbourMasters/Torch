@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.30)
 project(torch)
 include(FetchContent)
 
@@ -43,7 +43,7 @@ if(USE_STANDALONE)
     FetchContent_GetProperties(libgfxd)
 
     if(NOT libgfxd_POPULATED)
-        FetchContent_Populate(libgfxd)
+        FetchContent_MakeAvailable(libgfxd)
         include_directories(${libgfxd_SOURCE_DIR})
         set(LGFXD_SRC gfxd.c uc_f3d.c uc_f3db.c uc_f3dex.c uc_f3dexb.c uc_f3dex2.c)
         foreach (LGFXD_FILE ${LGFXD_SRC})
@@ -206,7 +206,7 @@ set(YAML_CPP_DISABLE_UNINSTALL ON)
 FetchContent_Declare(
     yaml-cpp
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-    GIT_TAG f7320141120f720aecc4c32be25586e7da9eb978
+    GIT_TAG 28f93bdec6387d42332220afa9558060c8016795
 )
 set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)

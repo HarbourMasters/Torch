@@ -61,8 +61,16 @@ ExportResult TextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<
     } else {
         if(isOTR){
             write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
+            if (Companion::Instance->AddTextureDefines()) {
+                write << "#define _" << symbol << "_WIDTH 0x" << std::hex << texture->mWidth << std::dec << "\n";
+                write << "#define _" << symbol << "_HEIGHT 0x" << std::hex << texture->mHeight << std::dec << "\n";
+            }
         } else {
             write << "extern " << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol << "[];\n";
+            if (Companion::Instance->AddTextureDefines()) {
+                write << "#define _" << symbol << "_WIDTH 0x" << std::hex << texture->mWidth << std::dec << "\n";
+                write << "#define _" << symbol << "_HEIGHT 0x" << std::hex << texture->mHeight << std::dec << "\n";
+            }
         }
     }
 

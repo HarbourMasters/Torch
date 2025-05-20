@@ -72,6 +72,7 @@
 
 #ifdef FZERO_SUPPORT
 #include "factories/fzerox/CourseFactory.h"
+#include "factories/fzerox/GhostRecordFactory.h"
 #endif
 
 #ifdef NAUDIO_SUPPORT
@@ -165,6 +166,7 @@ void Companion::Init(const ExportType type) {
 
 #ifdef FZERO_SUPPORT
     this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
+    this->RegisterFactory("FZX:GHOST", std::make_shared<FZX::GhostRecordFactory>());
 #endif
 
 #ifdef NAUDIO_SUPPORT
@@ -741,17 +743,37 @@ void Companion::ProcessFile(YAML::Node root) {
 
         if (result.node["offset"]) {
             auto alignment = GetSafeNode<uint32_t>(result.node, "alignment", impl->GetAlignment());
-            if (!endptr.has_value()) {
-                wEntry = { result.name, result.node["offset"].as<uint32_t>(), alignment, stream.str(), std::nullopt };
+            if(!endptr.has_value()) {
+                wEntry = {
+                    result.name,
+                    result.node["offset"].as<uint32_t>(),
+                    alignment,
+                    stream.str(),
+                    GetNode<std::string>(result.node, "comment"),
+                    std::nullopt
+                };
             } else {
                 switch (endptr->index()) {
                     case 0:
-                        wEntry = { result.name, result.node["offset"].as<uint32_t>(), alignment, stream.str(),
-                                   std::get<size_t>(endptr.value()) };
+                        wEntry = {
+                            result.name,
+                            result.node["offset"].as<uint32_t>(),
+                            alignment,
+                            stream.str(),
+                            GetNode<std::string>(result.node, "comment"),
+                            std::get<size_t>(endptr.value())
+                        };
                         break;
                     case 1: {
                         const auto oentry = std::get<OffsetEntry>(endptr.value());
-                        wEntry = { result.name, oentry.start, alignment, stream.str(), oentry.end };
+                        wEntry = {
+                            result.name,
+                            oentry.start,
+                            alignment,
+                            stream.str(),
+                            GetNode<std::string>(result.node, "comment"),
+                            oentry.end
+                        };
                         break;
                     }
                     default:
@@ -822,6 +844,11 @@ void Companion::ProcessFile(YAML::Node root) {
         for (size_t i = 0; i < entries.size(); i++) {
             const auto result = entries[i];
             const auto hasSize = result.endptr.has_value();
+
+            if(result.comment.has_value()){
+                stream << "// " << result.comment.value() << "\n";
+            }
+
             if (hasSize && this->IsDebug()) {
                 stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.addr) << "\n";
             }
@@ -1030,6 +1057,7 @@ void Companion::Process() {
     this->gAssetPath = rom["path"].as<std::string>();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
+    auto gbi_floats = cfg["gbi_floats"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
 
     this->gConfig.moddingPath = modding_path;
@@ -1084,6 +1112,10 @@ void Companion::Process() {
         } else {
             SPDLOG_ERROR("Invalid GBI version");
             return;
+        }
+
+        if(gbi_floats) {
+            this->gConfig.gbi.useFloats = gbi_floats.as<bool>();
         }
     }
 
@@ -1143,6 +1175,8 @@ void Companion::Process() {
                 "Invalid logging level, please use TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL or OFF");
         }
     }
+
+    this->gConfig.textureDefines = cfg["textures"] && (cfg["textures"].as<std::string>() == "ADDITIONAL_DEFINES");
 
     this->ParseHash();
 
@@ -1413,6 +1447,23 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(
     }
 
     return node;
+}
+
+std::string Companion::GetSymbolFromAddr(uint32_t address, bool validZero) {
+    auto dec = Companion::Instance->GetNodeByAddr(address);
+    std::ostringstream outSymbol;
+
+    if(address == 0 && !validZero) {
+        outSymbol << "NULL";
+    } else if (dec.has_value()) {
+        auto node = std::get<1>(dec.value());
+        auto symbol = GetSafeNode<std::string>(node, "symbol");
+        outSymbol << "&" << symbol;
+    } else {
+        outSymbol << "0x" << std::uppercase << std::hex << address;
+    }
+
+    return outSymbol.str();
 }
 
 std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {

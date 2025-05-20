@@ -62,7 +62,8 @@ enum class ResourceType {
     ObjectInit = 0x4F42494E,   // OBIN
 
     // F-ZERO X
-    CourseData = 0x58435253, // XCRS
+    CourseData = 0x58435253,   // XCRS
+    GhostRecord = 0x58475244,  // XGRD
 
     // NAudio v0
     Bank = 0x42414E4B,     // BANK
