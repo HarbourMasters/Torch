@@ -87,7 +87,7 @@ enum class ResourceType {
     //GruntyQuestion = 0x00000000,
     //LevelSetup = 0x00000000,
     //Midi = 0x00000000,
-    //Model = 0x00000000,
+    Model = 0x4C444D42,           // BMDL
     //QuizQuestion = 0x00000000,
     BKSprite = 0x50534B42         // BKSP
 };

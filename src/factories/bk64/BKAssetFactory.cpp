@@ -72,6 +72,12 @@ ExportResult BinaryAssetBinaryExporter::Export(std::ostream &write, std::shared_
 
     // Write buffer size and the actual buffer data
     writer.Write((uint32_t) asset->mBuffer.size());
+
+    // Align to 8 bytes
+    uint32_t currentAddress = writer.GetBaseAddress();
+    currentAddress = (currentAddress + 7) & ~7;
+    writer.Seek(currentAddress, LUS::SeekOffsetType::Start);
+    
     writer.Write((char*) asset->mBuffer.data(), asset->mBuffer.size());
     
     writer.Finish(write);
