@@ -27,22 +27,12 @@ int getFileDepth(const fs::path& base, const fs::path& p) {
 }
 
 std::vector<fs::directory_entry> Torch::getRecursiveEntries(const fs::path baseDir) {
-    std::vector<fs::directory_entry> result;
+    std::set<fs::directory_entry> result;
 
     for (const auto& entry : fs::recursive_directory_iterator(baseDir)) {
-        result.push_back(entry);
+        result.insert(entry);
     }
 
-    std::sort(result.begin(), result.end(), [](const fs::directory_entry& a, const fs::directory_entry& b) {
-        std::string nameA = a.path().parent_path().string();
-        std::string nameB = b.path().parent_path().string();
-        int depthA = std::distance(a.path().begin(), a.path().end());
-        int depthB = std::distance(b.path().begin(), b.path().end());
-
-        if (nameA != nameB)
-            return nameA < nameB;
-        return depthA < depthB;
-    });
-
-    return result;
+    std::vector<fs::directory_entry> sortedEntries(result.begin(), result.end());
+    return sortedEntries;
 }

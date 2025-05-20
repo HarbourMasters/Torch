@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.30)
 project(torch)
 include(FetchContent)
 
@@ -44,7 +44,7 @@ if(USE_STANDALONE)
     FetchContent_GetProperties(libgfxd)
 
     if(NOT libgfxd_POPULATED)
-        FetchContent_Populate(libgfxd)
+        FetchContent_MakeAvailable(libgfxd)
         include_directories(${libgfxd_SOURCE_DIR})
         set(LGFXD_SRC gfxd.c uc_f3d.c uc_f3db.c uc_f3dex.c uc_f3dexb.c uc_f3dex2.c)
         foreach (LGFXD_FILE ${LGFXD_SRC})
