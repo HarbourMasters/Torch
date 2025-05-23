@@ -206,7 +206,7 @@ set(YAML_CPP_DISABLE_UNINSTALL ON)
 FetchContent_Declare(
     yaml-cpp
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-    GIT_TAG 28f93bdec6387d42332220afa9558060c8016795
+    GIT_TAG 2f86d13775d119edbb69af52e5f566fd65c6953b
 )
 set(YAML_CPP_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(yaml-cpp)
