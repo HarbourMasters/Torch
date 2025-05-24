@@ -61,11 +61,15 @@ ExportResult BinaryAssetBinaryExporter::Export(std::ostream &write, std::shared_
     auto writer = LUS::BinaryWriter();
     auto asset = std::static_pointer_cast<BinaryAssetData>(raw);
 
+    if (asset->mBuffer.size() == 0) {
+        return std::nullopt;
+    }
     // Custom resource type
     WriteHeader(writer, Torch::ResourceType::BKBinary, 1);
 
     // Write metadata
     //writer.Write((uint32_t) asset->mSubtype.size());
+
     writer.Write(asset->mSubtype.c_str(), asset->mSubtype.size());
     writer.Write((uint32_t) asset->mTFlag);
     writer.Write((uint32_t) asset->mIndex);
