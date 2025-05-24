@@ -80,7 +80,7 @@ enum class ResourceType {
     AudioTable = 0x4154424C,    // ATBL
 
     // BK64
-    //Animation = 0x4D4E4142,     // BANM
+    BKAnimation = 0x4D4E4142,     // BANM
     BKBinary = 0x4E494241,        // ABIN
     //DemoInput = 0x00000000,
     //Dialog = 0x00000000,
