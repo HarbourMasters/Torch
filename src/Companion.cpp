@@ -93,6 +93,14 @@
 #include "factories/naudio/v1/SequenceFactory.h"
 #endif
 
+#ifdef BK64_SUPPORT 
+//#include "factories/bk64/BKModelFactory.h"
+#include "factories/bk64/BKAnimFactory.h"
+#include "factories/bk64/BKAssetFactory.h"
+#include "factories/bk64/BKSpriteFactory.h"
+
+#endif
+
 #include "preprocess/CompTool.h"
 
 using namespace std::chrono;
@@ -185,6 +193,19 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
+#endif
+
+#ifdef BK64_SUPPORT
+    this->RegisterFactory("BK64::BINARY", std::make_shared<BK64::BinaryAssetFactory>());
+    this->RegisterFactory("BK64::ANIMATION", std::make_shared<BK64::AnimFactory>());
+    //this->RegisterFactory("BK64:DEMOINPUT", std::make_shared<BK64::DemoInputFactory>());
+    //this->RegisterFactory("BK64:DIALOG", std::make_shared<BK64::DialogFactory>());
+    //this->RegisterFactory("BK64:GRUNTYQUIZ", std::make_shared<BK64::GruntyQuizFactory>());
+    //this->RegisterFactory("BK64:LEVELSETUP", std::make_shared<BK64::LevelSetupFactory>());
+    //this->RegisterFactory("BK64:MIDI", std::make_shared<BK64::MidiFactory>());
+    //this->RegisterFactory("BK64:MODEL", std::make_shared<BK64::ModelFactory>());
+    //this->RegisterFactory("BK64:QUESTION", std::make_shared<BK64::QuestionFactory>());
+    this->RegisterFactory("BK64::SPRITE", std::make_shared<BK64::SpriteAssetFactory>());
 #endif
 
     this->Process();
@@ -317,7 +338,6 @@ void Companion::ParseModdingConfig() {
         this->gModdedAssetPaths[name] = asset;
     }
 }
-
 
 void Companion::ParseCurrentFileConfig(YAML::Node node) {
     if (node["external_files"]) {

@@ -4,6 +4,11 @@
 #include "Companion.h"
 #include "utils/Decompressor.h"
 
+/*
+D_TI1_7006F74:
+  { type: SF64:ANIM, offset: 0x7006F74, symbol: D_TI1_7006F74 }
+*/
+
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(7) << x
 #define NUM_JOINT(x) std::dec << std::setfill(' ') << std::setw(5) << x
 #define VEC_SIZE(vec) ((vec).size() * sizeof((vec)[0]))

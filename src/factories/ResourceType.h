@@ -77,6 +77,18 @@ enum class ResourceType {
     AdpcmLoop = 0x4150434C,    // APCL
     AdpcmBook = 0x41504342,    // APCB
     Envelope = 0x45564C50,     // EVLP
-    AudioTable = 0x4154424C    // ATBL
+    AudioTable = 0x4154424C,    // ATBL
+
+    // BK64
+    BKAnimation = 0x4D4E4142,     // BANM
+    BKBinary = 0x4E494241,        // ABIN
+    //DemoInput = 0x00000000,
+    //Dialog = 0x00000000,
+    //GruntyQuestion = 0x00000000,
+    //LevelSetup = 0x00000000,
+    //Midi = 0x00000000,
+    Model = 0x4C444D42,           // BMDL
+    //QuizQuestion = 0x00000000,
+    BKSprite = 0x50534B42         // BKSP
 };
 } // namespace LUS
