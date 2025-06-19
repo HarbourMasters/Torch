@@ -606,7 +606,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             const auto decl = Companion::Instance->GetNodeByAddr(w1);
 
             if(!decl.has_value()){
-                auto search = SearchVtx(w1);
+                auto adjPtr = Companion::Instance->PatchVirtualAddr(w1);
+                auto search = SearchVtx(adjPtr);
 
                 if(search.has_value()){
                     auto [path, vtx] = search.value();
@@ -617,14 +618,14 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     auto lCount = GetSafeNode<uint32_t>(vtx, "count");
                     auto lSize = ALIGN16(lCount * sizeof(N64Vtx_t));
 
-                    if(w1 > lOffset && w1 <= lOffset + lSize){
-                        SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", w1, lOffset);
-                        GFXDOverride::RegisterVTXOverlap(w1, search.value());
+                    if(adjPtr > lOffset && adjPtr <= lOffset + lSize){
+                        SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", adjPtr, lOffset);
+                        GFXDOverride::RegisterVTXOverlap(adjPtr, search.value());
                     }
                 } else {
                     YAML::Node vtx;
                     vtx["type"] = "VTX";
-                    vtx["offset"] = w1;
+                    vtx["offset"] = adjPtr;
                     vtx["count"] = nvtx;
                     Companion::Instance->AddAsset(vtx);
                 }

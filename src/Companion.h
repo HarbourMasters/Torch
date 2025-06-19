@@ -153,6 +153,7 @@ public:
 
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
+    uint32_t PatchVirtualAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);
     std::optional<std::vector<std::tuple<std::string, YAML::Node>>> GetNodesByType(const std::string& type);

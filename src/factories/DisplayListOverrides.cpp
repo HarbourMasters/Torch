@@ -52,6 +52,7 @@ void Quadrangle(const N64Gfx* gfx) {
 }
 
 int Vtx(uint32_t ptr, int32_t num) {
+    ptr = Companion::Instance->PatchVirtualAddr(ptr);
     auto vtx = GetVtxOverlap(ptr);
 
     if(vtx.has_value()){
