@@ -397,6 +397,11 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         }
     }
 
+    if (node["virtual"]) {
+        auto virtualAddrMap = node["virtual"];
+        gVirtualAddrMap[gCurrentFile] = std::make_tuple<uint32_t, uint32_t>(virtualAddrMap[0].as<uint32_t>(), virtualAddrMap[1].as<uint32_t>());
+    }
+
     if(node["header"]) {
         auto header = node["header"];
         switch (this->gConfig.exporterType) {
@@ -1392,9 +1397,17 @@ std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uin
     return std::nullopt;
 }
 
-std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(const uint32_t addr){
+std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint32_t addr){
     if(!this->gAddrMap.contains(this->gCurrentFile)){
         return std::nullopt;
+    }
+
+    // HACK: Adjust address to rom address if virtual address
+    if (addr & 0x80000000) {
+        if (gVirtualAddrMap.contains(gCurrentFile)) {
+            addr -= std::get<0>(gVirtualAddrMap[gCurrentFile]);
+            addr += std::get<1>(gVirtualAddrMap[gCurrentFile]);
+        }
     }
 
     if(!this->gAddrMap[this->gCurrentFile].contains(addr)){
