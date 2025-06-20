@@ -91,17 +91,17 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gKartAIBehaviourLUT.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"cpu_BehaviourLUT.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
-            file << m.kartAIBehaviourLUT << ", ";
+            file << m.CPUBehaviourLUT << ", ";
         }
         file << 0; // @WARNING TRAILING ZERO IN ARRAY
         file << "\n";
         file.close();
     }
 
-    file.open(outDir+"gKartAICourseMaximumSeparation.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"cpu_CourseMaximumSeparation.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         // file << "f32 gWaypointWidth[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -112,7 +112,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gKartAICourseMinimumSeparation.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"cpu_CourseMinimumSeparation.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         // file << "f32 gWaypointWidth2[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
@@ -134,11 +134,11 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"gCPUSteeringSensitivity.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"cpu_SteeringSensitivity.inc.c", std::ios_base::binary | std::ios_base::out);
 
     // @WARNING THIS FILE HAS A TRAILING ZERO
     if (file.is_open()) {
-        //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
+        //file << "u16 cpu_SteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << m.steeringSensitivity << ", ";
         }
@@ -150,7 +150,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
 
     file.open(outDir+"gBombKartSpawns.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
-        //file << "u16 gCPUSteeringSensitivity[] = {\n" << fourSpaceTab;
+        //file << "u16 cpu_SteeringSensitivity[] = {\n" << fourSpaceTab;
         for (const auto& m : metadata) {
             file << "{ // " << m.name << "\n";
             for (const auto& bombKart : m.bombKartSpawns) {
@@ -190,12 +190,12 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009418.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"cpu_CurveTargetSpeed.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
             file << "{ ";
-            for (const auto size : m.D_0D009418) {
+            for (const auto size : m.cpu_CurveTargetSpeed) {
                 file << size << ", ";
             }
             file << "},\n";
@@ -203,12 +203,12 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009568.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"cpu_NormalTargetSpeed.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
             file << "{ ";
-            for (const auto& size : m.D_0D009568) {
+            for (const auto& size : m.cpu_NormalTargetSpeed) {
                 file << size << ", ";
             }
             file << "},\n";
@@ -229,12 +229,12 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
         file.close();
     }
 
-    file.open(outDir+"D_0D009808.inc.c", std::ios_base::binary | std::ios_base::out);
+    file.open(outDir+"cpu_OffTrackTargetSpeed.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
             file << "// " << m.name << "\n";
             file << "{ ";
-            for (const auto& size : m.D_0D009808) {
+            for (const auto& size : m.cpu_OffTrackTargetSpeed) {
                 file << size << ", ";
             }
             file << "},\n";
@@ -310,7 +310,7 @@ ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std
         writer.Write(m.cup);
         writer.Write(m.cupIndex);
         writer.Write(m.courseLength);
-        writer.Write(m.kartAIBehaviourLUT);
+        writer.Write(m.CPUBehaviourLUT);
         writer.Write(m.kartAIMaximumSeparation);
         writer.Write(m.kartAIMinimumSeparation);
         writer.Write(m.D_800DCBB4);
@@ -330,11 +330,11 @@ ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std
             writer.Write(p);
         }
 
-        for (auto s : m.D_0D009418) {
+        for (auto s : m.cpu_CurveTargetSpeed) {
             writer.Write(s);
         }
 
-        for (auto s : m.D_0D009568) {
+        for (auto s : m.cpu_NormalTargetSpeed) {
             writer.Write(s);
         }
 
@@ -342,7 +342,7 @@ ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std
             writer.Write(s);
         }
 
-        for (auto s : m.D_0D009808) {
+        for (auto s : m.cpu_OffTrackTargetSpeed) {
             writer.Write(s);
         }
 
@@ -393,9 +393,9 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         data.cupIndex =             GetSafeNode<int32_t>(metadata, "cup_index");
         data.courseLength =         GetSafeNode<std::string>(metadata, "course_length");
 
-        data.kartAIBehaviourLUT =        GetSafeNode<std::string>(metadata, "kart_ai_behaviour_ptr");
-        data.kartAIMaximumSeparation =        GetSafeNode<std::string>(metadata, "kart_ai_maximum_separation");
-        data.kartAIMinimumSeparation =       GetSafeNode<std::string>(metadata, "kart_ai_minimum_separation");
+        data.CPUBehaviourLUT =        GetSafeNode<std::string>(metadata, "cpu_behaviour_ptr");
+        data.kartAIMaximumSeparation =        GetSafeNode<std::string>(metadata, "cpu_maximum_separation");
+        data.kartAIMinimumSeparation =       GetSafeNode<std::string>(metadata, "cpu_minimum_separation");
 
         data.D_800DCBB4 =           GetSafeNode<std::string>(metadata, "D_800DCBB4");
         data.steeringSensitivity =  GetSafeNode<uint32_t>(metadata, "cpu_steering_sensitivity");
@@ -416,20 +416,20 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
             data.pathSizes.push_back(size.as<uint16_t>());
         }
 
-        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009418")) {
-            data.D_0D009418.push_back(value.as<std::string>());
+        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "cpu_CurveTargetSpeed")) {
+            data.cpu_CurveTargetSpeed.push_back(value.as<std::string>());
         }
 
-        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009568")) {
-            data.D_0D009568.push_back(value.as<std::string>());
+        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "cpu_NormalTargetSpeed")) {
+            data.cpu_NormalTargetSpeed.push_back(value.as<std::string>());
         }
 
         for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D0096B8")) {
             data.D_0D0096B8.push_back(value.as<std::string>());
         }
         SPDLOG_INFO("MIDDLE");
-        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "D_0D009808")) {
-            data.D_0D009808.push_back(value.as<std::string>());
+        for (const auto& value : GetSafeNode<YAML::Node>(metadata, "cpu_OffTrackTargetSpeed")) {
+            data.cpu_OffTrackTargetSpeed.push_back(value.as<std::string>());
         }
 
         for (const auto& str : GetSafeNode<YAML::Node>(metadata, "path_table")) {

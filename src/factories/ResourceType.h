@@ -29,7 +29,7 @@ enum class ResourceType {
     Dictionary = 0x44494354,     // DICT
     GeoLayout = 0x47454F20,      // GEO
     Collision = 0x434F4C20,      // COL
-    LevelScript = 0x4C564C53,    // LVLS 
+    LevelScript = 0x4C564C53,    // LVLS
     MacroObject = 0x4D41434F,    // MACO
     Movtex = 0x4D4F5654,         // MOVT
     MovtexQuad = 0x4D4F5651,     // MOVQ
@@ -42,8 +42,8 @@ enum class ResourceType {
     CourseProperties = 0x43505459, // CPTY
     CourseVertex = 0x43565458,     // CVTX
     TrackSection = 0x5343544E,     // SCTN
-    Waypoints = 0x57505453,        // WPTS
-    Metadata  = 0x4D444154,        // MDAT
+    Paths = 0x50415453,            // PATH
+    Metadata = 0x4D444154,         // MDAT
     SpawnData = 0x53444154,        // SDAT
     UnkSpawnData = 0x55534454,     // USDT
     DrivingBehaviour = 0x44424856, // DBHV
@@ -79,4 +79,4 @@ enum class ResourceType {
     Envelope = 0x45564C50,     // EVLP
     AudioTable = 0x4154424C    // ATBL
 };
-} // namespace LUS
+} // namespace Torch

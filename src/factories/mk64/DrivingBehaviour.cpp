@@ -15,7 +15,7 @@ ExportResult MK64::DrivingBehaviourHeaderExporter::Export(std::ostream &write, s
         return std::nullopt;
     }
 
-    write << "extern KartAIBehaviour " << symbol << "[];\n";
+    write << "extern CPUBehaviour " << symbol << "[];\n";
     return std::nullopt;
 }
 
@@ -35,7 +35,7 @@ ExportResult MK64::DrivingBehaviourCodeExporter::Export(std::ostream &write, std
         write << "// 0x" << std::hex << std::uppercase << offset << "\n";
     }
 
-    write << "KartAIBehaviour " << symbol << "[] = {\n";
+    write << "CPUBehaviour " << symbol << "[] = {\n";
 
 
     for(auto b : bhv->mBhvs) {

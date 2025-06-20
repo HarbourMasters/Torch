@@ -48,7 +48,7 @@
 
 #ifdef MK64_SUPPORT
 #include "factories/mk64/CourseVtx.h"
-#include "factories/mk64/Waypoints.h"
+#include "factories/mk64/Paths.h"
 #include "factories/mk64/TrackSections.h"
 #include "factories/mk64/SpawnData.h"
 #include "factories/mk64/UnkSpawnData.h"
@@ -142,7 +142,7 @@ void Companion::Init(const ExportType type) {
 
 #ifdef MK64_SUPPORT
     this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
-    this->RegisterFactory("MK64:TRACK_WAYPOINTS", std::make_shared<MK64::WaypointsFactory>());
+    this->RegisterFactory("MK64:TRACK_PATH", std::make_shared<MK64::PathsFactory>());
     this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
     this->RegisterFactory("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
     this->RegisterFactory("MK64:UNK_SPAWN_DATA", std::make_shared<MK64::UnkSpawnDataFactory>());
