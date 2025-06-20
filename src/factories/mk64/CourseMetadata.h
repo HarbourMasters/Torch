@@ -21,7 +21,7 @@ namespace MK64 {
         std::string cup;
         int32_t cupIndex;
         std::string courseLength;
-        std::string kartAIBehaviourLUT;
+        std::string CPUBehaviourLUT;
         std::string kartAIMaximumSeparation;
         std::string kartAIMinimumSeparation;
         std::string D_800DCBB4;

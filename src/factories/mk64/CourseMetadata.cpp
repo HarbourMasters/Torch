@@ -94,7 +94,7 @@ ExportResult MK64::CourseMetadataCodeExporter::Export(std::ostream &write, std::
     file.open(outDir+"cpu_BehaviourLUT.inc.c", std::ios_base::binary | std::ios_base::out);
     if (file.is_open()) {
         for (const auto& m : metadata) {
-            file << m.kartAIBehaviourLUT << ", ";
+            file << m.CPUBehaviourLUT << ", ";
         }
         file << 0; // @WARNING TRAILING ZERO IN ARRAY
         file << "\n";
@@ -310,7 +310,7 @@ ExportResult MK64::CourseMetadataBinaryExporter::Export(std::ostream &write, std
         writer.Write(m.cup);
         writer.Write(m.cupIndex);
         writer.Write(m.courseLength);
-        writer.Write(m.kartAIBehaviourLUT);
+        writer.Write(m.CPUBehaviourLUT);
         writer.Write(m.kartAIMaximumSeparation);
         writer.Write(m.kartAIMinimumSeparation);
         writer.Write(m.D_800DCBB4);
@@ -393,7 +393,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseMetadataFactory::parse(s
         data.cupIndex =             GetSafeNode<int32_t>(metadata, "cup_index");
         data.courseLength =         GetSafeNode<std::string>(metadata, "course_length");
 
-        data.kartAIBehaviourLUT =        GetSafeNode<std::string>(metadata, "cpu_behaviour_ptr");
+        data.CPUBehaviourLUT =        GetSafeNode<std::string>(metadata, "cpu_behaviour_ptr");
         data.kartAIMaximumSeparation =        GetSafeNode<std::string>(metadata, "cpu_maximum_separation");
         data.kartAIMinimumSeparation =       GetSafeNode<std::string>(metadata, "cpu_minimum_separation");
 
