@@ -93,13 +93,13 @@ void AudioConverter::SampleV0ToAIFC(AudioBankSample* sample, LUS::BinaryWriter &
         float tmin = PyUtils::min(sample->tunings);
         float tmax = PyUtils::max(sample->tunings);
 
-        if(tmin <= 0.5f <= tmax){
+        if(tmin <= 0.5f && 0.5f <= tmax) {
             sample_rate = 16000;
-        } else if(tmin <= 1.0f <= tmax){
+        } else if(tmin <= 1.0f && 1.0f <= tmax){
             sample_rate = 32000;
-        } else if(tmin <= 1.5f <= tmax){
+        } else if(tmin <= 1.5f && 1.5f <= tmax){
             sample_rate = 48000;
-        } else if(tmin <= 2.5f <= tmax){
+        } else if(tmin <= 2.5f && 2.5f <= tmax){
             sample_rate = 80000;
         } else {
             sample_rate = 16000 * (tmin + tmax);
