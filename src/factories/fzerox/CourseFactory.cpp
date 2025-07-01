@@ -10,7 +10,7 @@
 
 #define ARRAY_COUNT(arr) (int32_t)(sizeof(arr) / sizeof(arr[0]))
 
-#define FORMAT_HEX(x, w) std::hex << std::setfill('0') << std::setw(w) << x
+#define FORMAT_HEX(x, w) std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
 
 uint32_t FZX::CourseData::CalculateChecksum(void) {
@@ -76,15 +76,23 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     write << fourSpaceTab << "0x" << std::hex << std::uppercase << course->CalculateChecksum() << std::dec << ", /* Checksum */\n";
     write << fourSpaceTab << (int32_t)course->mFlag << ", /* Flag */\n";
 
-    write << fourSpaceTab << "\"" << course->mFileName << std::hex;
-    for (int32_t i = 0; i < 22 - course->mFileName.length(); i++) {
-        if (i < (int32_t)course->mFileNameExtra.size() - 1) {
-            write << "\\x" << FORMAT_HEX((uint32_t)(uint8_t)course->mFileNameExtra.at(i), 2);
-        } else {
-            write << "\\x00";
+    write << fourSpaceTab << "{ ";
+
+    for (size_t i = 0; i < 13; i++) {
+        if (i != 0) {
+            write << ", ";
         }
+        if (!(course->mFileName.at(i) >= '0' && course->mFileName.at(i) <= '9') && !(course->mFileName.at(i) >= 'A' && course->mFileName.at(i) <= 'Z')
+            && !(course->mFileName.at(i) >= 'a' && course->mFileName.at(i) <= 'z')) {
+            write << "0x" << FORMAT_HEX((uint32_t)(uint8_t)course->mFileName.at(i), 2);
+            continue;
+        }
+        write << "\'" << course->mFileName.at(i) << "\'";
     }
-    write << std::dec << "\", /* File Name */\n";
+    
+    write << std::dec << " }, /* File Name */\n";
+
+    write << fourSpaceTab << (int32_t)course->unk_16 << ", " << (int32_t)course->unk_17 << ", " << course->unk_18 << ", " << course->unk_1C << ",\n";
 
     write << fourSpaceTab << "{ /* Control Points */\n";
 
@@ -93,7 +101,7 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
             Vec3f pos(controlPointInfo.controlPoint.pos.x, controlPointInfo.controlPoint.pos.y, controlPointInfo.controlPoint.pos.z);
-            write << "{ { " << FORMAT_FLOAT(pos, 6, 4) << "}, ";
+            write << "{ { " << FORMAT_FLOAT(pos, 6, 4) << " }, ";
             write << controlPointInfo.controlPoint.radiusLeft << ", ";
             write << controlPointInfo.controlPoint.radiusRight << ",\n";
             write << fourSpaceTab << fourSpaceTab << "  ";
@@ -437,11 +445,11 @@ ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_
     writer.Write(course->mSkybox);
     writer.Write(course->CalculateChecksum());
     writer.Write(course->mFlag);
-    writer.Write(course->mFileName);
-    writer.Write((uint32_t)course->mFileNameExtra.size());
-    for (const auto extra : course->mFileNameExtra) {
-        writer.Write(extra);
+    for (const auto nameChar : course->mFileName) {
+        writer.Write(nameChar);
     }
+
+    writer.Write(course->unk_16);
     for (const auto& controlPointInfo : course->mControlPointInfos) {
         writer.Write(controlPointInfo.controlPoint.pos.x);
         writer.Write(controlPointInfo.controlPoint.pos.y);
@@ -488,15 +496,28 @@ ExportResult FZX::CourseModdingExporter::Export(std::ostream &write, std::shared
     out << YAML::Key << "Flag";
     out << YAML::Value << course->mFlag;
     out << YAML::Key << "Name";
-    out << YAML::Value << course->mFileName;
-    if (course->mFileNameExtra.size() > 1) {
-        out << YAML::Key << "NameExtra";
-        out << YAML::Value << YAML::Flow << YAML::BeginSeq;
-        for (size_t i = 0; i < course->mFileNameExtra.size() - 1; i++) {
-            out << YAML::Hex << (uint32_t)(uint8_t)course->mFileNameExtra.at(i);
+    out << YAML::Value << YAML::Flow << YAML::BeginSeq;
+    for (size_t i = 0; i < course->mFileName.size(); i++) {
+        if (!(course->mFileName.at(i) >= '0' && course->mFileName.at(i) <= '9') && !(course->mFileName.at(i) >= 'A' && course->mFileName.at(i) <= 'Z')
+            && !(course->mFileName.at(i) >= 'a' && course->mFileName.at(i) <= 'z')) {
+            out << YAML::Hex << (uint32_t)(uint8_t)course->mFileName.at(i) << YAML::Dec;
+        } else {
+            out << course->mFileName.at(i);
         }
-        out << YAML::EndSeq << YAML::Block << YAML::Dec;
     }
+    out << YAML::EndSeq << YAML::Block << YAML::Dec;
+
+    out << YAML::Key << "unk_16";
+    out << YAML::Value << course->unk_16;
+
+    out << YAML::Key << "unk_17";
+    out << YAML::Value << course->unk_17;
+
+    out << YAML::Key << "unk_18";
+    out << YAML::Value << course->unk_18;
+
+    out << YAML::Key << "unk_1C";
+    out << YAML::Value << course->unk_1C;
 
     out << YAML::Key << "ControlPoints";
     out << YAML::Value << YAML::BeginSeq;
@@ -590,17 +611,16 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
     int8_t skybox = reader.ReadInt8();
     uint32_t checksum = reader.ReadUInt32();
     int8_t flag = reader.ReadInt8();
-    char nameBuffer[23];
+    std::vector<char> fileName;
 
-    for (int32_t i = 0; i < ARRAY_COUNT(nameBuffer); i++) {
-        nameBuffer[i] = reader.ReadInt8();
+    for (int32_t i = 0; i < 13; i++) {
+        fileName.push_back(reader.ReadInt8());
     }
 
-    std::string fileName(nameBuffer);
-    std::vector<int8_t> fileNameExtra;
-    for (int32_t i = fileName.length(); i < ARRAY_COUNT(nameBuffer); i++) {
-        fileNameExtra.push_back(nameBuffer[i]);
-    }
+    int8_t unk_16 = reader.ReadInt8();
+    int8_t unk_17 = reader.ReadInt8();
+    int32_t unk_18 = reader.ReadInt32();
+    int32_t unk_1C = reader.ReadInt32();
 
     std::vector<ControlPointInfo> controlPointInfos;
 
@@ -637,7 +657,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
         controlPointInfos.push_back(controlPointInfo);
     }
 
-    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, fileNameExtra, controlPointInfos);
+    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, unk_16, unk_17, unk_18, unk_1C, controlPointInfos);
 }
 
 std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -658,14 +678,22 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(st
     int8_t venue = info["Venue"].as<int8_t>();
     int8_t skybox = info["Skybox"].as<int8_t>();
     int8_t flag = info["Flag"].as<int8_t>();
-    std::string fileName = info["Name"].as<std::string>();
-    std::vector<int8_t> fileNameExtra;
-    if (info["NameExtra"]) {
-        auto nameExtra = info["NameExtra"];
-        for (YAML::iterator it = nameExtra.begin(); it != nameExtra.end(); ++it) {
-            fileNameExtra.push_back((int8_t)(*it).as<uint8_t>());
+    std::vector<char> fileName;
+    auto name = info["Name"];
+    for (const auto& node : name) {
+        auto nameChar = node.Scalar();
+        if (nameChar.size() == 1) {
+            fileName.push_back(nameChar.at(0));
+        } else {
+            fileName.push_back((char)std::stoi(nameChar, nullptr, 16));
         }
-    } 
+    }
+
+    int8_t unk_16 = info["unk_16"].as<int8_t>();
+    int8_t unk_17 = info["unk_17"].as<int8_t>();
+    int32_t unk_18 = info["unk_18"].as<int32_t>();
+    int32_t unk_1C = info["unk_1C"].as<int32_t>();
+
     std::vector<ControlPointInfo> controlPointInfos;
 
     auto controlPoints = info["ControlPoints"];
@@ -739,5 +767,5 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(st
         controlPointInfos.push_back(controlPointInfo);
     }
 
-    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, fileNameExtra, controlPointInfos);
+    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, unk_16, unk_17, unk_18, unk_1C, controlPointInfos);
 }
