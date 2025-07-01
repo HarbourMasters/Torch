@@ -178,7 +178,7 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
     write << fourSpaceTab;
 
     int32_t counter = 0;
-    for (uint32_t i = 0; i < record->mReplaySize; i++) {
+    for (uint32_t i = 0; i < record->mReplayData.size(); i++) {
         int32_t replayData = (int8_t)record->mReplayData.at(i);
 
         if (replayData == -0x80) {
@@ -192,7 +192,7 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
             write << replayData;
         }
 
-        if (i != record->mReplaySize - 1) {
+        if (i != record->mReplayData.size() - 1) {
             write << ", ";
         } else {
             write << "\n";
@@ -206,7 +206,7 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
 
     write << "};\n\n";
 
-    return offset + 0x20 + 0x40 + ALIGN4(record->mReplaySize);
+    return offset + 0x20 + 0x40 + ALIGN4(record->mReplayData.size());
 }
 
 ExportResult FZX::GhostRecordBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
@@ -249,7 +249,8 @@ ExportResult FZX::GhostRecordBinaryExporter::Export(std::ostream &write, std::sh
     writer.Write(record->mReplayEnd);
     writer.Write(record->mReplaySize);
 
-    for (uint32_t i = 0; i < record->mReplaySize; i++) {
+    writer.Write((uint32_t)record->mReplayData.size());
+    for (uint32_t i = 0; i < record->mReplayData.size(); i++) {
         writer.Write(record->mReplayData.at(i));
     }
 
@@ -339,7 +340,7 @@ ExportResult FZX::GhostRecordModdingExporter::Export(std::ostream &write, std::s
 
     out << YAML::Key << "ReplayData";
     out << YAML::Value << YAML::Hex << YAML::Flow << YAML::BeginSeq;
-    for (uint32_t i = 0; i < record->mReplaySize; i++) {
+    for (uint32_t i = 0; i < record->mReplayData.size(); i++) {
         out << YAML::Value << (uint32_t)(uint8_t)record->mReplayData.at(i);
     }
     out << YAML::EndSeq << YAML::Block << YAML::Dec;
@@ -355,6 +356,7 @@ ExportResult FZX::GhostRecordModdingExporter::Export(std::ostream &write, std::s
 std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
+    bool isDiskDrive = GetSafeNode<bool>(node, "disk_drive", false);
 
     reader.SetEndianness(Torch::Endianness::Big);
 
@@ -419,7 +421,9 @@ std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse(std::
     reader.ReadInt32();
 
     std::vector<int8_t> replayData;
-    for (uint32_t i = 0; i < replaySize; i++) {
+
+    size_t replayDataSize = (isDiskDrive) ? 16224 : replaySize;
+    for (uint32_t i = 0; i < replayDataSize; i++) {
         replayData.push_back(reader.ReadInt8());
     }
 
