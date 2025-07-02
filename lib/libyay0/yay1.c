@@ -1,4 +1,4 @@
-#include "yay0.h"
+#include "yay1.h"
 #include "libmio0/utils.h"
 #include <string.h>
 #include <stdlib.h>
@@ -117,7 +117,7 @@ static int find_longest(const unsigned char *buf, int start_offset, int max_sear
    return best_length;
 }
 
-int32_t yay0_encode(const uint8_t *in_buf, uint32_t length, uint8_t* out_buf) {
+int32_t yay1_encode(const uint8_t *in_buf, uint32_t length, uint8_t* out_buf) {
     unsigned char *bit_buf;
     unsigned char *comp_buf;
     unsigned char *uncomp_buf;
@@ -195,17 +195,17 @@ int32_t yay0_encode(const uint8_t *in_buf, uint32_t length, uint8_t* out_buf) {
     // +7 so int division accounts for all bits
     bit_length = ((bit_idx + 7) / 8);
     // compressed data after control bits and aligned to 4-byte boundary
-    comp_offset = ALIGN(YAY0_HEADER_LENGTH + bit_length, 4);
+    comp_offset = ALIGN(YAY1_HEADER_LENGTH + bit_length, 4);
     uncomp_offset = comp_offset + comp_idx;
     bytes_written = uncomp_offset + uncomp_idx;
  
     // output header
-    memcpy(out_buf, "Yay0", 4);
+    memcpy(out_buf, "Yay1", 4);
     write_u32_be(&out_buf[4], length);
     write_u32_be(&out_buf[8], comp_offset);
     write_u32_be(&out_buf[12], uncomp_offset);
     // output data
-    memcpy(&out_buf[YAY0_HEADER_LENGTH], bit_buf, bit_length);
+    memcpy(&out_buf[YAY1_HEADER_LENGTH], bit_buf, bit_length);
     memcpy(&out_buf[comp_offset], comp_buf, comp_idx);
     memcpy(&out_buf[uncomp_offset], uncomp_buf, uncomp_idx);
  
@@ -218,17 +218,11 @@ int32_t yay0_encode(const uint8_t *in_buf, uint32_t length, uint8_t* out_buf) {
     return bytes_written;
 }
 
-uint8_t* yay0_decode(const uint8_t* in_buf, uint32_t* out_size){
+uint8_t* yay1_decode(const uint8_t* in_buf, uint32_t* out_size){
 
     const uint8_t* in = in_buf;
-    const char* magic = (const char*) in;
-    if(!strncmp(magic, "PERS-SZP", 8)){
-        uint32_t header_size = read_u32_be(in + 8);
-        magic += header_size;
-        in += header_size;
-    }
 
-    if(strncmp(magic, "Yay0", 4) != 0){
+    if(strncmp(in, "Yay1", 4) != 0){
         return NULL;
     }
 

@@ -9,6 +9,8 @@ extern "C" {
 #include "n64graphics/n64graphics.h"
 #include "BaseFactory.h"
 #include <libmio0/mio0.h>
+#include <libyay0/yay0.h>
+#include <libyay0/yay1.h>
 }
 
 static bool isTable = false;
@@ -31,6 +33,7 @@ static const std::unordered_map <std::string, TextureFormat> sTextureFormats = {
 static const std::unordered_map <std::string, CompressionType> sCompressionTypes = {
     { "MIO0", CompressionType::MIO0 },
     { "YAY0", CompressionType::YAY0 },
+    { "YAY1", CompressionType::YAY1 },
     { "YAZ0", CompressionType::YAZ0 },
 };
 
@@ -85,6 +88,16 @@ ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::s
                         worstSize = MIO0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
                         compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
                         compressedSize = mio0_encode(data.data(), data.size(), compressedData);
+                        break;
+                    case CompressionType::YAY0:
+                        worstSize = YAY0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+                        compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
+                        compressedSize = yay0_encode(data.data(), data.size(), compressedData);
+                        break;
+                    case CompressionType::YAY1:
+                        worstSize = YAY1_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+                        compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
+                        compressedSize = yay1_encode(data.data(), data.size(), compressedData);
                         break;
                     default:
                         // UNIMPLEMENTED
@@ -150,6 +163,16 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
             worstSize = MIO0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
             compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
             compressedSize = mio0_encode(data.data(), data.size(), compressedData);
+            break;
+        case CompressionType::YAY0:
+            worstSize = YAY0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+            compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
+            compressedSize = yay0_encode(data.data(), data.size(), compressedData);
+            break;
+        case CompressionType::YAY1:
+            worstSize = YAY1_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+            compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
+            compressedSize = yay1_encode(data.data(), data.size(), compressedData);
             break;
         default:
             // UNIMPLEMENTED
@@ -329,6 +352,8 @@ std::string getcomptype(CompressionType type) {
             return "MIO0";
         case CompressionType::YAY0:
             return "YAY0";
+        case CompressionType::YAY1:
+            return "YAY1";
         case CompressionType::YAZ0:
             return "YAZ0";
         default:
@@ -350,7 +375,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std:
     if (!sCompressionTypes.contains(compression)) {
         SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
                       Please add one of the following compression types\n\
-                      MIO0, YAY0 (Unsupported), YAZ0 (Unsupported)", offset);
+                      MIO0, YAY0, YAY1, YAZ0 (Unsupported)", offset);
         return std::nullopt;
     }
     compressionType = sCompressionTypes.at(compression);
@@ -447,7 +472,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
     if (!sCompressionTypes.contains(compression)) {
         SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
                       Please add one of the following compression types\n\
-                      MIO0, YAY0 (Unsupported), YAZ0 (Unsupported)", offset);
+                      MIO0, YAY0, YAY1, YAZ0 (Unsupported)", offset);
         return std::nullopt;
     }
     compressionType = sCompressionTypes.at(compression);

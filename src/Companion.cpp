@@ -75,6 +75,10 @@
 #include "factories/fzerox/GhostRecordFactory.h"
 #endif
 
+#ifdef MARIO_ARTIST_SUPPORT
+#include "factories/mario_artist/MA2D1Factory.h"
+#endif
+
 #ifdef NAUDIO_SUPPORT
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/naudio/v0/BankFactory.h"
@@ -167,6 +171,10 @@ void Companion::Init(const ExportType type) {
 #ifdef FZERO_SUPPORT
     this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
     this->RegisterFactory("FZX:GHOST", std::make_shared<FZX::GhostRecordFactory>());
+#endif
+
+#ifdef MARIO_ARTIST_SUPPORT
+    this->RegisterFactory("MA:MA2D1", std::make_shared<MA::MA2D1Factory>());
 #endif
 
 #ifdef NAUDIO_SUPPORT
