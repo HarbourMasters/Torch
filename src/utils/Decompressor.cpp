@@ -7,6 +7,7 @@
 extern "C" {
 #include <libmio0/mio0.h>
 #include <libyay0/yay0.h>
+#include <libyay0/yay1.h>
 #include <libmio0/tkmk00.h>
 }
 
@@ -38,6 +39,17 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 
             if(!decompressed){
                 throw std::runtime_error("Failed to decode YAY0");
+            }
+
+            gCachedChunks[offset] = new DataChunk{ decompressed, size };
+            return gCachedChunks[offset];
+        }
+        case CompressionType::YAY1: {
+            uint32_t size = 0;
+            uint8_t* decompressed = yay1_decode(in_buf, &size);
+
+            if(!decompressed){
+                throw std::runtime_error("Failed to decode YAY1");
             }
 
             gCachedChunks[offset] = new DataChunk{ decompressed, size };
@@ -106,6 +118,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     // Extract a compressed file which contains many assets.
     switch(type) {
         case CompressionType::YAY0:
+        case CompressionType::YAY1:
         case CompressionType::MIO0: {
             offset = ASSET_PTR(offset);
 
@@ -179,6 +192,10 @@ CompressionType Decompressor::GetCompressionType(std::vector<uint8_t>& buffer, c
 
         if (header == "Yay0" || header == "PERS") {
             return CompressionType::YAY0;
+        }
+
+        if (header == "Yay1") {
+            return CompressionType::YAY1;
         }
 
         if (header == "Yaz0") {

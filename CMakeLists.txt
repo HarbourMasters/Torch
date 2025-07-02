@@ -14,6 +14,7 @@ option(BUILD_SM64 "Build with Super Mario 64 support" ON)
 option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
 option(BUILD_SF64 "Build with Star Fox 64 support" ON)
 option(BUILD_FZERO "Build with F-Zero X support" ON)
+option(BUILD_MARIO_ARTIST "Build with Mario Artist support" ON)
 option(BUILD_NAUDIO "Build with NAudio support" ON)
 
 ################################################################################
@@ -82,6 +83,12 @@ if(BUILD_FZERO)
     add_definitions(-DFZERO_SUPPORT)
 else()
     list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/fzerox/*")
+endif()
+
+if(BUILD_MARIO_ARTIST)
+    add_definitions(-DMARIO_ARTIST_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/mario_artist/*")
 endif()
 
 if(BUILD_NAUDIO)

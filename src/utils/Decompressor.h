@@ -12,6 +12,7 @@ enum class CompressionType {
     None,
     MIO0,
     YAY0,
+    YAY1,
     YAZ0,
 };
 
