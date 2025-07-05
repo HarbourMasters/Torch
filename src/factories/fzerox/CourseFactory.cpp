@@ -78,7 +78,7 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
 
     write << fourSpaceTab << "{ ";
 
-    for (size_t i = 0; i < 13; i++) {
+    for (size_t i = 0; i < 22; i++) {
         if (i != 0) {
             write << ", ";
         }
@@ -92,7 +92,7 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     
     write << std::dec << " }, /* File Name */\n";
 
-    write << fourSpaceTab << (int32_t)course->unk_16 << ", " << (int32_t)course->unk_17 << ", " << course->unk_18 << ", " << course->unk_1C << ",\n";
+    write << fourSpaceTab << (int32_t)course->unk_1F << ",\n";
 
     write << fourSpaceTab << "{ /* Control Points */\n";
 
@@ -449,7 +449,7 @@ ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_
         writer.Write(nameChar);
     }
 
-    writer.Write(course->unk_16);
+    writer.Write(course->unk_1F);
     for (const auto& controlPointInfo : course->mControlPointInfos) {
         writer.Write(controlPointInfo.controlPoint.pos.x);
         writer.Write(controlPointInfo.controlPoint.pos.y);
@@ -507,17 +507,8 @@ ExportResult FZX::CourseModdingExporter::Export(std::ostream &write, std::shared
     }
     out << YAML::EndSeq << YAML::Block << YAML::Dec;
 
-    out << YAML::Key << "unk_16";
-    out << YAML::Value << course->unk_16;
-
-    out << YAML::Key << "unk_17";
-    out << YAML::Value << course->unk_17;
-
-    out << YAML::Key << "unk_18";
-    out << YAML::Value << course->unk_18;
-
-    out << YAML::Key << "unk_1C";
-    out << YAML::Value << course->unk_1C;
+    out << YAML::Key << "unk_1F";
+    out << YAML::Value << course->unk_1F;
 
     out << YAML::Key << "ControlPoints";
     out << YAML::Value << YAML::BeginSeq;
@@ -613,14 +604,11 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
     int8_t flag = reader.ReadInt8();
     std::vector<char> fileName;
 
-    for (int32_t i = 0; i < 13; i++) {
+    for (int32_t i = 0; i < 22; i++) {
         fileName.push_back(reader.ReadInt8());
     }
 
-    int8_t unk_16 = reader.ReadInt8();
-    int8_t unk_17 = reader.ReadInt8();
-    int32_t unk_18 = reader.ReadInt32();
-    int32_t unk_1C = reader.ReadInt32();
+    int8_t unk_1F = reader.ReadInt8();
 
     std::vector<ControlPointInfo> controlPointInfos;
 
@@ -657,7 +645,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
         controlPointInfos.push_back(controlPointInfo);
     }
 
-    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, unk_16, unk_17, unk_18, unk_1C, controlPointInfos);
+    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, unk_1F, controlPointInfos);
 }
 
 std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -689,10 +677,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(st
         }
     }
 
-    int8_t unk_16 = info["unk_16"].as<int8_t>();
-    int8_t unk_17 = info["unk_17"].as<int8_t>();
-    int32_t unk_18 = info["unk_18"].as<int32_t>();
-    int32_t unk_1C = info["unk_1C"].as<int32_t>();
+    int8_t unk_1F = info["unk_1F"].as<int8_t>();
 
     std::vector<ControlPointInfo> controlPointInfos;
 
@@ -767,5 +752,5 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(st
         controlPointInfos.push_back(controlPointInfo);
     }
 
-    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, unk_16, unk_17, unk_18, unk_1C, controlPointInfos);
+    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, unk_1F, controlPointInfos);
 }
