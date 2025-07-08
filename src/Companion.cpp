@@ -115,7 +115,7 @@ static std::string ConvertType(std::string type) {
     return type;
 }
 
-static std::string GetTypeNode(const YAML::Node& node) {
+static std::string GetTypeNode(YAML::Node& node) {
     auto type = GetSafeNode<std::string>(node, "type");
     std::transform(type.begin(), type.end(), type.begin(), toupper);
     return type;
