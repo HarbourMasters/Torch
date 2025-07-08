@@ -1584,8 +1584,8 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
 
     if(decl.has_value()) {
         auto found = std::get<1>(decl.value());
-        if(GetSafeNode<std::string>(found, "type") != type) {
-            SPDLOG_ERROR("Asset clash detected {} vs {} at 0x{:X}", type, GetSafeNode<std::string>(found, "type"), offset);
+        if(ConvertType(GetSafeNode<std::string>(found, "type")) != ConvertType(type)) {
+            SPDLOG_ERROR("Asset clash detected {} vs {} at 0x{:X}", ConvertType(type), ConvertType(GetSafeNode<std::string>(found, "type")), offset);
         } else {
             return found;
         }
