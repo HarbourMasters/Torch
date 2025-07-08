@@ -105,6 +105,16 @@ namespace fs = std::filesystem;
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
 
+static std::string ConvertType(std::string type) {
+    int index = type.find(':');
+
+    if(index != std::string::npos) {
+        type = type.substr(index + 1);
+    }
+    std::transform(type.begin(), type.end(), type.begin(), tolower);
+    return type;
+}
+
 void Companion::Init(const ExportType type) {
 
     spdlog::set_level(spdlog::level::debug);
@@ -1452,8 +1462,8 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(
     auto [name, n] = node.value();
     auto n_type = GetSafeNode<std::string>(n, "type");
 
-    if(n_type != type) {
-        throw std::runtime_error("Requested node type does not match with the target node type at " + Torch::to_hex(addr, false));
+    if(ConvertType(n_type) != ConvertType(type)) {
+        throw std::runtime_error("Requested node type does not match with the target node type at " + Torch::to_hex(addr, false) + " Found: " + ConvertType(n_type) + " Expected: " + ConvertType(type));
     }
 
     return node;
@@ -1561,16 +1571,6 @@ std::string Companion::RelativePath(const std::string& path) const {
 
 std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
     return Chocobo1::SHA1().addData(data).finalize().toString();
-}
-
-static std::string ConvertType(std::string type) {
-    int index = type.find(':');
-
-    if(index != std::string::npos) {
-        type = type.substr(index + 1);
-    }
-    std::transform(type.begin(), type.end(), type.begin(), tolower);
-    return type;
 }
 
 std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
