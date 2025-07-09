@@ -264,7 +264,6 @@ void Companion::ParseEnums(std::string& header) {
 
 std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::string& name) {
     auto type = GetTypeNode(node);
-    std::transform(type.begin(), type.end(), type.begin(), ::toupper);
 
     spdlog::set_pattern(regular);
     if(node["offset"]) {
@@ -1469,7 +1468,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(
     auto n_type = GetTypeNode(n);
 
     if(n_type != type) {
-        throw std::runtime_error("Requested node type does not match with the target node type at " + Torch::to_hex(addr, false) + " Found: " + ConvertType(n_type) + " Expected: " + ConvertType(type));
+        throw std::runtime_error("Requested node type does not match with the target node type at " + Torch::to_hex(addr, false) + " Found: " + n_type + " Expected: " + type);
     }
 
     return node;
