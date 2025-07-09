@@ -230,7 +230,7 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr){
         auto count = GetSafeNode<uint32_t>(node, "count");
         auto end = ALIGN16((count * sizeof(N64Vtx_t)));
 
-        if(ptr > offset && ptr <= offset + end){
+        if(ptr > offset && ptr < offset + end){
             return std::make_tuple(GetSafeNode<std::string>(node, "symbol", name), node);
         }
     }
