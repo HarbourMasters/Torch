@@ -92,7 +92,7 @@ std::vector<uint8_t> CompTool::Decompress(std::vector<uint8_t> rom){
                 v_size = p_size;
                 break;
             case CompType::COMPRESSED:
-                decoded = Decompressor::Decode(std::vector(bytes, bytes + p_size), 0, CompressionType::MIO0, true);
+                decoded = Decompressor::Decode(std::vector(bytes, bytes + p_size), 0, CompressionType::MIO0, p_size, true);
                 bytes = decoded->data;
                 v_size = decoded->size;
                 break;

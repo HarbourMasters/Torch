@@ -11,9 +11,11 @@ extern "C" {
 #include <libmio0/tkmk00.h>
 }
 
+#include <bk_zip/bk_unzip.h>
+
 std::unordered_map<uint32_t, DataChunk*> gCachedChunks;
 
-DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32_t offset, const CompressionType type, bool ignoreCache) {
+DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32_t offset, const CompressionType type, const uint32_t in_size, bool ignoreCache) {
 
     if(!ignoreCache && gCachedChunks.contains(offset)){
         return gCachedChunks[offset];
@@ -50,6 +52,18 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 
             if(!decompressed){
                 throw std::runtime_error("Failed to decode YAY1");
+            }
+
+            gCachedChunks[offset] = new DataChunk{ decompressed, size };
+            return gCachedChunks[offset];
+        }
+        case CompressionType::BKZIP: {
+            std::vector<uint8_t> decompressedVec = BK64::bk_unzip(in_buf, in_size);
+            uint8_t* decompressed = decompressedVec.data();
+            uint32_t size = decompressedVec.size();
+
+            if(!decompressed){
+                throw std::runtime_error("Failed to decode BKZIP");
             }
 
             gCachedChunks[offset] = new DataChunk{ decompressed, size };
@@ -134,17 +148,17 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         case CompressionType::None: // The data does not have compression
         {
             fileOffset = TranslateAddr(offset, false);
-
+            
             auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - fileOffset);
-
+            
             return {
                 .root = nullptr,
                 .segment = { buffer.data() + fileOffset, size }
             };
         }
+        default:
+            throw std::runtime_error("Auto decode could not find a supported compression type.");
     }
-
-    throw std::runtime_error("Auto decode could not find a compression type nor uncompressed segment.\nThis is one of those issues that should never really happen.");
 }
 
 DecompressedData Decompressor::AutoDecode(uint32_t offset, std::optional<size_t> size, std::vector<uint8_t>& buffer) {
