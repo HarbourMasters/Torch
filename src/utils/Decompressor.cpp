@@ -58,9 +58,8 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
             return gCachedChunks[offset];
         }
         case CompressionType::BKZIP: {
-            std::vector<uint8_t> decompressedVec = BK64::bk_unzip(in_buf, in_size);
-            uint8_t* decompressed = decompressedVec.data();
-            uint32_t size = decompressedVec.size();
+            uint32_t size = in_size;
+            uint8_t* decompressed = BK64::bk_unzip(in_buf, &size);
 
             if(!decompressed){
                 throw std::runtime_error("Failed to decode BKZIP");
@@ -126,6 +125,18 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         return {
             .root = decoded,
             .segment = { decoded->data, size }
+        };
+    }
+
+    if (node["bkzip"]) {
+        const auto compressedSize = GetSafeNode<uint32_t>(node, "compressed_size");
+
+        // TODO: Some weird bug with fileOffset exists
+        auto decoded = Decode(buffer, offset, CompressionType::BKZIP, compressedSize);
+        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
+        return {
+                .root = decoded,
+                .segment = { decoded->data, size }
         };
     }
 

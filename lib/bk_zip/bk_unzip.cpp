@@ -11,9 +11,9 @@ namespace BK64 {
 /**
  * Implementation of bk_unzip as declared in bk_unzip.h
  */
-std::vector<uint8_t> bk_unzip(const uint8_t* in_buffer, size_t in_size) {
+uint8_t* bk_unzip(const uint8_t* in_buffer, uint32_t* size) {
     // Check buffer size
-    if (in_size < 6) {
+    if (*size < 6) {
         throw std::runtime_error("Input buffer too small");
     }
 
@@ -29,18 +29,18 @@ std::vector<uint8_t> bk_unzip(const uint8_t* in_buffer, size_t in_size) {
         (static_cast<uint32_t>(in_buffer[4]) << 8) |
         static_cast<uint32_t>(in_buffer[5]);
 
-    // Prepare output buffer - make it slightly larger to handle any potential overflow
-    std::vector<uint8_t> out_buffer(expected_len + 1024);
+    uint8_t* out_buffer = (uint8_t*)malloc(expected_len);
+    memset(out_buffer, 0, expected_len);
 
     // Set up zlib stream
     z_stream stream;
     stream.zalloc = Z_NULL;
     stream.zfree = Z_NULL;
     stream.opaque = Z_NULL;
-    stream.avail_in = static_cast<uInt>(in_size - 6);
+    stream.avail_in = static_cast<uInt>(*size - 6);
     stream.next_in = const_cast<Bytef*>(in_buffer + 6);
-    stream.avail_out = static_cast<uInt>(out_buffer.size());
-    stream.next_out = out_buffer.data();
+    stream.avail_out = static_cast<uInt>(expected_len);
+    stream.next_out = out_buffer;
 
     // Initialize for raw inflate (no zlib/gzip header) - same as wbits=-15 in Python
     int result = inflateInit2(&stream, -15);
@@ -65,7 +65,8 @@ std::vector<uint8_t> bk_unzip(const uint8_t* in_buffer, size_t in_size) {
     }
 
     // Resize buffer to the actual decompressed size
-    out_buffer.resize(stream.total_out);
+    // out_buffer.resize(stream.total_out);
+    *size = stream.total_out;
 
     // Verify decompressed size matches expected size
     if (stream.total_out != expected_len) {

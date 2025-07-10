@@ -76,6 +76,7 @@
 #endif
 
 #ifdef BK64_SUPPORT
+#include "factories/bk64/BKAssetFactory.h"
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -193,6 +194,7 @@ void Companion::Init(const ExportType type) {
 #endif
 
 #ifdef BK64_SUPPORT
+    this->RegisterFactory("BK64:ASSET_TABLE", std::make_shared<BK64::BKAssetFactory>());
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
