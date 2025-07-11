@@ -209,7 +209,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
                 break;
             case BKAssetType::Sprite:
                 bkAssetNode["type"] = "BK64:SPRITE";
-                // Companion::Instance->AddAsset(bkAssetNode);
+                Companion::Instance->AddAsset(bkAssetNode);
                 break;
             default:
                 // Should be unreachable

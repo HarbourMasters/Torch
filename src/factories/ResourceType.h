@@ -65,6 +65,9 @@ enum class ResourceType {
     CourseData = 0x58435253,   // XCRS
     GhostRecord = 0x58475244,  // XGRD
 
+    // BK64
+    BKSprite = 0x424B5350,       // BKSP
+
     // NAudio v0
     Bank = 0x42414E4B,         // BANK
     Sample = 0x41554643,       // AIFC
