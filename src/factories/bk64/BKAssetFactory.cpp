@@ -173,7 +173,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
         switch (assetType) {
             case BKAssetType::Animation:
                 bkAssetNode["type"] = "BK64:ANIM";
-                // Companion::Instance->AddAsset(bkAssetNode);
+                Companion::Instance->AddAsset(bkAssetNode);
                 break;
             case BKAssetType::Binary:
                 bkAssetNode["type"] = "BLOB";

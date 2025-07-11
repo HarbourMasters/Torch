@@ -66,7 +66,8 @@ enum class ResourceType {
     GhostRecord = 0x58475244,  // XGRD
 
     // BK64
-    BKSprite = 0x424B5350,       // BKSP
+    BKSprite = 0x424B5350,     // BKSP
+    BKAnimation = 0x424B414E,  // BKAN  
 
     // NAudio v0
     Bank = 0x42414E4B,         // BANK
