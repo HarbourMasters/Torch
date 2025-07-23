@@ -349,13 +349,13 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             for(size_t i = 0; i < externalFiles.size(); i++) {
                 auto externalFile = externalFiles[i];
                 if (externalFile.size() == 0) {
-                    this->gCurrentExternalFiles.push_back(externalFile.as<std::string>());
+                    this->gCurrentExternalFiles.push_back(this->gSourceDirectory / externalFile.as<std::string>());
                 } else {
                     SPDLOG_INFO("External File size {}", externalFile.size());
                     throw std::runtime_error("Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n  - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
 
-                auto externalFileName = externalFile.as<std::string>();
+                std::string externalFileName = this->gSourceDirectory / externalFile.as<std::string>();
                 if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
                 } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
@@ -475,7 +475,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
 }
 
 void Companion::ParseHash() {
-    const std::string out = "torch.hash.yml";
+    const std::string out = this->gDestinationPath / "torch.hash.yml";
 
     if(fs::exists(out)) {
         this->gHashNode = YAML::LoadFile(out);
@@ -983,13 +983,15 @@ void Companion::ProcessFile(YAML::Node root) {
 
 void Companion::Process() {
 
-    if(!fs::exists("config.yml")) {
+    auto configPath = this->gSourceDirectory / "config.yml";
+
+    if(!fs::exists(configPath)) {
         SPDLOG_ERROR("No config file found");
         return;
     }
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    YAML::Node config = YAML::LoadFile("config.yml");
+    YAML::Node config = YAML::LoadFile(configPath);
 
     bool isDirectoryMode = config["mode"] && config["mode"].as<std::string>() == "directory";
 
@@ -1067,13 +1069,14 @@ void Companion::Process() {
             this->gConfig.segment.global[i + 1] = segments[i];
         }
     }
-    this->gAssetPath = rom["path"].as<std::string>();
+    this->gAssetPath = this->gSourceDirectory / rom["path"].as<std::string>();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
     auto gbi_floats = cfg["gbi_floats"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
+    auto output_path = this->gDestinationPath;
 
-    this->gConfig.moddingPath = modding_path;
+    this->gConfig.moddingPath = this->gSourceDirectory / modding_path;
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
             std::string extension = "";
@@ -1087,23 +1090,24 @@ void Companion::Process() {
                 default:
                     throw std::runtime_error("Invalid archive type for export type Binary");
             }
-            this->gConfig.outputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
+            output_path /= opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
             break;
         }
         case ExportType::Header: {
-            this->gConfig.outputPath = opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
+            output_path /= opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
             break;
         }
         case ExportType::Code: {
-            this->gConfig.outputPath = opath && opath["code"] ? opath["code"].as<std::string>() : "code";
+            output_path /= opath && opath["code"] ? opath["code"].as<std::string>() : "code";
             break;
         }
         case ExportType::XML:
         case ExportType::Modding: {
-            this->gConfig.outputPath = modding_path;
+            output_path /= modding_path;
             break;
         }
     }
+    this->gConfig.outputPath = output_path;
 
     if(gbi) {
         auto key = gbi.as<std::string>();
@@ -1273,7 +1277,7 @@ void Companion::Process() {
     }
 
     // Write entries hash
-    std::ofstream file("torch.hash.yml", std::ios::binary);
+    std::ofstream file(this->gDestinationPath / "torch.hash.yml", std::ios::binary);
     file << this->gHashNode;
     file.close();
 

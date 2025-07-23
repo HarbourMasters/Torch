@@ -112,7 +112,9 @@ class Companion {
 public:
     static Companion* Instance;
 
-    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
+    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const bool modding = false,
+                       const std::string& srcDir = "", const std::string& destPath = "") : gCartridge(nullptr),
+                       gSourceDirectory(srcDir), gDestinationPath(destPath) {
         this->gRomPath = rom;
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
@@ -120,13 +122,21 @@ public:
         this->gConfig.textureDefines = false;
     }
 
-    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
+    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const bool modding = false,
+                       const std::string& srcDir = "", const std::string& destPath = "") : gCartridge(nullptr),
+                       gSourceDirectory(srcDir), gDestinationPath(destPath) {
         this->gRomData = rom;
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
         this->gConfig.modding = modding;
         this->gConfig.textureDefines = false;
     }
+
+    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
+                       Companion(rom, otr, debug, false, srcDir, destPath) {}
+
+    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
+                       Companion(rom, otr, debug, false, srcDir, destPath) {}
 
     void Init(ExportType type);
 
@@ -179,6 +189,8 @@ public:
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
+    fs::path gSourceDirectory;
+    fs::path gDestinationPath;
     fs::path gCurrentDirectory;
     std::string gCurrentHash;
     std::string gAssetPath;
