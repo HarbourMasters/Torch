@@ -20,8 +20,13 @@ int main(int argc, char *argv[]) {
     bool otrModeSelected = false;
     bool xmlMode = false;
     bool debug = false;
+    std::string srcdir;
+    std::string destdir
 
     app.require_subcommand();
+
+    app.add_option("-s", "--srcdir", srcdir, "Set source directory to locate config.yml, asset metadata, and modding files for importing");
+    app.add_option("-d", "--destdir", destdir, "Set destination directory for exporting and generating binaries and source code");
 
     /* Generate an OTR */
     const auto otr = app.add_subcommand("otr", "OTR - Generates an otr\n");
@@ -30,7 +35,7 @@ int main(int argc, char *argv[]) {
     otr->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
 
     otr->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::OTR, debug);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::OTR, debug, srcdir, destdir);
         instance->Init(ExportType::Binary);
     });
 
@@ -41,7 +46,7 @@ int main(int argc, char *argv[]) {
     o2r->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
 
     o2r->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::O2R, debug);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::O2R, debug, srcdir, destdir);
         instance->Init(ExportType::Binary);
     });
 
@@ -52,7 +57,7 @@ int main(int argc, char *argv[]) {
     code->add_flag("-v,--verbose", debug, "Verbose Debug Mode; adds offsets to C code");
 
     code->parse_complete_callback([&]() {
-        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
         instance->Init(ExportType::Code);
     });
 
@@ -62,7 +67,7 @@ int main(int argc, char *argv[]) {
     binary->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
     binary->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
         instance->Init(ExportType::Binary);
     });
 
@@ -80,7 +85,7 @@ int main(int argc, char *argv[]) {
             otrMode = ArchiveType::None;
         }
 
-        const auto instance = Companion::Instance = new Companion(filename, otrMode, debug);
+        const auto instance = Companion::Instance = new Companion(filename, otrMode, debug, srcdir, destdir);
         instance->Init(ExportType::Header);
     });
 
@@ -128,7 +133,7 @@ int main(int argc, char *argv[]) {
             otrMode = ArchiveType::None;
         }
 
-        const auto instance = Companion::Instance = new Companion(filename, otrMode, debug, true);
+        const auto instance = Companion::Instance = new Companion(filename, otrMode, debug, true, srcdir, destdir);
         if (mode == "code") {
             instance->Init(ExportType::Code);
         } else if (mode == "otr" || mode == "o2r") {
@@ -144,7 +149,7 @@ int main(int argc, char *argv[]) {
     modding_export->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
 
     modding_export->parse_complete_callback([&] {
-        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug);
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
         if (xmlMode) {
             instance->Init(ExportType::XML);
         } else {
