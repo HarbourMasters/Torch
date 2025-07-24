@@ -475,7 +475,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
 }
 
 void Companion::ParseHash() {
-    const std::string out = this->gDestinationPath / "torch.hash.yml";
+    const std::string out = this->gDestinationDirectory / "torch.hash.yml";
 
     if(fs::exists(out)) {
         this->gHashNode = YAML::LoadFile(out);
@@ -506,9 +506,10 @@ bool Companion::NodeHasChanges(const std::string& path) {
     const std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator( yaml ), {});
     this->gCurrentHash = CalculateHash(data);
     bool needsInit = true;
+    auto srcRelativePath = RelativePathToSrcDir(path);
 
-    if(this->gHashNode[path]) {
-        auto entry = GetSafeNode<YAML::Node>(this->gHashNode, path);
+    if(this->gHashNode[srcRelativePath]) {
+        auto entry = GetSafeNode<YAML::Node>(this->gHashNode, srcRelativePath);
         const auto hash = GetSafeNode<std::string>(entry, "hash", "no-hash");
         auto modes = GetSafeNode<YAML::Node>(entry, "extracted");
         auto extracted = GetSafeNode<bool>(modes, ExportTypeToString(this->gConfig.exporterType));
@@ -516,18 +517,18 @@ bool Companion::NodeHasChanges(const std::string& path) {
         if(hash == this->gCurrentHash) {
             needsInit = false;
             if(extracted) {
-                SPDLOG_INFO("Skipping {} as it has not changed", path);
+                SPDLOG_INFO("Skipping {} as it has not changed", srcRelativePath);
                 return false;
             }
         }
     }
 
     if(needsInit) {
-        this->gHashNode[path] = YAML::Node();
-        this->gHashNode[path]["hash"] = this->gCurrentHash;
-        this->gHashNode[path]["extracted"] = YAML::Node();
+        this->gHashNode[srcRelativePath] = YAML::Node();
+        this->gHashNode[srcRelativePath]["hash"] = this->gCurrentHash;
+        this->gHashNode[srcRelativePath]["extracted"] = YAML::Node();
         for(size_t m = 0; m <= static_cast<size_t>(ExportType::Modding); m++) {
-            this->gHashNode[path]["extracted"][ExportTypeToString(static_cast<ExportType>(m))] = false;
+            this->gHashNode[srcRelativePath]["extracted"][ExportTypeToString(static_cast<ExportType>(m))] = false;
         }
     }
 
@@ -977,7 +978,7 @@ void Companion::ProcessFile(YAML::Node root) {
     }
 
     if(this->gConfig.exporterType != ExportType::Binary) {
-        this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
+        this->gHashNode[RelativePathToSrcDir(this->gCurrentFile)]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
     }
 }
 
@@ -1074,9 +1075,13 @@ void Companion::Process() {
     auto gbi = cfg["gbi"];
     auto gbi_floats = cfg["gbi_floats"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
-    auto output_path = this->gDestinationPath;
 
-    this->gConfig.moddingPath = this->gSourceDirectory / modding_path;
+    if (!fs::exists(this->gDestinationDirectory)) {
+        create_directories(this->gDestinationDirectory);
+    }
+    auto output_path = this->gDestinationDirectory;
+
+    this->gConfig.moddingPath = this->gDestinationDirectory / modding_path;
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
             std::string extension = "";
@@ -1166,6 +1171,7 @@ void Companion::Process() {
     if(cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
+            file = this->gSourceDirectory / file;
             this->ParseEnums(file);
         }
     }
@@ -1277,7 +1283,7 @@ void Companion::Process() {
     }
 
     // Write entries hash
-    std::ofstream file(this->gDestinationPath / "torch.hash.yml", std::ios::binary);
+    std::ofstream file(this->gDestinationDirectory / "torch.hash.yml", std::ios::binary);
     file << this->gHashNode;
     file.close();
 
@@ -1576,6 +1582,14 @@ std::string Companion::RelativePath(const std::string& path) const {
     std::string doutput = (this->gCurrentDirectory / path).string();
     std::replace(doutput.begin(), doutput.end(), '\\', '/');
     return doutput;
+}
+
+std::string Companion::RelativePathToDestDir(const std::string& path) const {
+    return relative(path, this->gDestinationDirectory);
+}
+
+std::string Companion::RelativePathToSrcDir(const std::string& path) const {
+    return relative(path, this->gSourceDirectory);
 }
 
 std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {

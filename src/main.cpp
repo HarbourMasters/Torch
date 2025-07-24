@@ -21,18 +21,17 @@ int main(int argc, char *argv[]) {
     bool xmlMode = false;
     bool debug = false;
     std::string srcdir;
-    std::string destdir
+    std::string destdir;
 
     app.require_subcommand();
-
-    app.add_option("-s", "--srcdir", srcdir, "Set source directory to locate config.yml, asset metadata, and modding files for importing");
-    app.add_option("-d", "--destdir", destdir, "Set destination directory for exporting and generating binaries and source code");
 
     /* Generate an OTR */
     const auto otr = app.add_subcommand("otr", "OTR - Generates an otr\n");
 
     otr->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
     otr->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
+    otr->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing")->check(CLI::ExistingDirectory);
+    otr->add_option("-d,--destdir", destdir, "Set destination directory for export");
 
     otr->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::OTR, debug, srcdir, destdir);
@@ -44,6 +43,8 @@ int main(int argc, char *argv[]) {
 
     o2r->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
     o2r->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
+    o2r->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing")->check(CLI::ExistingDirectory);
+    o2r->add_option("-d,--destdir", destdir, "Set destination directory for export");
 
     o2r->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::O2R, debug, srcdir, destdir);
@@ -55,6 +56,8 @@ int main(int argc, char *argv[]) {
 
     code->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
     code->add_flag("-v,--verbose", debug, "Verbose Debug Mode; adds offsets to C code");
+    code->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing")->check(CLI::ExistingDirectory);
+    code->add_option("-d,--destdir", destdir, "Set destination directory to place C code to");
 
     code->parse_complete_callback([&]() {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
@@ -65,6 +68,8 @@ int main(int argc, char *argv[]) {
     const auto binary = app.add_subcommand("binary", "Binary - Generates a binary\n");
 
     binary->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    binary->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing")->check(CLI::ExistingDirectory);
+    binary->add_option("-d,--destdir", destdir, "Set destination directory to place binary to");
 
     binary->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
@@ -76,7 +81,8 @@ int main(int argc, char *argv[]) {
 
     header->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
     header->add_flag("-o,--otr", otrModeSelected, "OTR/O2R Mode");
-
+    header->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing")->check(CLI::ExistingDirectory);
+    header->add_option("-d,--destdir", destdir, "Set destination directory to place headers to");
 
     header->parse_complete_callback([&] {
         if (otrModeSelected) {
@@ -121,6 +127,8 @@ int main(int argc, char *argv[]) {
     modding_import->add_option("mode", mode, "code, otr, o2r or header")->required();
     modding_import->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
     modding_import->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
+    modding_import->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing, including modified files")->check(CLI::ExistingDirectory);
+    modding_import->add_option("-d,--destdir", destdir, "Set destination directory to place for generating C code");
 
     modding_import->parse_complete_callback([&] {
         ArchiveType otrMode;
@@ -147,6 +155,8 @@ int main(int argc, char *argv[]) {
 
     modding_export->add_flag("-x,--xml", xmlMode, "XML Mode");
     modding_export->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    modding_export->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing, including modified files")->check(CLI::ExistingDirectory);
+    modding_export->add_option("-d,--destdir", destdir, "Set destination directory to place for generating modified files");
 
     modding_export->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);

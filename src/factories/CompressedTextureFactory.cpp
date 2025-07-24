@@ -218,7 +218,7 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
 
         write << tab_t << "{\n";
 
-        write << tab_t << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".incbin.c\"\n";
+        write << tab_t << tab_t << "#include \"" << Companion::Instance->GetDestRelativeOutputPath() + "/" << *replacement << ".incbin.c\"\n";
 
         write << tab_t << "},\n";
 
@@ -231,7 +231,7 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
     } else {
         write << "u8 " << symbol  << "[] = {\n";
 
-        write << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".incbin.c\"\n";
+        write << tab_t << "#include \"" << Companion::Instance->GetDestRelativeOutputPath() + "/" << *replacement << ".incbin.c\"\n";
 
         write << "};\n";
 
