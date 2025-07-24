@@ -137,7 +137,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
 
         write << tab_t << "{\n";
         if (!Companion::Instance->IsUsingIndividualIncludes()){
-            write << tab_t << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+            write << tab_t << tab_t << "#include \"" << Companion::Instance->GetDestRelativeOutputPath() + "/" << *replacement << ".inc.c\"\n";
         } else {
             write << imgstream.str();
         }
@@ -153,7 +153,7 @@ ExportResult TextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IP
         write << GetSafeNode<std::string>(node, "ctype", "u8") << " " << symbol  << "[] = {\n";
 
         if (!Companion::Instance->IsUsingIndividualIncludes()){
-            write << tab_t << "#include \"" << Companion::Instance->GetOutputPath() + "/" << *replacement << ".inc.c\"\n";
+            write << tab_t << "#include \"" << Companion::Instance->GetDestRelativeOutputPath() + "/" << *replacement << ".inc.c\"\n";
         } else {
             write << imgstream.str();
         }
