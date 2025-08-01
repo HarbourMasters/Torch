@@ -349,13 +349,13 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             for(size_t i = 0; i < externalFiles.size(); i++) {
                 auto externalFile = externalFiles[i];
                 if (externalFile.size() == 0) {
-                    this->gCurrentExternalFiles.push_back(this->gSourceDirectory / externalFile.as<std::string>());
+                    this->gCurrentExternalFiles.push_back((this->gSourceDirectory / externalFile.as<std::string>()).string());
                 } else {
                     SPDLOG_INFO("External File size {}", externalFile.size());
                     throw std::runtime_error("Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n  - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
 
-                std::string externalFileName = this->gSourceDirectory / externalFile.as<std::string>();
+                std::string externalFileName = (this->gSourceDirectory / externalFile.as<std::string>()).string();
                 if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
                 } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
@@ -475,10 +475,10 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
 }
 
 void Companion::ParseHash() {
-    const std::string out = this->gDestinationDirectory / "torch.hash.yml";
+    const auto out = this->gDestinationDirectory / "torch.hash.yml";
 
     if(fs::exists(out)) {
-        this->gHashNode = YAML::LoadFile(out);
+        this->gHashNode = YAML::LoadFile(out.string());
     } else {
         this->gHashNode = YAML::Node();
     }
@@ -992,7 +992,7 @@ void Companion::Process() {
     }
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    YAML::Node config = YAML::LoadFile(configPath);
+    YAML::Node config = YAML::LoadFile(configPath.string());
 
     bool isDirectoryMode = config["mode"] && config["mode"].as<std::string>() == "directory";
 
@@ -1070,18 +1070,18 @@ void Companion::Process() {
             this->gConfig.segment.global[i + 1] = segments[i];
         }
     }
-    this->gAssetPath = this->gSourceDirectory / rom["path"].as<std::string>();
+    this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
     auto gbi_floats = cfg["gbi_floats"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
 
-    if (!fs::exists(this->gDestinationDirectory)) {
+    if (!this->gDestinationDirectory.empty() && !fs::exists(this->gDestinationDirectory)) {
         create_directories(this->gDestinationDirectory);
     }
     auto output_path = this->gDestinationDirectory;
 
-    this->gConfig.moddingPath = this->gDestinationDirectory / modding_path;
+    this->gConfig.moddingPath = (this->gDestinationDirectory / modding_path).string();
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
             std::string extension = "";
@@ -1112,7 +1112,7 @@ void Companion::Process() {
             break;
         }
     }
-    this->gConfig.outputPath = output_path;
+    this->gConfig.outputPath = output_path.string();
 
     if(gbi) {
         auto key = gbi.as<std::string>();
@@ -1171,7 +1171,7 @@ void Companion::Process() {
     if(cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
-            file = this->gSourceDirectory / file;
+            file = (this->gSourceDirectory / file).string();
             this->ParseEnums(file);
         }
     }
@@ -1578,18 +1578,27 @@ std::string Companion::NormalizeAsset(const std::string& name) const {
     return path;
 }
 
+static std::string& ConvertWinToUnixSlash(std::string& path) {
+    std::replace(path.begin(), path.end(), '\\', '/');
+    return path;
+}
+
 std::string Companion::RelativePath(const std::string& path) const {
     std::string doutput = (this->gCurrentDirectory / path).string();
-    std::replace(doutput.begin(), doutput.end(), '\\', '/');
+    ConvertWinToUnixSlash(doutput);
     return doutput;
 }
 
 std::string Companion::RelativePathToDestDir(const std::string& path) const {
-    return relative(path, this->gDestinationDirectory);
+    std::string doutput = relative(path, this->gDestinationDirectory).string();
+    ConvertWinToUnixSlash(doutput);
+    return doutput;
 }
 
 std::string Companion::RelativePathToSrcDir(const std::string& path) const {
-    return relative(path, this->gSourceDirectory);
+    std::string doutput = relative(path, this->gSourceDirectory).string();
+    ConvertWinToUnixSlash(doutput);
+    return doutput;
 }
 
 std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
