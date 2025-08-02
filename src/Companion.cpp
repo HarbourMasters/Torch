@@ -1372,7 +1372,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
     spdlog::set_pattern(regular);
     SPDLOG_INFO("------------------------------------------------");
     spdlog::set_pattern(line);
-    
+
     return entry;
 }
 
@@ -1590,13 +1590,13 @@ std::string Companion::RelativePath(const std::string& path) const {
 }
 
 std::string Companion::RelativePathToDestDir(const std::string& path) const {
-    std::string doutput = relative(path, this->gDestinationDirectory).string();
+    std::string doutput = fs::path(path).lexically_relative(this->gDestinationDirectory).string();
     ConvertWinToUnixSlash(doutput);
     return doutput;
 }
 
 std::string Companion::RelativePathToSrcDir(const std::string& path) const {
-    std::string doutput = relative(path, this->gSourceDirectory).string();
+    std::string doutput = fs::path(path).lexically_relative(this->gSourceDirectory).string();
     ConvertWinToUnixSlash(doutput);
     return doutput;
 }
