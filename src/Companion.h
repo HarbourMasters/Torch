@@ -135,9 +135,6 @@ public:
     explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
                        Companion(rom, otr, debug, false, srcDir, destPath) {}
 
-    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
-                       Companion(rom, otr, debug, false, srcDir, destPath) {}
-
     void Init(ExportType type);
 
     bool NodeHasChanges(const std::string& string);
