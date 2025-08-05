@@ -29,7 +29,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-          toolset: ${{ matrix.toolchain }}
+          # only use default toolchain for Ninja
       - name: Build Ninja
         if: ${{ matrix.generate == 'Ninja' }}
         run: |
