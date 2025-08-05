@@ -14,9 +14,6 @@ jobs:
         config: [Release, Debug]
         toolchain: [v143, clangcl]
         generate: [Visual Studio 17 2022, Ninja]
-        exclude:
-          - toolchain: clangcl
-            generate: Ninja
     steps:
       - uses: actions/checkout@v4
       - name: Build Visual Studio
@@ -30,10 +27,15 @@ jobs:
         with:
           arch: x64
           # only use default toolchain for Ninja
-      - name: Build Ninja
-        if: ${{ matrix.generate == 'Ninja' }}
+      - name: Build Ninja msvc
+        if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'v143' }}
         run: |
           cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
+          cmake --build ./build/x64 --config ${{ matrix.config }} --parallel 10
+      - name: Build Ninja clang-cl
+        if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'clangcl' }}
+        run: |
+          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -A x64 -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_C_COMPILER=clang-cl.exe
           cmake --build ./build/x64 --config ${{ matrix.config }} --parallel 10
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' }}
