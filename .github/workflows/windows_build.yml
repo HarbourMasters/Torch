@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
-        toolchain: [v142, v143, clangcl]
+        toolchain: [v143, clangcl]
     steps:
       - uses: actions/checkout@v4
       - name: Build
