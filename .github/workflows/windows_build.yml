@@ -16,6 +16,11 @@ jobs:
         generate: [Visual Studio 17 2022, Ninja]
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Ninja
+        if: ${{ matrix.generate == 'Ninja' }}
+        uses: ashutoshvarma/setup-ninja@master
+        with:
+          version: 1.13.1
       - name: Build
         run: |
           cmake -S . -B "build/x64" -G ${{ matrix.generate }} -T ${{ matrix.toolchain }} -A x64 -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
