@@ -35,7 +35,7 @@ jobs:
       - name: Build Ninja clang-cl
         if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'clangcl' }}
         run: |
-          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -A x64 -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_C_COMPILER=clang-cl.exe
+          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_C_COMPILER=clang-cl.exe
           cmake --build ./build/x64 --config ${{ matrix.config }} --parallel 10
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' }}
