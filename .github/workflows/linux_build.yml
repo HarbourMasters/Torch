@@ -9,13 +9,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config: [Release, Debug]
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: sudo apt-get install cmake ninja-build libbz2-dev
       - name: Build
         run: |
-          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
+          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }}
           cmake --build build-cmake -j
       - name: Create Package
         run: |
@@ -23,6 +26,7 @@ jobs:
           mv build-cmake/torch torch-release/
           cp "$(ldconfig -p | grep libbz2.so.1.0 | tr ' ' '\n' | grep /| head -n1)" torch-release/
       - name: Publish packaged artifacts
+        if: ${{ matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
           name: torch-linux-x64
