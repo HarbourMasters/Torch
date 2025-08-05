@@ -7,7 +7,7 @@ set(CMAKE_C_STANDARD 11)
 
 # Set build options
 option(USE_STANDALONE "Build as a standalone executable" ON)
-option(BUILD_STORMLIB "Build with StormLib support" ON)
+option(BUILD_STORMLIB "Build with StormLib support" OFF)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
 option(BUILD_SM64 "Build with Super Mario 64 support" ON)
