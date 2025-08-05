@@ -16,18 +16,19 @@ jobs:
         generate: [Visual Studio 17 2022, Ninja]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Ninja
-        if: ${{ matrix.generate == 'Ninja' }}
-        uses: ashutoshvarma/setup-ninja@master
-        with:
-          version: 1.13.1
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-      - name: Build
+      - name: Build Visual Studio
+        if: ${{ matrix.generate == 'Visual Studio 17 2022' }}
         run: |
           cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
           cmake --build ./build/x64
+      - name: Build Ninja
+        if: ${{ matrix.generate == 'Ninja' }}
+        run: |
+          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
+          cmake --build ./build/x64 --config ${{ matrix.config }} --parallel 10
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
