@@ -134,7 +134,7 @@ else()
             /W3;
             /${LINK_TYPE}
         >
-        /bigobj
+        # /bigobj
         /permissive-;
         /MP;
         ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
@@ -150,7 +150,7 @@ else()
             /INCREMENTAL:NO;
             /FORCE:MULTIPLE
         >
-        /bigobj;
+        # /bigobj;
         /MANIFEST:NO;
         /DEBUG;
         /SUBSYSTEM:CONSOLE
