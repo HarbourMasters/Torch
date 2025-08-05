@@ -14,16 +14,22 @@ jobs:
         config: [Release, Debug]
         toolchain: [v143, clangcl]
         generate: [Visual Studio 17 2022, Ninja]
+        exclude:
+          - toolchain: clangcl
+            generate: Ninja
     steps:
       - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
       - name: Build Visual Studio
         if: ${{ matrix.generate == 'Visual Studio 17 2022' }}
         run: |
-          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
+          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -A x64 -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
           cmake --build ./build/x64
+      - name: Setup Ninja
+        if: ${{ matrix.generate == 'Ninja' }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: ${{ matrix.toolchain }}
       - name: Build Ninja
         if: ${{ matrix.generate == 'Ninja' }}
         run: |
