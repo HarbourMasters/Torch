@@ -21,9 +21,12 @@ jobs:
         uses: ashutoshvarma/setup-ninja@master
         with:
           version: 1.13.1
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
       - name: Build
         run: |
-          cmake -S . -B "build/x64" -G ${{ matrix.generate }} -T ${{ matrix.toolchain }} -A x64 -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
+          cmake -S . -B "build/x64" -G ${{ matrix.generate }} -T ${{ matrix.toolchain }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
           cmake --build ./build/x64
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' }}
