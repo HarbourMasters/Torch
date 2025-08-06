@@ -233,7 +233,7 @@ if(USE_STANDALONE)
 	FetchContent_MakeAvailable(spdlog)
 	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
 else()
-	find_package(spdlog OPTIONAL)
+	find_package(spdlog QUIET)
     if(NOT spdlog_FOUND)
         FetchContent_Declare(
             spdlog
