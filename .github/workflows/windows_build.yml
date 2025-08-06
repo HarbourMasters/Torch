@@ -17,7 +17,7 @@ jobs:
         generate: [Visual Studio 17 2022, Ninja]
         arch: [x64, Win32]
         exclude: 
-          - toolchain: cmake/toolchain/windows-clang-cl
+          - toolchain: cmake/toolchain/windows-clang-cl.cmake
             arch: Win32
     steps:
       - uses: actions/checkout@v4
