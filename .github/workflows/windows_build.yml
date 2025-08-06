@@ -13,33 +13,35 @@ jobs:
       matrix:
         config: [Release, Debug]
         toolchain: [v143, clangcl]
+        standalone: [OFF, ON]
         generate: [Visual Studio 17 2022, Ninja]
+        arch: [x64, x86]
     steps:
       - uses: actions/checkout@v4
       - name: Build Visual Studio
         if: ${{ matrix.generate == 'Visual Studio 17 2022' }}
         run: |
-          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -A x64 -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
-          cmake --build ./build/x64
+          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -A ${{ matrix.arch }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
+          cmake --build ./build/${{ matrix.arch }}
       - name: Setup Ninja
         if: ${{ matrix.generate == 'Ninja' }}
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: x64
+          arch: ${{ matrix.arch }}
           # only use default toolchain for Ninja
       - name: Build Ninja msvc
         if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'v143' }}
         run: |
-          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }}
-          cmake --build ./build/x64 --config ${{ matrix.config }} --parallel 10
+          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
+          cmake --build ./build/${{ matrix.arch }} --config ${{ matrix.config }} --parallel 10
       - name: Build Ninja clang-cl
         if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'clangcl' }}
         run: |
-          cmake -S . -B "build/x64" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_LINKER=lld-link.exe
-          cmake --build ./build/x64 --config ${{ matrix.config }} --parallel 10
+          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_LINKER=lld-link.exe -DUSE_STANDALONE=${{ matrix.standalone }}
+          cmake --build ./build/${{ matrix.arch }} --config ${{ matrix.config }} --parallel 10
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: torch-windows-x64-${{ matrix.toolchain }}
-          path: build/x64/Release/torch.exe
+          name: torch-windows-${{ matrix.arch }}-${{ matrix.toolchain }}
+          path: build/${{ matrix.arch }}/Release/torch.exe
