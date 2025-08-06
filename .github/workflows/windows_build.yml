@@ -15,16 +15,16 @@ jobs:
         toolchain: [v143, clangcl]
         standalone: [OFF, ON]
         generate: [Visual Studio 17 2022, Ninja]
-        arch: [x64, x86]
-        exclude: 
-          - toolchain: clangcl
-            arch: x86
+        arch: [x64, win32]
+        # exclude: 
+        #   - toolchain: clangcl
+        #     arch: win32
     steps:
       - uses: actions/checkout@v4
       - name: Build Visual Studio
         if: ${{ matrix.generate == 'Visual Studio 17 2022' }}
         run: |
-          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -p:Platform=${{ matrix.arch }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
+          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -DCMAKE_GENERATOR_PLATFORM=${{ matrix.arch }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
           cmake --build ./build/${{ matrix.arch }}
       - name: Setup Ninja
         if: ${{ matrix.generate == 'Ninja' }}
