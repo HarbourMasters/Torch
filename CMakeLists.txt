@@ -134,7 +134,6 @@ else()
             /W3;
             /${LINK_TYPE}
         >
-        # /bigobj
         /permissive-;
         /MP;
         ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
@@ -150,12 +149,14 @@ else()
             /INCREMENTAL:NO;
             /FORCE:MULTIPLE
         >
-        # /bigobj;
         /MANIFEST:NO;
         /DEBUG;
         /SUBSYSTEM:CONSOLE
     )
-
+    if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+        target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+        target_link_options(${PROJECT_NAME} PRIVATE /bigobj)
+    endif()
     add_definitions(-DSTORMLIB_NO_AUTO_LINK)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
