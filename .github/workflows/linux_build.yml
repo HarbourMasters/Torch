@@ -13,13 +13,14 @@ jobs:
       matrix:
         config: [Release, Debug]
         standalone: [OFF, ON]
+        toolchain: [cmake/toolchain/linux-gnu.cmake, cmake/toolchain/linux-clang.cmake]
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: sudo apt-get install cmake ninja-build libbz2-dev
       - name: Build
         run: |
-          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
+          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}
           cmake --build build-cmake -j
       - name: Create Package
         if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' }}
@@ -31,5 +32,5 @@ jobs:
         if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' }}
         uses: actions/upload-artifact@v4
         with:
-          name: torch-linux-x64
+          name: torch-linux-x64-${{ matrix.toolchain }}
           path: torch-release
