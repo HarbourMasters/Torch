@@ -16,6 +16,9 @@ jobs:
         standalone: [OFF, ON]
         generate: [Visual Studio 17 2022, Ninja]
         arch: [x64, x86]
+        exclude: 
+          - toolchain: clangcl
+            arch: x86
     steps:
       - uses: actions/checkout@v4
       - name: Build Visual Studio
@@ -40,7 +43,7 @@ jobs:
           cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_LINKER=lld-link.exe -DUSE_STANDALONE=${{ matrix.standalone }}
           cmake --build ./build/${{ matrix.arch }} --config ${{ matrix.config }} --parallel 10
       - name: Publish packaged artifacts
-        if: ${{ matrix.config == 'Release' }}
+        if: ${{ matrix.config == 'Release' && matrix.generate == 'Visual Studio 17 2022' && matrix.standalone == 'ON' }}
         uses: actions/upload-artifact@v4
         with:
           name: torch-windows-${{ matrix.arch }}-${{ matrix.toolchain }}
