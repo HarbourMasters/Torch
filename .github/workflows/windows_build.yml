@@ -22,26 +22,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build Visual Studio
-        if: ${{ matrix.generate == 'Visual Studio 17 2022' }}
+        # if: ${{ matrix.generate == 'Visual Studio 17 2022' }}
         run: |
           cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_TOOLCHAIN_FILE="${{ matrix.toolchain }}" -DCMAKE_GENERATOR_PLATFORM=${{ matrix.arch }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
           cmake --build ./build/${{ matrix.arch }}
-      - name: Setup Ninja
-        if: ${{ matrix.generate == 'Ninja' }}
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ matrix.arch }}
-          # only use default toolchain for Ninja
-      - name: Build Ninja msvc
-        if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'torch/cmake/toolchain/windows-msvc.cmake' }}
-        run: |
-          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
-          cmake --build ./build/${{ matrix.arch }} --config ${{ matrix.config }} --parallel 10
-      - name: Build Ninja clang-cl
-        if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'cmake/toolchain/windows-clang-cl.cmake' }}
-        run: |
-          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_LINKER=lld-link.exe -DUSE_STANDALONE=${{ matrix.standalone }}
-          cmake --build ./build/${{ matrix.arch }} --config ${{ matrix.config }} --parallel 10
+      # - name: Setup Ninja
+      #   if: ${{ matrix.generate == 'Ninja' }}
+      #   uses: ilammy/msvc-dev-cmd@v1
+      #   with:
+      #     arch: ${{ matrix.arch }}
+      #     # only use default toolchain for Ninja
+      # - name: Build Ninja msvc
+      #   if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'torch/cmake/toolchain/windows-msvc.cmake' }}
+      #   run: |
+      #     cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
+      #     cmake --build ./build/${{ matrix.arch }} --config ${{ matrix.config }} --parallel 10
+      # - name: Build Ninja clang-cl
+      #   if: ${{ matrix.generate == 'Ninja' && matrix.toolchain == 'cmake/toolchain/windows-clang-cl.cmake' }}
+      #   run: |
+      #     cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_LINKER=lld-link.exe -DUSE_STANDALONE=${{ matrix.standalone }}
+      #     cmake --build ./build/${{ matrix.arch }} --config ${{ matrix.config }} --parallel 10
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' && matrix.generate == 'Visual Studio 17 2022' && matrix.standalone == 'ON' }}
         uses: actions/upload-artifact@v4
