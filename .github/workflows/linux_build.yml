@@ -22,6 +22,7 @@ jobs:
           cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
           cmake --build build-cmake -j
       - name: Create Package
+        if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' }}
         run: |
           mkdir torch-release
           mv build-cmake/torch torch-release/
