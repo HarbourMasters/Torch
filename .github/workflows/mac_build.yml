@@ -13,7 +13,7 @@ jobs:
       matrix:
         config: [Release, Debug]
         standalone: [OFF, ON]
-        toolchain: [macos-clang, macos-clang-llvm, macos-gnu]
+        toolchain: [macos-clang, macos-gnu] # remove temporary macos-clang-llvm
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
