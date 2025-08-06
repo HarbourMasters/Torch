@@ -16,9 +16,13 @@ jobs:
         standalone: [OFF, ON]
         generate: [Visual Studio 17 2022, Ninja]
         arch: [x64, Win32]
+        isPR:
+          - ${{ github.event_name == 'pull_request' }}
         exclude: 
           - toolchain: windows-clang-cl
             arch: Win32
+          - isPR: true
+            standalone: OFF
     steps:
       - uses: actions/checkout@v4
       - name: Build Visual Studio
