@@ -16,9 +16,9 @@ jobs:
         standalone: [OFF, ON]
         generate: [Visual Studio 17 2022, Ninja]
         arch: [x64, Win32]
-        # exclude: 
-        #   - toolchain: clangcl
-        #     arch: Win32
+        exclude: 
+          - toolchain: clangcl
+            arch: Win32
     steps:
       - uses: actions/checkout@v4
       - name: Build Visual Studio
