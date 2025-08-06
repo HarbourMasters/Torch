@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         config: [Release, Debug]
-        toolchain: [torch/cmake/toolchain/windows-msvc.cmake, clangcl]
+        toolchain: [cmake/toolchain/windows-msvc.cmake, clangcl]
         standalone: [OFF, ON]
         generate: [Visual Studio 17 2022, Ninja]
         arch: [x64, Win32]
