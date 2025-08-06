@@ -13,10 +13,21 @@ jobs:
       matrix:
         config: [Release, Debug]
         standalone: [OFF, ON]
+        toolchain: [cmake/toolchain/macos-clang.cmake, cmake/toolchain/macos-clang-llvm.cmake, cmake/toolchain/macos-gnu.cmake]
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: brew install cmake ninja xcodes
+      - name: Download llvm
+        if: ${{ matrix.toolchain == 'cmake/toolchain/macos-clang-llvm.cmake' }}
+        run: |
+          brew install llvm lld
+          echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+      - name: Download gnu
+        if: ${{ matrix.toolchain == 'cmake/toolchain/macos-gnu.cmake' }}
+        run: |
+          brew install gcc
+          echo "/opt/homebrew/opt/gcc/bin" >> $GITHUB_PATH
       - name: Build
         run: |
           cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
