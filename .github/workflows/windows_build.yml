@@ -24,7 +24,7 @@ jobs:
       - name: Build Visual Studio
         if: ${{ matrix.generate == 'Visual Studio 17 2022' }}
         run: |
-          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -A ${{ matrix.arch }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
+          cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -T ${{ matrix.toolchain }} -p:Platform=${{ matrix.arch }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }}
           cmake --build ./build/${{ matrix.arch }}
       - name: Setup Ninja
         if: ${{ matrix.generate == 'Ninja' }}
