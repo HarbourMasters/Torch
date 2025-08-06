@@ -1,2 +1,2 @@
-set(CMAKE_C_COMPILER /opt/homebrew/opt/gcc/bin/gcc)
-set(CMAKE_CXX_COMPILER /opt/homebrew/opt/gcc/bin/g++)
+set(CMAKE_C_COMPILER /opt/homebrew/opt/gcc/bin/gcc-14)
+set(CMAKE_CXX_COMPILER /opt/homebrew/opt/gcc/bin/g++-14)
