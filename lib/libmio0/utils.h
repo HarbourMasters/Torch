@@ -69,7 +69,7 @@ typedef struct
 } dir_list;
 
 // global verbosity setting
-extern int g_verbosity;
+static int g_verbosity = 0;
 
 #undef ERROR
 #define ERROR(...) fprintf(stderr, __VA_ARGS__)
