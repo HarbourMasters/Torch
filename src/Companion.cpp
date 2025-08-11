@@ -384,6 +384,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                     this->gCurrentDirectory = currentDirectory;
                     this->gCurrentExternalFiles = currentExternalFiles;
                     this->gFileHeader.clear();
+                } else {
+                    SPDLOG_INFO("Skipping external file {} as it has already been processed", externalFileName);
                 }
             }
         }
