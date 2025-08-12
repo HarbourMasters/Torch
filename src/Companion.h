@@ -166,7 +166,9 @@ public:
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
     uint32_t PatchVirtualAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
+    std::optional<std::string> GetStringByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);
+    std::optional<std::string> GetSafeStringByAddr(const uint32_t addr, std::string type);
     std::optional<std::vector<std::tuple<std::string, YAML::Node>>> GetNodesByType(const std::string& type);
     std::string GetSymbolFromAddr(uint32_t addr, bool validZero = false);
 
@@ -219,6 +221,7 @@ private:
     CompressionType gCurrentCompressionType = CompressionType::None;
     std::vector<Table> gTables;
     std::vector<std::string> gCurrentExternalFiles;
+    std::unordered_map<int, std::string> gManualSegments;
     std::unordered_set<std::string> gProcessedFiles;
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;

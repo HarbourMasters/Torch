@@ -391,6 +391,23 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         }
     }
 
+    if(node["manual_segments"]) {
+        auto manualSegments = node["manual_segments"];
+        if (manualSegments.IsSequence() && manualSegments.size()) {
+            for(size_t i = 0; i < manualSegments.size(); i++) {
+                auto segment = manualSegments[i];
+                if (segment.IsSequence() && segment.size() == 2) {
+                    const auto id = segment[0].as<uint32_t>();
+                    const auto replacement = segment[1].as<std::string>();
+                    this->gManualSegments[id] = replacement;
+                    SPDLOG_DEBUG("Manual Segment {} replaced with {}", id, replacement);
+                } else {
+                    throw std::runtime_error("Incorrect yaml syntax for manual segments.\n\nThe yaml expects:\n:config:\n  manual_segments:\n  - [<addr>, <replacement>]\n\nLike so:\nmanual_segments:\n  - [0x05000000, \"textures/other_textures/texture_6447C4\"]");
+                }
+            }
+        }
+    }
+
     if(node["segments"]) {
         auto segments = node["segments"];
 
@@ -637,6 +654,7 @@ void Companion::ProcessFile(YAML::Node root) {
     this->gCurrentFileOffset = 0;
     this->gTables.clear();
     this->gCurrentExternalFiles.clear();
+    this->gManualSegments.clear();
     GFXDOverride::ClearVtx();
 
     if(root[":config"]) {
@@ -1469,6 +1487,20 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
     return this->gAddrMap[this->gCurrentFile][addr];
 }
 
+std::optional<std::string> Companion::GetStringByAddr(const uint32_t addr) {
+    if(this->gManualSegments.contains(addr)) {
+        return this->gManualSegments[addr];
+    }
+
+    auto node = this->GetNodeByAddr(addr);
+
+    if(!node.has_value()) {
+        return std::nullopt;
+    }
+
+    return std::get<0>(node.value());
+}
+
 std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(const uint32_t addr, std::string type) {
     auto node = this->GetNodeByAddr(addr);
 
@@ -1485,6 +1517,27 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(
 
     return node;
 
+}
+
+std::optional<std::string> Companion::GetSafeStringByAddr(const uint32_t addr, std::string type) {
+    if(this->gManualSegments.contains(addr)) {
+        return this->gManualSegments[addr];
+    }
+
+    auto node = this->GetNodeByAddr(addr);
+
+    if(!node.has_value()) {
+        return std::nullopt;
+    }
+
+    auto [name, n] = node.value();
+    auto n_type = GetTypeNode(n);
+
+    if(n_type != type) {
+        throw std::runtime_error("Requested node type does not match with the target node type at " + Torch::to_hex(addr, false) + " Found: " + n_type + " Expected: " + type);
+    }
+
+    return std::get<0>(node.value());
 }
 
 std::string Companion::GetSymbolFromAddr(uint32_t address, bool validZero) {
