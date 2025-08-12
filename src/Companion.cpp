@@ -212,7 +212,7 @@ void Companion::Init(const ExportType type) {
 #endif
 #ifndef __EMSCRIPTEN__ // We call this manually
     this->Process();
-#else
+#endif
 }
 
 void Companion::ParseEnums(std::string& header) {
