@@ -17,6 +17,15 @@ option(BUILD_FZERO "Build with F-Zero X support" ON)
 option(BUILD_MARIO_ARTIST "Build with Mario Artist support" ON)
 option(BUILD_NAUDIO "Build with NAudio support" ON)
 
+if(EMSCRIPTEN)
+    set(BUILD_SM64 OFF) # TODO: This is broken for some reason
+    add_definitions(-D__EMSCRIPTEN__)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --bind -lidbfs.js -s MODULARIZE=1 -s EXPORT_ES6=1 -s NO_DISABLE_EXCEPTION_CATCHING -s ALLOW_MEMORY_GROWTH=1 -s EXPORT_NAME=createModule -s EXPORTED_RUNTIME_METHODS='[\"FS\", \"IDBFS\"]'")
+    if(EMSCRIPTEN_PRELOAD)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --preload-file ${EMSCRIPTEN_PRELOAD}")
+    endif()
+endif()
+
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
 ################################################################################
@@ -225,6 +234,11 @@ if(NOT USE_STANDALONE)
 endif()
 
 if(USE_STANDALONE)
+    if(EMSCRIPTEN)
+        set(CMAKE_CXX_FLAGS_DEBUG "-O3")
+        set(SPDLOG_USE_STD_FORMAT ON)
+    endif()
+
 	FetchContent_Declare(
 		spdlog
 		GIT_REPOSITORY https://github.com/gabime/spdlog.git
