@@ -17,6 +17,8 @@ option(BUILD_FZERO "Build with F-Zero X support" ON)
 option(BUILD_MARIO_ARTIST "Build with Mario Artist support" ON)
 option(BUILD_NAUDIO "Build with NAudio support" ON)
 
+set(EMSCRIPTEN_PRELOAD "../assets")
+
 if(EMSCRIPTEN)
     set(BUILD_SM64 OFF) # TODO: This is broken for some reason
     add_definitions(-D__EMSCRIPTEN__)
@@ -278,4 +280,13 @@ if(NOT USE_STANDALONE)
     target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
     target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_include_directories(${PROJECT_NAME} PUBLIC ${yaml-cpp_SOURCE_DIR}/include)
+endif()
+
+if(EMSCRIPTEN)
+    # Copy builded .js and .wasm to web/
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${CMAKE_CURRENT_SOURCE_DIR}/web/torch.js
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${PROJECT_NAME}>.wasm ${CMAKE_CURRENT_SOURCE_DIR}/web/torch.wasm
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE_DIR:${PROJECT_NAME}>/$<TARGET_FILE_BASE_NAME:${PROJECT_NAME}>.data ${CMAKE_CURRENT_SOURCE_DIR}/web/torch.data
+    )
 endif()

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Torch</title>
+    <link rel="stylesheet" href="style.css"> 
+    <link rel="icon" href="torch-icon.png" type="image/png">
+  </head>
+  <body>
+    <div class="modal" id="loadingModal">
+      <div class="spinner"></div>
+    </div>
+    <input type="file" id="romInput" accept=".z64" style="display:none" />
+    <header>Torch</header>
+    <img src="torch-icon.png" alt="Torch Icon" />
+    <div class="description">
+      Convert N64 ROM to O2R format<br />
+      Choose your target configuration below<br />
+      <span style="color: red; font-weight: bold;">Warning: The web is going to freeze for a few seconds while the ROM is being converted.</span>
+    </div>
+    <div class="target-label">Target Configuration:</div>
+    <div class="radio-group">
+      <label
+        ><input type="radio" name="config" id="starship-config" checked /> Starship (Star Fox
+        64)</label
+      >
+      <label
+        ><input type="radio" name="config" id="spaghetti-config" /> Spaghetti Kart (Mario Kart
+        64)</label
+      >
+    </div>
+    <button id="rom-picker">SELECT ROM FILE (.Z64 FORMAT ONLY)</button>
+    <button id="start-btn">CONVERT TO O2R</button>
+
+    <div class="status" id="rom-id">
+      ROM: Not selected<br />
+    </div>
+
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>

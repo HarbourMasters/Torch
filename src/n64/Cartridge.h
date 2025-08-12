@@ -17,7 +17,7 @@ public:
     explicit Cartridge(const std::vector<uint8_t>& romData)
       : gRomData(romData), gCountryCode(CountryCode::Unknown), gVersion(0), gGameTitle("Unknown"), gRomCRC(0) {
   }
-  void Initialize();
+    void Initialize();
     const std::string& GetGameTitle();
     std::string GetCountryCode();
     CountryCode GetCountry();
