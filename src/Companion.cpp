@@ -941,6 +941,7 @@ void Companion::ProcessFile(YAML::Node root) {
             std::string buffer = stream.str();
 
             if(buffer.empty()) {
+                SPDLOG_WARN("No data to write for {}", this->gCurrentFile);
                 return;
             }
 
@@ -951,6 +952,7 @@ void Companion::ProcessFile(YAML::Node root) {
             }
 
             std::ofstream file(output, std::ios::binary);
+            SPDLOG_INFO("Writing {} to {}", this->gCurrentFile, output);
 
             if(this->gConfig.exporterType == ExportType::Header) {
                 fs::path entryPath = this->gCurrentFile;
