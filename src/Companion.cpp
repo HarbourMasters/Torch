@@ -55,6 +55,7 @@
 #include "factories/mk64/DrivingBehaviour.h"
 #include "factories/mk64/ItemCurve.h"
 #include "factories/mk64/CourseMetadata.h"
+#include "factories/mk64/PackedDisplayListFactory.h"
 #endif
 
 #ifdef SF64_SUPPORT
@@ -169,6 +170,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
     this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
     this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
+    this->RegisterFactory("MK64:PACKED_GFX", std::make_shared<PackedDListFactory>());
 #endif
 
 #ifdef SF64_SUPPORT
