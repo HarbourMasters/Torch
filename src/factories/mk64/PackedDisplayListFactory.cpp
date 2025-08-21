@@ -582,6 +582,7 @@ std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vecto
             // uint32_t w0 = (_SHIFTL(G_VTX, 24, 8)
             //               | ((n << 10) + ((n * 0x10) - 1)));
             // uint32_t w1 = vtxOff;
+            vtxOff |= 0x04000000;
             N64Gfx macro = gsSPVertex(vtxOff, n, 0);
             emit(macro.words.w0, macro.words.w1);
             continue;
@@ -686,7 +687,7 @@ std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vecto
                 // G_SETTIMG (on garde un pointeur brut = offset; l'exporteur patchera en OTR)
                 // Utiliser width=1 par défaut pour le champ "width-1" du w0
                 // uint32_t w0 = (_SHIFTL(G_SETTIMG, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(siz, 19, 2));
-                N64Gfx macro = gsDPSetTextureImage(fmt, siz, 1, offset);
+                N64Gfx macro = gsDPSetTextureImage(fmt, siz, 1, 0x05000000 | offset);
                 
                 emit(macro.words.w0, macro.words.w1);
 
@@ -828,7 +829,7 @@ std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vecto
                 // uint32_t w0 = (_SHIFTL(G_DL, 24, 8)); // push
                 // // Encode as segmented address into segment 0x07 so exporter treats it as an index into packed DL buffer
                 // uint32_t w1 = 0x07000000u | (idx * 8);
-                N64Gfx macro = gsSPDisplayList(idx);
+                N64Gfx macro = gsSPDisplayList(0x07000000u|(idx*8));
                 emit(macro.words.w0, macro.words.w1);
             } break;
             case PG_ENDDL:

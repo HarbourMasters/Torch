@@ -11,6 +11,9 @@ public:
         return {
             REGISTER(Header, DListHeaderExporter)
             REGISTER(Binary, DListBinaryExporter)
+            #ifdef STANDALONE
+            REGISTER(Code, DListCodeExporter)
+            #endif
         };
     }
     uint32_t GetAlignment() override { return 0; }
