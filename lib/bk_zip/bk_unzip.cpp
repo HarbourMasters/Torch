@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <cstdint>
 #include <string>
+#include <cstring>
 #include <utility>
 #include "zlib.h"
 #include "bk_unzip.h"

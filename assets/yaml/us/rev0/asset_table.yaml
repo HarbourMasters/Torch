@@ -1,0 +1,11 @@
+:config:
+  header:
+    code:
+      - '#include "assets/asset_table.h"'
+    header:
+      - '#include "structs.h"'
+
+aBKAssetTable:
+  type: BK64:ASSET_TABLE
+  offset: 0x5E90
+  symbol: aBKAssetTable
