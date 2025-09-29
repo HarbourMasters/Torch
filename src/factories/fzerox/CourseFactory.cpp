@@ -92,7 +92,7 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     
     write << std::dec << " }, /* File Name */\n";
 
-    write << fourSpaceTab << (int32_t)course->unk_1F << ",\n";
+    write << fourSpaceTab << (int32_t)course->mBgm << ",\n";
 
     write << fourSpaceTab << "{ /* Control Points */\n";
 
@@ -449,7 +449,7 @@ ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_
         writer.Write(nameChar);
     }
 
-    writer.Write(course->unk_1F);
+    writer.Write(course->mBgm);
     for (const auto& controlPointInfo : course->mControlPointInfos) {
         writer.Write(controlPointInfo.controlPoint.pos.x);
         writer.Write(controlPointInfo.controlPoint.pos.y);
@@ -507,8 +507,8 @@ ExportResult FZX::CourseModdingExporter::Export(std::ostream &write, std::shared
     }
     out << YAML::EndSeq << YAML::Block << YAML::Dec;
 
-    out << YAML::Key << "unk_1F";
-    out << YAML::Value << course->unk_1F;
+    out << YAML::Key << "BGM";
+    out << YAML::Value << course->mBgm;
 
     out << YAML::Key << "ControlPoints";
     out << YAML::Value << YAML::BeginSeq;
@@ -608,7 +608,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
         fileName.push_back(reader.ReadInt8());
     }
 
-    int8_t unk_1F = reader.ReadInt8();
+    int8_t bgm = reader.ReadInt8();
 
     std::vector<ControlPointInfo> controlPointInfos;
 
@@ -645,7 +645,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
         controlPointInfos.push_back(controlPointInfo);
     }
 
-    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, unk_1F, controlPointInfos);
+    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, bgm, controlPointInfos);
 }
 
 std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -677,7 +677,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(st
         }
     }
 
-    int8_t unk_1F = info["unk_1F"].as<int8_t>();
+    int8_t bgm = info["BGM"].as<int8_t>();
 
     std::vector<ControlPointInfo> controlPointInfos;
 
@@ -752,5 +752,5 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(st
         controlPointInfos.push_back(controlPointInfo);
     }
 
-    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, unk_1F, controlPointInfos);
+    return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, bgm, controlPointInfos);
 }
