@@ -1,0 +1,3 @@
+if (CMAKE_GENERATOR MATCHES "Visual Studio")
+  set(CMAKE_GENERATOR_TOOLSET "v143")
+endif()

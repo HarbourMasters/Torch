@@ -7,7 +7,7 @@ set(CMAKE_C_STANDARD 11)
 
 # Set build options
 option(USE_STANDALONE "Build as a standalone executable" ON)
-option(BUILD_STORMLIB "Build with StormLib support" ON)
+option(BUILD_STORMLIB "Build with StormLib support" OFF)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
 option(BUILD_SM64 "Build with Super Mario 64 support" ON)
@@ -16,6 +16,15 @@ option(BUILD_SF64 "Build with Star Fox 64 support" ON)
 option(BUILD_FZERO "Build with F-Zero X support" ON)
 option(BUILD_MARIO_ARTIST "Build with Mario Artist support" ON)
 option(BUILD_NAUDIO "Build with NAudio support" ON)
+
+if(EMSCRIPTEN)
+    set(BUILD_SM64 OFF) # TODO: This is broken for some reason
+    add_definitions(-D__EMSCRIPTEN__)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --bind -lidbfs.js -s MODULARIZE=1 -s EXPORT_ES6=1 -s NO_DISABLE_EXCEPTION_CATCHING -s ALLOW_MEMORY_GROWTH=1 -s EXPORT_NAME=createModule -s EXPORTED_RUNTIME_METHODS='[\"FS\", \"IDBFS\"]'")
+    if(EMSCRIPTEN_PRELOAD)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --preload-file ${EMSCRIPTEN_PRELOAD}")
+    endif()
+endif()
 
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
@@ -58,7 +67,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp)
-file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/**/*.c)
+file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libmio0/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libyay0/*.c)
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
 if(BUILD_SM64)
@@ -116,7 +125,7 @@ if (BUILD_STORMLIB)
     add_definitions(-DUSE_STORMLIB)
 endif()
 
-if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "-g")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
     set(CMAKE_CXX_FLAGS "-Wno-narrowing")
@@ -134,7 +143,6 @@ else()
             /W3;
             /${LINK_TYPE}
         >
-        /bigobj
         /permissive-;
         /MP;
         ${DEFAULT_CXX_DEBUG_INFORMATION_FORMAT};
@@ -150,12 +158,14 @@ else()
             /INCREMENTAL:NO;
             /FORCE:MULTIPLE
         >
-        /bigobj;
         /MANIFEST:NO;
         /DEBUG;
         /SUBSYSTEM:CONSOLE
     )
-
+    if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+        target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+        target_link_options(${PROJECT_NAME} PRIVATE /bigobj)
+    endif()
     add_definitions(-DSTORMLIB_NO_AUTO_LINK)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
@@ -224,6 +234,11 @@ if(NOT USE_STANDALONE)
 endif()
 
 if(USE_STANDALONE)
+    if(EMSCRIPTEN)
+        set(CMAKE_CXX_FLAGS_DEBUG "-O3")
+        set(SPDLOG_USE_STD_FORMAT ON)
+    endif()
+
 	FetchContent_Declare(
 		spdlog
 		GIT_REPOSITORY https://github.com/gabime/spdlog.git
@@ -233,7 +248,16 @@ if(USE_STANDALONE)
 	FetchContent_MakeAvailable(spdlog)
 	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
 else()
-	find_package(spdlog REQUIRED)
+	find_package(spdlog QUIET)
+    if(NOT spdlog_FOUND)
+        FetchContent_Declare(
+            spdlog
+            GIT_REPOSITORY https://github.com/gabime/spdlog.git
+            GIT_TAG 7e635fca68d014934b4af8a1cf874f63989352b7
+        )
+
+        FetchContent_MakeAvailable(spdlog)
+    endif()
 	target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 endif()
 

@@ -112,7 +112,9 @@ class Companion {
 public:
     static Companion* Instance;
 
-    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
+    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const bool modding = false,
+                       const std::string& srcDir = "", const std::string& destPath = "") : gCartridge(nullptr),
+                       gSourceDirectory(srcDir), gDestinationDirectory(destPath) {
         this->gRomPath = rom;
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
@@ -120,13 +122,21 @@ public:
         this->gConfig.textureDefines = false;
     }
 
-    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const bool modding = false) : gCartridge(nullptr) {
+    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const bool modding = false,
+                       const std::string& srcDir = "", const std::string& destPath = "") : gCartridge(nullptr),
+                       gSourceDirectory(srcDir), gDestinationDirectory(destPath) {
         this->gRomData = rom;
         this->gConfig.otrMode = otr;
         this->gConfig.debug = debug;
         this->gConfig.modding = modding;
         this->gConfig.textureDefines = false;
     }
+
+    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
+                       Companion(rom, otr, debug, false, srcDir, destPath) {}
+    
+    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
+                       Companion(rom, otr, debug, false, srcDir, destPath) {}
 
     void Init(ExportType type);
 
@@ -141,6 +151,7 @@ public:
     N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
     std::vector<uint8_t>& GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gConfig.outputPath; }
+    std::string GetDestRelativeOutputPath() { return RelativePathToDestDir(GetOutputPath()); }
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
@@ -169,6 +180,8 @@ public:
     static void Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode);
     std::string NormalizeAsset(const std::string& name) const;
     std::string RelativePath(const std::string& path) const;
+    std::string RelativePathToSrcDir(const std::string& path) const;
+    std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
 
     TorchConfig& GetConfig() { return this->gConfig; }
@@ -179,6 +192,8 @@ public:
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
+    fs::path gSourceDirectory;
+    fs::path gDestinationDirectory;
     fs::path gCurrentDirectory;
     std::string gCurrentHash;
     std::string gAssetPath;

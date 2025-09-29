@@ -16,9 +16,6 @@
 
 #include "utils.h"
 
-// global verbosity setting
-int g_verbosity = 0;
-
 int read_s16_be(unsigned char *buf)
 {
    unsigned tmp = read_u16_be(buf);

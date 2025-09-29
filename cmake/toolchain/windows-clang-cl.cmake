@@ -1,0 +1,7 @@
+if (CMAKE_GENERATOR MATCHES "Visual Studio")
+  set(CMAKE_GENERATOR_TOOLSET "clangcl")
+else()
+  set(CMAKE_C_COMPILER clang-cl.exe)
+  set(CMAKE_CXX_COMPILER clang-cl.exe)
+  set(CMAKE_LINKER lld-link.exe)
+endif()

@@ -9,19 +9,41 @@ on:
 jobs:
   build:
     runs-on: macOS-latest
+    strategy:
+      matrix:
+        config: [Release, Debug]
+        standalone: [OFF, ON]
+        toolchain: [macos-clang, macos-gnu] # remove temporary macos-clang-llvm
+        isPR:
+          - ${{ github.event_name == 'pull_request' }}
+        exclude:
+          - isPR: true
+            standalone: OFF
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: brew install cmake ninja xcodes
+      - name: Download llvm
+        if: ${{ matrix.toolchain == 'macos-clang-llvm' }}
+        run: |
+          brew install llvm lld
+          echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+      - name: Download gnu
+        if: ${{ matrix.toolchain == 'macos-gnu' }}
+        run: |
+          brew install gcc
+          echo "/opt/homebrew/opt/gcc/bin" >> $GITHUB_PATH
       - name: Build
         run: |
-          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
+          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }}.cmake
           cmake --build build-cmake -j
       - name: Create Package
+        if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'macos-clang' }}
         run: |
           mkdir torch-release
           mv build-cmake/torch torch-release/
       - name: Publish packaged artifacts
+        if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'macos-clang' }}
         uses: actions/upload-artifact@v4
         with:
             name: torch-mac-bin

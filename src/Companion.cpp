@@ -105,6 +105,22 @@ namespace fs = std::filesystem;
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line    = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
 
+static std::string ConvertType(std::string type) {
+    int index = type.find(':');
+
+    if(index != std::string::npos) {
+        type = type.substr(index + 1);
+    }
+    std::transform(type.begin(), type.end(), type.begin(), tolower);
+    return type;
+}
+
+static std::string GetTypeNode(YAML::Node& node) {
+    auto type = GetSafeNode<std::string>(node, "type");
+    std::transform(type.begin(), type.end(), type.begin(), toupper);
+    return type;
+}
+
 void Companion::Init(const ExportType type) {
 
     spdlog::set_level(spdlog::level::debug);
@@ -194,8 +210,9 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 #endif
-
+#ifndef __EMSCRIPTEN__ // We call this manually
     this->Process();
+#endif
 }
 
 void Companion::ParseEnums(std::string& header) {
@@ -247,8 +264,7 @@ void Companion::ParseEnums(std::string& header) {
 }
 
 std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::string& name) {
-    auto type = GetSafeNode<std::string>(node, "type");
-    std::transform(type.begin(), type.end(), type.begin(), ::toupper);
+    auto type = GetTypeNode(node);
 
     spdlog::set_pattern(regular);
     if(node["offset"]) {
@@ -334,13 +350,13 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             for(size_t i = 0; i < externalFiles.size(); i++) {
                 auto externalFile = externalFiles[i];
                 if (externalFile.size() == 0) {
-                    this->gCurrentExternalFiles.push_back(externalFile.as<std::string>());
+                    this->gCurrentExternalFiles.push_back((this->gSourceDirectory / externalFile.as<std::string>()).string());
                 } else {
                     SPDLOG_INFO("External File size {}", externalFile.size());
                     throw std::runtime_error("Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n  - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
 
-                auto externalFileName = externalFile.as<std::string>();
+                std::string externalFileName = (this->gSourceDirectory / externalFile.as<std::string>()).string();
                 if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
                 } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
@@ -369,6 +385,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                     this->gCurrentDirectory = currentDirectory;
                     this->gCurrentExternalFiles = currentExternalFiles;
                     this->gFileHeader.clear();
+                } else {
+                    SPDLOG_INFO("Skipping external file {} as it has already been processed", externalFileName);
                 }
             }
         }
@@ -460,10 +478,10 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
 }
 
 void Companion::ParseHash() {
-    const std::string out = "torch.hash.yml";
+    const auto out = this->gDestinationDirectory / "torch.hash.yml";
 
     if(fs::exists(out)) {
-        this->gHashNode = YAML::LoadFile(out);
+        this->gHashNode = YAML::LoadFile(out.string());
     } else {
         this->gHashNode = YAML::Node();
     }
@@ -491,9 +509,10 @@ bool Companion::NodeHasChanges(const std::string& path) {
     const std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator( yaml ), {});
     this->gCurrentHash = CalculateHash(data);
     bool needsInit = true;
+    auto srcRelativePath = RelativePathToSrcDir(path);
 
-    if(this->gHashNode[path]) {
-        auto entry = GetSafeNode<YAML::Node>(this->gHashNode, path);
+    if(this->gHashNode[srcRelativePath]) {
+        auto entry = GetSafeNode<YAML::Node>(this->gHashNode, srcRelativePath);
         const auto hash = GetSafeNode<std::string>(entry, "hash", "no-hash");
         auto modes = GetSafeNode<YAML::Node>(entry, "extracted");
         auto extracted = GetSafeNode<bool>(modes, ExportTypeToString(this->gConfig.exporterType));
@@ -501,18 +520,18 @@ bool Companion::NodeHasChanges(const std::string& path) {
         if(hash == this->gCurrentHash) {
             needsInit = false;
             if(extracted) {
-                SPDLOG_INFO("Skipping {} as it has not changed", path);
+                SPDLOG_INFO("Skipping {} as it has not changed", srcRelativePath);
                 return false;
             }
         }
     }
 
     if(needsInit) {
-        this->gHashNode[path] = YAML::Node();
-        this->gHashNode[path]["hash"] = this->gCurrentHash;
-        this->gHashNode[path]["extracted"] = YAML::Node();
+        this->gHashNode[srcRelativePath] = YAML::Node();
+        this->gHashNode[srcRelativePath]["hash"] = this->gCurrentHash;
+        this->gHashNode[srcRelativePath]["extracted"] = YAML::Node();
         for(size_t m = 0; m <= static_cast<size_t>(ExportType::Modding); m++) {
-            this->gHashNode[path]["extracted"][ExportTypeToString(static_cast<ExportType>(m))] = false;
+            this->gHashNode[srcRelativePath]["extracted"][ExportTypeToString(static_cast<ExportType>(m))] = false;
         }
     }
 
@@ -584,7 +603,7 @@ void Companion::ProcessFile(YAML::Node root) {
         std::replace(output.begin(), output.end(), '\\', '/');
 
         if(node["type"]){
-            const auto type = GetSafeNode<std::string>(node, "type");
+            const auto type = GetTypeNode(node);
             if(type == "NAUDIO:V0:SAMPLE"){
                 AudioManager::Instance->bind_sample(node, output);
             }
@@ -922,6 +941,7 @@ void Companion::ProcessFile(YAML::Node root) {
             std::string buffer = stream.str();
 
             if(buffer.empty()) {
+                SPDLOG_WARN("No data to write for {}", this->gCurrentFile);
                 return;
             }
 
@@ -932,6 +952,7 @@ void Companion::ProcessFile(YAML::Node root) {
             }
 
             std::ofstream file(output, std::ios::binary);
+            SPDLOG_INFO("Writing {} to {}", this->gCurrentFile, output);
 
             if(this->gConfig.exporterType == ExportType::Header) {
                 fs::path entryPath = this->gCurrentFile;
@@ -962,19 +983,21 @@ void Companion::ProcessFile(YAML::Node root) {
     }
 
     if(this->gConfig.exporterType != ExportType::Binary) {
-        this->gHashNode[this->gCurrentFile]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
+        this->gHashNode[RelativePathToSrcDir(this->gCurrentFile)]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
     }
 }
 
 void Companion::Process() {
 
-    if(!fs::exists("config.yml")) {
+    auto configPath = this->gSourceDirectory / "config.yml";
+
+    if(!fs::exists(configPath)) {
         SPDLOG_ERROR("No config file found");
         return;
     }
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    YAML::Node config = YAML::LoadFile("config.yml");
+    YAML::Node config = YAML::LoadFile(configPath.string());
 
     bool isDirectoryMode = config["mode"] && config["mode"].as<std::string>() == "directory";
 
@@ -1007,18 +1030,18 @@ void Companion::Process() {
             auto item = job->second;
             auto method = GetSafeNode<std::string>(item, "method");
             if (method == "mio0-comptool") {
-                auto type = GetSafeNode<std::string>(item, "type");
+                auto type = GetTypeNode(item);
                 auto target = GetSafeNode<std::string>(item, "target");
                 auto restart = GetSafeNode<bool>(item, "restart");
 
-                if (type == "decompress") {
+                if (type == "DECOMPRESS") {
                     this->gRomData = CompTool::Decompress(this->gRomData);
                     this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
                     this->gCartridge->Initialize();
 
                     auto hash = this->gCartridge->GetHash();
 
-                    SPDLOG_INFO("ROM decompressed to {}", hash);
+                    SPDLOG_CRITICAL("ROM decompressed to {}", hash);
 
                     if (hash != target) {
                         throw std::runtime_error("Hash mismatch");
@@ -1052,13 +1075,18 @@ void Companion::Process() {
             this->gConfig.segment.global[i + 1] = segments[i];
         }
     }
-    this->gAssetPath = rom["path"].as<std::string>();
+    this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
     auto gbi_floats = cfg["gbi_floats"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
 
-    this->gConfig.moddingPath = modding_path;
+    if (!this->gDestinationDirectory.empty() && !fs::exists(this->gDestinationDirectory)) {
+        create_directories(this->gDestinationDirectory);
+    }
+    auto output_path = this->gDestinationDirectory;
+
+    this->gConfig.moddingPath = (this->gDestinationDirectory / modding_path).string();
     switch (this->gConfig.exporterType) {
         case ExportType::Binary: {
             std::string extension = "";
@@ -1072,23 +1100,24 @@ void Companion::Process() {
                 default:
                     throw std::runtime_error("Invalid archive type for export type Binary");
             }
-            this->gConfig.outputPath = opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
+            output_path /= opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
             break;
         }
         case ExportType::Header: {
-            this->gConfig.outputPath = opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
+            output_path /= opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
             break;
         }
         case ExportType::Code: {
-            this->gConfig.outputPath = opath && opath["code"] ? opath["code"].as<std::string>() : "code";
+            output_path /= opath && opath["code"] ? opath["code"].as<std::string>() : "code";
             break;
         }
         case ExportType::XML:
         case ExportType::Modding: {
-            this->gConfig.outputPath = modding_path;
+            output_path /= modding_path;
             break;
         }
     }
+    this->gConfig.outputPath = output_path.string();
 
     if(gbi) {
         auto key = gbi.as<std::string>();
@@ -1147,6 +1176,7 @@ void Companion::Process() {
     if(cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
+            file = (this->gSourceDirectory / file).string();
             this->ParseEnums(file);
         }
     }
@@ -1177,22 +1207,24 @@ void Companion::Process() {
 
     this->ParseHash();
 
-    SPDLOG_INFO("------------------------------------------------");
+    SPDLOG_CRITICAL("------------------------------------------------");
     spdlog::set_pattern(line);
 
-    SPDLOG_INFO("Starting Torch...");
+    SPDLOG_CRITICAL("Starting Torch...");
 
     if(this->gConfig.parseMode == ParseMode::Default) {
-        SPDLOG_INFO("Game: {}", this->gCartridge->GetGameTitle());
-        SPDLOG_INFO("CRC: {}", this->gCartridge->GetCRC());
-        SPDLOG_INFO("Version: {}", this->gCartridge->GetVersion());
-        SPDLOG_INFO("Country: [{}]", this->gCartridge->GetCountryCode());
-        SPDLOG_INFO("Hash: {}", this->gCartridge->GetHash());
-        SPDLOG_INFO("Assets: {}", this->gAssetPath);
+        SPDLOG_CRITICAL("Game: {}", this->gCartridge->GetGameTitle());
+        SPDLOG_CRITICAL("CRC: {}", this->gCartridge->GetCRC());
+        SPDLOG_CRITICAL("Version: {}", this->gCartridge->GetVersion());
+        SPDLOG_CRITICAL("Country: [{}]", this->gCartridge->GetCountryCode());
+        SPDLOG_CRITICAL("Hash: {}", this->gCartridge->GetHash());
+        SPDLOG_CRITICAL("Assets: {}", this->gAssetPath);
     } else {
-        SPDLOG_INFO("Mode: Directory");
-        SPDLOG_INFO("Directory: {}", rom["folder"].as<std::string>());
+        SPDLOG_CRITICAL("Mode: Directory");
+        SPDLOG_CRITICAL("Directory: {}", rom["folder"].as<std::string>());
     }
+
+    SPDLOG_CRITICAL("------------------------------------------------");
 
     AudioManager::Instance = new AudioManager();
     BinaryWrapper* wrapper = nullptr;
@@ -1251,24 +1283,24 @@ void Companion::Process() {
     }
 
     if(wrapper != nullptr) {
-        SPDLOG_INFO("Writing version file");
+        SPDLOG_CRITICAL("Writing version file");
         wrapper->AddFile("version", vWriter.ToVector());
         vWriter.Close();
         wrapper->Close();
     }
 
     // Write entries hash
-    std::ofstream file("torch.hash.yml", std::ios::binary);
+    std::ofstream file(this->gDestinationDirectory / "torch.hash.yml", std::ios::binary);
     file << this->gHashNode;
     file.close();
 
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     auto level = spdlog::get_level();
     spdlog::set_level(spdlog::level::info);
-    SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
+    SPDLOG_CRITICAL("Done! Took {}ms", end.count() - start.count());
+    SPDLOG_CRITICAL("------------------------------------------------");
     spdlog::set_level(level);
     spdlog::set_pattern(regular);
-    SPDLOG_INFO("------------------------------------------------");
 
     Decompressor::ClearCache();
     this->gCartridge = nullptr;
@@ -1280,10 +1312,10 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
-    SPDLOG_INFO("------------------------------------------------");
+    SPDLOG_CRITICAL("------------------------------------------------");
 
-    SPDLOG_INFO("Starting Torch...");
-    SPDLOG_INFO("Scanning {}", folder);
+    SPDLOG_CRITICAL("Starting Torch...");
+    SPDLOG_CRITICAL("Scanning {}", folder);
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     std::unordered_map<std::string, std::vector<char>> files;
@@ -1318,14 +1350,14 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
         // Remove parent folder
         normalized = normalized.substr(folder.length() + 1);
         wrapper->AddFile(normalized, data);
-        SPDLOG_INFO("> Added {}", normalized);
+        SPDLOG_CRITICAL("> Added {}", normalized);
     }
 
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    SPDLOG_INFO("Done! Took {}ms", end.count() - start.count());
-    SPDLOG_INFO("Exported to {}", output);
+    SPDLOG_CRITICAL("Done! Took {}ms", end.count() - start.count());
+    SPDLOG_CRITICAL("Exported to {}", output);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-    SPDLOG_INFO("------------------------------------------------");
+    SPDLOG_CRITICAL("------------------------------------------------");
 
     wrapper->Close();
 }
@@ -1347,13 +1379,13 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
     spdlog::set_pattern(regular);
     SPDLOG_INFO("------------------------------------------------");
     spdlog::set_pattern(line);
-    
+
     return entry;
 }
 
 void Companion::RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory) {
     this->gFactories[type] = factory;
-    SPDLOG_DEBUG("Registered factory for {}", type);
+    SPDLOG_INFO("Registered factory for {}", type);
 }
 
 std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::string &type) {
@@ -1450,10 +1482,10 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(
     }
 
     auto [name, n] = node.value();
-    auto n_type = GetSafeNode<std::string>(n, "type");
+    auto n_type = GetTypeNode(n);
 
     if(n_type != type) {
-        throw std::runtime_error("Requested node type does not match with the target node type at " + Torch::to_hex(addr, false));
+        throw std::runtime_error("Requested node type does not match with the target node type at " + Torch::to_hex(addr, false) + " Found: " + n_type + " Expected: " + type);
     }
 
     return node;
@@ -1529,7 +1561,7 @@ std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNo
 
     for(auto& [addr, tpl] : this->gAddrMap[this->gCurrentFile]){
         auto [name, node] = tpl;
-        const auto n_type = GetSafeNode<std::string>(node, "type");
+        const auto n_type = GetTypeNode(node);
         if(node["autogen"]){
             SPDLOG_DEBUG("Skipping autogenerated asset {}", name);
             continue;
@@ -1553,9 +1585,26 @@ std::string Companion::NormalizeAsset(const std::string& name) const {
     return path;
 }
 
+static std::string& ConvertWinToUnixSlash(std::string& path) {
+    std::replace(path.begin(), path.end(), '\\', '/');
+    return path;
+}
+
 std::string Companion::RelativePath(const std::string& path) const {
     std::string doutput = (this->gCurrentDirectory / path).string();
-    std::replace(doutput.begin(), doutput.end(), '\\', '/');
+    ConvertWinToUnixSlash(doutput);
+    return doutput;
+}
+
+std::string Companion::RelativePathToDestDir(const std::string& path) const {
+    std::string doutput = fs::path(path).lexically_relative(this->gDestinationDirectory).string();
+    ConvertWinToUnixSlash(doutput);
+    return doutput;
+}
+
+std::string Companion::RelativePathToSrcDir(const std::string& path) const {
+    std::string doutput = fs::path(path).lexically_relative(this->gSourceDirectory).string();
+    ConvertWinToUnixSlash(doutput);
     return doutput;
 }
 
@@ -1563,29 +1612,19 @@ std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
     return Chocobo1::SHA1().addData(data).finalize().toString();
 }
 
-static std::string ConvertType(std::string type) {
-    int index = type.find(':');
-
-    if(index != std::string::npos) {
-        type = type.substr(index + 1);
-    }
-    std::transform(type.begin(), type.end(), type.begin(), tolower);
-    return type;
-}
-
 std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     if(!asset["offset"] || !asset["type"]) {
         return std::nullopt;
     }
-    const auto type = GetSafeNode<std::string>(asset, "type");
+    const auto type = GetTypeNode(asset);
     const auto offset = GetSafeNode<uint32_t>(asset, "offset");
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
     const auto decl = this->GetNodeByAddr(offset);
 
     if(decl.has_value()) {
         auto found = std::get<1>(decl.value());
-        if(GetSafeNode<std::string>(found, "type") != type) {
-            SPDLOG_ERROR("Asset clash detected {} vs {} at 0x{:X}", type, GetSafeNode<std::string>(found, "type"), offset);
+        if(GetTypeNode(found) != type) {
+            SPDLOG_ERROR("Asset clash detected {} vs {} at 0x{:X}", type, GetTypeNode(found), offset);
         } else {
             return found;
         }
