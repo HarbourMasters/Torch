@@ -291,7 +291,7 @@
 
 #define READ_U8 (((count++), (reader.ReadUByte())))
 #define READ_S16 (((count+=2), (reader.ReadUInt16())))
-#define READ_CS16 (((count++), (temp = reader.ReadUByte(), (temp & 0x80) ? (count++, ((temp & 0x7F) << 8) | reader.ReadUByte()) : temp)))
+#define READ_CS16 (((count++), (temp = reader.ReadUByte(), (temp & 0x80) ? (count++, ((temp) << 8) | reader.ReadUByte()) : temp)))
 
 #define FORMAT_HEX(x, w) "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase << std::dec
 #define FORMAT_HEX2(x, w) std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase << std::dec
@@ -314,7 +314,14 @@ ExportResult FZX::SequenceCodeExporter::Export(std::ostream &write, std::shared_
     uint32_t lastEndPos = 0;
     for (const auto& command : data->mCmds) {
         if (lastEndPos != command.pos) {
-            write << fourSpaceTab << "/* Missing instruction at: " << FORMAT_HEX(lastEndPos, 3) << " ( With Gap " << FORMAT_HEX(command.pos - lastEndPos, 2) << " )*/\n";
+            write << fourSpaceTab << "/* Missing instruction or padding at: " << FORMAT_HEX(lastEndPos, 3) << " ( With Gap " << FORMAT_HEX(command.pos - lastEndPos, 2) << " )*/";
+
+            if (command.pos - lastEndPos < 0x10) {
+                for (uint32_t i = lastEndPos; i < command.pos; i++) {
+                    write << " 0,";
+                }
+            }
+            write << "\n";
         }
         lastEndPos = command.pos + command.size;
 
@@ -327,11 +334,27 @@ ExportResult FZX::SequenceCodeExporter::Export(std::ostream &write, std::shared_
             write << fourSpaceTab << "/* DATA LABELS */\n";
             for (const auto& arg: command.args) {
                 write << fourSpaceTab << "/* " << FORMAT_HEX(command.pos + 2 * i, 3) << " - " << FORMAT_HEX(command.pos + 2 * (i + 1), 3) << " */ ";
-                write << FORMAT_HEX(std::get<uint16_t>(arg), 3) << ", ";
+                write << "S16(" << FORMAT_HEX(std::get<uint16_t>(arg), 3) << "), ";
                 write << "// L____" << FORMAT_HEX2(std::get<uint16_t>(arg), 3) << "\n";
                 i++;
             }
             write << fourSpaceTab << "/* DATA END */\n";
+            continue;
+        }
+
+        if (command.state == SequenceState::envelope) {
+            uint32_t i = 0;
+            write << fourSpaceTab << "/* ENVELOPE START */\n";
+            for (const auto& arg: command.args) {
+                if (i % 2 == 0) {
+                    write << fourSpaceTab << "/* " << FORMAT_HEX(command.pos + 2 * i, 3) << " - " << FORMAT_HEX(command.pos + 2 * (i + 2), 3) << " */ ";
+                    write << "S16(" << FORMAT_HEX(std::get<uint16_t>(arg), 4) << "), ";
+                } else {
+                    write << "S16(" << FORMAT_HEX(std::get<uint16_t>(arg), 4) << "),\n";
+                }
+                i++;
+            }
+            write << fourSpaceTab << "/* ENVELOPE END */\n";
             continue;
         }
 
@@ -1227,7 +1250,11 @@ ExportResult FZX::SequenceCodeExporter::Export(std::ostream &write, std::shared_
                     write << "S16(" << FORMAT_HEX(std::get<uint16_t>(arg), 4) << "),";
                     break;
                 case SeqArgType::CS16:
-                    write << "CS16(" << FORMAT_HEX(std::get<uint32_t>(arg), 4) << "),";
+                    if (std::get<uint32_t>(arg) & 0x8000) {
+                        write << "CS16(" << FORMAT_HEX((std::get<uint32_t>(arg) & 0x7FFF), 4) << "),";
+                    } else {
+                        write << FORMAT_HEX(std::get<uint32_t>(arg), 4) << ",";
+                    }
                     break;
             }
         }
@@ -1240,10 +1267,24 @@ ExportResult FZX::SequenceCodeExporter::Export(std::ostream &write, std::shared_
 
         write << "\n";
     }
+    if (data->mHasFooter) {
+        const std::string mmlPassCheckStr = "== MML PASS CHECK ==";
+
+        write << fourSpaceTab << "/* " << FORMAT_HEX(lastEndPos, 3) << " - " << FORMAT_HEX(lastEndPos + mmlPassCheckStr.length(), 3) << " */ ";
+        for (size_t i = 0; i < mmlPassCheckStr.length(); i++) {
+            write << "\'" << mmlPassCheckStr.at(i) << "\'";
+            if (i != mmlPassCheckStr.length() - 1) {
+                write << ", ";
+            }
+        }
+
+        write << "\n";
+        lastEndPos += mmlPassCheckStr.length();
+    }
 
     write << "};\n\n";
 
-    return offset;
+    return offset + lastEndPos;
 }
 
 ExportResult FZX::SequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -1267,6 +1308,8 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
     uint32_t count = 0;
     SequenceState state = SequenceState::player;
     bool largeNotes = false;
+    bool scanPastJump = false;
+    bool forceLargeNotes = false;
     int32_t channel = -1;
     int32_t layer = -1;
     std::deque<SeqLabelInfo> posStack;
@@ -1274,6 +1317,16 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
     std::unordered_set<uint32_t> existingPositions;
     uint32_t depth = 0;
     std::unordered_set<uint32_t> labels;
+    std::unordered_set<uint16_t> envelopeAddresses;
+
+    /* Following checks are for uncertain behaviours that arise when parsing */
+    if (node["has_jump_bug"]) {
+        scanPastJump = GetSafeNode<bool>(node, "has_jump_bug");
+    }
+
+    if (node["force_large_notes"]) {
+        forceLargeNotes = GetSafeNode<bool>(node, "force_large_notes");
+    }
 
     while (count < size || !posStack.empty()) {
         SeqCommand command;
@@ -1287,11 +1340,11 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
             existingPositions.insert(command.pos);
         } else {
             while (!posStack.empty() && existingPositions.contains(posStack.back().pos)) {
-                SPDLOG_ERROR("POP BACK 0x{:X}", posStack.back().pos);
+                SPDLOG_INFO("POP BACK 0x{:X}", posStack.back().pos);
                 posStack.pop_back();
             }
             if (posStack.empty()) {
-                SPDLOG_ERROR("BREAK 0x{:X} 0x{:X}", count, command.cmd);
+                SPDLOG_INFO("BREAK 0x{:X} 0x{:X}", count, command.cmd);
                 break;
             }
 
@@ -1302,9 +1355,16 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
             command.channel = channel = labelInfo.channel;
             command.layer = layer = labelInfo.layer;
             largeNotes = labelInfo.largeNotes;
-            SPDLOG_ERROR("POP BACK 0x{:X}", posStack.back().pos);
+            SPDLOG_INFO("POP BACK 0x{:X}", posStack.back().pos);
             posStack.pop_back();
             existingPositions.insert(command.pos);
+
+            if (command.pos >= size) {
+                SPDLOG_WARN("CMD POS START FOUND GREATER THAN LIMIT: 0x{:X}", command.pos);
+            }
+        }
+        if (forceLargeNotes) {
+            largeNotes = true;
         }
 
         uint32_t startPos = command.pos;
@@ -1336,7 +1396,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
             buf.push_back(command);
 
             if (posStack.empty()) {
-                SPDLOG_ERROR("BREAK 0x{:X} 0x{:X}", count, command.cmd);
+                SPDLOG_INFO("BREAK 0x{:X} 0x{:X}", count, command.cmd);
                 break;
             }
 
@@ -1347,14 +1407,14 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
             channel = labelInfo.channel;
             layer = labelInfo.layer;
             largeNotes = labelInfo.largeNotes;
-            SPDLOG_ERROR("POP BACK 0x{:X}", posStack.back().pos);
+            SPDLOG_INFO("POP BACK 0x{:X}", posStack.back().pos);
             posStack.pop_back();
             continue;
         }
 
         command.cmd = READ_U8;
 
-        SPDLOG_ERROR("POS: 0x{:X}, CMD: 0x{:X}", command.pos, command.cmd);
+        SPDLOG_INFO("POS: 0x{:X}, CMD: 0x{:X}", command.pos, command.cmd);
 
         switch (command.cmd) {
             case ASEQ_OP_RBLTZ: {
@@ -1418,7 +1478,10 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
                 command.args.emplace_back(jumpPos);
                 posStack.emplace_back(jumpPos, command.state, command.channel, command.layer, largeNotes);
                 labels.insert(jumpPos);
-                nextLabel = true;
+                // HACKY FIX: Not sure how to appropriately handle
+                if (!scanPastJump) {
+                    nextLabel = true;
+                }
                 break;
             }
             case ASEQ_OP_CALL: {
@@ -1547,7 +1610,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
                             command.args.emplace_back(chanPos);
                             posStack.emplace_back(chanPos, SequenceState::channel, command.cmd & 0xF, command.layer, largeNotes);
                             labels.insert(chanPos);
-                            SPDLOG_ERROR("PLAYER LDCHAN POS: 0x{:X}, Chan: {}", chanPos, command.cmd & 0xF);
+                            SPDLOG_INFO("PLAYER LDCHAN POS: 0x{:X}, Chan: {}", chanPos, command.cmd & 0xF);
                             break;
                         }
                         case ASEQ_OP_SEQ_RLDCHAN: {
@@ -1555,7 +1618,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
                             command.args.emplace_back(chanRPos);
                             posStack.emplace_back(count + chanRPos, SequenceState::channel, command.cmd & 0xF, command.layer, largeNotes);
                             labels.insert(count + chanRPos);
-                            SPDLOG_ERROR("PLAYER RLDCHAN POS: 0x{:X}, Chan: {}", count + chanRPos, command.cmd & 0xF);
+                            SPDLOG_INFO("PLAYER RLDCHAN POS: 0x{:X}, Chan: {}", count + chanRPos, command.cmd & 0xF);
                             break;
                         }
                         case ASEQ_OP_SEQ_LDSEQ:
@@ -1680,9 +1743,12 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
                         case ASEQ_OP_CHAN_RELEASERATE:
                             command.args.emplace_back(READ_U8);
                             break;
-                        case ASEQ_OP_CHAN_ENV:
-                            command.args.emplace_back(READ_S16);
+                        case ASEQ_OP_CHAN_ENV: {
+                            uint16_t envAddr = READ_S16;
+                            command.args.emplace_back(envAddr);
+                            envelopeAddresses.insert(envAddr);
                             break;
+                        }
                         case ASEQ_OP_CHAN_TRANSPOSE:
                             command.args.emplace_back(READ_U8);
                             break;
@@ -1846,10 +1912,13 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
                         }
                         case ASEQ_OP_LAYER_NOPORTAMENTO:
                             break;
-                        case ASEQ_OP_LAYER_ENV:
-                            command.args.emplace_back(READ_S16);
+                        case ASEQ_OP_LAYER_ENV: {
+                            uint16_t envAddr = READ_S16;
+                            command.args.emplace_back(envAddr);
                             command.args.emplace_back(READ_U8);
+                            envelopeAddresses.insert(envAddr);
                             break;
+                        }
                         case ASEQ_OP_LAYER_RELEASERATE:
                             command.args.emplace_back(READ_U8);
                             break;
@@ -1888,8 +1957,6 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
                                 break;
                         }
                     }
-                    // There sometimes seems to be another instruction here?
-                    // nextLabel = true;
                 }
             }
         }
@@ -1899,7 +1966,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
 
         if (nextLabel) {
             if (posStack.empty()) {
-                SPDLOG_ERROR("BREAK 0x{:X} 0x{:X}", count, command.cmd);
+                SPDLOG_INFO("BREAK 0x{:X} 0x{:X}", count, command.cmd);
                 break;
             }
 
@@ -1910,11 +1977,38 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
             channel = labelInfo.channel;
             layer = labelInfo.layer;
             largeNotes = labelInfo.largeNotes;
-            SPDLOG_ERROR("POP BACK 0x{:X}", posStack.back().pos);
+            SPDLOG_INFO("POP BACK 0x{:X}", posStack.back().pos);
             posStack.pop_back();
             continue;
         }
     }
 
-    return std::make_shared<SequenceData>(buf, labels);
+    for (const auto& envAddr : envelopeAddresses) {
+        SeqCommand command;
+        command.pos = envAddr;
+        command.state = SequenceState::envelope;
+
+        uint16_t addr = envAddr;
+        reader.Seek(addr, LUS::SeekOffsetType::Start);
+        while (!existingPositions.contains(addr) && addr < size) {
+            auto delay = READ_S16;
+            auto arg = READ_S16;
+            command.args.emplace_back(delay);
+            command.args.emplace_back(arg);
+            existingPositions.insert(addr);
+            addr += 2 * sizeof(int16_t);
+            if (arg == 0) {
+                break;
+            }
+        }
+        command.size = addr - envAddr;
+        buf.push_back(command);
+    }
+
+    bool hasFooter = false;
+    if (node["has_footer"]) {
+        hasFooter = GetSafeNode<bool>(node, "has_footer");
+    }
+
+    return std::make_shared<SequenceData>(buf, labels, hasFooter);
 }

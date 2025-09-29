@@ -15,7 +15,8 @@ enum class SequenceState {
     player,
     channel,
     layer,
-    data
+    data,
+    envelope
 };
 
 struct SeqLabelInfo {
@@ -44,8 +45,9 @@ class SequenceData : public IParsedData {
 public:
     std::vector<SeqCommand> mCmds;
     std::unordered_set<uint32_t> mLabels;
+    bool mHasFooter;
 
-    SequenceData(std::vector<SeqCommand> cmds, std::unordered_set<uint32_t> labels) : mCmds(std::move(cmds)), mLabels(std::move(labels)) {}
+    SequenceData(std::vector<SeqCommand> cmds, std::unordered_set<uint32_t> labels, bool hasFooter) : mCmds(std::move(cmds)), mLabels(std::move(labels)), mHasFooter(hasFooter) {}
 };
 
 class SequenceHeaderExporter : public BaseExporter {
