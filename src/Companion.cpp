@@ -74,6 +74,7 @@
 #include "factories/fzerox/CourseFactory.h"
 #include "factories/fzerox/GhostRecordFactory.h"
 #include "factories/fzerox/SequenceFactory.h"
+#include "factories/fzerox/SoundFontFactory.h"
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -189,6 +190,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
     this->RegisterFactory("FZX:GHOST", std::make_shared<FZX::GhostRecordFactory>());
     this->RegisterFactory("FZX:SEQUENCE", std::make_shared<FZX::SequenceFactory>());
+    this->RegisterFactory("FZX:SOUNDFONT", std::make_shared<FZX::SoundFontFactory>());
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
