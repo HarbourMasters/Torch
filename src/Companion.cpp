@@ -71,8 +71,10 @@
 #endif
 
 #ifdef FZERO_SUPPORT
+#include "factories/fzerox/EADAnimationFactory.h"
 #include "factories/fzerox/CourseFactory.h"
 #include "factories/fzerox/GhostRecordFactory.h"
+#include "factories/fzerox/EADLimbFactory.h"
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -185,8 +187,10 @@ void Companion::Init(const ExportType type) {
 #endif
 
 #ifdef FZERO_SUPPORT
+    this->RegisterFactory("FZX:ANIM", std::make_shared<FZX::EADAnimationFactory>());
     this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
     this->RegisterFactory("FZX:GHOST", std::make_shared<FZX::GhostRecordFactory>());
+    this->RegisterFactory("FZX:LIMB", std::make_shared<FZX::EADLimbFactory>());
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -1616,6 +1620,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     if(!asset["offset"] || !asset["type"]) {
         return std::nullopt;
     }
+    asset["offset"] = PatchVirtualAddr(GetSafeNode<uint32_t>(asset, "offset"));
     const auto type = GetTypeNode(asset);
     const auto offset = GetSafeNode<uint32_t>(asset, "offset");
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
