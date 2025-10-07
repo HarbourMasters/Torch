@@ -27,7 +27,7 @@ ExportResult AssetArrayCodeExporter::Export(std::ostream &write, std::shared_ptr
 
     auto data = std::static_pointer_cast<AssetArrayData>(raw);
 
-    write << "static " << data->mType << "* " << symbol << "[] = {\n";
+    write << data->mType << "* " << symbol << "[] = {\n";
     for (auto ptr : data->mPtrs) {
         write << fourSpaceTab;
         if (ptr == 0) {
