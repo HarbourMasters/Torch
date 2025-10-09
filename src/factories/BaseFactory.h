@@ -13,8 +13,14 @@
 #include <yaml-cpp/yaml.h>
 #include <filesystem>
 #include <strhash64/StrHash64.h>
+#include "utils/TorchUtils.h"
 #include "lib/binarytools/BinaryWriter.h"
 #include "lib/binarytools/BinaryReader.h"
+
+#ifdef BUILD_UI
+#include "raylib.h"
+#include "ui/raygui.h"
+#endif
 
 namespace fs = std::filesystem;
 
@@ -85,6 +91,21 @@ public:
     T mData;
 };
 
+struct ParseResultData {
+    std::string name;
+    std::string type;
+    YAML::Node node;
+    std::optional<std::shared_ptr<IParsedData>> data;
+
+    uint32_t GetOffset() {
+        return GetSafeNode<uint32_t>(node, "offset");
+    }
+
+    std::optional<std::string> GetSymbol() {
+        return GetSafeNode<std::string>(node, "symbol");
+    }
+};
+
 class BaseExporter {
 public:
     virtual ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) = 0;
@@ -120,4 +141,12 @@ private:
     virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() {
         return {};
     }
+};
+
+class BaseFactoryUI {
+public:
+    virtual Vector2 GetBounds(Vector2 windowSize, const ParseResultData& data) {
+        return {0, 0};
+    }
+    virtual bool DrawUI(Vector2 pos, Vector2 windowSize, const ParseResultData& data) = 0;
 };

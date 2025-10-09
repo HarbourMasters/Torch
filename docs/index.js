@@ -78,8 +78,10 @@ async function convertToO2R() {
         }
     });
 
+    const start = Date.now();
     companion.Init(ExportType.Binary);
     companion.Process();
+    companion.Finalize(start);
     await downloadFile(FS, companion.GetOutputPath());
     UpdateStatus(`Conversion complete!`);
     ToggleModal(false);

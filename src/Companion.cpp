@@ -121,98 +121,100 @@ static std::string GetTypeNode(YAML::Node& node) {
     return type;
 }
 
-void Companion::Init(const ExportType type) {
+void Companion::Init(const ExportType type, const bool runProcess) {
 
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
     this->gConfig.exporterType = type;
-    this->RegisterFactory("BLOB", std::make_shared<BlobFactory>());
-    this->RegisterFactory("TEXTURE", std::make_shared<TextureFactory>());
-    this->RegisterFactory("VTX", std::make_shared<VtxFactory>());
-    this->RegisterFactory("MTX", std::make_shared<MtxFactory>());
-    this->RegisterFactory("F32", std::make_shared<FloatFactory>());
-    this->RegisterFactory("INC", std::make_shared<IncludeFactory>());
-    this->RegisterFactory("LIGHTS", std::make_shared<LightsFactory>());
-    this->RegisterFactory("GFX", std::make_shared<DListFactory>());
-    this->RegisterFactory("VEC3F", std::make_shared<Vec3fFactory>());
-    this->RegisterFactory("VEC3S", std::make_shared<Vec3sFactory>());
-    this->RegisterFactory("ARRAY", std::make_shared<GenericArrayFactory>());
-    this->RegisterFactory("ASSET_ARRAY", std::make_shared<AssetArrayFactory>());
-    this->RegisterFactory("VP", std::make_shared<ViewportFactory>());
-    this->RegisterFactory("COMPRESSED_TEXTURE", std::make_shared<CompressedTextureFactory>());
+    REGISTER_FACTORY("BLOB", std::make_shared<BlobFactory>());
+    REGISTER_FACTORY("TEXTURE", std::make_shared<TextureFactory>(), std::make_shared<TextureFactoryUI>());
+    REGISTER_FACTORY("VTX", std::make_shared<VtxFactory>());
+    REGISTER_FACTORY("MTX", std::make_shared<MtxFactory>());
+    REGISTER_FACTORY("F32", std::make_shared<FloatFactory>());
+    REGISTER_FACTORY("INC", std::make_shared<IncludeFactory>());
+    REGISTER_FACTORY("LIGHTS", std::make_shared<LightsFactory>());
+    REGISTER_FACTORY("GFX", std::make_shared<DListFactory>());
+    REGISTER_FACTORY("VEC3F", std::make_shared<Vec3fFactory>());
+    REGISTER_FACTORY("VEC3S", std::make_shared<Vec3sFactory>());
+    REGISTER_FACTORY("ARRAY", std::make_shared<GenericArrayFactory>());
+    REGISTER_FACTORY("ASSET_ARRAY", std::make_shared<AssetArrayFactory>());
+    REGISTER_FACTORY("VP", std::make_shared<ViewportFactory>());
+    REGISTER_FACTORY("COMPRESSED_TEXTURE", std::make_shared<CompressedTextureFactory>());
 
 #ifdef SM64_SUPPORT
-    this->RegisterFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
-    this->RegisterFactory("SM64:TEXT", std::make_shared<SM64::TextFactory>());
-    this->RegisterFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
-    this->RegisterFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
-    this->RegisterFactory("SM64:BEHAVIOR_SCRIPT", std::make_shared<SM64::BehaviorScriptFactory>());
-    this->RegisterFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactory>());
-    this->RegisterFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
-    this->RegisterFactory("SM64:LEVEL_SCRIPT", std::make_shared<SM64::LevelScriptFactory>());
-    this->RegisterFactory("SM64:MACRO", std::make_shared<SM64::MacroFactory>());
-    this->RegisterFactory("SM64:MOVTEX_QUAD", std::make_shared<SM64::MovtexQuadFactory>());
-    this->RegisterFactory("SM64:MOVTEX", std::make_shared<SM64::MovtexFactory>());
-    this->RegisterFactory("SM64:PAINTING", std::make_shared<SM64::PaintingFactory>());
-    this->RegisterFactory("SM64:PAINTING_MAP", std::make_shared<SM64::PaintingMapFactory>());
-    this->RegisterFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactory>());
-    this->RegisterFactory("SM64:WATER_DROPLET", std::make_shared<SM64::WaterDropletFactory>());
+    REGISTER_FACTORY("SM64:DIALOG", std::make_shared<SM64::DialogFactory>());
+    REGISTER_FACTORY("SM64:TEXT", std::make_shared<SM64::TextFactory>());
+    REGISTER_FACTORY("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactory>());
+    REGISTER_FACTORY("SM64:ANIM", std::make_shared<SM64::AnimationFactory>());
+    REGISTER_FACTORY("SM64:BEHAVIOR_SCRIPT", std::make_shared<SM64::BehaviorScriptFactory>());
+    REGISTER_FACTORY("SM64:COLLISION", std::make_shared<SM64::CollisionFactory>());
+    REGISTER_FACTORY("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactory>());
+    REGISTER_FACTORY("SM64:LEVEL_SCRIPT", std::make_shared<SM64::LevelScriptFactory>());
+    REGISTER_FACTORY("SM64:MACRO", std::make_shared<SM64::MacroFactory>());
+    REGISTER_FACTORY("SM64:MOVTEX_QUAD", std::make_shared<SM64::MovtexQuadFactory>());
+    REGISTER_FACTORY("SM64:MOVTEX", std::make_shared<SM64::MovtexFactory>());
+    REGISTER_FACTORY("SM64:PAINTING", std::make_shared<SM64::PaintingFactory>());
+    REGISTER_FACTORY("SM64:PAINTING_MAP", std::make_shared<SM64::PaintingMapFactory>());
+    REGISTER_FACTORY("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactory>());
+    REGISTER_FACTORY("SM64:WATER_DROPLET", std::make_shared<SM64::WaterDropletFactory>());
 #endif
 
 #ifdef MK64_SUPPORT
-    this->RegisterFactory("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
-    this->RegisterFactory("MK64:TRACK_PATH", std::make_shared<MK64::PathsFactory>());
-    this->RegisterFactory("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
-    this->RegisterFactory("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
-    this->RegisterFactory("MK64:UNK_SPAWN_DATA", std::make_shared<MK64::UnkSpawnDataFactory>());
-    this->RegisterFactory("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
-    this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
-    this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
+    REGISTER_FACTORY("MK64:COURSE_VTX", std::make_shared<MK64::CourseVtxFactory>());
+    REGISTER_FACTORY("MK64:TRACK_PATH", std::make_shared<MK64::PathsFactory>());
+    REGISTER_FACTORY("MK64:TRACK_SECTIONS", std::make_shared<MK64::TrackSectionsFactory>());
+    REGISTER_FACTORY("MK64:SPAWN_DATA", std::make_shared<MK64::SpawnDataFactory>());
+    REGISTER_FACTORY("MK64:UNK_SPAWN_DATA", std::make_shared<MK64::UnkSpawnDataFactory>());
+    REGISTER_FACTORY("MK64:DRIVING_BEHAVIOUR", std::make_shared<MK64::DrivingBehaviourFactory>());
+    REGISTER_FACTORY("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
+    REGISTER_FACTORY("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
 #endif
 
 #ifdef SF64_SUPPORT
-    this->RegisterFactory("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
-    this->RegisterFactory("SF64:SKELETON", std::make_shared<SF64::SkeletonFactory>());
-    this->RegisterFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>());
-    this->RegisterFactory("SF64:MSG_TABLE", std::make_shared<SF64::MessageLookupFactory>());
-    this->RegisterFactory("SF64:SCRIPT", std::make_shared<SF64::ScriptFactory>());
-    this->RegisterFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
-    this->RegisterFactory("SF64:ENVIRONMENT", std::make_shared<SF64::EnvironmentFactory>());
-    this->RegisterFactory("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
-    this->RegisterFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
-    this->RegisterFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
+    REGISTER_FACTORY("SF64:ANIM", std::make_shared<SF64::AnimFactory>());
+    REGISTER_FACTORY("SF64:SKELETON", std::make_shared<SF64::SkeletonFactory>());
+    REGISTER_FACTORY("SF64:MESSAGE", std::make_shared<SF64::MessageFactory>(), std::make_shared<SF64::MessageFactoryUI>());
+    REGISTER_FACTORY("SF64:MSG_TABLE", std::make_shared<SF64::MessageLookupFactory>());
+    REGISTER_FACTORY("SF64:SCRIPT", std::make_shared<SF64::ScriptFactory>());
+    REGISTER_FACTORY("SF64:HITBOX", std::make_shared<SF64::HitboxFactory>());
+    REGISTER_FACTORY("SF64:ENVIRONMENT", std::make_shared<SF64::EnvironmentFactory>());
+    REGISTER_FACTORY("SF64:OBJECT_INIT", std::make_shared<SF64::ObjInitFactory>());
+    REGISTER_FACTORY("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactory>());
+    REGISTER_FACTORY("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactory>());
 #endif
 
 #ifdef FZERO_SUPPORT
-    this->RegisterFactory("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
-    this->RegisterFactory("FZX:GHOST", std::make_shared<FZX::GhostRecordFactory>());
+    REGISTER_FACTORY("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
+    REGISTER_FACTORY("FZX:GHOST", std::make_shared<FZX::GhostRecordFactory>());
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
-    this->RegisterFactory("MA:MA2D1", std::make_shared<MA::MA2D1Factory>());
+    REGISTER_FACTORY("MA:MA2D1", std::make_shared<MA::MA2D1Factory>());
 #endif
 
 #ifdef NAUDIO_SUPPORT
-    this->RegisterFactory("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
-    this->RegisterFactory("NAUDIO:V0:SEQUENCE", std::make_shared<SequenceFactory>());
-    this->RegisterFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactory>());
-    this->RegisterFactory("NAUDIO:V0:BANK", std::make_shared<BankFactory>());
+    REGISTER_FACTORY("NAUDIO:V0:AUDIO_HEADER", std::make_shared<AudioHeaderFactory>());
+    REGISTER_FACTORY("NAUDIO:V0:SEQUENCE", std::make_shared<SequenceFactory>());
+    REGISTER_FACTORY("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactory>());
+    REGISTER_FACTORY("NAUDIO:V0:BANK", std::make_shared<BankFactory>());
 
-    this->RegisterFactory("NAUDIO:V1:AUDIO_SETUP", std::make_shared<AudioContextFactory>());
-    this->RegisterFactory("NAUDIO:V1:AUDIO_TABLE", std::make_shared<AudioTableFactory>());
-    this->RegisterFactory("NAUDIO:V1:SOUND_FONT", std::make_shared<SoundFontFactory>());
-    this->RegisterFactory("NAUDIO:V1:INSTRUMENT", std::make_shared<InstrumentFactory>());
-    this->RegisterFactory("NAUDIO:V1:DRUM", std::make_shared<DrumFactory>());
-    this->RegisterFactory("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactory>());
-    this->RegisterFactory("NAUDIO:V1:ENVELOPE", std::make_shared<EnvelopeFactory>());
-    this->RegisterFactory("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
-    this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
-    this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:AUDIO_SETUP", std::make_shared<AudioContextFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:AUDIO_TABLE", std::make_shared<AudioTableFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:SOUND_FONT", std::make_shared<SoundFontFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:INSTRUMENT", std::make_shared<InstrumentFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:DRUM", std::make_shared<DrumFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:ENVELOPE", std::make_shared<EnvelopeFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 #endif
-#ifndef __EMSCRIPTEN__ // We call this manually
-    this->Process();
-#endif
+    if(runProcess) {
+        auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        this->Process();
+        this->Finalize(start);
+    }
 }
 
 void Companion::ParseEnums(std::string& header) {
@@ -610,6 +612,7 @@ void Companion::ProcessFile(YAML::Node root) {
         }
 
         if(!node["offset"])  {
+            SPDLOG_WARN("No offset found for {}, skipping address map entry", entryName);
             continue;
         }
 
@@ -645,6 +648,7 @@ void Companion::ProcessFile(YAML::Node root) {
     }
 
     if(!this->NodeHasChanges(this->gCurrentFile) && !this->gNodeForceProcessing) {
+        SPDLOG_INFO("Skipping file {} as it has not changed", RelativePathToSrcDir(this->gCurrentFile));
         return;
     }
 
@@ -658,6 +662,7 @@ void Companion::ProcessFile(YAML::Node root) {
         auto assetNode = asset->second;
 
         if(entryName.find(":config") != std::string::npos) {
+            SPDLOG_INFO("Skipping :config node");
             continue;
         }
 
@@ -684,7 +689,10 @@ void Companion::ProcessFile(YAML::Node root) {
         SPDLOG_INFO("------------------------------------------------");
         spdlog::set_pattern(line);
     }
+}
 
+void Companion::WriteFile(YAML::Node root) {
+    // Start
     for(auto& result : this->gParseResults[this->gCurrentFile]){
         std::ostringstream stream;
         ExportResult endptr = std::nullopt;
@@ -804,7 +812,7 @@ void Companion::ProcessFile(YAML::Node root) {
 
         this->gWriteMap[this->gCurrentFile][result.type].push_back(wEntry);
     }
-
+    
     auto fsout = fs::path(this->gConfig.outputPath);
 
     if(this->gConfig.exporterType == ExportType::Modding || this->gConfig.exporterType == ExportType::XML) {
@@ -983,10 +991,10 @@ void Companion::ProcessFile(YAML::Node root) {
     if(this->gConfig.exporterType != ExportType::Binary) {
         this->gHashNode[RelativePathToSrcDir(this->gCurrentFile)]["extracted"][ExportTypeToString(this->gConfig.exporterType)] = true;
     }
+// End
 }
 
 void Companion::Process() {
-
     auto configPath = this->gSourceDirectory / "config.yml";
 
     if(!fs::exists(configPath)) {
@@ -994,7 +1002,6 @@ void Companion::Process() {
         return;
     }
 
-    auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     YAML::Node config = YAML::LoadFile(configPath.string());
 
     bool isDirectoryMode = config["mode"] && config["mode"].as<std::string>() == "directory";
@@ -1243,17 +1250,8 @@ void Companion::Process() {
     if (wrapper) {
         wrapper->CreateArchive();
     }
+
     this->gCurrentWrapper = wrapper;
-
-    auto vWriter = LUS::BinaryWriter();
-    vWriter.SetEndianness(Torch::Endianness::Big);
-    vWriter.Write(static_cast<uint8_t>(Torch::Endianness::Big));
-
-    if(this->gConfig.parseMode == ParseMode::Default) {
-        vWriter.Write(this->gCartridge->GetCRC());
-    } else {
-        vWriter.Write((uint32_t) 0);
-    }
 
     for (const auto & entry : Torch::getRecursiveEntries(this->gAssetPath)){
         if(entry.is_directory())  {
@@ -1279,12 +1277,32 @@ void Companion::Process() {
             this->gProcessedFiles.insert(this->gCurrentFile);
         }
     }
+}
+
+void Companion::Finalize(std::chrono::milliseconds start) {
+    BinaryWrapper* wrapper = this->gCurrentWrapper;
+
+    auto vWriter = LUS::BinaryWriter();
+    vWriter.SetEndianness(Torch::Endianness::Big);
+    vWriter.Write(static_cast<uint8_t>(Torch::Endianness::Big));
+
+    if(this->gConfig.parseMode == ParseMode::Default) {
+        vWriter.Write(this->gCartridge->GetCRC());
+    } else {
+        vWriter.Write((uint32_t) 0);
+    }
 
     if(wrapper != nullptr) {
         SPDLOG_CRITICAL("Writing version file");
         wrapper->AddFile("version", vWriter.ToVector());
         vWriter.Close();
         wrapper->Close();
+    }
+
+    for(const auto& file : this->gProcessedFiles) {
+        this->gCurrentFile = file;
+        this->gCurrentDirectory = relative(fs::path(file), this->gAssetPath).replace_extension("");
+        WriteFile(YAML::LoadFile(file));
     }
 
     // Write entries hash
@@ -1299,6 +1317,11 @@ void Companion::Process() {
     SPDLOG_CRITICAL("------------------------------------------------");
     spdlog::set_level(level);
     spdlog::set_pattern(regular);
+
+    if(AudioManager::Instance) {
+        delete AudioManager::Instance;
+        AudioManager::Instance = nullptr;
+    }
 
     Decompressor::ClearCache();
     this->gCartridge = nullptr;
@@ -1381,8 +1404,19 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
     return entry;
 }
 
-void Companion::RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory) {
+void Companion::RegisterFactory(
+    const std::string& type, 
+    const std::shared_ptr<BaseFactory>& factory
+#ifdef BUILD_UI
+    , const std::shared_ptr<BaseFactoryUI>& uiFactory
+#endif
+) {
     this->gFactories[type] = factory;
+#ifdef BUILD_UI
+    if(uiFactory != nullptr) {
+        this->gUIFactories[type] = uiFactory;
+    }
+#endif
     SPDLOG_INFO("Registered factory for {}", type);
 }
 
@@ -1393,6 +1427,16 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
 
     return this->gFactories[type];
 }
+
+#ifdef BUILD_UI
+std::optional<std::shared_ptr<BaseFactoryUI>> Companion::GetUIFactory(const std::string &type) {
+    if(!this->gUIFactories.contains(type)){
+        return std::nullopt;
+    }
+
+    return this->gUIFactories[type];
+}
+#endif
 
 std::optional<Table> Companion::SearchTable(uint32_t addr){
     for(auto& table : this->gTables){

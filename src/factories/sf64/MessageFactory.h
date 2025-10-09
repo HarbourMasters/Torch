@@ -7,9 +7,10 @@ namespace SF64 {
 class MessageData : public IParsedData {
 public:
     std::vector<uint16_t> mMessage;
+    std::vector<std::string> mLines;
     std::string mMesgStr;
 
-    MessageData(std::vector<uint16_t> message, std::string mesgStr) : mMessage(message), mMesgStr(mesgStr) {}
+    MessageData(std::vector<uint16_t> message, std::string mesgStr, std::vector<std::string> lines) : mMessage(message), mMesgStr(mesgStr), mLines(lines) {}
 };
 
 class MessageCodeExporter : public BaseExporter {
@@ -46,5 +47,11 @@ public:
         };
     }
     bool SupportModdedAssets() override { return true; }
+};
+
+class MessageFactoryUI : public BaseFactoryUI {
+public:
+    Vector2 GetBounds(Vector2 windowSize, const ParseResultData& data) override;
+    bool DrawUI(Vector2 pos, Vector2 windowSize, const ParseResultData& data) override;
 };
 }

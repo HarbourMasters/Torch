@@ -464,3 +464,30 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
 
     return std::make_shared<TextureData>(fmt, width, height, result);
 }
+
+Vector2 TextureFactoryUI::GetBounds(Vector2 windowSize, const ParseResultData& data) {
+    return { windowSize.x - 50, 150 };
+}
+
+bool TextureFactoryUI::DrawUI(Vector2 pos, Vector2 windowSize, const ParseResultData& item) {
+    Rectangle bounds = { pos.x + 10, pos.y, windowSize.x - 70, 140 };
+    Rectangle image = { bounds.x + 5, bounds.y + 5, 128, 128 };
+    Rectangle info = { image.x + 5 + image.width, bounds.y + 5, bounds.width - 20, 20 };
+    auto texture = std::static_pointer_cast<TextureData>(item.data.value());
+    auto symbol = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "symbol", item.name);
+    auto format = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "format");
+
+    GuiGroupBox(bounds, symbol.c_str());
+
+    GuiDummyRec(image, "Texture Preview");
+
+    GuiLabel(info, ("Format: " + format + " (" + std::to_string(texture->mFormat.depth) + "bpp)").c_str());
+    info.y += 20;
+    GuiLabel(info, ("Resolution: " + std::to_string(texture->mWidth) + "x" + std::to_string(texture->mHeight)).c_str());
+    info.y += 20;
+    GuiLabel(info, ("Size: " + std::to_string(texture->mBuffer.size()) + " bytes").c_str());
+    info.y += 20;
+    GuiLabel(info, ("Offset: " + Torch::to_hex(GetSafeNode<uint32_t>(const_cast<YAML::Node&>(item.node), "offset"))).c_str());
+
+    return false;
+}

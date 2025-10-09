@@ -3,8 +3,34 @@
 #include "Companion.h"
 
 #if defined(STANDALONE) && !defined(__EMSCRIPTEN__)
-
 Companion* Companion::Instance;
+
+#ifdef BUILD_UI
+#include "raylib.h"
+
+#define RAYGUI_IMPLEMENTATION
+#include "ui/View.h"
+#include "ui/list/Main.h"
+
+void launchUI() {
+    const int screenWidth = 800;
+    const int screenHeight = 600;
+    std::shared_ptr<ViewManager> view = std::make_shared<ViewManager>();
+
+    InitWindow(screenWidth, screenHeight, "Torch GUI");
+    SetTargetFPS(60);
+
+    view->SetView(std::make_shared<MainView>());
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+            ClearBackground(RAYWHITE);
+            view->Render();
+        EndDrawing();
+    }
+
+    CloseWindow();
+}
+#endif
 
 int main(int argc, char *argv[]) {
     CLI::App app{"Torch - [T]orch is [O]ur [R]esource [C]onversion [H]elper\n\
@@ -74,6 +100,7 @@ int main(int argc, char *argv[]) {
     binary->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
         instance->Init(ExportType::Binary);
+        instance->Process();
     });
 
     /* Generate headers */
@@ -166,6 +193,11 @@ int main(int argc, char *argv[]) {
             instance->Init(ExportType::Modding);
         }
     });
+
+#ifdef BUILD_UI
+    const auto ui = app.add_subcommand("ui", "UI - Launch the GUI (if built with UI support)");
+    ui->parse_complete_callback(launchUI);
+#endif
 
     try {
         app.parse(argc, argv);

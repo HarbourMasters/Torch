@@ -43,3 +43,9 @@ public:
     }
     bool SupportModdedAssets() override { return true; }
 };
+
+class TextureFactoryUI : public BaseFactoryUI {
+public:
+    Vector2 GetBounds(Vector2 windowSize, const ParseResultData& data) override;
+    bool DrawUI(Vector2 pos, Vector2 windowSize, const ParseResultData& data) override;
+};

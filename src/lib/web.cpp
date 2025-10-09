@@ -86,6 +86,7 @@ EMSCRIPTEN_BINDINGS(Torch) {
         .constructor<std::vector<uint8_t>, ArchiveType, bool, bool>()
         .function("Init", &Companion::Init)
         .function("Process", &Companion::Process)
+        .function("Finalize", &Companion::Finalize)
         .function("GetOutputPath", &Companion::GetOutputPath)
         .function("GetCartridge", &Companion::GetCartridge, allow_raw_pointers())
         .function("GetRomData", &Companion::GetRomData, allow_raw_pointers());

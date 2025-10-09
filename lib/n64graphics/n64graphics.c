@@ -506,7 +506,9 @@ int ci2png(unsigned char **png_output, int *size_output, const ci *img, int widt
             }
         }
 
+    #ifndef BUILD_UI
         (*png_output) = stbi_write_plte_png_to_mem(data, 0, width, height, 1, NULL, 0, size_output);
+    #endif
 
         free(data);
     }
