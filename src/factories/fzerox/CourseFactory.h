@@ -59,22 +59,16 @@ public:
     int8_t mSkybox;
     int8_t mFlag;
     std::vector<char> mFileName;
-    int8_t unk_16;
-    int8_t unk_17;
-    int32_t unk_18;
-    int32_t unk_1C;
+    int8_t mBgm;
     std::vector<ControlPointInfo> mControlPointInfos;
 
-    CourseData(int8_t creatorId, int8_t venue, int8_t skybox, int8_t flag, std::vector<char> fileName, int8_t unk_16, int8_t unk_17, int32_t unk_18, int32_t unk_1C, std::vector<ControlPointInfo> controlPointInfos) :
+    CourseData(int8_t creatorId, int8_t venue, int8_t skybox, int8_t flag, std::vector<char> fileName, int8_t bgm, std::vector<ControlPointInfo> controlPointInfos) :
         mCreatorId(creatorId),
         mVenue(venue),
         mSkybox(skybox),
         mFlag(flag),
         mFileName(std::move(fileName)),
-        unk_16(unk_16),
-        unk_17(unk_17),
-        unk_18(unk_18),
-        unk_1C(unk_1C),
+        mBgm(bgm),
         mControlPointInfos(std::move(controlPointInfos)) {}
 
     uint32_t CalculateChecksum(void);

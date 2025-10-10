@@ -71,8 +71,12 @@
 #endif
 
 #ifdef FZERO_SUPPORT
+#include "factories/fzerox/EADAnimationFactory.h"
 #include "factories/fzerox/CourseFactory.h"
 #include "factories/fzerox/GhostRecordFactory.h"
+#include "factories/fzerox/EADLimbFactory.h"
+#include "factories/fzerox/SequenceFactory.h"
+#include "factories/fzerox/SoundFontFactory.h"
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -185,8 +189,12 @@ void Companion::Init(const ExportType type, const bool runProcess) {
 #endif
 
 #ifdef FZERO_SUPPORT
+    REGISTER_FACTORY("FZX:ANIM", std::make_shared<FZX::EADAnimationFactory>());
     REGISTER_FACTORY("FZX:COURSE", std::make_shared<FZX::CourseFactory>());
     REGISTER_FACTORY("FZX:GHOST", std::make_shared<FZX::GhostRecordFactory>());
+    REGISTER_FACTORY("FZX:LIMB", std::make_shared<FZX::EADLimbFactory>());
+    REGISTER_FACTORY("FZX:SEQUENCE", std::make_shared<FZX::SequenceFactory>());
+    REGISTER_FACTORY("FZX:SOUNDFONT", std::make_shared<FZX::SoundFontFactory>());
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -949,6 +957,7 @@ void Companion::WriteFile(YAML::Node root) {
             std::string buffer = stream.str();
 
             if(buffer.empty()) {
+                SPDLOG_WARN("No data to write for {}", this->gCurrentFile);
                 return;
             }
 
@@ -959,6 +968,7 @@ void Companion::WriteFile(YAML::Node root) {
             }
 
             std::ofstream file(output, std::ios::binary);
+            SPDLOG_INFO("Writing {} to {}", this->gCurrentFile, output);
 
             if(this->gConfig.exporterType == ExportType::Header) {
                 fs::path entryPath = this->gCurrentFile;
@@ -1658,6 +1668,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     if(!asset["offset"] || !asset["type"]) {
         return std::nullopt;
     }
+    asset["offset"] = PatchVirtualAddr(GetSafeNode<uint32_t>(asset, "offset"));
     const auto type = GetTypeNode(asset);
     const auto offset = GetSafeNode<uint32_t>(asset, "offset");
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
