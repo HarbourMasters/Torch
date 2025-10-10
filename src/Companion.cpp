@@ -139,8 +139,8 @@ void Companion::Init(const ExportType type, const bool runProcess) {
     REGISTER_FACTORY("INC", std::make_shared<IncludeFactory>());
     REGISTER_FACTORY("LIGHTS", std::make_shared<LightsFactory>());
     REGISTER_FACTORY("GFX", std::make_shared<DListFactory>());
-    REGISTER_FACTORY("VEC3F", std::make_shared<Vec3fFactory>());
-    REGISTER_FACTORY("VEC3S", std::make_shared<Vec3sFactory>());
+    REGISTER_FACTORY("VEC3F", std::make_shared<Vec3fFactory>(), std::make_shared<Vec3fFactoryUI>());
+    REGISTER_FACTORY("VEC3S", std::make_shared<Vec3sFactory>(), std::make_shared<Vec3sFactoryUI>());
     REGISTER_FACTORY("ARRAY", std::make_shared<GenericArrayFactory>());
     REGISTER_FACTORY("ASSET_ARRAY", std::make_shared<AssetArrayFactory>());
     REGISTER_FACTORY("VP", std::make_shared<ViewportFactory>());
@@ -222,6 +222,7 @@ void Companion::Init(const ExportType type, const bool runProcess) {
         auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         this->Process();
         this->Finalize(start);
+        this->Exit();
     }
 }
 
@@ -471,7 +472,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             auto mode = GetSafeNode<std::string>(table->second, "mode", "APPEND");
             TableMode tMode = mode == "REFERENCE" ? TableMode::Reference : TableMode::Append;
             auto index_size = GetSafeNode<int32_t>(table->second, "index_size", -1);
-            this->gTables.push_back({name, start, end, tMode, index_size});
+            if(!this->gFileTables[this->gCurrentFile].contains(name)){
+                this->gFileTables[this->gCurrentFile][name] = {name, start, end, tMode, index_size};
+            }
         }
     }
 
@@ -647,7 +650,6 @@ void Companion::ProcessFile(YAML::Node root) {
     this->gCurrentSegmentNumber = 0;
     this->gCurrentCompressionType = CompressionType::None;
     this->gCurrentFileOffset = 0;
-    this->gTables.clear();
     this->gCurrentExternalFiles.clear();
     GFXDOverride::ClearVtx();
 
@@ -665,7 +667,6 @@ void Companion::ProcessFile(YAML::Node root) {
     spdlog::set_pattern(line);
 
     for(auto asset = root.begin(); asset != root.end(); ++asset){
-
         auto entryName = asset->first.as<std::string>();
         auto assetNode = asset->second;
 
@@ -1327,7 +1328,9 @@ void Companion::Finalize(std::chrono::milliseconds start) {
     SPDLOG_CRITICAL("------------------------------------------------");
     spdlog::set_level(level);
     spdlog::set_pattern(regular);
+}
 
+void Companion::Exit() {
     if(AudioManager::Instance) {
         delete AudioManager::Instance;
         AudioManager::Instance = nullptr;
@@ -1449,7 +1452,7 @@ std::optional<std::shared_ptr<BaseFactoryUI>> Companion::GetUIFactory(const std:
 #endif
 
 std::optional<Table> Companion::SearchTable(uint32_t addr){
-    for(auto& table : this->gTables){
+    for(auto& [name, table] : this->gFileTables[this->gCurrentFile]){
         if(addr >= table.start && addr <= table.end){
             return table;
         }

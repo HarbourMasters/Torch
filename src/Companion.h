@@ -137,6 +137,7 @@ public:
 
     void Process();
     void Finalize(std::chrono::milliseconds start);
+    void Exit();
 
     bool IsOTRMode() const { return (this->gConfig.otrMode != ArchiveType::None); }
     bool IsDebug() const { return this->gConfig.debug; }
@@ -183,7 +184,6 @@ public:
     std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
     
-
     TorchConfig& GetConfig() { return this->gConfig; }
     BinaryWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
 
@@ -217,13 +217,13 @@ private:
     uint32_t gCurrentSegmentNumber;
     std::optional<VRAMEntry> gCurrentVram;
     CompressionType gCurrentCompressionType = CompressionType::None;
-    std::vector<Table> gTables;
     std::vector<std::string> gCurrentExternalFiles;
     std::unordered_set<std::string> gProcessedFiles;
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
     std::unordered_map<std::string, std::string> gFileHeaders;
+    std::unordered_map<std::string, std::unordered_map<std::string, Table>> gFileTables;
 
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
