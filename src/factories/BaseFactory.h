@@ -13,8 +13,17 @@
 #include <yaml-cpp/yaml.h>
 #include <filesystem>
 #include <strhash64/StrHash64.h>
+#include "utils/TorchUtils.h"
 #include "lib/binarytools/BinaryWriter.h"
 #include "lib/binarytools/BinaryReader.h"
+
+#ifdef BUILD_UI
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui.h"
+#include "raylib.h"
+#include "rlImGui.h"
+#include "misc/cpp/imgui_stdlib.h"
+#endif
 
 namespace fs = std::filesystem;
 
@@ -85,6 +94,21 @@ public:
     T mData;
 };
 
+struct ParseResultData {
+    std::string name;
+    std::string type;
+    YAML::Node node;
+    std::optional<std::shared_ptr<IParsedData>> data;
+
+    uint32_t GetOffset() {
+        return GetSafeNode<uint32_t>(node, "offset");
+    }
+
+    std::optional<std::string> GetSymbol() {
+        return GetSafeNode<std::string>(node, "symbol");
+    }
+};
+
 class BaseExporter {
 public:
     virtual ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) = 0;
@@ -120,4 +144,12 @@ private:
     virtual std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() {
         return {};
     }
+};
+
+class BaseFactoryUI {
+public:
+    virtual float GetItemHeight(const ParseResultData& data) {
+        return ImGui::GetTextLineHeightWithSpacing();
+    };
+    virtual void DrawUI(const ParseResultData& data) = 0;
 };

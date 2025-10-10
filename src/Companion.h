@@ -93,20 +93,13 @@ struct TorchConfig {
     bool textureDefines;
 };
 
-struct ParseResultData {
-    std::string name;
-    std::string type;
-    YAML::Node node;
-    std::optional<std::shared_ptr<IParsedData>> data;
-
-    uint32_t GetOffset() {
-        return GetSafeNode<uint32_t>(node, "offset");
-    }
-
-    std::optional<std::string> GetSymbol() {
-        return GetSafeNode<std::string>(node, "symbol");
-    }
-};
+#ifdef BUILD_UI
+#define REGISTER_FACTORY(type, ...) \
+    this->RegisterFactory(type, __VA_ARGS__);
+#else
+#define REGISTER_FACTORY(type, factory) \
+    this->RegisterFactory(type, factory);
+#endif
 
 class Companion {
 public:
@@ -138,11 +131,13 @@ public:
     explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
                        Companion(rom, otr, debug, false, srcDir, destPath) {}
 
-    void Init(ExportType type);
+    void Init(ExportType type, const bool runProcess = true);
 
     bool NodeHasChanges(const std::string& string);
 
     void Process();
+    void Finalize(std::chrono::milliseconds start);
+    void Exit();
 
     bool IsOTRMode() const { return (this->gConfig.otrMode != ArchiveType::None); }
     bool IsDebug() const { return this->gConfig.debug; }
@@ -152,6 +147,7 @@ public:
     std::vector<uint8_t>& GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gConfig.outputPath; }
     std::string GetDestRelativeOutputPath() { return RelativePathToDestDir(GetOutputPath()); }
+    std::string GetAssetPath() { return this->gAssetPath; }
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
@@ -159,11 +155,15 @@ public:
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
     bool IsUsingIndividualIncludes() const { return this->gIndividualIncludes; }
 
+    std::unordered_map<std::string, std::vector<ParseResultData>> GetParseResults() const { return this->gParseResults; }
     std::optional<ParseResultData> GetParseDataByAddr(uint32_t addr);
     std::optional<ParseResultData> GetParseDataBySymbol(const std::string& symbol);
 
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
+#ifdef BUILD_UI
+    std::optional<std::shared_ptr<BaseFactoryUI>> GetUIFactory(const std::string& type);
+#endif
     uint32_t PatchVirtualAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);
@@ -183,12 +183,13 @@ public:
     std::string RelativePathToSrcDir(const std::string& path) const;
     std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
-
+    
     TorchConfig& GetConfig() { return this->gConfig; }
     BinaryWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
+    std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> GetAddrMap() const { return this->gAddrMap; }
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
@@ -210,33 +211,41 @@ private:
     // Temporal Variables
     std::string gCurrentFile;
     std::string gCurrentVirtualPath;
-    std::string gFileHeader;
     bool gEnablePadGen = false;
     uint32_t gCurrentPad = 0;
     uint32_t gCurrentFileOffset;
     uint32_t gCurrentSegmentNumber;
     std::optional<VRAMEntry> gCurrentVram;
     CompressionType gCurrentCompressionType = CompressionType::None;
-    std::vector<Table> gTables;
     std::vector<std::string> gCurrentExternalFiles;
     std::unordered_set<std::string> gProcessedFiles;
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
+    std::unordered_map<std::string, std::string> gFileHeaders;
+    std::unordered_map<std::string, std::unordered_map<std::string, Table>> gFileTables;
 
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
+    std::unordered_map<std::string, std::shared_ptr<BaseFactoryUI>> gUIFactories;
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>> gVirtualAddrMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
     void ProcessFile(YAML::Node root);
+    void WriteFile(YAML::Node root);
     void ParseEnums(std::string& file);
     void ParseHash();
     void ParseModdingConfig();
     void ParseCurrentFileConfig(YAML::Node node);
-    void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
+    void RegisterFactory(
+        const std::string& type, 
+        const std::shared_ptr<BaseFactory>& factory
+#ifdef BUILD_UI
+        , const std::shared_ptr<BaseFactoryUI>& factoryUI = nullptr
+#endif
+    );
     void ExtractNode(YAML::Node& node, std::string& name, BinaryWrapper* binary);
     void ProcessTables(YAML::Node& rom);
     void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
