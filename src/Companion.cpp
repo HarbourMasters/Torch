@@ -394,7 +394,6 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                     this->gCurrentFile = currentFile;
                     this->gCurrentDirectory = currentDirectory;
                     this->gCurrentExternalFiles = currentExternalFiles;
-                    this->gFileHeader.clear();
                 } else {
                     SPDLOG_INFO("Skipping external file {} as it has already been processed", externalFileName);
                 }
@@ -437,14 +436,15 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
         auto virtualAddrMap = node["virtual"];
         gVirtualAddrMap[gCurrentFile] = std::make_tuple<uint32_t, uint32_t>(virtualAddrMap[0].as<uint32_t>(), virtualAddrMap[1].as<uint32_t>());
     }
-
+    
     if(node["header"]) {
         auto header = node["header"];
+        std::string tempHeader = "";
         switch (this->gConfig.exporterType) {
             case ExportType::Header: {
                 if(header["header"].IsSequence()) {
                     for(auto line = header["header"].begin(); line != header["header"].end(); ++line) {
-                        this->gFileHeader += line->as<std::string>() + "\n";
+                        tempHeader += line->as<std::string>() + "\n";
                     }
                 }
                 break;
@@ -452,13 +452,14 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
             case ExportType::Code: {
                 if(header["code"].IsSequence()) {
                     for(auto line = header["code"].begin(); line != header["code"].end(); ++line) {
-                        this->gFileHeader += line->as<std::string>() + "\n";
+                        tempHeader += line->as<std::string>() + "\n";
                     }
                 }
                 break;
             }
             default: break;
         }
+        this->gFileHeaders[this->gCurrentFile] = tempHeader;
     }
 
     if(node["tables"]){
@@ -640,7 +641,6 @@ void Companion::ProcessFile(YAML::Node root) {
     // Stupid hack because the iteration broke the assets
     root = YAML::LoadFile(this->gCurrentFile);
     this->gConfig.segment.local.clear();
-    this->gFileHeader.clear();
     this->gCurrentPad = 0;
     this->gCurrentVram = std::nullopt;
     this->gCurrentVirtualPath = "";
@@ -941,8 +941,8 @@ void Companion::WriteFile(YAML::Node root) {
 
                 std::ofstream file(outinc, std::ios::binary);
 
-                if(!this->gFileHeader.empty()) {
-                    file << this->gFileHeader << std::endl;
+                if(this->gFileHeaders.contains(this->gCurrentFile) && !this->gFileHeaders[this->gCurrentFile].empty()) {
+                    file << this->gFileHeaders[this->gCurrentFile] << std::endl;
                 }
                 file << stream.str();
                 stream.str("");
@@ -980,16 +980,16 @@ void Companion::WriteFile(YAML::Node root) {
                     file << "#ifndef " << symbol << "_H" << std::endl;
                     file << "#define " << symbol << "_H" << std::endl << std::endl;
                 }
-                if(!this->gFileHeader.empty()) {
-                    file << this->gFileHeader << std::endl;
+                if(!this->gFileHeaders[this->gCurrentFile].empty()) {
+                    file << this->gFileHeaders[this->gCurrentFile] << std::endl;
                 }
                 file << buffer;
                 if(!this->IsOTRMode()){
                     file << std::endl << "#endif" << std::endl;
                 }
             } else {
-                if(!this->gFileHeader.empty()) {
-                    file << this->gFileHeader << std::endl;
+                if(!this->gFileHeaders[this->gCurrentFile].empty()) {
+                    file << this->gFileHeaders[this->gCurrentFile] << std::endl;
                 }
                 file << buffer;
             }

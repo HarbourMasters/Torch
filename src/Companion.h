@@ -211,7 +211,6 @@ private:
     // Temporal Variables
     std::string gCurrentFile;
     std::string gCurrentVirtualPath;
-    std::string gFileHeader;
     bool gEnablePadGen = false;
     uint32_t gCurrentPad = 0;
     uint32_t gCurrentFileOffset;
@@ -224,6 +223,7 @@ private:
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
+    std::unordered_map<std::string, std::string> gFileHeaders;
 
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
