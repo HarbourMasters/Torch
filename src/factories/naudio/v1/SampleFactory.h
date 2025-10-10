@@ -54,3 +54,9 @@ public:
     }
     bool SupportModdedAssets() override { return true; }
 };
+
+class NSampleFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};

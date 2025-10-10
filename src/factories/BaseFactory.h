@@ -18,8 +18,8 @@
 #include "lib/binarytools/BinaryReader.h"
 
 #ifdef BUILD_UI
-#include "raylib.h"
-#include "ui/raygui.h"
+#include "imgui.h"
+#include "misc/cpp/imgui_stdlib.h"
 #endif
 
 namespace fs = std::filesystem;
@@ -145,8 +145,8 @@ private:
 
 class BaseFactoryUI {
 public:
-    virtual Vector2 GetBounds(Vector2 windowSize, const ParseResultData& data) {
-        return {0, 0};
-    }
-    virtual bool DrawUI(Vector2 pos, Vector2 windowSize, const ParseResultData& data) = 0;
+    virtual float GetItemHeight(const ParseResultData& data) {
+        return ImGui::GetTextLineHeightWithSpacing();
+    };
+    virtual void DrawUI(const ParseResultData& data) = 0;
 };

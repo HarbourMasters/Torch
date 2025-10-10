@@ -7,10 +7,88 @@ Companion* Companion::Instance;
 
 #ifdef BUILD_UI
 #include "raylib.h"
+#include "rlImGui.h"
+#include "imgui.h"
 
 #define RAYGUI_IMPLEMENTATION
 #include "ui/View.h"
 #include "ui/list/Main.h"
+
+void ApplyRayguiTheme()
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    // Set all rounding to 0.0f for sharp corners
+    style.WindowRounding    = 0.0f;
+    style.ChildRounding     = 0.0f;
+    style.FrameRounding     = 0.0f;
+    style.GrabRounding      = 0.0f;
+    style.PopupRounding     = 0.0f;
+    style.ScrollbarRounding = 0.0f;
+    style.TabRounding       = 0.0f;
+
+    // Set all border sizes to 1.0f for a consistent outline
+    style.WindowBorderSize  = 1.0f;
+    style.ChildBorderSize   = 1.0f;
+    style.FrameBorderSize   = 1.0f;
+    style.PopupBorderSize   = 1.0f;
+    style.TabBorderSize     = 1.0f;
+
+    // Tweak spacing to be compact like raygui
+    style.WindowPadding     = ImVec2(8.0f, 8.0f);
+    style.FramePadding      = ImVec2(6.0f, 4.0f);
+    style.ItemSpacing       = ImVec2(8.0f, 4.0f);
+    style.ItemInnerSpacing  = ImVec2(4.0f, 4.0f);
+    style.ScrollbarSize     = 12.0f;
+
+    // Main Colors
+    ImVec4* colors = style.Colors;
+    colors[ImGuiCol_Text]                   = ImVec4(0.25f, 0.25f, 0.25f, 1.00f); // Dark Gray
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.96f, 0.96f, 0.96f, 1.00f); // Almost White
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.92f, 0.92f, 0.92f, 1.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.98f, 0.98f, 0.98f, 1.00f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.56f, 0.56f, 0.56f, 1.00f); // Mid Gray
+    colors[ImGuiCol_BorderShadow]           = ImVec4(1.00f, 1.00f, 1.00f, 0.20f); // Transparent white for a subtle inner highlight
+
+    // Frame/Control Colors
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.78f, 0.78f, 0.78f, 1.00f); // Lighter Gray
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.78f, 0.82f, 0.90f, 1.00f); // Light Blue
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.61f, 0.67f, 0.78f, 1.00f); // Darker Blue
+
+    // Title Bar
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.85f, 0.85f, 0.85f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.78f, 0.82f, 0.90f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.95f, 0.95f, 0.95f, 1.00f);
+    
+    // Buttons
+    colors[ImGuiCol_Button]                 = colors[ImGuiCol_FrameBg];
+    colors[ImGuiCol_ButtonHovered]          = colors[ImGuiCol_FrameBgHovered];
+    colors[ImGuiCol_ButtonActive]           = colors[ImGuiCol_FrameBgActive];
+
+    // Headers (Selectable, CollapsingHeader, etc.)
+    colors[ImGuiCol_Header]                 = ImVec4(0.85f, 0.85f, 0.85f, 1.00f);
+    colors[ImGuiCol_HeaderHovered]          = colors[ImGuiCol_FrameBgHovered];
+    colors[ImGuiCol_HeaderActive]           = colors[ImGuiCol_FrameBgActive];
+    
+    // Tabs
+    colors[ImGuiCol_Tab]                    = colors[ImGuiCol_Header];
+    colors[ImGuiCol_TabHovered]             = colors[ImGuiCol_HeaderHovered];
+    colors[ImGuiCol_TabActive]              = colors[ImGuiCol_HeaderActive];
+    colors[ImGuiCol_TabUnfocused]           = colors[ImGuiCol_TitleBg];
+    colors[ImGuiCol_TabUnfocusedActive]     = colors[ImGuiCol_TitleBgActive];
+
+    // Checkbox and Sliders
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
+    
+    // Separators and Resize Grips
+    colors[ImGuiCol_Separator]              = colors[ImGuiCol_Border];
+    colors[ImGuiCol_ResizeGrip]             = ImVec4(0.85f, 0.85f, 0.85f, 0.50f);
+    colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.78f, 0.82f, 0.90f, 0.78f);
+    colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.61f, 0.67f, 0.78f, 1.00f);
+}
 
 void launchUI() {
     const int screenWidth = 800;
@@ -21,10 +99,17 @@ void launchUI() {
     SetTargetFPS(60);
 
     view->SetView(std::make_shared<MainView>());
+
+    rlImGuiSetup(false);
+
+    ApplyRayguiTheme();
+
     while (!WindowShouldClose()) {
         BeginDrawing();
             ClearBackground(RAYWHITE);
-            view->Render();
+            rlImGuiBegin();
+                view->Render();
+            rlImGuiEnd();
         EndDrawing();
     }
 

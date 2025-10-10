@@ -185,3 +185,84 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
 
     return sample;
 }
+
+float NSampleFactoryUI::GetItemHeight(const ParseResultData& data) {
+    auto sample = std::static_pointer_cast<NSampleData>(data.data.value());
+    float height = 140.0f;
+
+    if(sample->loop != 0) {
+        height += 20.0f;
+        auto ldata = Companion::Instance->GetParseDataByAddr(sample->loop);
+        if(ldata.has_value() && ldata->data.has_value()) {
+            auto loop = std::static_pointer_cast<ADPCMLoopData>(ldata->data.value());
+            if(loop->count != 0) {
+                height += 20.0f * 16;
+            }
+        }
+    }
+
+    if(sample->book != 0) {
+        height += 20.0f;
+        auto bdata = Companion::Instance->GetParseDataByAddr(sample->book);
+        if(bdata.has_value() && bdata->data.has_value()) {
+            auto book = std::static_pointer_cast<ADPCMBookData>(bdata->data.value());
+            height += 20.0f * book->book.size();
+        }
+    }
+
+    return height;
+}
+
+void NSampleFactoryUI::DrawUI(const ParseResultData& item) {
+    auto sample = std::static_pointer_cast<NSampleData>(item.data.value());
+    auto symbol = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "symbol", item.name);
+
+    ImGui::Text("%s", symbol.c_str());
+    ImGui::Text("Codec: %s", AudioContext::GetCodecStr(sample->codec));
+    ImGui::Text("Medium: %s", AudioContext::GetMediumStr(sample->medium));
+    ImGui::Text("bit26: %d", sample->unk);
+    ImGui::Text("Size: %d bytes", sample->size);
+    ImGui::Text("Tuning: %.2f", sample->tuning);
+    ImGui::Text("Sample Rate: %d Hz", sample->sampleRate);
+
+    if(sample->loop != 0) {
+        auto ldata = Companion::Instance->GetParseDataByAddr(sample->loop);
+        if(!ldata.has_value() || !ldata->data.has_value()) {
+            ImGui::TextDisabled("Invalid Loop");
+            return;
+        }
+        auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(sample->loop)->data.value());
+        if (ImGui::TreeNode("ADPCM Loop")) {
+            ImGui::Text("Start: %d", loop->start);
+            ImGui::Text("End: %d", loop->end);
+            ImGui::Text("Count: %d", loop->count);
+            if (loop->count != 0) {
+                for (size_t i = 0; i < 16; i++) {
+                    ImGui::Text("Predictor %zu: %d", i, loop->predictorState[i]);
+                }
+            }
+            ImGui::TreePop();
+        }
+    } else {
+        ImGui::TextDisabled("No Loop");
+    }
+
+    if(sample->book != 0) {
+        auto bdata = Companion::Instance->GetParseDataByAddr(sample->book);
+        if(!bdata.has_value() || !bdata->data.has_value()) {
+            ImGui::TextDisabled("Invalid Book");
+            return;
+        }
+        auto book = std::static_pointer_cast<ADPCMBookData>(bdata->data.value());
+        if (ImGui::TreeNode("ADPCM Book")) {
+            ImGui::Text("Order: %d", book->order);
+            ImGui::Text("Npredictors: %d", book->numPredictors);
+            for (size_t i = 0; i < book->book.size(); i++) {
+                ImGui::Text("Page %zu: %d", i, book->book[i]);
+            }
+            ImGui::TreePop();
+        }
+    } else {
+        ImGui::TextDisabled("No Book");
+    }
+}

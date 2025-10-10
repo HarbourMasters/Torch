@@ -1,12 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <raylib.h>
-#include "ui/raygui.h"
-
-#undef RAYGUI_IMPLEMENTATION
-#define GUI_WINDOW_FILE_DIALOG_IMPLEMENTATION
-#include "ui/gui_file_dialogs.h"
+#include "ui/ImGuiFileDialog.h"
+#include "extras/IconsFontAwesome6.h"
 
 class ViewManager;
 

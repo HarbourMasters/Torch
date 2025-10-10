@@ -65,6 +65,45 @@ if(USE_STANDALONE)
         endforeach()
     endif()
 endif()
+
+if(BUILD_UI)
+    add_definitions(-DBUILD_UI)
+    FetchContent_Declare(
+        raylib
+        GIT_REPOSITORY https://github.com/raysan5/raylib.git
+        GIT_TAG 767df4cf526b78a64393a790d252bea21b71627c
+    )
+    FetchContent_MakeAvailable(raylib)
+
+    FetchContent_Declare(
+        ImGui
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.90.6-docking
+    )
+    FetchContent_MakeAvailable(ImGui)
+
+    set(UI_FILES 
+        ${imgui_SOURCE_DIR}/imgui_demo.cpp
+        ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp
+        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
+        ${imgui_SOURCE_DIR}/imgui.cpp
+    )
+
+    include_directories(${imgui_SOURCE_DIR})
+
+    FetchContent_Declare(
+        rlImGui
+        GIT_REPOSITORY https://github.com/raylib-extras/rlImGui.git
+        GIT_TAG 3c6986358c001851d9bc20e55acf9de803c73b5d
+    )
+    FetchContent_MakeAvailable(rlImGui)
+
+    list(APPEND UI_FILES ${rlimgui_SOURCE_DIR}/rlImGui.cpp)
+    include_directories(${rlimgui_SOURCE_DIR})
+endif()
+
 # Source files
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -72,7 +111,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/lib)
 file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp)
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libmio0/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libyay0/*.c)
-set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
+set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES} ${UI_FILES})
 
 if(BUILD_SM64)
     add_definitions(-DSM64_SUPPORT)
@@ -251,43 +290,6 @@ if(USE_STANDALONE)
 
 	FetchContent_MakeAvailable(spdlog)
 	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
-
-    if(BUILD_UI)
-        add_definitions(-DBUILD_UI)
-        FetchContent_Declare(
-            raylib
-            GIT_REPOSITORY https://github.com/raysan5/raylib.git
-            GIT_TAG 767df4cf526b78a64393a790d252bea21b71627c
-        )
-        FetchContent_MakeAvailable(raylib)
-
-        FetchContent_Declare(
-            ImGui
-            GIT_REPOSITORY https://github.com/ocornut/imgui.git
-            GIT_TAG v1.90.6-docking
-        )
-        FetchContent_MakeAvailable(ImGui)
-
-        list(APPEND SRC_DIR 
-            ${imgui_SOURCE_DIR}/imgui_demo.cpp
-            ${imgui_SOURCE_DIR}/imgui_draw.cpp
-            ${imgui_SOURCE_DIR}/imgui_tables.cpp
-            ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-            ${imgui_SOURCE_DIR}/imgui.cpp
-        )
-
-        include_directories(${imgui_SOURCE_DIR})
-
-        FetchContent_Declare(
-            rlImGui
-            GIT_REPOSITORY https://github.com/raylib-extras/rlImGui.git
-            GIT_TAG 3c6986358c001851d9bc20e55acf9de803c73b5d
-        )
-        FetchContent_MakeAvailable(rlImGui)
-
-        list(APPEND SRC_DIR ${rlimgui_SOURCE_DIR}/rlImGui.cpp)
-        include_directories(${rlimgui_SOURCE_DIR})
-    endif()
 else()
 	find_package(spdlog QUIET)
     if(NOT spdlog_FOUND)

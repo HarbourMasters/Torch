@@ -204,7 +204,7 @@ void Companion::Init(const ExportType type, const bool runProcess) {
     REGISTER_FACTORY("NAUDIO:V1:SOUND_FONT", std::make_shared<SoundFontFactory>());
     REGISTER_FACTORY("NAUDIO:V1:INSTRUMENT", std::make_shared<InstrumentFactory>());
     REGISTER_FACTORY("NAUDIO:V1:DRUM", std::make_shared<DrumFactory>());
-    REGISTER_FACTORY("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactory>());
+    REGISTER_FACTORY("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactory>(), std::make_shared<NSampleFactoryUI>());
     REGISTER_FACTORY("NAUDIO:V1:ENVELOPE", std::make_shared<EnvelopeFactory>());
     REGISTER_FACTORY("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
     REGISTER_FACTORY("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());

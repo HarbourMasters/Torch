@@ -187,11 +187,11 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vec
     uint16_t c;
     std::string whitespace = "";
     std::string str;
-    std::vector<std::string> mesgLines;
 
     do {
         c = reader.ReadUInt16();
         message.push_back(c);
+        str += gASCIIFullTable[c];
 
         std::string enumCode = gCharCodeEnums[c];
         if((enumCode.find("SP") != std::string::npos) && whitespace.empty()) {
@@ -199,10 +199,6 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vec
         }
         if(c == NEWLINE_CODE) {
             whitespace += "\n";
-            mesgLines.push_back(str);
-            str.clear();
-        } else {
-            str += gASCIIFullTable[c];
         }
         if (c >= CLF_CODE) {
             mesgStr << whitespace;
@@ -216,7 +212,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vec
 
     } while(c != END_CODE);
 
-    return std::make_shared<MessageData>(message, mesgStr.str(), mesgLines);
+    return std::make_shared<MessageData>(message, mesgStr.str(), str);
 }
 
 std::optional<uint16_t> getCharByCode(const std::string& code) {
@@ -299,57 +295,16 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse_modding(
 
     message.push_back(END_CODE);
 
-    return std::make_shared<MessageData>(message, mesgStr.str(), lines);
+    return std::make_shared<MessageData>(message, mesgStr.str(), "");
 }
 
-struct InputBuffer {
-    char* buffer;
-    bool focused;
-};
-
-static std::unordered_map<std::string, std::vector<InputBuffer>> gInputBufferMap;
-
-Vector2 SF64::MessageFactoryUI::GetBounds(Vector2 windowSize, const ParseResultData& item) {
-    auto data = std::static_pointer_cast<MessageData>(item.data.value());
-    int y = 20;
-    for(size_t i = 0; i < data->mMessage.size(); i++) {
-        if(data->mMessage[i] == NEWLINE_CODE){
-            y += 20;
-        }
-    }
-    return { windowSize.x - 50, y + 25 };
-}
-
-bool SF64::MessageFactoryUI::DrawUI(Vector2 pos, Vector2 windowSize, const ParseResultData& item) {
-    Rectangle bounds = { pos.x + 10, pos.y, windowSize.x - 70, 0 };
-    Rectangle info = { bounds.x + 10, bounds.y + 10, bounds.width - 60, 20 };
-    auto data = std::static_pointer_cast<MessageData>(item.data.value());
+void SF64::MessageFactoryUI::DrawUI(const ParseResultData& item) {
+    auto msg = std::static_pointer_cast<MessageData>(item.data.value());
     auto symbol = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "symbol", item.name);
 
-    if(gInputBufferMap.find(symbol) == gInputBufferMap.end()) {
-        gInputBufferMap[symbol] = std::vector<InputBuffer>();
-        for(size_t i = 0; i < data->mLines.size(); i++) {
-            InputBuffer inputBuffer;
-            inputBuffer.buffer = new char[256];
-            memset(inputBuffer.buffer, 0, 256);
-            strncpy(inputBuffer.buffer, data->mLines[i].c_str(), 255);
-            inputBuffer.focused = false;
-            gInputBufferMap[symbol].push_back(inputBuffer);
-        }
-    }
+    ImVec2 textSize = ImGui::CalcTextSize(msg->mRawStr.c_str());
 
-    for(size_t i = 0; i < data->mLines.size(); i++) {
-        if(GuiTextBox(info, gInputBufferMap[symbol][i].buffer, 255, gInputBufferMap[symbol][i].focused)) {
-            gInputBufferMap[symbol][i].focused = !gInputBufferMap[symbol][i].focused;
-        }
-        if()
-        info.y += 20;
-        bounds.height += 20;
-    }
-
-    bounds.height += 20;
-
-    GuiGroupBox(bounds, symbol.c_str());
-
-    return false;
+    ImGui::Text("%s", symbol.c_str());
+    ImGui::InputTextMultiline(("##" + symbol).c_str(), &msg->mRawStr, ImVec2(-FLT_MIN, std::max(textSize.y, ImGui::GetTextLineHeight() * 6)), ImGuiInputTextFlags_AllowTabInput, nullptr);
+    ImGui::Separator();
 }
