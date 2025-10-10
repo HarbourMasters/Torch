@@ -5,7 +5,6 @@
 #include <optional>
 
 #include "ui/View.h"
-#include "ui/Scroll.h"
 #include "utils/TorchUtils.h"
 
 namespace fs = std::filesystem;

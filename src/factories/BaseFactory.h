@@ -18,7 +18,10 @@
 #include "lib/binarytools/BinaryReader.h"
 
 #ifdef BUILD_UI
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
+#include "raylib.h"
+#include "rlImGui.h"
 #include "misc/cpp/imgui_stdlib.h"
 #endif
 

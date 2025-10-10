@@ -298,6 +298,12 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse_modding(
     return std::make_shared<MessageData>(message, mesgStr.str(), "");
 }
 
+float SF64::MessageFactoryUI::GetItemHeight(const ParseResultData& item) {
+    auto msg = std::static_pointer_cast<MessageData>(item.data.value());
+    ImVec2 textSize = ImGui::CalcTextSize(msg->mRawStr.c_str());
+    return (std::max(textSize.y, ImGui::GetTextLineHeight() * 6) + ImGui::GetStyle().FramePadding.y * 2 + ImGui::GetStyle().ItemSpacing.y) + 30.0f;
+}
+
 void SF64::MessageFactoryUI::DrawUI(const ParseResultData& item) {
     auto msg = std::static_pointer_cast<MessageData>(item.data.value());
     auto symbol = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "symbol", item.name);
@@ -306,5 +312,4 @@ void SF64::MessageFactoryUI::DrawUI(const ParseResultData& item) {
 
     ImGui::Text("%s", symbol.c_str());
     ImGui::InputTextMultiline(("##" + symbol).c_str(), &msg->mRawStr, ImVec2(-FLT_MIN, std::max(textSize.y, ImGui::GetTextLineHeight() * 6)), ImGuiInputTextFlags_AllowTabInput, nullptr);
-    ImGui::Separator();
 }

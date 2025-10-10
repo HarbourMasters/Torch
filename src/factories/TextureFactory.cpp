@@ -190,23 +190,16 @@ ExportResult TextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<
     return std::nullopt;
 }
 
-ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
-    auto texture = std::static_pointer_cast<TextureData>(data);
+uint8_t* ConvertTextureToRGBA(std::shared_ptr<TextureData> texture, YAML::Node &node, int* size) {
     auto format = texture->mFormat;
     uint8_t* raw = new uint8_t[TextureUtils::CalculateTextureSize(format.type, texture->mWidth, texture->mHeight) * 2];
-    int size = 0;
-
-    auto ext = GetSafeNode<std::string>(node, "format");
-
-    std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
-    *replacement += "." + ext + ".png";
 
     switch (format.type) {
         case TextureType::TLUT:
         case TextureType::RGBA16bpp:
         case TextureType::RGBA32bpp: {
             rgba* imgr = raw2rgba(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
-            if(rgba2png(&raw, &size, imgr, texture->mWidth, texture->mHeight)) {
+            if(rgba2png(&raw, size, imgr, texture->mWidth, texture->mHeight)) {
                 throw std::runtime_error("Failed to convert texture to PNG");
             }
             break;
@@ -216,7 +209,7 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
         case TextureType::GrayscaleAlpha4bpp:
         case TextureType::GrayscaleAlpha1bpp: {
             ia* imgia = raw2ia(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
-            if(ia2png(&raw, &size, imgia, texture->mWidth, texture->mHeight)) {
+            if(ia2png(&raw, size, imgia, texture->mWidth, texture->mHeight)) {
                 throw std::runtime_error("Failed to convert texture to PNG");
             }
             break;
@@ -229,10 +222,11 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
 
                 if (palette.has_value()) {
                     auto palTexture = std::static_pointer_cast<TextureData>(palette.value().data.value());
-                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palTexture->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palTexture->mFormat.depth);
+                    convert_raw_to_ci8(&raw, size, texture->mBuffer.data(), (uint8_t *)palTexture->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palTexture->mFormat.depth);
                 } else {
                     auto symbol = GetSafeNode<std::string>(node, "symbol");
-                    throw std::runtime_error("Could not convert ci8 '"+symbol+"' the tlut symbol name is probably wrong for tlut_symbol node");
+                    SPDLOG_ERROR("Could not convert ci8 '{}' the tlut symbol name is probably wrong for tlut_symbol node", symbol);
+                    return nullptr;
                 }
                 break;
             }
@@ -243,10 +237,11 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
 
                 if (palette.has_value()) {
                     auto palTexture = std::static_pointer_cast<TextureData>(palette.value().data.value());
-                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palTexture->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palTexture->mFormat.depth);
+                    convert_raw_to_ci8(&raw, size, texture->mBuffer.data(), (uint8_t *)palTexture->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palTexture->mFormat.depth);
                 } else {
                     auto symbol = GetSafeNode<std::string>(node, "symbol");
-                    throw std::runtime_error("Could not convert ci8 '"+symbol+"' the address is probably wrong for tlut address node");
+                    SPDLOG_ERROR("Could not convert ci8 '{}' the address is probably wrong for tlut address node", symbol);
+                    return nullptr;
                 }
                 break;
             }
@@ -254,20 +249,39 @@ ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<
         case TextureType::Grayscale8bpp:
         case TextureType::Grayscale4bpp: {
             ia* imgi = raw2i(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
-            if(ia2png(&raw, &size, imgi, texture->mWidth, texture->mHeight)) {
+            if(ia2png(&raw, size, imgi, texture->mWidth, texture->mHeight)) {
                 throw std::runtime_error("Failed to convert texture to PNG");
             }
             break;
         }
         default: {
-            SPDLOG_ERROR("Unsupported texture format for modding: {}", ext);
+            return nullptr;
         }
     }
 
-    write.write(reinterpret_cast<char*>(raw), size);
-    return std::nullopt;
+    return raw;
 }
 
+ExportResult TextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+    auto texture = std::static_pointer_cast<TextureData>(data);
+    auto format = texture->mFormat;
+    int size = 0;
+
+    auto ext = GetSafeNode<std::string>(node, "format");
+    std::transform(ext.begin(), ext.end(), ext.begin(), tolower);
+    *replacement += "." + ext + ".png";
+
+    uint8_t* raw = ConvertTextureToRGBA(texture, node, &size);
+
+    if(raw == nullptr) {
+        write.write(reinterpret_cast<char*>(raw), size);
+        SPDLOG_ERROR("Unsupported texture format for modding: {}", ext);
+    }
+
+    delete[] raw;
+
+    return std::nullopt;
+}
 
 std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -465,6 +479,36 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
     return std::make_shared<TextureData>(fmt, width, height, result);
 }
 
+std::unordered_map<std::string, Texture2D> sLoadedTextures = {};
+
+Texture2D* GetOrLoadTexture(const ParseResultData& item) {
+    auto texture = std::static_pointer_cast<TextureData>(item.data.value());
+    auto symbol = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "symbol", item.name);
+    auto format = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "format");
+    auto offset = GetSafeNode<uint32_t>(const_cast<YAML::Node&>(item.node), "offset");
+
+    if (!sLoadedTextures.contains(symbol)) {
+        int size = 0;
+        uint8_t* raw = ConvertTextureToRGBA(texture, const_cast<YAML::Node&>(item.node), &size);
+        if (raw) {
+            Image image = LoadImageFromMemory(".png", raw, size);
+            SPDLOG_INFO("Loaded texture: {} (0x{:X}) {}x{}, {} bytes)", symbol, offset, texture->mWidth, texture->mHeight, size);
+            sLoadedTextures[symbol] = LoadTextureFromImage(image);
+            delete[] raw;
+        } else {
+            SPDLOG_ERROR("Unsupported texture format: {}", format);
+            return nullptr;
+        }
+    }
+
+    if (sLoadedTextures.contains(symbol)) {
+        return &sLoadedTextures[symbol];
+    } else {
+        SPDLOG_ERROR("Failed to load texture: {}", symbol);
+        return nullptr;
+    }
+}
+
 float TextureFactoryUI::GetItemHeight(const ParseResultData& item) {
     return 150.0f;
 }
@@ -474,9 +518,28 @@ void TextureFactoryUI::DrawUI(const ParseResultData& item) {
     auto symbol = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "symbol", item.name);
     auto format = GetSafeNode<std::string>(const_cast<YAML::Node&>(item.node), "format");
     auto offset = GetSafeNode<uint32_t>(const_cast<YAML::Node&>(item.node), "offset");
+    auto tex2d = GetOrLoadTexture(item);
 
-    ImGui::Text("%s", symbol.c_str());
-    ImGui::Button("Texture Preview", ImVec2(128, 128));
+    ImGui::Text("%s", item.name.c_str());
+    auto cursorPos = ImGui::GetCursorPos();
+    if (tex2d != nullptr) {
+        float aspectRatio = (float)tex2d->width / (float)tex2d->height;
+        float displayWidth = 128.0f;
+        float displayHeight = displayWidth / aspectRatio;
+        if (displayHeight > 128.0f) {
+            displayHeight = 128.0f;
+            displayWidth = displayHeight * aspectRatio;
+        }
+        ImGui::Image((ImTextureID)tex2d, ImVec2(displayWidth, displayHeight));
+    } else {
+        // Draw a placeholder box
+        ImGui::SetCursorPos(cursorPos);
+        ImGui::Dummy(ImVec2(128, 128));
+        ImGui::SetCursorPos(cursorPos);
+        ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(100, 100, 100, 255));
+        ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(32, 56));
+        ImGui::GetWindowDrawList()->AddText(ImGui::GetItemRectMin(), IM_COL32(0, 0, 0, 255), "No Preview");
+    }
     ImGui::SameLine();
     ImGui::BeginGroup();
     ImGui::Text("Format: %s (%dbpp)", format.c_str(), texture->mFormat.depth);

@@ -51,6 +51,7 @@ public:
 
 class MessageFactoryUI : public BaseFactoryUI {
 public:
+    float GetItemHeight(const ParseResultData& data) override;
     void DrawUI(const ParseResultData& data) override;
 };
 }
