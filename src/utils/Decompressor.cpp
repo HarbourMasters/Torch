@@ -9,6 +9,7 @@ extern "C" {
 #include <libyay0/yay0.h>
 #include <libyay0/yay1.h>
 #include <libmio0/tkmk00.h>
+#include <libedl/edl.h>
 }
 
 std::unordered_map<uint32_t, DataChunk*> gCachedChunks;
@@ -55,6 +56,19 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
             gCachedChunks[offset] = new DataChunk{ decompressed, size };
             return gCachedChunks[offset];
         }
+        case CompressionType::EDL: {
+            EDLInfo info;
+            int32_t size = getEDLDecompressedSize((uint8_t*)in_buf);
+            SPDLOG_INFO("EDL decompressed size: {}", size);
+            auto* decompressed = new uint8_t[size];
+
+            if(decompressEDL(&info, (void*) in_buf, (void*) decompressed) != 0){
+                throw std::runtime_error("Failed to decode EDL");
+            }
+
+            gCachedChunks[offset] = new DataChunk{ decompressed, size };
+            return gCachedChunks[offset];
+        }
         default:
             throw std::runtime_error("Unknown compression type");
     }
@@ -79,23 +93,11 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     CompressionType type = Companion::Instance->GetCurrCompressionType();
 
-    auto fileOffset = TranslateAddr(offset, true);
-
-    // Check if an asset in a yaml file is mio0 compressed and extract.
-    if (node["mio0"]) {
-        auto assetPtr = ASSET_PTR(offset);
-        auto gameSize = Companion::Instance->GetRomData().size();
-
-        auto fileOffset = TranslateAddr(offset, true);
-        offset = ASSET_PTR(offset);
-
-        auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
-        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
-        return {
-                .root = decoded,
-                .segment = { decoded->data, size }
-        };
+    if(type == CompressionType::None){
+        type = GetCompressionType(buffer, offset);
     }
+
+    auto fileOffset = TranslateAddr(offset, true);
 
     // Check if an asset in a yaml file is tkmk00 compressed and extract (mk64).
     if (node["tkmk00"]) {
@@ -104,7 +106,6 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         const auto height = GetSafeNode<uint32_t>(node, "height");
         const auto textureSize = width * height * 2;
 
-        auto fileOffset = TranslateAddr(offset, true);
         offset = ASSET_PTR(offset);
 
         auto decoded = DecodeTKMK00(buffer, fileOffset + offset, textureSize, alpha);
@@ -117,16 +118,24 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
     // Extract a compressed file which contains many assets.
     switch(type) {
-        case CompressionType::YAY0:
-        case CompressionType::YAY1:
         case CompressionType::MIO0: {
             offset = ASSET_PTR(offset);
 
-            auto decoded = Decode(buffer, fileOffset, type);
-            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
+            auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
+            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
             return {
                 .root = decoded,
-                .segment = { decoded->data + offset, size }
+                .segment = { decoded->data, size }
+            };
+        }
+        case CompressionType::EDL:
+        case CompressionType::YAY0:
+        case CompressionType::YAY1: {
+            auto decoded = Decode(buffer, offset, type);
+            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
+            return {
+                .root = decoded,
+                .segment = { decoded->data, size }
             };
         }
         case CompressionType::YAZ0:
@@ -150,6 +159,9 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 DecompressedData Decompressor::AutoDecode(uint32_t offset, std::optional<size_t> size, std::vector<uint8_t>& buffer) {
     YAML::Node node;
     node["offset"] = offset;
+    if(size.has_value()){
+        node["size"] = size.value();
+    }
 
     return AutoDecode(node, buffer, size);
 }
@@ -179,28 +191,32 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress){
 }
 
 CompressionType Decompressor::GetCompressionType(std::vector<uint8_t>& buffer, const uint32_t offset) {
-    if (offset) {
+    if (offset != 0) {
         LUS::BinaryReader reader((char*) buffer.data() + offset, sizeof(uint32_t));
         reader.SetEndianness(Torch::Endianness::Big);
 
         const std::string header = reader.ReadCString();
+#define CONTAINS(str) (header.find(str) != std::string::npos)
 
         // Check if a compressed header exists
-        if (header == "MIO0") {
+        if (CONTAINS("MIO0")) {
+            SPDLOG_INFO("MIO0 compressed segment found at offset 0x{:X}", offset);
             return CompressionType::MIO0;
-        }
-
-        if (header == "Yay0" || header == "PERS") {
+        } else if (CONTAINS("Yay0") || CONTAINS("PERS")) {
+            SPDLOG_INFO("YAY0 compressed segment found at offset 0x{:X}", offset);
             return CompressionType::YAY0;
-        }
-
-        if (header == "Yay1") {
+        } else if (CONTAINS("Yay1")) {
+            SPDLOG_INFO("YAY1 compressed segment found at offset 0x{:X}", offset);
             return CompressionType::YAY1;
-        }
-
-        if (header == "Yaz0") {
+        } else if (CONTAINS("EDL")) {
+            SPDLOG_INFO("EDL compressed segment found at offset 0x{:X}", offset);
+            return CompressionType::EDL;
+        } else if (CONTAINS("Yaz0")) {
+            SPDLOG_INFO("YAZ0 compressed segment found at offset 0x{:X}", offset);
             return CompressionType::YAZ0;
         }
+
+        SPDLOG_INFO("No compression found at offset 0x{:X} {}", offset, header);
     }
     return CompressionType::None;
 }

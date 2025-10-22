@@ -35,6 +35,7 @@ static const std::unordered_map <std::string, CompressionType> sCompressionTypes
     { "YAY0", CompressionType::YAY0 },
     { "YAY1", CompressionType::YAY1 },
     { "YAZ0", CompressionType::YAZ0 },
+    { "EDL" , CompressionType::EDL },
 };
 
 ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
@@ -356,6 +357,8 @@ std::string getcomptype(CompressionType type) {
             return "YAY1";
         case CompressionType::YAZ0:
             return "YAZ0";
+        case CompressionType::EDL:
+            return "EDL";
         default:
             break;
     }
@@ -472,7 +475,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
     if (!sCompressionTypes.contains(compression)) {
         SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
                       Please add one of the following compression types\n\
-                      MIO0, YAY0, YAY1, YAZ0 (Unsupported)", offset);
+                      MIO0, YAY0, YAY1, YAZ0 (Unsupported), EDL (Unsupported)", offset);
         return std::nullopt;
     }
     compressionType = sCompressionTypes.at(compression);
