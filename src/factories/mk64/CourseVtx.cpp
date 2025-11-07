@@ -2,6 +2,7 @@
 
 #include "Companion.h"
 #include "utils/Decompressor.h"
+#include <cstdint>
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
@@ -81,7 +82,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
     LUS::BinaryReader reader(segment.data, count * sizeof(CourseVtx));
 
     reader.SetEndianness(Torch::Endianness::Big);
-    std::vector<CourseVtx> vertices;
+    std::vector<VtxRaw> vertices;
 
     for(size_t i = 0; i < count; i++) {
         auto x = reader.ReadInt16();
@@ -94,10 +95,13 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
         auto cn3 = reader.ReadUByte();
         auto cn4 = reader.ReadUByte();
 
-        vertices.push_back(CourseVtx({
-           {x, y, z}, {tc1, tc2}, {cn1, cn2, cn3, cn4}
+        int16_t flags = cn1 & 3;
+        flags |= (cn2 << 2) & 0xC;
+
+        vertices.push_back(VtxRaw({
+           {x, y, z},  flags, {tc1, tc2}, {cn1 & 0xfc, cn2 & 0xfc, cn3, 0xff}
        }));
     }
 
-    return std::make_shared<CourseVtxData>(vertices);
+    return std::make_shared<VtxData>(vertices);
 }

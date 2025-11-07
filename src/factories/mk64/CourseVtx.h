@@ -1,5 +1,6 @@
 #pragma once
 
+#include "factories/VtxFactory.h"
 #include <factories/BaseFactory.h>
 
 namespace MK64 {
@@ -38,8 +39,8 @@ namespace MK64 {
         inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
             return {
                 REGISTER(Code, CourseVtxCodeExporter)
-                REGISTER(Header, CourseVtxHeaderExporter)
-                REGISTER(Binary, CourseVtxBinaryExporter)
+                REGISTER(Header, VtxHeaderExporter)
+                REGISTER(Binary, VtxBinaryExporter)
             };
         }
         bool SupportModdedAssets() override { return false; }
