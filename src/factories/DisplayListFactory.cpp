@@ -282,9 +282,8 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             }
 
             auto ptr = w1;
-            auto overlap = GFXDOverride::GetVtxOverlap(ptr);
 
-            if(overlap.has_value()){
+            if(auto overlap = GFXDOverride::GetVtxOverlap(ptr); overlap.has_value()){
                 auto ovnode = std::get<1>(overlap.value());
                 auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
                 uint64_t hash = CRC64(path.c_str());
@@ -311,13 +310,7 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
 
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
-            } else {
-                SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
-            }
-
-            auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "VTX");
-
-            if(dec.has_value()){
+            } else if(auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "VTX"); dec.has_value()){
                 uint64_t hash = CRC64(dec.value().c_str());
                 if(hash == 0) {
                     throw std::runtime_error("Vtx hash is 0 for " + dec.value());
