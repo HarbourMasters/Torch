@@ -5,7 +5,7 @@
 namespace MK64 {
 
     struct TrackSections {
-        uint32_t addr;
+        uint64_t addr;
         int8_t surfaceType;
         int8_t sectionId;
         uint16_t flags;
