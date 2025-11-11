@@ -2,6 +2,7 @@
 
 #include "Companion.h"
 #include "utils/Decompressor.h"
+#include <spdlog/spdlog.h>
 
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) "0x" << std::hex << std::setw(2) << std::setfill('0') << c
@@ -56,7 +57,14 @@ ExportResult MK64::TrackSectionsBinaryExporter::Export(std::ostream &write, std:
     WriteHeader(writer, Torch::ResourceType::TrackSection, 0);
     writer.Write((uint32_t) sections->mSecs.size());
     for(auto entry : sections->mSecs) {
-        writer.Write(entry.addr);
+        auto dec = Companion::Instance->GetSafeStringByAddr(entry.addr, "GFX");
+        if(!dec.has_value()){
+            SPDLOG_WARN("Could not find gfx at 0x{:X}", entry.addr);
+            writer.Write(entry.addr);
+        } else {
+            uint64_t hash = CRC64(dec.value().c_str());
+            writer.Write(hash);
+        }
         writer.Write(entry.surfaceType);
         writer.Write(entry.sectionId);
         writer.Write(entry.flags);
