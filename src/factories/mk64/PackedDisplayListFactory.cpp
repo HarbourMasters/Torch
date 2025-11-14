@@ -198,18 +198,6 @@
             (_SHIFTL((s), 16, 16) | _SHIFTL((t), 0, 16))                                                            \
     }
 
-#define gsDPSetCombineLERP(a0, b0, c0, d0, Aa0, Ab0, Ac0, Ad0, a1, b1, c1, d1, Aa1, Ab1, Ac1, Ad1)                     \
-    {                                                                                                                  \
-        {                                                                                                              \
-            _SHIFTL(G_SETCOMBINE, 24, 8) | _SHIFTL(GCCc0w0(G_CCMUX_##a0, G_CCMUX_##c0, G_ACMUX_##Aa0, G_ACMUX_##Ac0) | \
-                                                       GCCc1w0(G_CCMUX_##a1, G_CCMUX_##c1),                            \
-                                                   0, 24),                                                             \
-                (unsigned int) (GCCc0w1(G_CCMUX_##b0, G_CCMUX_##d0, G_ACMUX_##Ab0, G_ACMUX_##Ad0) |                    \
-                                GCCc1w1(G_CCMUX_##b1, G_ACMUX_##Aa1, G_ACMUX_##Ac1, G_CCMUX_##d1, G_ACMUX_##Ab1,       \
-                                        G_ACMUX_##Ad1))                                                                \
-        }                                                                                                              \
-    }
-
 #define GCCc0w0(saRGB0, mRGB0, saA0, mA0) \
     (_SHIFTL((saRGB0), 20, 4) | _SHIFTL((mRGB0), 15, 5) | _SHIFTL((saA0), 12, 3) | _SHIFTL((mA0), 9, 3))
 
@@ -221,6 +209,18 @@
 #define GCCc1w1(sbRGB1, saA1, mA1, aRGB1, sbA1, aA1)                                                      \
     (_SHIFTL((sbRGB1), 24, 4) | _SHIFTL((saA1), 21, 3) | _SHIFTL((mA1), 18, 3) | _SHIFTL((aRGB1), 6, 3) | \
      _SHIFTL((sbA1), 3, 3) | _SHIFTL((aA1), 0, 3))
+
+#define gsDPSetCombineLERP(a0, b0, c0, d0, Aa0, Ab0, Ac0, Ad0, a1, b1, c1, d1, Aa1, Ab1, Ac1, Ad1)                     \
+    {                                                                                                                  \
+        {                                                                                                              \
+            _SHIFTL(G_SETCOMBINE, 24, 8) | _SHIFTL(GCCc0w0(G_CCMUX_##a0, G_CCMUX_##c0, G_ACMUX_##Aa0, G_ACMUX_##Ac0) | \
+                                                       GCCc1w0(G_CCMUX_##a1, G_CCMUX_##c1),                            \
+                                                   0, 24),                                                             \
+                (unsigned int) (GCCc0w1(G_CCMUX_##b0, G_CCMUX_##d0, G_ACMUX_##Ab0, G_ACMUX_##Ad0) |                    \
+                                GCCc1w1(G_CCMUX_##b1, G_ACMUX_##Aa1, G_ACMUX_##Ac1, G_CCMUX_##d1, G_ACMUX_##Ab1,       \
+                                        G_ACMUX_##Ad1))                                                                \
+        }                                                                                                              \
+    }
 
 #define gsDPSetCombineMode(a, b) gsDPSetCombineLERP(a, b)
 
