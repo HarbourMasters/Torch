@@ -99,7 +99,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
         flags |= (cn2 << 2) & 0xC;
 
         vertices.push_back(VtxRaw({
-           {x, y, z},  flags, {tc1, tc2}, {(uint8_t)cn1 & 0xfc, (uint8_t)cn2 & 0xfc, cn3, 0xff}
+           {x, y, z},  flags, {tc1, tc2}, {(uint8_t)(cn1 & 0xfc), (uint8_t)(cn2 & 0xfc), cn3, 0xff}
        }));
     }
 
