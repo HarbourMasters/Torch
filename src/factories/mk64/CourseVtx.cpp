@@ -95,11 +95,11 @@ std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::v
         auto cn3 = reader.ReadUByte();
         auto cn4 = reader.ReadUByte();
 
-        int16_t flags = cn1 & 3;
+        uint16_t flags = cn1 & 3;
         flags |= (cn2 << 2) & 0xC;
 
         vertices.push_back(VtxRaw({
-           {x, y, z},  flags, {tc1, tc2}, {cn1 & 0xfc, cn2 & 0xfc, cn3, 0xff}
+           {x, y, z},  flags, {tc1, tc2}, {(uint8_t)cn1 & 0xfc, (uint8_t)cn2 & 0xfc, cn3, 0xff}
        }));
     }
 
