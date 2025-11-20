@@ -110,7 +110,9 @@ struct ParseResultData {
 
 class Companion {
 public:
+#if defined(STANDALONE) && !defined(__EMSCRIPTEN__)
     static Companion* Instance;
+#endif
 
     explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const bool modding = false,
                        const std::string& srcDir = "", const std::string& destPath = "") : gCartridge(nullptr),
