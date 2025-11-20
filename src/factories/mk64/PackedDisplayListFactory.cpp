@@ -222,7 +222,8 @@
         }                                                                                                              \
     }
 
-#define gsDPSetCombineMode(a, b) gsDPSetCombineLERP(a, b)
+#define gsDPSetCombineLERP_Wrapper(...) gsDPSetCombineLERP(__VA_ARGS__)
+#define gsDPSetCombineMode(a, b) gsDPSetCombineLERP_Wrapper(a, b)
 
 #define gsSPSetOtherMode(cmd, sft, len, data)                                                    \
     {                                                                                            \
