@@ -126,6 +126,8 @@ static std::string GetTypeNode(YAML::Node& node) {
     return type;
 }
 
+Companion* Companion::Instance;
+
 void Companion::Init(const ExportType type) {
 
     spdlog::set_level(spdlog::level::debug);

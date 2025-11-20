@@ -4,8 +4,6 @@
 
 #if defined(STANDALONE) && !defined(__EMSCRIPTEN__)
 
-Companion* Companion::Instance;
-
 int main(int argc, char *argv[]) {
     CLI::App app{"Torch - [T]orch is [O]ur [R]esource [C]onversion [H]elper\n\
         * It extracts from a baserom and generates code or an otr.\n\
