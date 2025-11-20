@@ -222,8 +222,14 @@
         }                                                                                                              \
     }
 
-#define gsDPSetCombineLERP_Wrapper(...) gsDPSetCombineLERP(__VA_ARGS__)
-#define gsDPSetCombineMode(a, b) gsDPSetCombineLERP_Wrapper(a, b)
+#if defined(_MSC_VER)
+#define CALL_2(A, B) A B
+#define CALL_3(A, B, C) A B C
+
+#define gsDPSetCombineMode(a, b) CALL_2(gsDPSetCombineLERP, (a, b))
+#else
+#define gsDPSetCombineMode(a, b) gsDPSetCombineLERP(a, b)
+#endif
 
 #define gsSPSetOtherMode(cmd, sft, len, data)                                                    \
     {                                                                                            \
