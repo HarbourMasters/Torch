@@ -2,9 +2,9 @@
 #include "CLI11.hpp"
 #include "Companion.h"
 
-Companion* Companion::Instance;
+#if defined(STANDALONE) && !defined(__EMSCRIPTEN__)
 
-#ifdef STANDALONE
+Companion* Companion::Instance;
 
 int main(int argc, char *argv[]) {
     CLI::App app{"Torch - [T]orch is [O]ur [R]esource [C]onversion [H]elper\n\
