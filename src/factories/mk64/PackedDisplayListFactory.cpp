@@ -867,19 +867,19 @@ done:
 
 #ifdef STANDALONE
     // Pretty-print the generated commands using gfxd (same tooling as DisplayListFactory)
-    gfxd_input_buffer(gfx.data(), sizeof(uint32_t) * gfx.size());
-    gfxd_output_fd(fileno(stdout));
-    gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
-    gfxd_macro_fn([] {
-        gfxd_puts("> ");
-        gfxd_macro_dflt();
-        gfxd_puts("\n");
-        return 0;
-    });
-    // No overrides needed here; just default decode
-    // Version selection mirrors DisplayListFactory
-    gfxd_target(gfxd_f3dex);
-    gfxd_execute();
+    // gfxd_input_buffer(gfx.data(), sizeof(uint32_t) * gfx.size());
+    // gfxd_output_fd(fileno(stdout));
+    // gfxd_endian(gfxd_endian_host, sizeof(uint32_t));
+    // gfxd_macro_fn([] {
+    //     gfxd_puts("> ");
+    //     gfxd_macro_dflt();
+    //     gfxd_puts("\n");
+    //     return 0;
+    // });
+    // // No overrides needed here; just default decode
+    // // Version selection mirrors DisplayListFactory
+    // gfxd_target(gfxd_f3dex);
+    // gfxd_execute();
 #endif
     return std::make_shared<DListData>(gfx);
 }
