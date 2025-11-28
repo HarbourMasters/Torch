@@ -71,38 +71,6 @@
 #define G_LOAD_UCODE (G_IMMFIRST - 16)
 #define G_QUAD (G_IMMFIRST - 10)
 
-#define G_CC_PRIMITIVE 0, 0, 0, PRIMITIVE, 0, 0, 0, PRIMITIVE
-#define G_CC_SHADE 0, 0, 0, SHADE, 0, 0, 0, SHADE
-#define G_CC_MODULATEI TEXEL0, 0, SHADE, 0, 0, 0, 0, SHADE
-#define G_CC_MODULATEIA TEXEL0, 0, SHADE, 0, TEXEL0, 0, SHADE, 0
-#define G_CC_MODULATEIDECALA TEXEL0, 0, SHADE, 0, 0, 0, 0, TEXEL0
-#define G_CC_MODULATERGB G_CC_MODULATEI
-#define G_CC_MODULATERGBA G_CC_MODULATEIA
-#define G_CC_MODULATERGBDECALA G_CC_MODULATEIDECALA
-#define G_CC_MODULATEI_PRIM TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE
-#define G_CC_MODULATEIA_PRIM TEXEL0, 0, PRIMITIVE, 0, TEXEL0, 0, PRIMITIVE, 0
-#define G_CC_MODULATEIDECALA_PRIM TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, TEXEL0
-#define G_CC_MODULATERGB_PRIM G_CC_MODULATEI_PRIM
-#define G_CC_MODULATERGBA_PRIM G_CC_MODULATEIA_PRIM
-#define G_CC_MODULATERGBDECALA_PRIM G_CC_MODULATEIDECALA_PRIM
-#define G_CC_DECALRGB 0, 0, 0, TEXEL0, 0, 0, 0, SHADE
-#define G_CC_DECALRGBA 0, 0, 0, TEXEL0, 0, 0, 0, TEXEL0
-#define G_CC_BLENDI ENVIRONMENT, SHADE, TEXEL0, SHADE, 0, 0, 0, SHADE
-#define G_CC_BLENDIA ENVIRONMENT, SHADE, TEXEL0, SHADE, TEXEL0, 0, SHADE, 0
-#define G_CC_BLENDIDECALA ENVIRONMENT, SHADE, TEXEL0, SHADE, 0, 0, 0, TEXEL0
-#define G_CC_BLENDRGBA TEXEL0, SHADE, TEXEL0_ALPHA, SHADE, 0, 0, 0, SHADE
-#define G_CC_BLENDRGBDECALA TEXEL0, SHADE, TEXEL0_ALPHA, SHADE, 0, 0, 0, TEXEL0
-#define G_CC_ADDRGB 1, 0, TEXEL0, SHADE, 0, 0, 0, SHADE
-#define G_CC_ADDRGBDECALA 1, 0, TEXEL0, SHADE, 0, 0, 0, TEXEL0
-#define G_CC_REFLECTRGB ENVIRONMENT, 0, TEXEL0, SHADE, 0, 0, 0, SHADE
-#define G_CC_REFLECTRGBDECALA ENVIRONMENT, 0, TEXEL0, SHADE, 0, 0, 0, TEXEL0
-#define G_CC_HILITERGB PRIMITIVE, SHADE, TEXEL0, SHADE, 0, 0, 0, SHADE
-#define G_CC_HILITERGBA PRIMITIVE, SHADE, TEXEL0, SHADE, PRIMITIVE, SHADE, TEXEL0, SHADE
-#define G_CC_HILITERGBDECALA PRIMITIVE, SHADE, TEXEL0, SHADE, 0, 0, 0, TEXEL0
-#define G_CC_SHADEDECALA 0, 0, 0, SHADE, 0, 0, 0, TEXEL0
-#define G_CC_BLENDPE PRIMITIVE, ENVIRONMENT, TEXEL0, ENVIRONMENT, TEXEL0, 0, SHADE, 0
-#define G_CC_BLENDPEDECALA PRIMITIVE, ENVIRONMENT, TEXEL0, ENVIRONMENT, 0, 0, 0, TEXEL0
-
 #define G_IM_SIZ_16b_BYTES 2
 
 #define G_SETCIMG 0xff         /*  -1 */
@@ -171,6 +139,38 @@
 #define G_ACMUX_1 6
 #define G_ACMUX_0 7
 
+#define G_CC_PRIMITIVE 0, 0, 0, PRIMITIVE, 0, 0, 0, PRIMITIVE
+#define G_CC_SHADE 0, 0, 0, SHADE, 0, 0, 0, SHADE
+#define G_CC_MODULATEI TEXEL0, 0, SHADE, 0, 0, 0, 0, SHADE
+#define G_CC_MODULATEIA TEXEL0, 0, SHADE, 0, TEXEL0, 0, SHADE, 0
+#define G_CC_MODULATEIDECALA TEXEL0, 0, SHADE, 0, 0, 0, 0, TEXEL0
+#define G_CC_MODULATERGB G_CC_MODULATEI
+#define G_CC_MODULATERGBA G_CC_MODULATEIA
+#define G_CC_MODULATERGBDECALA G_CC_MODULATEIDECALA
+#define G_CC_MODULATEI_PRIM TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, PRIMITIVE
+#define G_CC_MODULATEIA_PRIM TEXEL0, 0, PRIMITIVE, 0, TEXEL0, 0, PRIMITIVE, 0
+#define G_CC_MODULATEIDECALA_PRIM TEXEL0, 0, PRIMITIVE, 0, 0, 0, 0, TEXEL0
+#define G_CC_MODULATERGB_PRIM G_CC_MODULATEI_PRIM
+#define G_CC_MODULATERGBA_PRIM G_CC_MODULATEIA_PRIM
+#define G_CC_MODULATERGBDECALA_PRIM G_CC_MODULATEIDECALA_PRIM
+#define G_CC_DECALRGB 0, 0, 0, TEXEL0, 0, 0, 0, SHADE
+#define G_CC_DECALRGBA 0, 0, 0, TEXEL0, 0, 0, 0, TEXEL0
+#define G_CC_BLENDI ENVIRONMENT, SHADE, TEXEL0, SHADE, 0, 0, 0, SHADE
+#define G_CC_BLENDIA ENVIRONMENT, SHADE, TEXEL0, SHADE, TEXEL0, 0, SHADE, 0
+#define G_CC_BLENDIDECALA ENVIRONMENT, SHADE, TEXEL0, SHADE, 0, 0, 0, TEXEL0
+#define G_CC_BLENDRGBA TEXEL0, SHADE, TEXEL0_ALPHA, SHADE, 0, 0, 0, SHADE
+#define G_CC_BLENDRGBDECALA TEXEL0, SHADE, TEXEL0_ALPHA, SHADE, 0, 0, 0, TEXEL0
+#define G_CC_ADDRGB 1, 0, TEXEL0, SHADE, 0, 0, 0, SHADE
+#define G_CC_ADDRGBDECALA 1, 0, TEXEL0, SHADE, 0, 0, 0, TEXEL0
+#define G_CC_REFLECTRGB ENVIRONMENT, 0, TEXEL0, SHADE, 0, 0, 0, SHADE
+#define G_CC_REFLECTRGBDECALA ENVIRONMENT, 0, TEXEL0, SHADE, 0, 0, 0, TEXEL0
+#define G_CC_HILITERGB PRIMITIVE, SHADE, TEXEL0, SHADE, 0, 0, 0, SHADE
+#define G_CC_HILITERGBA PRIMITIVE, SHADE, TEXEL0, SHADE, PRIMITIVE, SHADE, TEXEL0, SHADE
+#define G_CC_HILITERGBDECALA PRIMITIVE, SHADE, TEXEL0, SHADE, 0, 0, 0, TEXEL0
+#define G_CC_SHADEDECALA 0, 0, 0, SHADE, 0, 0, 0, TEXEL0
+#define G_CC_BLENDPE PRIMITIVE, ENVIRONMENT, TEXEL0, ENVIRONMENT, TEXEL0, 0, SHADE, 0
+#define G_CC_BLENDPEDECALA PRIMITIVE, ENVIRONMENT, TEXEL0, ENVIRONMENT, 0, 0, 0, TEXEL0
+
 #define gsDPTileSync() gsDPNoParam(G_RDPTILESYNC)
 #define gsDPLoadSync() gsDPNoParam(G_RDPLOADSYNC)
 
@@ -198,18 +198,6 @@
             (_SHIFTL((s), 16, 16) | _SHIFTL((t), 0, 16))                                                            \
     }
 
-#define gsDPSetCombineLERP(a0, b0, c0, d0, Aa0, Ab0, Ac0, Ad0, a1, b1, c1, d1, Aa1, Ab1, Ac1, Ad1)                     \
-    {                                                                                                                  \
-        {                                                                                                              \
-            _SHIFTL(G_SETCOMBINE, 24, 8) | _SHIFTL(GCCc0w0(G_CCMUX_##a0, G_CCMUX_##c0, G_ACMUX_##Aa0, G_ACMUX_##Ac0) | \
-                                                       GCCc1w0(G_CCMUX_##a1, G_CCMUX_##c1),                            \
-                                                   0, 24),                                                             \
-                (unsigned int) (GCCc0w1(G_CCMUX_##b0, G_CCMUX_##d0, G_ACMUX_##Ab0, G_ACMUX_##Ad0) |                    \
-                                GCCc1w1(G_CCMUX_##b1, G_ACMUX_##Aa1, G_ACMUX_##Ac1, G_CCMUX_##d1, G_ACMUX_##Ab1,       \
-                                        G_ACMUX_##Ad1))                                                                \
-        }                                                                                                              \
-    }
-
 #define GCCc0w0(saRGB0, mRGB0, saA0, mA0) \
     (_SHIFTL((saRGB0), 20, 4) | _SHIFTL((mRGB0), 15, 5) | _SHIFTL((saA0), 12, 3) | _SHIFTL((mA0), 9, 3))
 
@@ -222,7 +210,26 @@
     (_SHIFTL((sbRGB1), 24, 4) | _SHIFTL((saA1), 21, 3) | _SHIFTL((mA1), 18, 3) | _SHIFTL((aRGB1), 6, 3) | \
      _SHIFTL((sbA1), 3, 3) | _SHIFTL((aA1), 0, 3))
 
+#define gsDPSetCombineLERP(a0, b0, c0, d0, Aa0, Ab0, Ac0, Ad0, a1, b1, c1, d1, Aa1, Ab1, Ac1, Ad1)                     \
+    {                                                                                                                  \
+        {                                                                                                              \
+            _SHIFTL(G_SETCOMBINE, 24, 8) | _SHIFTL(GCCc0w0(G_CCMUX_##a0, G_CCMUX_##c0, G_ACMUX_##Aa0, G_ACMUX_##Ac0) | \
+                                                       GCCc1w0(G_CCMUX_##a1, G_CCMUX_##c1),                            \
+                                                   0, 24),                                                             \
+                (unsigned int) (GCCc0w1(G_CCMUX_##b0, G_CCMUX_##d0, G_ACMUX_##Ab0, G_ACMUX_##Ad0) |                    \
+                                GCCc1w1(G_CCMUX_##b1, G_ACMUX_##Aa1, G_ACMUX_##Ac1, G_CCMUX_##d1, G_ACMUX_##Ab1,       \
+                                        G_ACMUX_##Ad1))                                                                \
+        }                                                                                                              \
+    }
+
+#if defined(_MSC_VER)
+#define CALL_2(A, B) A B
+#define CALL_3(A, B, C) A B C
+
+#define gsDPSetCombineMode(a, b) CALL_2(gsDPSetCombineLERP, (a, b))
+#else
 #define gsDPSetCombineMode(a, b) gsDPSetCombineLERP(a, b)
+#endif
 
 #define gsSPSetOtherMode(cmd, sft, len, data)                                                    \
     {                                                                                            \
