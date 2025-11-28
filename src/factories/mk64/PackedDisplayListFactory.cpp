@@ -556,7 +556,7 @@ std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vecto
 
     while (i < decoded.size()) {
         uint8_t op = decoded[i++];
-        SPDLOG_INFO("PackedDListFactory: opcode 0x{:02X} ({})", op, opcode_to_string(op));
+        // SPDLOG_INFO("PackedDListFactory: opcode 0x{:02X} ({})", op, opcode_to_string(op));
         if (op == PG_EOF) { break; }
 
         // LIGHTS: 0x00..0x14
@@ -854,9 +854,9 @@ done:
     }
 
     // Print gfx command output for debugging/export visualization
-    for (size_t j = 0; j + 1 < gfx.size(); j += 2) {
-        SPDLOG_INFO("PackedDL gfx[{}]: W0=0x{:08X} W1=0x{:08X}", j / 2, gfx[j], gfx[j + 1]);
-    }
+    // for (size_t j = 0; j + 1 < gfx.size(); j += 2) {
+    //     SPDLOG_INFO("PackedDL gfx[{}]: W0=0x{:08X} W1=0x{:08X}", j / 2, gfx[j], gfx[j + 1]);
+    // }
 
 #ifdef STANDALONE
     // Pretty-print the generated commands using gfxd (same tooling as DisplayListFactory)
