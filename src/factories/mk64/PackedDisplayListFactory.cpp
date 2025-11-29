@@ -625,7 +625,7 @@ std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vecto
             case PG_TILECFG_E:
             case PG_TILECFG_F:
             case PG_TILECFG_G: {
-                // Mirror de unpack_tile_sync
+                // Mirror of unpack_tile_sync
                 if (i + 2 > decoded.size()) { goto done; }
                 int width = 32, height = 32, fmt = 0, tmem = 0;
                 switch (op) {
@@ -672,7 +672,7 @@ std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vecto
             case PG_TIMG_LOADBLOCK_3:
             case PG_TIMG_LOADBLOCK_4:
             case PG_TIMG_LOADBLOCK_5: {
-                // Mirror de unpack_tile_load_sync
+                // Mirror of unpack_tile_load_sync
                 if (i + 3 > decoded.size()) { goto done; }
                 uint32_t width = 32, height = 32, fmt = 0;
                 switch (op) {
@@ -691,8 +691,6 @@ std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vecto
                 const uint32_t tmem = (arg & 0x0F);
                 const uint32_t tile = ((arg >> 4) & 0x0F);
 
-                // G_SETTIMG (on garde un pointeur brut = offset; l'exporteur patchera en OTR)
-                // Utiliser width=1 par défaut pour le champ "width-1" du w0
                 // uint32_t w0 = (_SHIFTL(G_SETTIMG, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(siz, 19, 2));
                 N64Gfx macro = gsDPSetTextureImage(fmt, siz, 1, 0x05000000 | offset);
                 
@@ -747,7 +745,6 @@ std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vecto
                 emit(macro.words.w0, macro.words.w1);
             } break;
             case PG_SETCOMBINE_ALT: {
-                // Alias historique → même que MODULATERGBDECALA côté runtime
                 N64Gfx macro = gsDPSetCombineMode(G_CC_MODULATERGBDECALA, G_CC_MODULATERGBDECALA);
                 emit(macro.words.w0, macro.words.w1);
             } break;
