@@ -33,7 +33,7 @@ ExportResult MK64::TrackSectionsCodeExporter::Export(std::ostream &write, std::s
     for (int i = 0; i < sections.size(); i++) {
         auto entry = sections[i];
 
-        auto addr = entry.addr;
+        auto crc = entry.crc;
         auto surf = entry.surfaceType;
         auto sect = entry.sectionId;
         auto flags = entry.flags;
@@ -43,7 +43,7 @@ ExportResult MK64::TrackSectionsCodeExporter::Export(std::ostream &write, std::s
         }
 
         // { addr, surface, section, flags },
-        write << "{" << NUM(addr) << ", " << NUM(surf) << ", " << NUM(sect) << ", " << NUM(flags) << "},\n";
+        write << "{" << NUM(crc) << ", " << NUM(surf) << ", " << NUM(sect) << ", " << NUM(flags) << "},\n";
     }
     write << "};\n";
 
@@ -57,10 +57,10 @@ ExportResult MK64::TrackSectionsBinaryExporter::Export(std::ostream &write, std:
     WriteHeader(writer, Torch::ResourceType::TrackSection, 0);
     writer.Write((uint32_t) sections->mSecs.size());
     for(auto entry : sections->mSecs) {
-        auto dec = Companion::Instance->GetSafeStringByAddr(entry.addr, "GFX");
+        auto dec = Companion::Instance->GetSafeStringByAddr(entry.crc, "GFX");
         if(!dec.has_value()){
-            SPDLOG_WARN("Could not find gfx at 0x{:X}", entry.addr);
-            writer.Write(entry.addr);
+            SPDLOG_WARN("Could not find gfx at 0x{:X}", entry.crc);
+            writer.Write(entry.crc);
         } else {
             uint64_t hash = CRC64(dec.value().c_str());
             writer.Write(hash);
