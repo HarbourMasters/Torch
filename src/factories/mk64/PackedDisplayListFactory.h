@@ -3,6 +3,7 @@
 #include "../BaseFactory.h"
 #include "../DisplayListFactory.h" // Reuse DList exporters and data shape
 
+namespace MK64 {
 // Factory to expand MK64 packed DL bytecode into regular Gfx commands
 class PackedDListFactory : public BaseFactory {
 public:
@@ -18,3 +19,4 @@ public:
     }
     uint32_t GetAlignment() override { return 0; }
 };
+}

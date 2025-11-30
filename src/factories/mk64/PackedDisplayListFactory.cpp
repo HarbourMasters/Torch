@@ -544,7 +544,7 @@ static inline uint16_t RD16(const std::vector<uint8_t>& b, size_t i) {
     return (uint16_t)((b[i + 1] << 8) | b[i]);
 }
 
-std::optional<std::shared_ptr<IParsedData>> PackedDListFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
+std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
     auto [_, segment] = Decompressor::AutoDecode(data, buffer);
     std::vector<uint8_t> decoded(segment.data, segment.data + segment.size);
 
