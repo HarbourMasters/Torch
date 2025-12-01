@@ -1313,6 +1313,20 @@ void Companion::Process() {
     }
 
     if(wrapper != nullptr) {
+        // Add additional files specified by the user
+        for (const auto& filePath : this->gAdditionalFiles) {
+            std::ifstream input(filePath, std::ios::binary);
+            if (input.is_open()) {
+                std::vector<char> data((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+                input.close();
+                std::string filename = fs::path(filePath).filename().string();
+                wrapper->AddFile(filename, data);
+                SPDLOG_INFO("Added additional file: {}", filename);
+            } else {
+                SPDLOG_WARN("Could not open additional file: {}", filePath);
+            }
+        }
+
         SPDLOG_CRITICAL("Writing version file");
         wrapper->AddFile("version", vWriter.ToVector());
         vWriter.Close();
