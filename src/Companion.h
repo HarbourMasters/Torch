@@ -185,6 +185,7 @@ public:
     std::string RelativePathToSrcDir(const std::string& path) const;
     std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
+    void SetAdditionalFiles(const std::vector<std::string>& files) { this->gAdditionalFiles = files; }
 
     TorchConfig& GetConfig() { return this->gConfig; }
     BinaryWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
@@ -226,6 +227,7 @@ private:
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
+    std::vector<std::string> gAdditionalFiles;
 
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
