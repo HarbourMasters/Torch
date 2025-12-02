@@ -1315,7 +1315,7 @@ void Companion::Process() {
     if(wrapper != nullptr) {
         // Add additional files specified by the user
         for (const auto& filePath : this->gAdditionalFiles) {
-            std::ifstream input(filePath, std::ios::binary);
+            std::ifstream input(this->gSourceDirectory / filePath, std::ios::binary);
             if (input.is_open()) {
                 std::vector<char> data((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
                 input.close();
