@@ -14,6 +14,7 @@ enum class CompressionType {
     YAY0,
     YAY1,
     YAZ0,
+    EDL
 };
 
 
@@ -26,8 +27,12 @@ struct DecompressedData {
     DataChunk* root;
     DataChunk segment;
 
-    LUS::BinaryReader GetReader() {
-        return LUS::BinaryReader(reinterpret_cast<char*>(segment.data), segment.size);
+    [[nodiscard]] LUS::BinaryReader GetReader() const {
+        return { reinterpret_cast<char*>(segment.data), segment.size };
+    }
+
+    [[nodiscard]] LUS::BinaryReader GetDecodedReader() const {
+        return { reinterpret_cast<char*>(root->data), root->size };
     }
 };
 

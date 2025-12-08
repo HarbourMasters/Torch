@@ -102,6 +102,14 @@
 #include "factories/naudio/v1/SequenceFactory.h"
 #endif
 
+#ifdef DKZH_SUPPORT
+#include "factories/dkzh/VertexFactory.h"
+#include "factories/dkzh/MapInfoFactory.h"
+#include "factories/dkzh/WallTypeFactory.h"
+#include "factories/dkzh/SectorTypeFactory.h"
+#include "factories/dkzh/SpriteTypeFactory.h"
+#endif
+
 #include "preprocess/CompTool.h"
 
 using namespace std::chrono;
@@ -222,6 +230,15 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 #endif
+
+#ifdef DKZH_SUPPORT
+    this->RegisterFactory("DKZH:VERTEX", std::make_shared<VertexFactory>());
+    this->RegisterFactory("DKZH:MAP_INFO_TABLE", std::make_shared<MapInfoFactory>());
+    this->RegisterFactory("DKZH:WALL_TYPE_TABLE", std::make_shared<WallTypeFactory>());
+    this->RegisterFactory("DKZH:SECTOR_TYPE_TABLE", std::make_shared<SectorTypeFactory>());
+    this->RegisterFactory("DKZH:SPRITE_TYPE_TABLE", std::make_shared<SpriteTypeFactory>());
+#endif
+
 #ifndef __EMSCRIPTEN__ // We call this manually
     this->Process();
 #endif
@@ -337,7 +354,7 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
     SPDLOG_INFO("Processed {}", name);
 
     return ParseResultData {
-        name, type, node, result
+        name, type, YAML::Clone(node), result
     };
 }
 
@@ -796,6 +813,7 @@ void Companion::ProcessFile(YAML::Node root) {
                     result.name,
                     result.node["offset"].as<uint32_t>(),
                     alignment,
+                    GetNode<std::string>(result.node, "out"),
                     stream.str(),
                     GetNode<std::string>(result.node, "comment"),
                     std::nullopt
@@ -807,6 +825,7 @@ void Companion::ProcessFile(YAML::Node root) {
                             result.name,
                             result.node["offset"].as<uint32_t>(),
                             alignment,
+                            GetNode<std::string>(result.node, "out"),
                             stream.str(),
                             GetNode<std::string>(result.node, "comment"),
                             std::get<size_t>(endptr.value())
@@ -818,6 +837,7 @@ void Companion::ProcessFile(YAML::Node root) {
                             result.name,
                             oentry.start,
                             alignment,
+                            GetNode<std::string>(result.node, "out"),
                             stream.str(),
                             GetNode<std::string>(result.node, "comment"),
                             oentry.end
@@ -912,7 +932,7 @@ void Companion::ProcessFile(YAML::Node root) {
                 stream << "// 0x" << std::hex << std::uppercase << ASSET_PTR(result.endptr.value()) << "\n\n";
             }
 
-            if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code && !this->gIndividualIncludes){
+            if(hasSize && i < entries.size() - 1 && this->gConfig.exporterType == ExportType::Code && !this->gIndividualIncludes) {
                 int32_t startptr = ASSET_PTR(result.endptr.value());
                 int32_t end = ASSET_PTR(entries[i + 1].addr);
 
@@ -947,7 +967,7 @@ void Companion::ProcessFile(YAML::Node root) {
 
             if (this->gConfig.exporterType == ExportType::Code && this->gIndividualIncludes) {
                 fs::path outinc = fs::path(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() /
-                    fs::relative(fs::path(result.name + ".inc.c"), this->gCurrentDirectory.parent_path());
+                    fs::relative(fs::path(result.out.value_or(result.name + ".inc.c")), this->gCurrentDirectory.parent_path());
 
                 if(!exists(outinc.parent_path())){
                     create_directories(outinc.parent_path());
@@ -955,9 +975,10 @@ void Companion::ProcessFile(YAML::Node root) {
 
                 std::ofstream file(outinc, std::ios::binary);
 
-                if(!this->gFileHeader.empty()) {
+                if(!this->gFileHeader.empty() && file.tellp() == 0) {
                     file << this->gFileHeader << std::endl;
                 }
+
                 file << stream.str();
                 stream.str("");
                 stream.seekp(0);
@@ -1429,7 +1450,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
 
 void Companion::RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory) {
     this->gFactories[type] = factory;
-    SPDLOG_INFO("Registered factory for {}", type);
+    SPDLOG_DEBUG("Registered factory for {}", type);
 }
 
 std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::string &type) {

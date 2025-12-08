@@ -27,6 +27,7 @@ namespace fs = std::filesystem;
 #define ASSET_PTR(x) (IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : (x))
 
 #define tab_t "\t"
+#define dtab_t "\t\t"
 #define fourSpaceTab "    "
 
 struct OffsetEntry {

@@ -69,6 +69,7 @@ struct WriteEntry {
     std::string name;
     uint32_t addr;
     uint32_t alignment;
+    std::optional<std::string> out;
     std::string buffer;
     std::optional<std::string> comment;
     std::optional<uint32_t> endptr;
