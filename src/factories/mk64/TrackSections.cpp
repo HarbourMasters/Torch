@@ -77,8 +77,11 @@ ExportResult MK64::TrackSectionsBinaryExporter::Export(std::ostream &write, std:
 std::optional<std::shared_ptr<IParsedData>> MK64::TrackSectionsFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto count = GetSafeNode<size_t>(node, "count");
 
+    // On-disk format: uint32_t addr + int8_t surf + int8_t sect + uint16_t flags = 8 bytes
+    // Note: sizeof(MK64::TrackSections) is 16 bytes due to uint64_t crc + padding
+    constexpr size_t kOnDiskTrackSectionSize = sizeof(uint32_t) + sizeof(int8_t) + sizeof(int8_t) + sizeof(uint16_t);
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
-    LUS::BinaryReader reader(segment.data, count * sizeof(MK64::TrackSections));
+    LUS::BinaryReader reader(segment.data, count * kOnDiskTrackSectionSize);
 
     reader.SetEndianness(Torch::Endianness::Big);
     std::vector<MK64::TrackSections> sections;
