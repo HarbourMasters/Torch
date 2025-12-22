@@ -78,13 +78,16 @@ ExportResult MK64::CourseVtxBinaryExporter::Export(std::ostream &write, std::sha
 std::optional<std::shared_ptr<IParsedData>> MK64::CourseVtxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto count = GetSafeNode<size_t>(node, "count");
 
-    auto [_, segment] = Decompressor::AutoDecode(node, buffer);
-    LUS::BinaryReader reader(segment.data, count * sizeof(CourseVtx));
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer, count * sizeof(CourseVtx));
+    LUS::BinaryReader reader(segment.data, segment.size);
+
+    // Limit count to actual available vertices in the decompressed data
+    auto actualCount = std::min(count, segment.size / sizeof(CourseVtx));
 
     reader.SetEndianness(Torch::Endianness::Big);
     std::vector<VtxRaw> vertices;
 
-    for(size_t i = 0; i < count; i++) {
+    for(size_t i = 0; i < actualCount; i++) {
         auto x = reader.ReadInt16();
         auto y = reader.ReadInt16();
         auto z = reader.ReadInt16();
