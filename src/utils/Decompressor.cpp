@@ -222,7 +222,7 @@ bool Decompressor::IsSegmented(uint32_t addr) {
 
 void Decompressor::ClearCache() {
     for(auto& [key, value] : gCachedChunks){
-        delete value->data;
+        delete[] value->data;
     }
     gCachedChunks.clear();
 }
