@@ -123,7 +123,8 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             offset = ASSET_PTR(offset);
 
             auto decoded = Decode(buffer, fileOffset, type);
-            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offset);
+            auto availableSize = decoded->size - offset;
+            auto size = node["size"] ? node["size"].as<size_t>() : std::min(manualSize.value_or(availableSize), availableSize);
             return {
                 .root = decoded,
                 .segment = { decoded->data + offset, size }
@@ -135,7 +136,8 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         {
             fileOffset = TranslateAddr(offset, false);
 
-            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(buffer.size() - fileOffset);
+            auto availableSize = buffer.size() - fileOffset;
+            auto size = node["size"] ? node["size"].as<size_t>() : std::min(manualSize.value_or(availableSize), availableSize);
 
             return {
                 .root = nullptr,
