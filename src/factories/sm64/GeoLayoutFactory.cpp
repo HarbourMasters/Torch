@@ -196,7 +196,8 @@ ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr
 
     for(auto& [opcode, arguments, skip] : layout->commands) {
         if(skip){
-            continue;
+            opcode = GeoOpcode::End;
+            arguments.clear();
         }
         writer.Write(static_cast<uint8_t>(opcode));
 
@@ -504,7 +505,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 switch ((params & 0x70) >> 4) {
                     case 0:
                         cmd_pos = read_vec3s(translation, &cmd_pos[2]);
-                        cmd_pos = read_vec3s_angle(rotation, cmd_pos);
+                        cmd_pos = read_vec3s(rotation, cmd_pos);
                         arguments.emplace_back(translation);
                         arguments.emplace_back(rotation);
                         break;
@@ -513,12 +514,12 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                         arguments.emplace_back(translation);
                         break;
                     case 2:
-                        cmd_pos = read_vec3s_angle(rotation, &cmd_pos[1]);
+                        cmd_pos = read_vec3s(rotation, &cmd_pos[1]);
                         arguments.emplace_back(rotation);
                         break;
                     case 3:
                         arguments.emplace_back(cmd_pos[1]);
-                        cmd_pos += 0x04 << CMD_SIZE_SHIFT;
+                        cmd_pos += 0x02 << CMD_SIZE_SHIFT;
                         break;
                     default: {
                         break;
@@ -534,7 +535,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 cmd = reinterpret_cast<uint8_t *>(cmd_pos);
                 break;
             }
-            case GeoOpcode::NodeTranslation:
+            case GeoOpcode::NodeTranslation: 
             case GeoOpcode::NodeRotation: {
                 Vec3s vector = {};
                 auto params = cur_geo_cmd_u8(0x01);
@@ -542,7 +543,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
                 arguments.emplace_back(params);
 
-                cmd_pos = read_vec3s_angle(vector, &cmd_pos[1]);
+                cmd_pos = read_vec3s(vector, &cmd_pos[1]);
 
                 arguments.emplace_back(vector);
 
@@ -556,10 +557,9 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 break;
             }
             case GeoOpcode::NodeAnimatedPart: {
-
                 Vec3s translation = {};
                 auto layer = cur_geo_cmd_u8(0x01);
-                auto  ptr = cur_geo_cmd_u32(0x08);
+                auto ptr = cur_geo_cmd_u32(0x08);
                 auto cmd_pos = reinterpret_cast<int16_t*>(cmd);
 
                 arguments.emplace_back(layer);
