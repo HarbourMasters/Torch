@@ -128,7 +128,7 @@ ExportResult VtxBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPar
     WriteHeader(writer, Torch::ResourceType::Vertex, 0);
     writer.Write((uint32_t) vtx->mVtxs.size());
     for(auto v : vtx->mVtxs) {
-        if(Companion::Instance->GetConfig().gbi.useFloats){
+        if(false && Companion::Instance->GetConfig().gbi.useFloats){
             writer.Write((float) v.ob[0]);
             writer.Write((float) v.ob[1]);
             writer.Write((float) v.ob[2]);
