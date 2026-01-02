@@ -55,9 +55,12 @@ ExportResult SM64::PaintingMapBinaryExporter::Export(std::ostream &write, std::s
 
     WriteHeader(writer, Torch::ResourceType::PaintingData, 0);
 
-    writer.Write((uint32_t) (paintingData->mPaintingMappings.size() + paintingData->mPaintingGroups.size()) + 2 );
+    uint32_t mappingsSize = paintingData->mPaintingMappings.size();
+    uint32_t groupsSize = paintingData->mPaintingGroups.size();
 
-    writer.Write((int16_t) paintingData->mPaintingMappings.size());
+    writer.Write((uint32_t) ((mappingsSize * 3) + (groupsSize * 3)) + 2);
+
+    writer.Write((int16_t) mappingsSize);
 
     for (auto &mapping : paintingData->mPaintingMappings) {
         writer.Write(mapping.vtxId);
@@ -65,7 +68,7 @@ ExportResult SM64::PaintingMapBinaryExporter::Export(std::ostream &write, std::s
         writer.Write(mapping.texY);
     }
 
-    writer.Write((int16_t) paintingData->mPaintingGroups.size());
+    writer.Write((int16_t) groupsSize);
 
     for (auto &group : paintingData->mPaintingGroups) {
         writer.Write(group.x);
