@@ -66,10 +66,11 @@ std::optional<std::shared_ptr<IParsedData>> SM64::TrajectoryFactory::parse(std::
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
 
-    while (true) {
+    bool isRunning = true;
+    while (isRunning) {
         auto trajId = reader.ReadInt16();
         if (trajId == -1) {
-            break;
+            isRunning = false;
         }
         auto posX = reader.ReadInt16();
         auto posY = reader.ReadInt16();
