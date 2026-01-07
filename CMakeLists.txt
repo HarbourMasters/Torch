@@ -242,7 +242,7 @@ if(USE_STANDALONE)
 	FetchContent_Declare(
 		spdlog
 		GIT_REPOSITORY https://github.com/gabime/spdlog.git
-		GIT_TAG 7e635fca68d014934b4af8a1cf874f63989352b7
+		GIT_TAG 79524ddd08a4ec981b7fea76afd08ee05f83755d
 	)
 
 	FetchContent_MakeAvailable(spdlog)
@@ -253,7 +253,7 @@ else()
         FetchContent_Declare(
             spdlog
             GIT_REPOSITORY https://github.com/gabime/spdlog.git
-            GIT_TAG 7e635fca68d014934b4af8a1cf874f63989352b7
+            GIT_TAG 79524ddd08a4ec981b7fea76afd08ee05f83755d
         )
 
         FetchContent_MakeAvailable(spdlog)

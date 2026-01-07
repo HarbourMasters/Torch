@@ -185,7 +185,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::BehaviorScriptFactory::parse(s
     while(processing) {
         auto opcode = static_cast<BehaviorOpcode>(cmd[0x00]);
 
-        // SPDLOG_INFO("Processing Command {}", opcode);
+        SPDLOG_INFO("Processing Command {}", opcode);
 
         std::vector<BehaviorArgument> arguments;
 
