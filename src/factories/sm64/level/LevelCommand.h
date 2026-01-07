@@ -265,6 +265,15 @@ inline std::ostream& operator<<(std::ostream& out, const LevelOpcode& opcode) {
     return out << output;
 }
 
+template <>
+struct fmt::formatter<LevelOpcode> : fmt::formatter<std::string> {
+    auto format(const LevelOpcode& opcode, format_context& ctx) const {
+        std::stringstream ss;
+        ss << opcode; // This calls your operator<< above
+        return formatter<std::string>::format(ss.str(), ctx);
+    }
+};
+
 #define cur_level_cmd_u8(offset) \
     (cmd[CMD_PROCESS_OFFSET(offset)])
 

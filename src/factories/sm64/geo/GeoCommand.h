@@ -153,6 +153,15 @@ inline std::ostream& operator<<(std::ostream& out, const GeoOpcode& opcode) {
     return out << output;
 }
 
+template <>
+struct fmt::formatter<GeoOpcode> : fmt::formatter<std::string> {
+    auto format(const GeoOpcode& opcode, format_context& ctx) const {
+        std::stringstream ss;
+        ss << opcode; // This calls your operator<< above
+        return formatter<std::string>::format(ss.str(), ctx);
+    }
+};
+
 #define cur_geo_cmd_u8(offset) \
     (cmd[CMD_PROCESS_OFFSET(offset)])
 
