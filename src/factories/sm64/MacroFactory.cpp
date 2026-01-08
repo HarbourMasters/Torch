@@ -89,39 +89,20 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MacroFactory::parse(std::vecto
 
     std::vector<int16_t> entries;
 
-    while(true) {
+    while(reader.GetBaseAddress() < segment.size) {
         int16_t raw = reader.ReadInt16();
         if(raw == 0x1E){
             break;
         }
 
-        entries.push_back(raw);
+        entries.push_back(raw);                // (Preset/Beh)
+        entries.push_back(reader.ReadInt16()); // Yaw
+        entries.push_back(reader.ReadInt16()); // PosX
+        entries.push_back(reader.ReadInt16()); // PosY
+        entries.push_back(reader.ReadInt16()); // PosZ
     }
 
     entries.push_back(0x1E);
-
-    /*
-       std::vector<MacroObject> macroData;
-       while (true) {
-            int16_t presetID = reader.ReadInt16();
-
-            if(presetID < 0) {
-                break;
-            }
-
-            int16_t yRot = reader.ReadInt16();
-            int16_t xObj = reader.ReadInt16();
-            int16_t yObj = reader.ReadInt16();
-            int16_t zObj = reader.ReadInt16();
-            int16_t params = reader.ReadInt16();
-
-            macroData.emplace_back(static_cast<MacroPresets>(presetID), yRot, xObj, yObj, zObj, params);
-        }
-
-        macroData.emplace_back(MacroPresets::macro_invalid, -1, -1, -1, -1, -1);
-
-        return std::make_shared<SM64::MacroData>(macroData);
-    */
 
     return std::make_shared<SM64::MacroDataAlt>(entries);
 }
