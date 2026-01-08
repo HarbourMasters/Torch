@@ -23,59 +23,63 @@ ExportResult SM64::MovtexCodeExporter::Export(std::ostream &write, std::shared_p
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     auto movtex = std::static_pointer_cast<SM64::MovtexData>(raw);
-    uint32_t additionalSize = 1;
+    uint32_t additionalSize = 0;
 
     write << "static Movtex " << symbol << "[] = {\n";
 
     if (movtex->mIsQuad) {
         auto numLists = movtex->mMovtexData.at(0);
         write << fourSpaceTab << "MOV_TEX_INIT_LOAD(" << numLists << "),\n";
-        additionalSize++; // MOV_TEX_INIT_LOAD has additional padding
+        additionalSize += 2; // Count + Padding
         for (uint32_t i = 0; i < numLists; ++i) {
-            write << fourSpaceTab << "MOV_TEX_ROT_SPEED(" << movtex->mMovtexData.at(i * 14 + 1) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_ROT_SCALE(" << movtex->mMovtexData.at(i * 14 + 2) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(i * 14 + 3) << ", " << movtex->mMovtexData.at(i * 14 + 4) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(i * 14 + 5) << ", " << movtex->mMovtexData.at(i * 14 + 6) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(i * 14 + 7) << ", " << movtex->mMovtexData.at(i * 14 + 8) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(i * 14 + 9) << ", " << movtex->mMovtexData.at(i * 14 + 10) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_ROT(" << movtex->mMovtexData.at(i * 14 + 11) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_ALPHA(" << movtex->mMovtexData.at(i * 14 + 12) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_DEFINE(" << movtex->mMovtexData.at(i * 14 + 13) << "),\n";
+            uint32_t base = 1 + (i * 14);
+            write << fourSpaceTab << "MOV_TEX_ROT_SPEED(" << movtex->mMovtexData.at(base + 0) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_ROT_SCALE(" << movtex->mMovtexData.at(base + 1) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 2) << ", " << movtex->mMovtexData.at(base + 3) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 4) << ", " << movtex->mMovtexData.at(base + 5) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 6) << ", " << movtex->mMovtexData.at(base + 7) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 8) << ", " << movtex->mMovtexData.at(base + 9) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_ROT(" << movtex->mMovtexData.at(base + 10) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_ALPHA(" << movtex->mMovtexData.at(base + 11) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_DEFINE(" << movtex->mMovtexData.at(base + 12) << "),\n";
             write << fourSpaceTab << "MOV_TEX_END(),\n";
+            additionalSize += 10;
         }
     } else {
         write << fourSpaceTab << "MOV_TEX_SPEED(" << movtex->mMovtexData.at(0) << "),\n";
+        additionalSize += 1;
         if (movtex->mHasColor) {
             for (uint32_t i = 0; i < movtex->mVertexCount; ++i) {
                 // There is also a MOV_TEX_LIGHT_TRIS macro, however this is identical in result to using MOV_TEX_ROT_TRIS and would require more params on the yaml
                 write << fourSpaceTab << "MOV_TEX_ROT_TRIS(";
-                write << movtex->mMovtexData.at(i * 8 + 0 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 8 + 1 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 8 + 2 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 8 + 3 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 8 + 4 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 8 + 5 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 8 + 6 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 8 + 7 + 1) << "),\n";
+                write << movtex->mMovtexData.at(i * 8 + 1) << ", ";
+                write << movtex->mMovtexData.at(i * 8 + 2) << ", ";
+                write << movtex->mMovtexData.at(i * 8 + 3) << ", ";
+                write << movtex->mMovtexData.at(i * 8 + 4) << ", ";
+                write << movtex->mMovtexData.at(i * 8 + 5) << ", ";
+                write << movtex->mMovtexData.at(i * 8 + 6) << ", ";
+                write << movtex->mMovtexData.at(i * 8 + 7) << ", ";
+                write << movtex->mMovtexData.at(i * 8 + 8) << "),\n";
+                additionalSize += 8;
             }
         } else {
             for (uint32_t i = 0; i < movtex->mVertexCount; ++i) {
                 write << fourSpaceTab << "MOV_TEX_TRIS(";
-                write << movtex->mMovtexData.at(i * 5 + 0 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 5 + 1 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 5 + 2 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 5 + 3 + 1) << ", ";
-                write << movtex->mMovtexData.at(i * 5 + 4 + 1) << "),\n";
+                write << movtex->mMovtexData.at(i * 5 + 1) << ", ";
+                write << movtex->mMovtexData.at(i * 5 + 2) << ", ";
+                write << movtex->mMovtexData.at(i * 5 + 3) << ", ";
+                write << movtex->mMovtexData.at(i * 5 + 4) << ", ";
+                write << movtex->mMovtexData.at(i * 5 + 5) << "),\n";
+                additionalSize += 5;
             }
         }
         write << fourSpaceTab << "MOV_TEX_END(),\n";
+        additionalSize += 1;
     }
 
     write << "};\n";
 
-    size_t size = (movtex->mMovtexData.size() + additionalSize) * sizeof(int16_t);
-
-    return offset + size;
+    return offset + (additionalSize * sizeof(int16_t));
 }
 
 ExportResult SM64::MovtexBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
@@ -90,33 +94,22 @@ ExportResult SM64::MovtexBinaryExporter::Export(std::ostream &write, std::shared
         auto numLists = movtex->mMovtexData.at(0);
         
         buffer.push_back(numLists);
-        buffer.push_back(0);
+        buffer.push_back(0); // Alignment padding
         
         for (uint32_t i = 0; i < numLists; ++i) {
             for(size_t j = 0; j < 14; j++){
-                buffer.push_back(movtex->mMovtexData.at(i * 14 + (j + 1)));
+                buffer.push_back(movtex->mMovtexData.at(1 + (i * 14) + j));
             }
-
-            buffer.push_back(0);
         }
     } else {
         buffer.push_back(movtex->mMovtexData.at(0));
         
-        if (movtex->mHasColor) {
-            for (uint32_t i = 0; i < movtex->mVertexCount; ++i) {
-                for(size_t j = 0; j < 8; j++){
-                    buffer.push_back(movtex->mMovtexData.at(i * 8 + (j + 1)));
-                }
-            }
-        } else {
-            for (uint32_t i = 0; i < movtex->mVertexCount; ++i) {
-                for(size_t j = 0; j < 5; j++){
-                    buffer.push_back(movtex->mMovtexData.at(i * 5 + (j + 1)));
-                }
-            }
+        size_t triSize = movtex->mHasColor ? 8 : 5;
+        for (uint32_t i = 0; i < movtex->mVertexCount * triSize; ++i) {
+            buffer.push_back(movtex->mMovtexData.at(1 + i));
         }
         
-        buffer.push_back(0);
+        buffer.push_back(0); // MOV_TEX_END
     }
 
     writer.Write((uint32_t) buffer.size());
