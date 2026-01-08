@@ -508,14 +508,13 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         }
 
         if(opcode == GBI(G_DL)) {
+            if (C0(16, 1) == G_DL_NO_PUSH) {
+                SPDLOG_INFO("Branch List Command Found");
+                processing = false;
+            }
+
             if (SEGMENT_NUMBER(node["offset"].as<uint32_t>()) == SEGMENT_NUMBER(w1)) {
-
                 std::optional<uint32_t> segment;
-
-                if ((w0 >> 16) & G_DL_NO_PUSH) {
-                    SPDLOG_INFO("Branch List Command Found");
-                    processing = false;
-                }
 
                 YAML::Node gfx;
                 gfx["type"] = "GFX";
