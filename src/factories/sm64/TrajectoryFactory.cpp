@@ -28,15 +28,17 @@ ExportResult SM64::TrajectoryCodeExporter::Export(std::ostream &write, std::shar
 
     for (auto &trajectory : trajectoryData) {
         write << fourSpaceTab;
+        if(trajectory.trajId == -1) {
+            write << "TRAJECTORY_END(),\n";
+            break;
+        }
         write << "TRAJECTORY_POS(";
         write << trajectory.trajId << ", " << trajectory.posX << ", " << trajectory.posY << ", " << trajectory.posZ << "),\n";
     }
 
-    write << fourSpaceTab << "TRAJECTORY_END(),";
-
     write << "\n};\n";
 
-    size_t size = (trajectoryData.size()) * sizeof(Trajectory) + 1;
+    size_t size = (trajectoryData.size()) * sizeof(Trajectory);
 
     return offset + size;
 }
@@ -64,19 +66,24 @@ std::optional<std::shared_ptr<IParsedData>> SM64::TrajectoryFactory::parse(std::
     std::vector<Trajectory> trajectoryData;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
+
+    SPDLOG_INFO("Parsing MIO0 Trajectory Data, size: {}", segment.size);
+
     reader.SetEndianness(Torch::Endianness::Big);
 
     bool isRunning = true;
     while (isRunning) {
         auto trajId = reader.ReadInt16();
         if (trajId == -1) {
-            isRunning = false;
+            break;
         }
         auto posX = reader.ReadInt16();
         auto posY = reader.ReadInt16();
         auto posZ = reader.ReadInt16();
         trajectoryData.emplace_back(trajId, posX, posY, posZ);
     }
+
+    trajectoryData.emplace_back(-1, 0, 0, 0); // End marker
 
     return std::make_shared<SM64::TrajectoryData>(trajectoryData);
 }

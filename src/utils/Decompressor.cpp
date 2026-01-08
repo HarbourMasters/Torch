@@ -90,10 +90,25 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         offset = ASSET_PTR(offset);
 
         auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
-        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
+        size_t decodedSize = decoded->size - offset;
+        size_t size;
+
+        if (node["size"]) {
+            size = node["size"].as<size_t>();
+        } else if (manualSize.has_value()) {
+            size = manualSize.value();
+        } else {
+            size = decodedSize;
+        }
+
+        if(size > decodedSize) {
+            SPDLOG_WARN("Requested size 0x{:X} exceeds decoded MIO0 asset size 0x{:X} at offset 0x{:X}. Reducing to available size.", size, decodedSize, assetPtr);
+            size = decodedSize;
+        }
+
         return {
-                .root = decoded,
-                .segment = { decoded->data, size }
+            .root = decoded,
+            .segment = { decoded->data, size }
         };
     }
 
@@ -107,8 +122,24 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         auto fileOffset = TranslateAddr(offset, true);
         offset = ASSET_PTR(offset);
 
-        auto decoded = DecodeTKMK00(buffer, fileOffset + offset, textureSize, alpha);
-        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
+        auto assetPtr = fileOffset + offset;
+        auto decoded = DecodeTKMK00(buffer, assetPtr, textureSize, alpha);
+        size_t decodedSize = decoded->size - offset;
+        size_t size;
+
+        if (node["size"]) {
+            size = node["size"].as<size_t>();
+        } else if (manualSize.has_value()) {
+            size = manualSize.value();
+        } else {
+            size = decodedSize;
+        }
+
+        if(size > decodedSize) {
+            SPDLOG_WARN("Requested size 0x{:X} exceeds decoded TKMK00 asset size 0x{:X} at offset 0x{:X}. Reducing to available size.", size, decodedSize, assetPtr);
+            size = decodedSize;
+        }
+
         return {
             .root = decoded,
             .segment = { decoded->data, size }
@@ -124,7 +155,21 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
             auto decoded = Decode(buffer, fileOffset, type);
             auto availableSize = decoded->size - offset;
-            auto size = node["size"] ? node["size"].as<size_t>() : std::min(manualSize.value_or(availableSize), availableSize);
+            size_t size;
+
+            if (node["size"]) {
+                size = node["size"].as<size_t>();
+            } else if (manualSize.has_value()) {
+                size = manualSize.value();
+            } else {
+                size = availableSize;
+            }
+
+            if(size > availableSize) {
+                SPDLOG_WARN("Requested size 0x{:X} exceeds decoded asset size 0x{:X} at offset 0x{:X}. Reducing to available size.", size, availableSize, fileOffset);
+                size = availableSize;
+            }
+
             return {
                 .root = decoded,
                 .segment = { decoded->data + offset, size }
@@ -137,7 +182,20 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             fileOffset = TranslateAddr(offset, false);
 
             auto availableSize = buffer.size() - fileOffset;
-            auto size = node["size"] ? node["size"].as<size_t>() : std::min(manualSize.value_or(availableSize), availableSize);
+            size_t size;
+
+            if (node["size"]) {
+                size = node["size"].as<size_t>();
+            } else if (manualSize.has_value()) {
+                size = manualSize.value();
+            } else {
+                size = availableSize;
+            }
+
+            if(size > availableSize) {
+                SPDLOG_WARN("Requested size 0x{:X} exceeds available asset size 0x{:X} at offset 0x{:X}. Reducing to available size.", size, availableSize, fileOffset);
+                size = availableSize;
+            }
 
             return {
                 .root = nullptr,

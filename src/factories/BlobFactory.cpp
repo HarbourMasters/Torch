@@ -56,7 +56,6 @@ ExportResult BlobBinaryExporter::Export(std::ostream &write, std::shared_ptr<IPa
 }
 
 std::optional<std::shared_ptr<IParsedData>> BlobFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto size = GetSafeNode<size_t>(node, "size");
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     return std::make_shared<RawBuffer>(segment.data, segment.size);
 }
