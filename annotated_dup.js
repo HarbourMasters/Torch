@@ -1,5 +1,10 @@
 var annotated_dup =
 [
+    [ "fmt", null, [
+      [ "formatter< BehaviorOpcode >", "structfmt_1_1formatter_3_01BehaviorOpcode_01_4.html", null ],
+      [ "formatter< GeoOpcode >", "structfmt_1_1formatter_3_01GeoOpcode_01_4.html", null ],
+      [ "formatter< LevelOpcode >", "structfmt_1_1formatter_3_01LevelOpcode_01_4.html", null ]
+    ] ],
     [ "FZX", null, [
       [ "AdpcmBook", "structFZX_1_1AdpcmBook.html", null ],
       [ "AdpcmLoop", "structFZX_1_1AdpcmLoop.html", null ],

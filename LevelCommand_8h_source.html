@@ -358,20 +358,31 @@ $(function(){initNavTree('LevelCommand_8h_source.html','',''); });
 <div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    <span class="keywordflow">return</span> out &lt;&lt; output;</div>
 <div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>}</div>
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span> </div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span><span class="preprocessor">#define cur_level_cmd_u8(offset) \</span></div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span><span class="preprocessor">    (cmd[CMD_PROCESS_OFFSET(offset)])</span></div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span> </div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span><span class="preprocessor">#define cur_level_cmd_s16(offset) \</span></div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span><span class="preprocessor">    (int16_t)BSWAP16((*(int16_t *) &amp;cmd[CMD_PROCESS_OFFSET(offset)]))</span></div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span> </div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span><span class="preprocessor">#define cur_level_cmd_s32(offset) \</span></div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span><span class="preprocessor">    (int32_t)BSWAP32((*(int32_t *) &amp;cmd[CMD_PROCESS_OFFSET(offset)]))</span></div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span><span class="keyword">template</span> &lt;&gt;</div>
+<div class="foldopen" id="foldopen00269" data-start="{" data-end="};">
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno"><a class="line" href="structfmt_1_1formatter_3_01LevelOpcode_01_4.html">  269</a></span><span class="keyword">struct </span>fmt::formatter&lt;LevelOpcode&gt; : fmt::formatter&lt;std::string&gt; {</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    <span class="keyword">auto</span> format(<span class="keyword">const</span> LevelOpcode&amp; opcode, format_context&amp; ctx)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>        std::stringstream ss;</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        ss &lt;&lt; opcode; <span class="comment">// This calls your operator&lt;&lt; above</span></div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>        <span class="keywordflow">return</span> formatter&lt;std::string&gt;::format(ss.str(), ctx);</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    }</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>};</div>
+</div>
 <div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span> </div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span><span class="preprocessor">#define cur_level_cmd_u32(offset) \</span></div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span><span class="preprocessor">    (uint32_t) BSWAP32((*(uint32_t *) &amp;cmd[CMD_PROCESS_OFFSET(offset)]))</span></div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span><span class="preprocessor">#define cur_level_cmd_u8(offset) \</span></div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span><span class="preprocessor">    (cmd[CMD_PROCESS_OFFSET(offset)])</span></div>
 <div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span> </div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span><span class="preprocessor">#define cur_level_cmd_f32(offset) \</span></div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span><span class="preprocessor">    (float) BSWAP32((*(float *) &amp;cmd[CMD_PROCESS_OFFSET(offset)]))</span></div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span><span class="preprocessor">#define cur_level_cmd_s16(offset) \</span></div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span><span class="preprocessor">    (int16_t)BSWAP16((*(int16_t *) &amp;cmd[CMD_PROCESS_OFFSET(offset)]))</span></div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span> </div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span><span class="preprocessor">#define cur_level_cmd_s32(offset) \</span></div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span><span class="preprocessor">    (int32_t)BSWAP32((*(int32_t *) &amp;cmd[CMD_PROCESS_OFFSET(offset)]))</span></div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span> </div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span><span class="preprocessor">#define cur_level_cmd_u32(offset) \</span></div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span><span class="preprocessor">    (uint32_t) BSWAP32((*(uint32_t *) &amp;cmd[CMD_PROCESS_OFFSET(offset)]))</span></div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span> </div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span><span class="preprocessor">#define cur_level_cmd_f32(offset) \</span></div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span><span class="preprocessor">    (float) BSWAP32((*(float *) &amp;cmd[CMD_PROCESS_OFFSET(offset)]))</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->

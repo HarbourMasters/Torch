@@ -326,6 +326,11 @@ var hierarchy =
     [ "EnvelopePoint", "structEnvelopePoint.html", null ],
     [ "FZX::EnvelopePoint", "structFZX_1_1EnvelopePoint.html", null ],
     [ "SM64::EnvRegionBox", "structSM64_1_1EnvRegionBox.html", null ],
+    [ "fmt::formatter", null, [
+      [ "fmt::formatter< BehaviorOpcode >", "structfmt_1_1formatter_3_01BehaviorOpcode_01_4.html", null ],
+      [ "fmt::formatter< GeoOpcode >", "structfmt_1_1formatter_3_01GeoOpcode_01_4.html", null ],
+      [ "fmt::formatter< LevelOpcode >", "structfmt_1_1formatter_3_01LevelOpcode_01_4.html", null ]
+    ] ],
     [ "GBIConfig", "structGBIConfig.html", null ],
     [ "SM64::GeoCommand", "structSM64_1_1GeoCommand.html", null ],
     [ "GeoLayoutCommand", "classGeoLayoutCommand.html", null ],

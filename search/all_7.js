@@ -13,5 +13,8 @@ var searchData=
   ['floatheaderexporter_10',['FloatHeaderExporter',['../classFloatHeaderExporter.html',1,'']]],
   ['format_11',['Container Format',['../otr_format.html#autotoc_md28',1,'']]],
   ['format_20specification_12',['Format Specification',['../otr_format.html',1,'OTR File Format Specification'],['../otr_format.html#autotoc_md26',1,'OTR File Format Specification']]],
-  ['formats_13',['File Formats',['../index.html#autotoc_md3',1,'']]]
+  ['formats_13',['File Formats',['../index.html#autotoc_md3',1,'']]],
+  ['formatter_3c_20behavioropcode_20_3e_14',['formatter&lt; BehaviorOpcode &gt;',['../structfmt_1_1formatter_3_01BehaviorOpcode_01_4.html',1,'fmt']]],
+  ['formatter_3c_20geoopcode_20_3e_15',['formatter&lt; GeoOpcode &gt;',['../structfmt_1_1formatter_3_01GeoOpcode_01_4.html',1,'fmt']]],
+  ['formatter_3c_20levelopcode_20_3e_16',['formatter&lt; LevelOpcode &gt;',['../structfmt_1_1formatter_3_01LevelOpcode_01_4.html',1,'fmt']]]
 ];
