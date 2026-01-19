@@ -83,6 +83,7 @@ std::optional<std::shared_ptr<IParsedData>> AssetArrayFactory::parse(std::vector
     auto assetType = GetSafeNode<std::string>(node, "assetType");
     auto factoryType = GetSafeNode<std::string>(node, "factoryType");
     const auto count = GetSafeNode<uint32_t>(node, "count");
+    const auto additional_info = node["additional_info"];
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
@@ -94,6 +95,17 @@ std::optional<std::shared_ptr<IParsedData>> AssetArrayFactory::parse(std::vector
             YAML::Node assetNode;
             assetNode["type"] = factoryType;
             assetNode["offset"] = ptr;
+            if(additional_info) {
+                for (const auto& it : additional_info) {
+                    assetNode[it.first.as<std::string>()] = it.second;
+                }
+                if (assetNode["symbol"]) {
+                    std::string symbol = assetNode["symbol"].as<std::string>();
+                    symbol = std::regex_replace(symbol, std::regex(R"(\{idx\})"), std::to_string(i));
+                    symbol = std::regex_replace(symbol, std::regex(R"(\{addr\})"), Torch::to_hex(ptr));
+                    assetNode["symbol"] = symbol;
+                }
+            }
             Companion::Instance->AddAsset(assetNode);
         }
 
