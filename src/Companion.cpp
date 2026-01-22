@@ -1277,6 +1277,13 @@ void Companion::Process() {
     }
     this->gCurrentWrapper = wrapper;
 
+    for(auto& entry : this->gCompanionFiles) {
+        auto output = entry.first;
+        std::replace(output.begin(), output.end(), '\\', '/');
+        this->gCurrentWrapper->AddFile(output, entry.second);
+    }
+
+
     auto vWriter = LUS::BinaryWriter();
     vWriter.SetEndianness(Torch::Endianness::Big);
     vWriter.Write(static_cast<uint8_t>(Torch::Endianness::Big));
