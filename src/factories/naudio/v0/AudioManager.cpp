@@ -13,6 +13,7 @@
 #include "spdlog/spdlog.h"
 #include "lib/binarytools/BinaryReader.h"
 #include "spdlog/spdlog.h"
+#include "utils/TorchUtils.h"
 
 std::unordered_map<std::string, uint32_t> name_table;
 std::unordered_map<uint32_t, std::string> sample_table;
@@ -27,7 +28,7 @@ std::vector<uint32_t> PyUtils::range(uint32_t start, uint32_t end) {
 }
 
 std::string gen_name(const std::string& prefix){
-    if(!name_table.contains(prefix)){
+    if(!Torch::contains(name_table, prefix)){
         name_table[prefix] = 0;
     }
     return prefix + std::to_string(name_table[prefix]++);
@@ -42,7 +43,7 @@ AudioBankSample* SampleBank::AddSample(uint32_t addr, size_t sampleSize, const A
 
     AudioBankSample* entry;
 
-    if(this->entries.contains(addr)){
+    if(Torch::contains(this->entries, addr)){
         entry = this->entries[addr];
         assert(entry->book == book);
         assert(entry->loop == loop);
@@ -428,7 +429,7 @@ TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& 
     TBLFile tbl;
     std::unordered_map<uint32_t, std::string> cache;
     for(auto &entry : entries){
-        if(!cache.contains(entry.offset)){
+        if(!Torch::contains(cache, entry.offset)){
             std::string name = gen_name("sample_bank");
             auto* sampleBank = new SampleBank{
                 name, entry.offset, PyUtils::slice(data, entry.offset, entry.offset + entry.length)
@@ -494,7 +495,7 @@ void AudioManager::bind_sample(YAML::Node& node, const std::string& path){
 }
 
 std::string& AudioManager::get_sample(uint32_t id) {
-    if(!sample_table.contains(id)) {
+    if(!Torch::contains(sample_table, id)) {
         throw std::runtime_error("Failed to find sample with id " + std::to_string(id));
     }
     return sample_table[id];
@@ -535,7 +536,7 @@ AudioBankSample AudioManager::get_aifc(int32_t index) {
 }
 
 uint32_t AudioManager::get_index(AudioBankSample* entry) {
-    if(!this->sampleMap.contains(entry)){
+    if(!Torch::contains(this->sampleMap, entry)){
         return -1;
     }
     return this->sampleMap[entry];

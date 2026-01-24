@@ -24,6 +24,15 @@ std::string to_hex(T number, const bool append0x = true) {
     return format;
 }
 
+template <typename Container, typename Key>
+constexpr bool contains(const Container& c, const Key& k) {
+#if __cplusplus >= 202002L
+    return c.contains(k);
+#else
+    return c.find(k) != c.end();
+#endif
+}
+
 uint32_t translate(uint32_t offset);
 std::vector<std::filesystem::directory_entry> getRecursiveEntries(const std::filesystem::path baseDir);
 
