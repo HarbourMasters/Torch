@@ -42,6 +42,21 @@ cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build-cmake -j
 ```
 
+## MSYS2 MinGW-w64
+
+### Dependencies
+
+``` bash
+pacman -S mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-bzip2
+```
+
+### Compile
+
+``` bash
+cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-cmake -j
+```
+
 # Linux
 
 ### Dependencies
