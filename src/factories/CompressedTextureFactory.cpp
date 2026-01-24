@@ -1,5 +1,6 @@
 #include "CompressedTextureFactory.h"
 #include "utils/Decompressor.h"
+#include "utils/TorchUtils.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <iomanip>
@@ -372,7 +373,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std:
     uint32_t size;
     auto compression = GetSafeNode<std::string>(node, "compression");
     CompressionType compressionType;
-    if (!sCompressionTypes.contains(compression)) {
+    if (!Torch::contains(sCompressionTypes, compression)) {
         SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
                       Please add one of the following compression types\n\
                       MIO0, YAY0, YAY1, YAZ0 (Unsupported)", offset);
@@ -399,7 +400,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std:
         return std::nullopt;
     }
 
-    if(!sTextureFormats.contains(format)) {
+    if(!Torch::contains(sTextureFormats, format)) {
         return std::nullopt;
     }
 
@@ -469,7 +470,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto compression = GetSafeNode<std::string>(node, "compression");
     CompressionType compressionType;
-    if (!sCompressionTypes.contains(compression)) {
+    if (!Torch::contains(sCompressionTypes, compression)) {
         SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
                       Please add one of the following compression types\n\
                       MIO0, YAY0, YAY1, YAZ0 (Unsupported)", offset);
@@ -484,7 +485,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
         return std::nullopt;
     }
 
-    if(!sTextureFormats.contains(format)) {
+    if(!Torch::contains(sTextureFormats, format)) {
         return std::nullopt;
     }
 

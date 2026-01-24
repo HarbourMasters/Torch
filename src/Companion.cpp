@@ -1,11 +1,12 @@
 #include "Companion.h"
 
 #include "utils/Decompressor.h"
+#include "utils/StringHelper.h"
 #include "utils/TorchUtils.h"
 #include "archive/SWrapper.h"
 #include "archive/ZWrapper.h"
 #include "spdlog/spdlog.h"
-#include "hj/sha1.h"
+#include "TinySHA1.hpp"
 
 #include <regex>
 #include <fstream>
@@ -303,7 +304,7 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
 
     bool executeDef = true;
     std::optional<std::shared_ptr<IParsedData>> result;
-    if(this->gConfig.modding && impl->SupportModdedAssets() && this->gModdedAssetPaths.contains(name)) {
+    if(this->gConfig.modding && impl->SupportModdedAssets() && Torch::contains(this->gModdedAssetPaths, name)) {
         auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
         if(!exists(path)) {
             SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
@@ -369,13 +370,13 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                 }
 
                 std::string externalFileName = (this->gSourceDirectory / externalFile.as<std::string>()).string();
-                if (std::filesystem::relative(externalFileName, this->gAssetPath).string().starts_with("../")) {
+                if (StringHelper::StartsWith(std::filesystem::relative(externalFileName, this->gAssetPath).string(), "../")) {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
                 } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " + this->gAssetPath);
                 }
 
-                if (!this->gAddrMap.contains(externalFileName)) {
+                if (!Torch::contains(this->gAddrMap, externalFileName)) {
                     SPDLOG_INFO("Dependency on external file {}. Now processing {}", externalFileName, externalFileName);
                     auto currentFile = this->gCurrentFile;
                     auto currentDirectory = this->gCurrentDirectory;
@@ -386,7 +387,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
 
                     YAML::Node root = YAML::LoadFile(externalFileName);
 
-                    if (!this->gProcessedFiles.contains(this->gCurrentFile)) {
+                    if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
                         ProcessFile(root);
                         this->gProcessedFiles.insert(this->gCurrentFile);
                     }
@@ -1313,7 +1314,7 @@ void Companion::Process() {
         this->gCurrentDirectory = relative(entry.path(), this->gAssetPath).replace_extension("");
         this->gCurrentFile = yamlPath;
 
-        if (!this->gProcessedFiles.contains(this->gCurrentFile)) {
+        if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
             ProcessFile(root);
             this->gProcessedFiles.insert(this->gCurrentFile);
         }
@@ -1440,7 +1441,7 @@ void Companion::RegisterFactory(const std::string& type, const std::shared_ptr<B
 }
 
 std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::string &type) {
-    if(!this->gFactories.contains(type)){
+    if(!Torch::contains(this->gFactories, type)){
         return std::nullopt;
     }
 
@@ -1458,11 +1459,11 @@ std::optional<Table> Companion::SearchTable(uint32_t addr){
 }
 
 std::optional<std::string> Companion::GetEnumFromValue(const std::string& key, int32_t id) {
-    if(!this->gEnums.contains(key)){
+    if(!Torch::contains(this->gEnums, key)){
         return std::nullopt;
     }
 
-    if(!this->gEnums[key].contains(id)){
+    if(!Torch::contains(this->gEnums[key], id)){
         return std::nullopt;
     }
 
@@ -1473,15 +1474,15 @@ std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uin
 
     auto segments = this->gConfig.segment;
 
-    if(segments.temporal.contains(segment)) {
+    if(Torch::contains(segments.temporal, segment)) {
         return segments.temporal[segment];
     }
 
-    if(segments.local.contains(segment)) {
+    if(Torch::contains(segments.local, segment)) {
         return segments.local[segment];
     }
 
-    if(segments.global.contains(segment)) {
+    if(Torch::contains(segments.global, segment)) {
         return segments.global[segment];
     }
 
@@ -1490,7 +1491,7 @@ std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uin
 
 uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
     if (addr & 0x80000000) {
-        if (gVirtualAddrMap.contains(gCurrentFile)) {
+        if (Torch::contains(gVirtualAddrMap, gCurrentFile)) {
             addr -= std::get<0>(gVirtualAddrMap[gCurrentFile]);
             addr += std::get<1>(gVirtualAddrMap[gCurrentFile]);
         }
@@ -1500,21 +1501,21 @@ uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
 }
 
 std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint32_t addr){
-    if(!this->gAddrMap.contains(this->gCurrentFile)){
+    if(!Torch::contains(this->gAddrMap, this->gCurrentFile)){
         return std::nullopt;
     }
 
     // HACK: Adjust address to rom address if virtual address
     addr = PatchVirtualAddr(addr);
 
-    if(!this->gAddrMap[this->gCurrentFile].contains(addr)){
+    if(!Torch::contains(this->gAddrMap[this->gCurrentFile], addr)){
         for (auto &file : this->gCurrentExternalFiles) {
-            if (!this->gAddrMap.contains(file)) {
+            if (!Torch::contains(this->gAddrMap, file)) {
                 SPDLOG_WARN("GetNodeByAddr: External File {} Not Found.", file);
                 continue;
             }
 
-            if (!this->gAddrMap[file].contains(addr)) {
+            if (!Torch::contains(this->gAddrMap[file], addr)) {
                 continue;
             }
             return this->gAddrMap[file][addr];
@@ -1526,7 +1527,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
 }
 
 std::optional<std::string> Companion::GetStringByAddr(const uint32_t addr) {
-    if(this->gManualSegments.contains(addr)) {
+    if(Torch::contains(this->gManualSegments, addr)) {
         return this->gManualSegments[addr];
     }
 
@@ -1558,7 +1559,7 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetSafeNodeByAddr(
 }
 
 std::optional<std::string> Companion::GetSafeStringByAddr(const uint32_t addr, std::string type) {
-    if(this->gManualSegments.contains(addr)) {
+    if(Torch::contains(this->gManualSegments, addr)) {
         return this->gManualSegments[addr];
     }
 
@@ -1596,9 +1597,9 @@ std::string Companion::GetSymbolFromAddr(uint32_t address, bool validZero) {
 }
 
 std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
-    if(!this->gParseResults.contains(this->gCurrentFile)){
+    if(!Torch::contains(this->gParseResults, this->gCurrentFile)){
         for (auto &file : this->gCurrentExternalFiles) {
-            if (!this->gParseResults.contains(file)) {
+            if (!Torch::contains(this->gParseResults, file)) {
                 SPDLOG_INFO("GetParseDataByAddr: External File {} Not Found.", file);
                 continue;
             }
@@ -1622,7 +1623,7 @@ std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
 }
 
 std::optional<ParseResultData> Companion::GetParseDataBySymbol(const std::string& symbol) {
-    if(!this->gParseResults.contains(this->gCurrentFile)){
+    if(!Torch::contains(this->gParseResults, this->gCurrentFile)){
         return std::nullopt;
     }
 
@@ -1641,7 +1642,7 @@ std::optional<ParseResultData> Companion::GetParseDataBySymbol(const std::string
 std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNodesByType(const std::string& type){
     std::vector<std::tuple<std::string, YAML::Node>> nodes;
 
-    if(!this->gAddrMap.contains(this->gCurrentFile)){
+    if(!Torch::contains(this->gAddrMap, this->gCurrentFile)){
         return nodes;
     }
 
@@ -1695,7 +1696,18 @@ std::string Companion::RelativePathToSrcDir(const std::string& path) const {
 }
 
 std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
-    return Chocobo1::SHA1().addData(data).finalize().toString();
+    sha1::SHA1 s;
+    s.processBytes(data.data(), data.size());
+
+    uint32_t hash[5];
+    s.getDigest(hash);
+
+    char buf[41];
+    std::snprintf(buf, sizeof(buf),
+        "%08x%08x%08x%08x%08x",
+        hash[0], hash[1], hash[2], hash[3], hash[4]);
+
+    return std::string(buf);
 }
 
 std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {

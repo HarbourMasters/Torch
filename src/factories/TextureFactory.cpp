@@ -1,5 +1,6 @@
 #include "TextureFactory.h"
 #include "utils/Decompressor.h"
+#include "utils/TorchUtils.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <iomanip>
@@ -286,7 +287,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         return std::nullopt;
     }
 
-    if(!sTextureFormats.contains(format)) {
+    if(!Torch::contains(sTextureFormats, format)) {
         return std::nullopt;
     }
 
@@ -362,7 +363,7 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
         return std::nullopt;
     }
 
-    if(!sTextureFormats.contains(format)) {
+    if(!Torch::contains(sTextureFormats, format)) {
         return std::nullopt;
     }
 

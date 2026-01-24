@@ -1,5 +1,6 @@
 #include "AudioTableFactory.h"
 #include "utils/Decompressor.h"
+#include "utils/TorchUtils.h"
 #include "spdlog/spdlog.h"
 #include "AudioContext.h"
 #include "Companion.h"
@@ -109,7 +110,7 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
     auto format = GetSafeNode<std::string>(node, "format");
     std::transform(format.begin(), format.end(), format.begin(), ::toupper);
 
-    if(!gTableTypes.contains(format)) {
+    if(!Torch::contains(gTableTypes, format)) {
         return std::nullopt;
     }
 

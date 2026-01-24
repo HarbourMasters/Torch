@@ -1,6 +1,7 @@
 #include "DisplayListOverrides.h"
 
 #include "utils/Decompressor.h"
+#include "utils/TorchUtils.h"
 #include "DisplayListFactory.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -203,7 +204,7 @@ int Matrix(uint32_t ptr) {
 #endif
 
 std::optional<std::tuple<std::string, YAML::Node>> GetVtxOverlap(uint32_t ptr){
-    if(mVtxOverlaps.contains(ptr)){
+    if(Torch::contains(mVtxOverlaps, ptr)){
         SPDLOG_INFO("Found overlap for ptr 0x{:X}", ptr);
         return mVtxOverlaps[ptr];
     }

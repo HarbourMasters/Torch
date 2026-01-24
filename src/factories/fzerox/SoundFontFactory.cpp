@@ -376,7 +376,7 @@ ExportResult FZX::SoundFontBinaryExporter::Export(std::ostream &write, std::shar
 std::string FZX::SoundFontFactory::RegisterSoundFontData(std::string symbol, FZX::DataType dataType, uint32_t offset, std::map<uint32_t, std::pair<FZX::DataType, std::string>>& dataMap, std::unordered_map<FZX::DataType, uint32_t>& dataCountMap) {
     std::string dataName;
 
-    if (dataMap.contains(offset)) {
+    if (Torch::contains(dataMap, offset)) {
         return dataMap.at(offset).second;
     }
 
