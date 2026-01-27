@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     o2r->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing")->check(CLI::ExistingDirectory);
     o2r->add_option("-d,--destdir", destdir, "Set destination directory for export");
     o2r->add_option("-a,--additional-files", additionalFiles, "Additional files to include in the o2r archive (e.g., mods.toml)")->check(CLI::ExistingFile);
-    o2r->add_option("-vf,--version", version, "Version to set in the o2r archive");
+    o2r->add_option("-u,--version", version, "Version to set in the o2r archive");
 
     o2r->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::O2R, debug, srcdir, destdir);
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     pack->add_option("<folder>", folder, "Generate OTR from a directory of assets")->required()->check(CLI::ExistingDirectory);
     pack->add_option("<target>", target, "Archive output destination")->required();
     pack->add_option("<archive-type>", archive, "Archive type: otr or o2r")->required();
-    pack->add_option("-vf,--version", version, "Version to set in the o2r archive");
+    pack->add_option("-u,--version", version, "Version to set in the o2r archive");
 
     pack->parse_complete_callback([&] {
         if (archive == "otr") {
