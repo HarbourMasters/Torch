@@ -1335,6 +1335,11 @@ void Companion::Process() {
             }
         }
 
+        if(!this->gVersion.empty()) {
+            auto data = this->ParseVersionString(this->gVersion);
+            wrapper->AddFile("assetVersion", data);
+        }
+
         SPDLOG_CRITICAL("Writing version file");
         wrapper->AddFile("version", vWriter.ToVector());
         vWriter.Close();
@@ -1359,8 +1364,7 @@ void Companion::Process() {
     Instance = nullptr;
 }
 
-void Companion::Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode) {
-
+void Companion::Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode, const std::string& version) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
@@ -1403,6 +1407,12 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
         normalized = normalized.substr(folder.length() + 1);
         wrapper->AddFile(normalized, data);
         SPDLOG_CRITICAL("> Added {}", normalized);
+    }
+
+    if(!version.empty()) {
+        SPDLOG_CRITICAL("Adding version file");
+        auto data = this->ParseVersionString(version);
+        wrapper->AddFile("assetVersion", data);
     }
 
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
@@ -1765,4 +1775,21 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     }
 
     return std::nullopt;
+}
+
+std::vector<char> Companion::ParseVersionString(const std::string& version) {
+    uint16_t major = 0;
+    uint16_t minor = 0;
+    uint16_t patch = 0;
+
+    std::sscanf(version.c_str(), "%hu.%hu.%hu", &major, &minor, &patch);
+
+    auto wv = LUS::BinaryWriter();
+    wv.SetEndianness(Torch::Endianness::Big);
+    wv.Write(major);
+    wv.Write(minor);
+    wv.Write(patch);
+    wv.Close();
+
+    return wv.ToVector();
 }
