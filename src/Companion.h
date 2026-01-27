@@ -178,6 +178,7 @@ public:
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
     std::optional<Table> SearchTable(uint32_t addr);
 
+    static std::vector<char> ParseVersionString(const std::string& version);
     static std::string CalculateHash(const std::vector<uint8_t>& data);
     static void Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode, const std::string& version = "");
     std::string NormalizeAsset(const std::string& name) const;
@@ -248,5 +249,4 @@ private:
     void ProcessTables(YAML::Node& rom);
     void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
     std::optional<ParseResultData> ParseNode(YAML::Node& node, std::string& name);
-    std::vector<char> ParseVersionString(const std::string& version);
 };

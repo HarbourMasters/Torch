@@ -1336,8 +1336,8 @@ void Companion::Process() {
         }
 
         if(!this->gVersion.empty()) {
-            auto data = this->ParseVersionString(this->gVersion);
-            wrapper->AddFile("assetVersion", data);
+            auto data = ParseVersionString(this->gVersion);
+            wrapper->AddFile("portVersion", data);
         }
 
         SPDLOG_CRITICAL("Writing version file");
@@ -1411,8 +1411,8 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
 
     if(!version.empty()) {
         SPDLOG_CRITICAL("Adding version file");
-        auto data = this->ParseVersionString(version);
-        wrapper->AddFile("assetVersion", data);
+        auto data = ParseVersionString(version);
+        wrapper->AddFile("portVersion", data);
     }
 
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
@@ -1720,6 +1720,23 @@ std::string Companion::CalculateHash(const std::vector<uint8_t>& data) {
     return std::string(buf);
 }
 
+std::vector<char> Companion::ParseVersionString(const std::string& version) {
+    uint16_t major = 0;
+    uint16_t minor = 0;
+    uint16_t patch = 0;
+
+    std::sscanf(version.c_str(), "%hu.%hu.%hu", &major, &minor, &patch);
+
+    auto wv = LUS::BinaryWriter();
+    wv.SetEndianness(Torch::Endianness::Big);
+    wv.Write(major);
+    wv.Write(minor);
+    wv.Write(patch);
+    wv.Close();
+
+    return wv.ToVector();
+}
+
 std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     if(!asset["offset"] || !asset["type"]) {
         return std::nullopt;
@@ -1775,21 +1792,4 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     }
 
     return std::nullopt;
-}
-
-std::vector<char> Companion::ParseVersionString(const std::string& version) {
-    uint16_t major = 0;
-    uint16_t minor = 0;
-    uint16_t patch = 0;
-
-    std::sscanf(version.c_str(), "%hu.%hu.%hu", &major, &minor, &patch);
-
-    auto wv = LUS::BinaryWriter();
-    wv.SetEndianness(Torch::Endianness::Big);
-    wv.Write(major);
-    wv.Write(minor);
-    wv.Write(patch);
-    wv.Close();
-
-    return wv.ToVector();
 }
