@@ -1621,46 +1621,58 @@ std::string Companion::GetSymbolFromAddr(uint32_t address, bool validZero) {
 }
 
 std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
-    if(!Torch::contains(this->gParseResults, this->gCurrentFile)){
-        for (auto &file : this->gCurrentExternalFiles) {
-            if (!Torch::contains(this->gParseResults, file)) {
-                SPDLOG_INFO("GetParseDataByAddr: External File {} Not Found.", file);
-                continue;
-            }
-
-            for (auto& result : this->gParseResults[file]){
-                if (result.data.has_value() && result.GetOffset() == addr){
-                    return result;
-                }
+    if (this->gParseResults.contains(this->gCurrentFile)) {
+        for (auto& result : this->gParseResults[this->gCurrentFile]) {
+            if (result.data.has_value() && result.GetOffset() == addr) {
+                return result;
             }
         }
-        return std::nullopt;
     }
 
-    for(auto& result : this->gParseResults[this->gCurrentFile]){
-        if(result.data.has_value() && result.GetOffset() == addr){
-            return result;
+    for (auto &file : this->gCurrentExternalFiles) {
+        if (!this->gParseResults.contains(file)) {
+            SPDLOG_INFO("GetParseDataByAddr: External File {} Not Found.", file);
+            continue;
+        }
+
+        for (auto& result : this->gParseResults[file]) {
+            if (result.data.has_value() && result.GetOffset() == addr) {
+                return result;
+            }
         }
     }
 
     return std::nullopt;
 }
 
+
 std::optional<ParseResultData> Companion::GetParseDataBySymbol(const std::string& symbol) {
-    if(!Torch::contains(this->gParseResults, this->gCurrentFile)){
-        return std::nullopt;
+    if (this->gParseResults.contains(this->gCurrentFile)) {
+        for (auto& result : this->gParseResults[this->gCurrentFile]) {
+            auto sym = GetNode<std::string>(result.node, "symbol");
+
+            if (result.data.has_value() && sym.has_value() && sym.value() == symbol) {
+                return result;
+            }
+        }
     }
 
-    for(auto& result : this->gParseResults[this->gCurrentFile]){
-        auto sym = GetNode<std::string>(result.node, "symbol");
+    for (auto &file : this->gCurrentExternalFiles) {
+        if (!this->gParseResults.contains(file)) {
+            SPDLOG_INFO("GetParseDataBySymbol: External File {} Not Found.", file);
+            continue;
+        }
 
-        if(result.data.has_value() && sym.has_value() && sym.value() == symbol){
-            return result;
+        for (auto& result : this->gParseResults[file]) {
+            auto sym = GetNode<std::string>(result.node, "symbol");
+
+            if (result.data.has_value() && sym.has_value() && sym.value() == symbol) {
+                return result;
+            }
         }
     }
 
     return std::nullopt;
-
 }
 
 std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNodesByType(const std::string& type){
