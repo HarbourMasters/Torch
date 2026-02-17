@@ -1,4 +1,5 @@
 #include "Decompressor.h"
+#include "TorchUtils.h"
 
 #include <stdexcept>
 #include "spdlog/spdlog.h"
@@ -15,7 +16,7 @@ std::unordered_map<uint32_t, DataChunk*> gCachedChunks;
 
 DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32_t offset, const CompressionType type, bool ignoreCache) {
 
-    if(!ignoreCache && gCachedChunks.contains(offset)){
+    if(!ignoreCache && Torch::contains(gCachedChunks, offset)){
         return gCachedChunks[offset];
     }
 
@@ -61,7 +62,7 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 }
 
 DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const uint32_t offset, const uint32_t size, const uint32_t alpha) {
-    if(gCachedChunks.contains(offset)){
+    if(Torch::contains(gCachedChunks, offset)){
         return gCachedChunks[offset];
     }
 

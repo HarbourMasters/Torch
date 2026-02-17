@@ -325,7 +325,7 @@ ExportResult FZX::SequenceCodeExporter::Export(std::ostream &write, std::shared_
         }
         lastEndPos = command.pos + command.size;
 
-        if (data->mLabels.contains(command.pos)) {
+        if (Torch::contains(data->mLabels,command.pos)) {
             write << "// L____" << FORMAT_HEX2(command.pos, 3) << ":\n";
         }
 
@@ -1336,10 +1336,10 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
         command.channel = channel;
         command.layer = layer;
 
-        if (!existingPositions.contains(command.pos) && command.pos < size) {
+        if (!Torch::contains(existingPositions, command.pos) && command.pos < size) {
             existingPositions.insert(command.pos);
         } else {
-            while (!posStack.empty() && existingPositions.contains(posStack.back().pos)) {
+            while (!posStack.empty() && Torch::contains(existingPositions, posStack.back().pos)) {
                 SPDLOG_INFO("POP BACK 0x{:X}", posStack.back().pos);
                 posStack.pop_back();
             }
@@ -1990,7 +1990,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
 
         uint16_t addr = envAddr;
         reader.Seek(addr, LUS::SeekOffsetType::Start);
-        while (!existingPositions.contains(addr) && addr < size) {
+        while (!Torch::contains(existingPositions, addr) && addr < size) {
             auto delay = READ_S16;
             auto arg = READ_S16;
             command.args.emplace_back(delay);

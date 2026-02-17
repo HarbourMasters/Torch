@@ -1,6 +1,8 @@
 #include "MessageFactory.h"
 
 #include "utils/Decompressor.h"
+#include "utils/StringHelper.h"
+#include "utils/TorchUtils.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <regex>
@@ -201,9 +203,9 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse(std::vec
             mesgStr << whitespace;
             whitespace = "";
         }
-        if(enumCode.starts_with("_")){
+        if (StringHelper::StartsWith(enumCode, "_")) {
             mesgStr << enumCode.substr(1);
-        } else if(ASCIITable.contains(enumCode)){
+        } else if (Torch::contains(ASCIITable, enumCode)){
             mesgStr << ASCIITable[enumCode];
         }
 
@@ -276,9 +278,9 @@ std::optional<std::shared_ptr<IParsedData>> SF64::MessageFactory::parse_modding(
                     mesgStr << whitespace;
                     whitespace = "";
                 }
-                if(enumCode.starts_with("_")){
+                if (StringHelper::StartsWith(enumCode, "_")) {
                     mesgStr << enumCode.substr(1);
-                } else if(ASCIITable.contains(enumCode)){
+                } else if (Torch::contains(ASCIITable, enumCode)){
                     mesgStr << ASCIITable[enumCode];
                 }
             }

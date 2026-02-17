@@ -179,14 +179,16 @@ public:
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
     std::optional<Table> SearchTable(uint32_t addr);
 
+    static std::vector<char> ParseVersionString(const std::string& version);
     static std::string CalculateHash(const std::vector<uint8_t>& data);
-    static void Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode);
+    static void Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode, const std::string& version = "");
     std::string NormalizeAsset(const std::string& name) const;
     std::string RelativePath(const std::string& path) const;
     std::string RelativePathToSrcDir(const std::string& path) const;
     std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
     void SetAdditionalFiles(const std::vector<std::string>& files) { this->gAdditionalFiles = files; }
+    void SetVersion(const std::string& version) { this->gVersion = version; }
 
     void SetProcess(bool shouldProcess);
     TorchConfig& GetConfig() { return this->gConfig; }
@@ -202,6 +204,7 @@ private:
     fs::path gCurrentDirectory;
     std::string gCurrentHash;
     std::string gAssetPath;
+    std::string gVersion;
     std::vector<uint8_t> gRomData;
     std::optional<std::filesystem::path> gRomPath;
     bool gNodeForceProcessing = false;

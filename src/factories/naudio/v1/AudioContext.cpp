@@ -1,7 +1,6 @@
 #include "AudioContext.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
-#include "utils/StringHelper.h"
 
 std::unordered_map<AudioTableType, TableEntry> AudioContext::tables;
 NAudioDrivers AudioContext::driver = NAudioDrivers::UNKNOWN;
