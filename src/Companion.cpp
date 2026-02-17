@@ -128,7 +128,7 @@ static std::string GetTypeNode(YAML::Node& node) {
 
 Companion* Companion::Instance;
 
-void Companion::Init(const ExportType type) {
+void Companion::Init(const ExportType type, std::atomic_ref<size_t> assetCount) {
 
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
@@ -223,7 +223,7 @@ void Companion::Init(const ExportType type) {
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 #endif
 #ifndef __EMSCRIPTEN__ // We call this manually
-    this->Process();
+    this->Process(assetCount);
 #endif
 }
 
@@ -355,7 +355,7 @@ void Companion::ParseModdingConfig() {
 }
 
 
-void Companion::ParseCurrentFileConfig(YAML::Node node) {
+void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic_ref<size_t> assetCount) {
     if (node["external_files"]) {
         auto externalFiles = node["external_files"];
         if (externalFiles.IsSequence() && externalFiles.size()) {
@@ -387,8 +387,10 @@ void Companion::ParseCurrentFileConfig(YAML::Node node) {
                     YAML::Node root = YAML::LoadFile(externalFileName);
 
                     if (!this->gProcessedFiles.contains(this->gCurrentFile)) {
-                        ProcessFile(root);
-                        this->gProcessedFiles.insert(this->gCurrentFile);
+                        ProcessFile(root, assetCount);
+                        if (process) {
+                            this->gProcessedFiles.insert(this->gCurrentFile);
+                        }
                     }
 
                     SPDLOG_INFO("Finishing processing of file: {}", currentFile);
@@ -609,6 +611,12 @@ void Companion::ProcessTables(YAML::Node& rom) {
 }
 
 void Companion::ProcessFile(YAML::Node root) {
+    size_t assetCount = 0;
+    ProcessFile(root, std::atomic_ref<size_t>(assetCount));
+}
+
+void Companion::ProcessFile(YAML::Node root, std::atomic_ref<size_t> assetCount) {
+    assetCount++;
     // Set compressed file offsets and compression type
     if (auto segments = root[":config"]["segments"]) {
         if (segments.IsSequence() && segments.size() > 0) {
@@ -671,10 +679,10 @@ void Companion::ProcessFile(YAML::Node root) {
     GFXDOverride::ClearVtx();
 
     if(root[":config"]) {
-        this->ParseCurrentFileConfig(root[":config"]);
+        this->ParseCurrentFileConfig(root[":config"], assetCount);
     }
 
-    if(!this->NodeHasChanges(this->gCurrentFile) && !this->gNodeForceProcessing) {
+    if(!process || (!this->NodeHasChanges(this->gCurrentFile) && !this->gNodeForceProcessing)) {
         return;
     }
 
@@ -1017,8 +1025,7 @@ void Companion::ProcessFile(YAML::Node root) {
     }
 }
 
-void Companion::Process() {
-
+void Companion::Process(std::atomic_ref<size_t> assetCount) {
     auto configPath = this->gSourceDirectory / "config.yml";
 
     if(!fs::exists(configPath)) {
@@ -1314,8 +1321,10 @@ void Companion::Process() {
         this->gCurrentFile = yamlPath;
 
         if (!this->gProcessedFiles.contains(this->gCurrentFile)) {
-            ProcessFile(root);
-            this->gProcessedFiles.insert(this->gCurrentFile);
+            ProcessFile(root, assetCount);
+            if (process) {
+                this->gProcessedFiles.insert(this->gCurrentFile);
+            }
         }
     }
 
@@ -1659,6 +1668,10 @@ std::optional<std::vector<std::tuple<std::string, YAML::Node>>> Companion::GetNo
 
     return nodes;
 
+}
+
+void Companion::SetProcess(bool shouldProcess) {
+    this->process = shouldProcess;
 }
 
 void Companion::RegisterCompanionFile(const std::string path, std::vector<char> data) {

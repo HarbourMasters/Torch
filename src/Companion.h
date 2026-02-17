@@ -4,6 +4,7 @@
 #include <optional>
 #include <filesystem>
 #include <vector>
+#include <atomic>
 #include <fstream>
 #include <unordered_map>
 #include <unordered_set>
@@ -138,11 +139,11 @@ public:
     explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
                        Companion(rom, otr, debug, false, srcDir, destPath) {}
 
-    void Init(ExportType type);
+    void Init(ExportType type, std::atomic_ref<size_t> assetCount);
 
     bool NodeHasChanges(const std::string& string);
 
-    void Process();
+    void Process(std::atomic_ref<size_t> assetCount);
 
     bool IsOTRMode() const { return (this->gConfig.otrMode != ArchiveType::None); }
     bool IsDebug() const { return this->gConfig.debug; }
@@ -187,6 +188,7 @@ public:
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
     void SetAdditionalFiles(const std::vector<std::string>& files) { this->gAdditionalFiles = files; }
 
+    void SetProcess(bool shouldProcess);
     TorchConfig& GetConfig() { return this->gConfig; }
     BinaryWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
 
@@ -215,6 +217,7 @@ private:
     std::string gCurrentVirtualPath;
     std::string gFileHeader;
     bool gEnablePadGen = false;
+    bool process = true;
     uint32_t gCurrentPad = 0;
     uint32_t gCurrentFileOffset;
     uint32_t gCurrentSegmentNumber;
@@ -237,10 +240,11 @@ private:
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
 
     void ProcessFile(YAML::Node root);
+    void ProcessFile(YAML::Node root, std::atomic_ref<size_t> assetCount);
     void ParseEnums(std::string& file);
     void ParseHash();
     void ParseModdingConfig();
-    void ParseCurrentFileConfig(YAML::Node node);
+    void ParseCurrentFileConfig(YAML::Node node, std::atomic_ref<size_t> assetCount);
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, BinaryWrapper* binary);
     void ProcessTables(YAML::Node& rom);
