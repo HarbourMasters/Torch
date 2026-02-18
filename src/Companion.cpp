@@ -129,6 +129,11 @@ static std::string GetTypeNode(YAML::Node& node) {
 
 Companion* Companion::Instance;
 
+void Companion::Init(const ExportType type) {
+    size_t assetCount = 0;
+    Init(type, std::atomic_ref<size_t>(assetCount));
+}
+
 void Companion::Init(const ExportType type, std::atomic_ref<size_t> assetCount) {
 
     spdlog::set_level(spdlog::level::debug);
