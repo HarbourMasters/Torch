@@ -1622,7 +1622,7 @@ std::string Companion::GetSymbolFromAddr(uint32_t address, bool validZero) {
 }
 
 std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
-    if (this->gParseResults.contains(this->gCurrentFile)) {
+    if (CONTAINS(this->gParseResults, this->gCurrentFile)) {
         for (auto& result : this->gParseResults[this->gCurrentFile]) {
             if (result.data.has_value() && result.GetOffset() == addr) {
                 return result;
@@ -1631,7 +1631,7 @@ std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
     }
 
     for (auto &file : this->gCurrentExternalFiles) {
-        if (!this->gParseResults.contains(file)) {
+        if (!CONTAINS(this->gParseResults, this->gCurrentFile)) {
             SPDLOG_INFO("GetParseDataByAddr: External File {} Not Found.", file);
             continue;
         }
@@ -1648,7 +1648,7 @@ std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
 
 
 std::optional<ParseResultData> Companion::GetParseDataBySymbol(const std::string& symbol) {
-    if (this->gParseResults.contains(this->gCurrentFile)) {
+    if (CONTAINS(this->gParseResults, this->gCurrentFile)) {
         for (auto& result : this->gParseResults[this->gCurrentFile]) {
             auto sym = GetNode<std::string>(result.node, "symbol");
 
@@ -1659,7 +1659,7 @@ std::optional<ParseResultData> Companion::GetParseDataBySymbol(const std::string
     }
 
     for (auto &file : this->gCurrentExternalFiles) {
-        if (!this->gParseResults.contains(file)) {
+        if (!CONTAINS(this->gParseResults, this->gCurrentFile)) {
             SPDLOG_INFO("GetParseDataBySymbol: External File {} Not Found.", file);
             continue;
         }

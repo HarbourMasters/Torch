@@ -14,6 +14,8 @@
 #include "utils/Decompressor.h"
 #include "factories/TextureFactory.h"
 
+#define CONTAINS(_map, value) ((_map).find(value) != (_map).end())
+
 class BinaryWrapper;
 namespace fs = std::filesystem;
 
