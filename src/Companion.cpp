@@ -130,11 +130,12 @@ static std::string GetTypeNode(YAML::Node& node) {
 Companion* Companion::Instance;
 
 void Companion::Init(const ExportType type) {
-    size_t assetCount = 0;
-    Init(type, std::atomic_ref<size_t>(assetCount));
+    std::atomic<size_t> assetCount{0};
+
+    Init(type, assetCount);
 }
 
-void Companion::Init(const ExportType type, std::atomic_ref<size_t> assetCount) {
+void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
 
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
@@ -361,7 +362,7 @@ void Companion::ParseModdingConfig() {
 }
 
 
-void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic_ref<size_t> assetCount) {
+void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& assetCount) {
     if (node["external_files"]) {
         auto externalFiles = node["external_files"];
         if (externalFiles.IsSequence() && externalFiles.size()) {
@@ -617,11 +618,11 @@ void Companion::ProcessTables(YAML::Node& rom) {
 }
 
 void Companion::ProcessFile(YAML::Node root) {
-    size_t assetCount = 0;
-    ProcessFile(root, std::atomic_ref<size_t>(assetCount));
+    std::atomic<size_t> assetCount {0};
+    ProcessFile(root, assetCount);
 }
 
-void Companion::ProcessFile(YAML::Node root, std::atomic_ref<size_t> assetCount) {
+void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     assetCount++;
     // Set compressed file offsets and compression type
     if (auto segments = root[":config"]["segments"]) {
@@ -1031,7 +1032,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic_ref<size_t> assetCount)
     }
 }
 
-void Companion::Process(std::atomic_ref<size_t> assetCount) {
+void Companion::Process(std::atomic<size_t>& assetCount) {
     auto configPath = this->gSourceDirectory / "config.yml";
 
     if(!fs::exists(configPath)) {
