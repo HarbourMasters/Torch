@@ -126,7 +126,7 @@ $(function(){initNavTree('v0_2SampleFactory_8h_source.html','',''); });
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    std::optional&lt;std::shared_ptr&lt;IParsedData&gt;&gt; parse(std::vector&lt;uint8_t&gt;&amp; buffer, YAML::Node&amp; data) <span class="keyword">override</span>;</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    std::unordered_map&lt;ExportType, std::shared_ptr&lt;BaseExporter&gt;&gt; GetExporters()<span class="keyword"> override </span>{</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>        <span class="keywordflow">return</span> {</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>            REGISTER(Modding, <a class="code hl_class" href="classSampleModdingExporter.html">SampleModdingExporter</a>)</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>            <span class="comment">// REGISTER(Modding, SampleModdingExporter)</span></div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>            REGISTER(Binary, <a class="code hl_class" href="classSampleBinaryExporter.html">SampleBinaryExporter</a>)</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>        };</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    }</div>
