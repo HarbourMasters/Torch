@@ -41,7 +41,7 @@ var NAVTREEINDEX =
 [
 "AIFCDecode_8h_source.html",
 "classMK64_1_1TrackSectionsBinaryExporter.html",
-"otr_display_list.html#autotoc_md10"
+"otr_display_list.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

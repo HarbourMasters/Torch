@@ -418,6 +418,7 @@ var annotated_dup =
     [ "SequenceData", "classSequenceData.html", null ],
     [ "SequenceFactory", "classSequenceFactory.html", null ],
     [ "SequenceModdingExporter", "classSequenceModdingExporter.html", null ],
+    [ "SequenceXMLExporter", "classSequenceXMLExporter.html", null ],
     [ "SoundDataChunk", "structSoundDataChunk.html", null ],
     [ "SoundFontBinaryExporter", "classSoundFontBinaryExporter.html", null ],
     [ "SoundFontCodeExporter", "classSoundFontCodeExporter.html", null ],

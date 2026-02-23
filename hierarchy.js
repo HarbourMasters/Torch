@@ -200,6 +200,7 @@ var hierarchy =
       [ "SampleModdingExporter", "classSampleModdingExporter.html", null ],
       [ "SequenceBinaryExporter", "classSequenceBinaryExporter.html", null ],
       [ "SequenceModdingExporter", "classSequenceModdingExporter.html", null ],
+      [ "SequenceXMLExporter", "classSequenceXMLExporter.html", null ],
       [ "SoundFontBinaryExporter", "classSoundFontBinaryExporter.html", null ],
       [ "SoundFontCodeExporter", "classSoundFontCodeExporter.html", null ],
       [ "SoundFontHeaderExporter", "classSoundFontHeaderExporter.html", null ],
