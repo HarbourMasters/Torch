@@ -23,6 +23,10 @@ class SequenceModdingExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+class SequenceXMLExporter : public BaseExporter {
+    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
+};
+
 class SequenceFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -32,6 +36,7 @@ public:
         return {
             REGISTER(Modding, SequenceModdingExporter)
             REGISTER(Binary, SequenceBinaryExporter)
+            REGISTER(XML, SequenceXMLExporter)
         };
     }
 
