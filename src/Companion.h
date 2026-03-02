@@ -199,6 +199,7 @@ public:
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
+    void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
@@ -251,7 +252,6 @@ private:
     void ParseHash();
     void ParseModdingConfig();
     void ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& assetCount);
-    void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, BinaryWrapper* binary);
     void ProcessTables(YAML::Node& rom);
     void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
