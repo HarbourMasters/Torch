@@ -7,7 +7,7 @@ var dir_f2b5ac47bfcfd76a46f6511df3cbc32d =
     [ "macro", "dir_20fee6ddb726085bd6c81bdba8099cb9.html", "dir_20fee6ddb726085bd6c81bdba8099cb9" ],
     [ "AnimationFactory.h", "AnimationFactory_8h_source.html", null ],
     [ "BehaviorScriptFactory.h", "BehaviorScriptFactory_8h_source.html", null ],
-    [ "CollisionFactory.h", "CollisionFactory_8h_source.html", null ],
+    [ "CollisionFactory.h", "sm64_2CollisionFactory_8h_source.html", null ],
     [ "DialogFactory.h", "DialogFactory_8h_source.html", null ],
     [ "DictionaryFactory.h", "DictionaryFactory_8h_source.html", null ],
     [ "GeoLayoutFactory.h", "GeoLayoutFactory_8h_source.html", null ],

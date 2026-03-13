@@ -4,6 +4,7 @@ var dir_9c074b8a3ff180fe0f5e8e7bda80dc8f =
     [ "mario_artist", "dir_130bb4fd1312137b6ac766944eb628c1.html", "dir_130bb4fd1312137b6ac766944eb628c1" ],
     [ "mk64", "dir_817b046f66c63ddb752de3939f222995.html", "dir_817b046f66c63ddb752de3939f222995" ],
     [ "naudio", "dir_eb6deaadf9a10aa47ebe1ade1dff7815.html", "dir_eb6deaadf9a10aa47ebe1ade1dff7815" ],
+    [ "pm64", "dir_63aea215d05a9dadb75046164378489f.html", "dir_63aea215d05a9dadb75046164378489f" ],
     [ "sf64", "dir_356bf6f93ddba56092205a7abf104097.html", "dir_356bf6f93ddba56092205a7abf104097" ],
     [ "sm64", "dir_f2b5ac47bfcfd76a46f6511df3cbc32d.html", "dir_f2b5ac47bfcfd76a46f6511df3cbc32d" ],
     [ "AssetArrayFactory.h", "AssetArrayFactory_8h_source.html", null ],
