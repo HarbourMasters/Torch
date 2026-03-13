@@ -72,6 +72,20 @@
 #include "factories/sf64/TriangleFactory.h"
 #endif
 
+#ifdef PM64_SUPPORT
+#include "factories/pm64/SpriteFactory.h"
+#include "factories/pm64/ShapeFactory.h"
+#include "factories/pm64/BackgroundFactory.h"
+#include "factories/pm64/CollisionFactory.h"
+#include "factories/pm64/MapTextureFactory.h"
+#include "factories/pm64/AudioFactory.h"
+#include "factories/pm64/StoryImageFactory.h"
+#include "factories/pm64/ImgFXAnimFactory.h"
+#include "factories/pm64/TitleDataFactory.h"
+#include "factories/pm64/EntityGfxFactory.h"
+#include "factories/pm64/EffectDListFactory.h"
+#endif
+
 #ifdef FZERO_SUPPORT
 #include "factories/fzerox/EADAnimationFactory.h"
 #include "factories/fzerox/CourseFactory.h"
@@ -184,6 +198,20 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
     this->RegisterFactory("MK64:ITEM_CURVE", std::make_shared<MK64::ItemCurveFactory>()); // Item curve for decomp only
     this->RegisterFactory("MK64:METADATA", std::make_shared<MK64::CourseMetadataFactory>());
     this->RegisterFactory("MK64:PACKED_GFX", std::make_shared<MK64::PackedDListFactory>());
+#endif
+
+#ifdef PM64_SUPPORT
+    this->RegisterFactory("PM64:SPRITE", std::make_shared<PM64SpriteFactory>());
+    this->RegisterFactory("PM64:SHAPE", std::make_shared<PM64ShapeFactory>());
+    this->RegisterFactory("PM64:BACKGROUND", std::make_shared<PM64BackgroundFactory>());
+    this->RegisterFactory("PM64:COLLISION", std::make_shared<PM64CollisionFactory>());
+    this->RegisterFactory("PM64:MAP_TEXTURE", std::make_shared<PM64MapTextureFactory>());
+    this->RegisterFactory("PM64:AUDIO", std::make_shared<PM64AudioFactory>());
+    this->RegisterFactory("PM64:STORY_IMAGE", std::make_shared<PM64StoryImageFactory>());
+    this->RegisterFactory("PM64:IMGFX_ANIM", std::make_shared<PM64ImgFXAnimFactory>());
+    this->RegisterFactory("PM64:TITLE_DATA", std::make_shared<PM64TitleDataFactory>());
+    this->RegisterFactory("PM64:ENTITY_GFX", std::make_shared<PM64EntityGfxFactory>());
+    this->RegisterFactory("PM64:EFFECT_DL", std::make_shared<PM64EffectDListFactory>());
 #endif
 
 #ifdef SF64_SUPPORT
