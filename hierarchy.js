@@ -129,7 +129,6 @@ var hierarchy =
       [ "PM64BackgroundHeaderExporter", "classPM64BackgroundHeaderExporter.html", null ],
       [ "PM64CollisionBinaryExporter", "classPM64CollisionBinaryExporter.html", null ],
       [ "PM64CollisionHeaderExporter", "classPM64CollisionHeaderExporter.html", null ],
-      [ "PM64EffectDListBinaryExporter", "classPM64EffectDListBinaryExporter.html", null ],
       [ "PM64EntityGfxBinaryExporter", "classPM64EntityGfxBinaryExporter.html", null ],
       [ "PM64EntityGfxHeaderExporter", "classPM64EntityGfxHeaderExporter.html", null ],
       [ "PM64ImgFXAnimBinaryExporter", "classPM64ImgFXAnimBinaryExporter.html", null ],
@@ -253,9 +252,7 @@ var hierarchy =
       [ "BankFactory", "classBankFactory.html", null ],
       [ "BlobFactory", "classBlobFactory.html", null ],
       [ "CompressedTextureFactory", "classCompressedTextureFactory.html", null ],
-      [ "DListFactory", "classDListFactory.html", [
-        [ "PM64EffectDListFactory", "classPM64EffectDListFactory.html", null ]
-      ] ],
+      [ "DListFactory", "classDListFactory.html", null ],
       [ "DrumFactory", "classDrumFactory.html", null ],
       [ "EnvelopeFactory", "classEnvelopeFactory.html", null ],
       [ "FZX::CourseFactory", "classFZX_1_1CourseFactory.html", null ],

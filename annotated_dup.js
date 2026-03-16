@@ -416,8 +416,6 @@ var annotated_dup =
     [ "PM64CollisionFactory", "classPM64CollisionFactory.html", null ],
     [ "PM64CollisionHeaderExporter", "classPM64CollisionHeaderExporter.html", null ],
     [ "PM64DisplayListInfo", "structPM64DisplayListInfo.html", null ],
-    [ "PM64EffectDListBinaryExporter", "classPM64EffectDListBinaryExporter.html", null ],
-    [ "PM64EffectDListFactory", "classPM64EffectDListFactory.html", null ],
     [ "PM64EntityDisplayListInfo", "structPM64EntityDisplayListInfo.html", null ],
     [ "PM64EntityGfxBinaryExporter", "classPM64EntityGfxBinaryExporter.html", null ],
     [ "PM64EntityGfxData", "classPM64EntityGfxData.html", null ],
