@@ -428,13 +428,20 @@ ExportResult DListBinaryExporter::Export(std::ostream &write, std::shared_ptr<IP
             auto ptr = w1;
             auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "TEXTURE");
 
-            // Export texture segment addresses as segmented addresses
-            N64Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
-            w0 = value.words.w0;
-            w1 = value.words.w1;
-
-            writer.Write(w0);
-            writer.Write(w1);
+            if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::PM64) {
+                // preserve original w0 bits (fmt/siz/width) exactly, the
+                // ROM already stores width-1.
+                uint32_t newW0 = (G_SETTIMG_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
+                writer.Write(newW0);
+                writer.Write(ptr);
+            } else {
+                // Export texture segment addresses as segmented addresses
+                N64Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+                writer.Write(w0);
+                writer.Write(w1);
+            }
 
             if(dec.has_value()){
                 uint64_t hash = CRC64(dec.value().c_str());
