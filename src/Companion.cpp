@@ -83,7 +83,6 @@
 #include "factories/pm64/ImgFXAnimFactory.h"
 #include "factories/pm64/TitleDataFactory.h"
 #include "factories/pm64/EntityGfxFactory.h"
-#include "factories/pm64/EffectDListFactory.h"
 #endif
 
 #ifdef FZERO_SUPPORT
@@ -211,7 +210,6 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
     this->RegisterFactory("PM64:IMGFX_ANIM", std::make_shared<PM64ImgFXAnimFactory>());
     this->RegisterFactory("PM64:TITLE_DATA", std::make_shared<PM64TitleDataFactory>());
     this->RegisterFactory("PM64:ENTITY_GFX", std::make_shared<PM64EntityGfxFactory>());
-    this->RegisterFactory("PM64:EFFECT_DL", std::make_shared<PM64EffectDListFactory>());
 #endif
 
 #ifdef SF64_SUPPORT
@@ -1202,6 +1200,9 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             this->gConfig.gbi.version = GBIVersion::f3db;
         } else if(key == "F3DEX2") {
             this->gConfig.gbi.version = GBIVersion::f3dex2;
+        } else if(key == "F3DEX2_PM64") {
+            this->gConfig.gbi.version = GBIVersion::f3dex2;
+            this->gConfig.gbi.subversion = GBIMinorVersion::PM64;
         } else if(key == "F3DEXB") {
             this->gConfig.gbi.version = GBIVersion::f3dexb;
         } else if (key == "F3DEX_MK64") {
