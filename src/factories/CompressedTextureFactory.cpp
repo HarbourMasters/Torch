@@ -17,50 +17,52 @@ extern "C" {
 static bool isTable = false;
 static std::vector<std::string> tableEntries;
 
-static const std::unordered_map <std::string, TextureFormat> sTextureFormats = {
+static const std::unordered_map<std::string, TextureFormat> sTextureFormats = {
     { "RGBA16", { TextureType::RGBA16bpp, 16 } },
     { "RGBA32", { TextureType::RGBA32bpp, 32 } },
-    { "CI4",    { TextureType::Palette4bpp, 4 } },
-    { "CI8",    { TextureType::Palette8bpp, 8 } },
-    { "I4",     { TextureType::Grayscale4bpp, 4 } },
-    { "I8",     { TextureType::Grayscale8bpp, 8 } },
-    { "IA1",    { TextureType::GrayscaleAlpha1bpp, 1 } },
-    { "IA4",    { TextureType::GrayscaleAlpha4bpp, 4 } },
-    { "IA8",    { TextureType::GrayscaleAlpha8bpp, 8 } },
-    { "IA16",   { TextureType::GrayscaleAlpha16bpp, 16 } },
-    { "TLUT",   { TextureType::TLUT, 16 } },
+    { "CI4", { TextureType::Palette4bpp, 4 } },
+    { "CI8", { TextureType::Palette8bpp, 8 } },
+    { "I4", { TextureType::Grayscale4bpp, 4 } },
+    { "I8", { TextureType::Grayscale8bpp, 8 } },
+    { "IA1", { TextureType::GrayscaleAlpha1bpp, 1 } },
+    { "IA4", { TextureType::GrayscaleAlpha4bpp, 4 } },
+    { "IA8", { TextureType::GrayscaleAlpha8bpp, 8 } },
+    { "IA16", { TextureType::GrayscaleAlpha16bpp, 16 } },
+    { "TLUT", { TextureType::TLUT, 16 } },
 };
 
-static const std::unordered_map <std::string, CompressionType> sCompressionTypes = {
+static const std::unordered_map<std::string, CompressionType> sCompressionTypes = {
     { "MIO0", CompressionType::MIO0 },
     { "YAY0", CompressionType::YAY0 },
     { "YAY1", CompressionType::YAY1 },
     { "YAZ0", CompressionType::YAZ0 },
 };
 
-ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult CompressedTextureHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                     std::string& entryName, YAML::Node& node,
+                                                     std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
     auto texture = std::static_pointer_cast<CompressedTextureData>(raw);
     auto data = texture->mBuffer;
     auto isOTR = Companion::Instance->IsOTRMode();
-    size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
+    size_t byteSize = std::max(1, (int)(texture->mFormat.depth / 8));
 
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
-    if(searchTable.has_value()){
+    if (searchTable.has_value()) {
         const auto [name, start, end, mode, index_size] = searchTable.value();
         unsigned int isize = index_size > -1 ? index_size : data.size() / byteSize;
 
-        if(isOTR){
+        if (isOTR) {
             write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
 
             tableEntries.push_back(symbol);
 
-            if(end == offset){
+            if (end == offset) {
                 write << "static const char* " << name << "[] = {\n";
-                for(auto& entry : tableEntries){
+                for (auto& entry : tableEntries) {
                     write << tab_t << entry << ",\n";
                 }
                 write << "};\n\n";
@@ -70,7 +72,7 @@ ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::s
             write << "extern " << "u8 " << name << "[][" << isize << "];\n";
         }
     } else {
-        if(isOTR){
+        if (isOTR) {
             write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
             if (Companion::Instance->AddTextureDefines()) {
                 write << "#define _" << symbol << "_WIDTH 0x" << std::hex << texture->mWidth << std::dec << "\n";
@@ -86,17 +88,17 @@ ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::s
 
                 switch (texture->mCompressionType) {
                     case CompressionType::MIO0:
-                        worstSize = MIO0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+                        worstSize = MIO0_HEADER_LENGTH + ((data.size() + 7) / 8) + data.size();
                         compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
                         compressedSize = mio0_encode(data.data(), data.size(), compressedData);
                         break;
                     case CompressionType::YAY0:
-                        worstSize = YAY0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+                        worstSize = YAY0_HEADER_LENGTH + ((data.size() + 7) / 8) + data.size();
                         compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
                         compressedSize = yay0_encode(data.data(), data.size(), compressedData);
                         break;
                     case CompressionType::YAY1:
-                        worstSize = YAY1_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+                        worstSize = YAY1_HEADER_LENGTH + ((data.size() + 7) / 8) + data.size();
                         compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
                         compressedSize = yay1_encode(data.data(), data.size(), compressedData);
                         break;
@@ -105,7 +107,8 @@ ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::s
                         throw std::runtime_error("Unsupported Compressed Texture Type");
                         break;
                 }
-                write << "#define _" << symbol << "_COMPRESSED_SIZE 0x" << std::hex << compressedSize << std::dec << "\n";
+                write << "#define _" << symbol << "_COMPRESSED_SIZE 0x" << std::hex << compressedSize << std::dec
+                      << "\n";
                 write << "#define _" << symbol << "_WIDTH 0x" << std::hex << texture->mWidth << std::dec << "\n";
                 write << "#define _" << symbol << "_HEIGHT 0x" << std::hex << texture->mHeight << std::dec << "\n";
             }
@@ -115,7 +118,8 @@ ExportResult CompressedTextureHeaderExporter::Export(std::ostream &write, std::s
     return std::nullopt;
 }
 
-ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult CompressedTextureCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                   std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto texture = std::static_pointer_cast<CompressedTextureData>(raw);
     auto data = texture->mBuffer;
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -126,16 +130,16 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
     (*replacement) += "." + format;
 
     std::string dpath = Companion::Instance->GetOutputPath() + "/" + (*replacement);
-    if(!exists(fs::path(dpath).parent_path())){
+    if (!exists(fs::path(dpath).parent_path())) {
         create_directories(fs::path(dpath).parent_path());
     }
 
     std::ostringstream imgstream;
 
-    size_t byteSize = std::max(1, (int) (texture->mFormat.depth / 8));
+    size_t byteSize = std::max(1, (int)(texture->mFormat.depth / 8));
     size_t isize = texture->mBuffer.size() / byteSize;
 
-    for (int i = 0; i < data.size(); i+=byteSize) {
+    for (int i = 0; i < data.size(); i += byteSize) {
         if (i % 16 == 0 && i != 0) {
             imgstream << std::endl;
         }
@@ -161,17 +165,17 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
 
     switch (texture->mCompressionType) {
         case CompressionType::MIO0:
-            worstSize = MIO0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+            worstSize = MIO0_HEADER_LENGTH + ((data.size() + 7) / 8) + data.size();
             compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
             compressedSize = mio0_encode(data.data(), data.size(), compressedData);
             break;
         case CompressionType::YAY0:
-            worstSize = YAY0_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+            worstSize = YAY0_HEADER_LENGTH + ((data.size() + 7) / 8) + data.size();
             compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
             compressedSize = yay0_encode(data.data(), data.size(), compressedData);
             break;
         case CompressionType::YAY1:
-            worstSize = YAY1_HEADER_LENGTH + ((data.size()+7)/8) + data.size();
+            worstSize = YAY1_HEADER_LENGTH + ((data.size() + 7) / 8) + data.size();
             compressedData = static_cast<uint8_t*>(std::calloc(worstSize, sizeof(uint8_t)));
             compressedSize = yay1_encode(data.data(), data.size(), compressedData);
             break;
@@ -202,10 +206,10 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
 
     const auto searchTable = Companion::Instance->SearchTable(offset);
 
-    if(searchTable.has_value()){
+    if (searchTable.has_value()) {
         const auto [name, start, end, mode, index_size] = searchTable.value();
 
-        if(mode != TableMode::Append){
+        if (mode != TableMode::Append) {
             throw std::runtime_error("Reference mode is not supported for now");
         }
 
@@ -213,26 +217,29 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
             isize = index_size;
         }
 
-        if(start == offset){
+        if (start == offset) {
             write << "u8 " << name << "[][" << isize << "] = {\n";
         }
 
         write << tab_t << "{\n";
 
-        write << tab_t << tab_t << "#include \"" << Companion::Instance->GetDestRelativeOutputPath() + "/" << *replacement << ".incbin.c\"\n";
+        write << tab_t << tab_t << "#include \"" << Companion::Instance->GetDestRelativeOutputPath() + "/"
+              << *replacement << ".incbin.c\"\n";
 
         write << tab_t << "},\n";
 
-        if(end == offset){
+        if (end == offset) {
             write << "};\n";
             if (Companion::Instance->IsDebug()) {
-                write << "// size: 0x" << std::hex << std::uppercase << ASSET_PTR((end - start) + isize * byteSize) << "\n";
+                write << "// size: 0x" << std::hex << std::uppercase << ASSET_PTR((end - start) + isize * byteSize)
+                      << "\n";
             }
         }
     } else {
-        write << "u8 " << symbol  << "[] = {\n";
+        write << "u8 " << symbol << "[] = {\n";
 
-        write << tab_t << "#include \"" << Companion::Instance->GetDestRelativeOutputPath() + "/" << *replacement << ".incbin.c\"\n";
+        write << tab_t << "#include \"" << Companion::Instance->GetDestRelativeOutputPath() + "/" << *replacement
+              << ".incbin.c\"\n";
 
         write << "};\n";
 
@@ -246,7 +253,9 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream &write, std::sha
     return offset + compressedSize;
 }
 
-ExportResult CompressedTextureBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult CompressedTextureBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                     std::string& entryName, YAML::Node& node,
+                                                     std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto texture = std::static_pointer_cast<CompressedTextureData>(raw);
     auto data = texture->mBuffer;
@@ -255,21 +264,23 @@ ExportResult CompressedTextureBinaryExporter::Export(std::ostream &write, std::s
 
     WriteHeader(writer, Torch::ResourceType::Texture, 0);
 
-    if(texture->mFormat.type == TextureType::TLUT) {
+    if (texture->mFormat.type == TextureType::TLUT) {
         texture->mFormat.type = TextureType::RGBA16bpp;
     }
 
-    writer.Write((uint32_t) texture->mFormat.type);
+    writer.Write((uint32_t)texture->mFormat.type);
     writer.Write(texture->mWidth);
     writer.Write(texture->mHeight);
 
-    writer.Write((uint32_t) data.size());
-    writer.Write((char*) data.data(), data.size());
+    writer.Write((uint32_t)data.size());
+    writer.Write((char*)data.data(), data.size());
     writer.Finish(write);
     return std::nullopt;
 }
 
-ExportResult CompressedTextureModdingExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+ExportResult CompressedTextureModdingExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data,
+                                                      std::string& entryName, YAML::Node& node,
+                                                      std::string* replacement) {
     auto texture = std::static_pointer_cast<CompressedTextureData>(data);
     auto format = texture->mFormat;
     uint8_t* raw = new uint8_t[TextureUtils::CalculateTextureSize(format.type, texture->mWidth, texture->mHeight) * 2];
@@ -285,7 +296,7 @@ ExportResult CompressedTextureModdingExporter::Export(std::ostream&write, std::s
         case TextureType::RGBA16bpp:
         case TextureType::RGBA32bpp: {
             rgba* imgr = raw2rgba(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
-            if(rgba2png(&raw, &size, imgr, texture->mWidth, texture->mHeight)) {
+            if (rgba2png(&raw, &size, imgr, texture->mWidth, texture->mHeight)) {
                 throw std::runtime_error("Failed to convert texture to PNG");
             }
             break;
@@ -295,7 +306,7 @@ ExportResult CompressedTextureModdingExporter::Export(std::ostream&write, std::s
         case TextureType::GrayscaleAlpha4bpp:
         case TextureType::GrayscaleAlpha1bpp: {
             ia* imgia = raw2ia(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
-            if(ia2png(&raw, &size, imgia, texture->mWidth, texture->mHeight)) {
+            if (ia2png(&raw, &size, imgia, texture->mWidth, texture->mHeight)) {
                 throw std::runtime_error("Failed to convert texture to PNG");
             }
             break;
@@ -303,29 +314,35 @@ ExportResult CompressedTextureModdingExporter::Export(std::ostream&write, std::s
         case TextureType::Palette8bpp:
         case TextureType::Palette4bpp: {
             if (node["tlut_symbol"]) {
-                auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");
+                auto tlut = GetSafeNode<std::string>(node, "tlut_symbol");
                 auto palette = Companion::Instance->GetParseDataBySymbol(tlut);
 
                 if (palette.has_value()) {
                     auto palTexture = std::static_pointer_cast<TextureData>(palette.value().data.value());
-                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palTexture->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palTexture->mFormat.depth);
+                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t*)palTexture->mBuffer.data(), 0,
+                                       texture->mWidth, texture->mHeight, texture->mFormat.depth,
+                                       palTexture->mFormat.depth);
                 } else {
                     auto symbol = GetSafeNode<std::string>(node, "symbol");
-                    throw std::runtime_error("Could not convert ci8 '"+symbol+"' the tlut symbol name is probably wrong for tlut_symbol node");
+                    throw std::runtime_error("Could not convert ci8 '" + symbol +
+                                             "' the tlut symbol name is probably wrong for tlut_symbol node");
                 }
                 break;
             }
 
             if (node["tlut"]) {
-                auto tlut = GetSafeNode<uint32_t>(node,"tlut");
+                auto tlut = GetSafeNode<uint32_t>(node, "tlut");
                 auto palette = Companion::Instance->GetParseDataByAddr(tlut);
 
                 if (palette.has_value()) {
                     auto palTexture = std::static_pointer_cast<TextureData>(palette.value().data.value());
-                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t *)palTexture->mBuffer.data(), 0, texture->mWidth, texture->mHeight, texture->mFormat.depth, palTexture->mFormat.depth);
+                    convert_raw_to_ci8(&raw, &size, texture->mBuffer.data(), (uint8_t*)palTexture->mBuffer.data(), 0,
+                                       texture->mWidth, texture->mHeight, texture->mFormat.depth,
+                                       palTexture->mFormat.depth);
                 } else {
                     auto symbol = GetSafeNode<std::string>(node, "symbol");
-                    throw std::runtime_error("Could not convert ci8 '"+symbol+"' the address is probably wrong for tlut address node");
+                    throw std::runtime_error("Could not convert ci8 '" + symbol +
+                                             "' the address is probably wrong for tlut address node");
                 }
                 break;
             }
@@ -333,7 +350,7 @@ ExportResult CompressedTextureModdingExporter::Export(std::ostream&write, std::s
         case TextureType::Grayscale8bpp:
         case TextureType::Grayscale4bpp: {
             ia* imgi = raw2i(texture->mBuffer.data(), texture->mWidth, texture->mHeight, format.depth);
-            if(ia2png(&raw, &size, imgi, texture->mWidth, texture->mHeight)) {
+            if (ia2png(&raw, &size, imgi, texture->mWidth, texture->mHeight)) {
                 throw std::runtime_error("Failed to convert texture to PNG");
             }
             break;
@@ -364,7 +381,8 @@ std::string getcomptype(CompressionType type) {
     return "None";
 }
 
-std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std::vector<uint8_t>& buffer,
+                                                                            YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
     auto symbol = GetSafeNode<std::string>(node, "symbol");
@@ -376,37 +394,42 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std:
     if (!Torch::contains(sCompressionTypes, compression)) {
         SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
                       Please add one of the following compression types\n\
-                      MIO0, YAY0, YAY1, YAZ0 (Unsupported)", offset);
+                      MIO0, YAY0, YAY1, YAZ0 (Unsupported)",
+                     offset);
         return std::nullopt;
     }
     compressionType = sCompressionTypes.at(compression);
 
-    CompressionType realCompressionType = Decompressor::GetCompressionType(buffer, Decompressor::TranslateAddr(offset, false));
+    CompressionType realCompressionType =
+        Decompressor::GetCompressionType(buffer, Decompressor::TranslateAddr(offset, false));
 
     if (realCompressionType != compressionType) {
         SPDLOG_ERROR("Compressed Texture entry at {:X} in yaml uses mismatching compression type\n\
-                      Passed In {}, expected {}", offset, getcomptype(compressionType), getcomptype(realCompressionType));
+                      Passed In {}, expected {}",
+                     offset, getcomptype(compressionType), getcomptype(realCompressionType));
         return std::nullopt;
     }
 
-    DataChunk* uncompressedData = Decompressor::Decode(buffer, Decompressor::TranslateAddr(offset, false), compressionType);
+    DataChunk* uncompressedData =
+        Decompressor::Decode(buffer, Decompressor::TranslateAddr(offset, false), compressionType);
 
     std::transform(format.begin(), format.end(), format.begin(), ::toupper);
 
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
                       Please add one of the following formats\n\
-                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp, tlut", offset);
+                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp, tlut",
+                     offset);
         return std::nullopt;
     }
 
-    if(!Torch::contains(sTextureFormats, format)) {
+    if (!Torch::contains(sTextureFormats, format)) {
         return std::nullopt;
     }
 
     TextureFormat fmt = sTextureFormats.at(format);
 
-    if(fmt.type == TextureType::TLUT){
+    if (fmt.type == TextureType::TLUT) {
         width = GetSafeNode<uint32_t>(node, "colors");
         height = 1;
     } else {
@@ -414,7 +437,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std:
         height = GetSafeNode<uint32_t>(node, "height");
     }
 
-    if((format == "CI4" || format == "CI8") && node["tlut"] && node["colors"]) {
+    if ((format == "CI4" || format == "CI8") && node["tlut"] && node["colors"]) {
         YAML::Node tlutNode;
         const auto tlutOffset = GetSafeNode<uint32_t>(node, "tlut");
         const auto tlutSymbol = GetSafeNode(node, "tlut_symbol", symbol + "_tlut");
@@ -426,23 +449,24 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std:
         tlutNode["offset"] = tlutOffset;
         tlutNode["colors"] = GetSafeNode<uint32_t>(node, "colors");
         node["tlut"] = tlutOffset;
-        if(node["tlut_ctype"]) {
+        if (node["tlut_ctype"]) {
             tlutNode["ctype"] = GetSafeNode<std::string>(node, "tlut_ctype");
         }
         Companion::Instance->AddAsset(tlutNode);
     }
-    size = GetSafeNode<uint32_t>(node, "size", TextureUtils::CalculateTextureSize(sTextureFormats.at(format).type, width, height));
+    size = GetSafeNode<uint32_t>(node, "size",
+                                 TextureUtils::CalculateTextureSize(sTextureFormats.at(format).type, width, height));
 
     std::vector<uint8_t> result;
 
-    if(fmt.type == TextureType::GrayscaleAlpha1bpp){
+    if (fmt.type == TextureType::GrayscaleAlpha1bpp) {
         result = TextureUtils::alloc_ia8_text_from_i1(reinterpret_cast<uint16_t*>(uncompressedData->data), 8, 16);
     } else {
         result = std::vector(uncompressedData->data, uncompressedData->data + uncompressedData->size);
     }
 
     SPDLOG_INFO("Texture: {}", format);
-    if(fmt.type == TextureType::TLUT){
+    if (fmt.type == TextureType::TLUT) {
         SPDLOG_INFO("Colors: {}", width);
     } else {
         SPDLOG_INFO("Width: {}", width);
@@ -451,18 +475,19 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse(std:
     SPDLOG_INFO("Size: {}", size);
     SPDLOG_INFO("Offset: 0x{:X}", offset);
 
-    if(result.size() == 0){
+    if (result.size() == 0) {
         return std::nullopt;
     }
 
-        if(result.size() == 0){
+    if (result.size() == 0) {
         return std::nullopt;
     }
 
     return std::make_shared<CompressedTextureData>(fmt, width, height, result, compressionType);
 }
 
-std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modding(std::vector<uint8_t>& buffer,
+                                                                                    YAML::Node& node) {
     auto format = GetSafeNode<std::string>(node, "format");
     int width;
     int height;
@@ -473,7 +498,8 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
     if (!Torch::contains(sCompressionTypes, compression)) {
         SPDLOG_ERROR("Compresed Texture entry at {:X} in yaml missing compression type\n\
                       Please add one of the following compression types\n\
-                      MIO0, YAY0, YAY1, YAZ0 (Unsupported)", offset);
+                      MIO0, YAY0, YAY1, YAZ0 (Unsupported)",
+                     offset);
         return std::nullopt;
     }
     compressionType = sCompressionTypes.at(compression);
@@ -481,16 +507,17 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
     if (format.empty()) {
         SPDLOG_ERROR("Texture entry at {:X} in yaml missing format node\n\
                       Please add one of the following formats\n\
-                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp, tlut", offset);
+                      rgba16, rgba32, ia16, ia8, ia4, i8, i4, ci8, ci4, 1bpp, tlut",
+                     offset);
         return std::nullopt;
     }
 
-    if(!Torch::contains(sTextureFormats, format)) {
+    if (!Torch::contains(sTextureFormats, format)) {
         return std::nullopt;
     }
 
     TextureFormat fmt = sTextureFormats.at(format);
-    if(fmt.type == TextureType::TLUT){
+    if (fmt.type == TextureType::TLUT) {
         width = GetSafeNode<uint32_t>(node, "colors");
         height = 1;
     } else {
@@ -506,7 +533,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
             const auto imgr = png2rgba(buffer.data(), buffer.size(), &width, &height);
             size = width * height * fmt.depth / 8;
             raw = new uint8_t[size];
-            if(rgba2raw(raw, imgr, width, height, fmt.depth) <= 0){
+            if (rgba2raw(raw, imgr, width, height, fmt.depth) <= 0) {
                 throw std::runtime_error("Failed to convert PNG to texture");
             }
             break;
@@ -518,7 +545,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
             const auto imgia = png2ia(buffer.data(), buffer.size(), &width, &height);
             size = width * height * fmt.depth / 8;
             raw = new uint8_t[size];
-            if(ia2raw(raw, imgia, width, height, fmt.depth) <= 0){
+            if (ia2raw(raw, imgia, width, height, fmt.depth) <= 0) {
                 throw std::runtime_error("Failed to convert PNG to texture");
             }
             break;
@@ -539,7 +566,8 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
             // if (palettePtr) {
 
             //     auto imgi = png2rgba(buffer.data(), buffer.size(), &width, &height);
-            //     auto pal = png2rgba(palettePtr->mBuffer.data(), (palettePtr->mWidth * palettePtr->mWidth * palettePtr->mFormat.depth * 2), &width, &height);
+            //     auto pal = png2rgba(palettePtr->mBuffer.data(), (palettePtr->mWidth * palettePtr->mWidth *
+            //     palettePtr->mFormat.depth * 2), &width, &height);
 
             //     size = width * height * fmt.depth / 8;
             //     raw = new uint8_t[size];
@@ -558,7 +586,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
             const auto imgi = png2ia(buffer.data(), buffer.size(), &width, &height);
             size = width * height * fmt.depth / 8;
             raw = new uint8_t[size];
-            if(i2raw(raw, imgi, width, height, fmt.depth) <= 0){
+            if (i2raw(raw, imgi, width, height, fmt.depth) <= 0) {
                 throw std::runtime_error("Failed to convert PNG to texture");
             }
             break;
@@ -572,7 +600,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
     auto result = std::vector(raw, raw + size);
 
     SPDLOG_INFO("Texture: {}", format);
-    if(fmt.type == TextureType::TLUT){
+    if (fmt.type == TextureType::TLUT) {
         SPDLOG_INFO("Colors: {}", width);
     } else {
         SPDLOG_INFO("Width: {}", width);
@@ -581,7 +609,7 @@ std::optional<std::shared_ptr<IParsedData>> CompressedTextureFactory::parse_modd
     SPDLOG_INFO("Size: {}", size);
     SPDLOG_INFO("Offset: 0x{:X}", offset);
 
-    if(result.size() == 0){
+    if (result.size() == 0) {
         return std::nullopt;
     }
 

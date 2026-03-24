@@ -4,7 +4,7 @@
 #include <Companion.h>
 
 void N64::Cartridge::Initialize() {
-    LUS::BinaryReader reader((char*) this->gRomData.data(), this->gRomData.size());
+    LUS::BinaryReader reader((char*)this->gRomData.data(), this->gRomData.size());
     reader.SetEndianness(Torch::Endianness::Big);
     reader.Seek(0x10, LUS::SeekOffsetType::Start);
     this->gRomCRC = BSWAP32(reader.ReadUInt32());
@@ -32,7 +32,7 @@ void N64::Cartridge::Initialize() {
     reader.Close();
 }
 
-const std::string &N64::Cartridge::GetGameTitle() {
+const std::string& N64::Cartridge::GetGameTitle() {
     return this->gGameTitle;
 }
 

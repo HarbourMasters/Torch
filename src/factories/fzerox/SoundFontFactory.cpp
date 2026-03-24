@@ -50,8 +50,10 @@ static std::unordered_map<uint32_t, std::string> sMediumMap = {
     { MEDIUM_DISK_DRIVE, "MEDIUM_DISK_DRIVE" },
 };
 
-#define FORMAT_HEX(x, w) "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase << std::dec
-#define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x << "f"
+#define FORMAT_HEX(x, w) \
+    "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase << std::dec
+#define FORMAT_FLOAT(x, w, p) \
+    std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x << "f"
 
 #define DRUM_SIZE 0x10
 #define SFX_SIZE 0x8
@@ -63,10 +65,11 @@ static std::unordered_map<uint32_t, std::string> sMediumMap = {
 #define LOOP_SIZE2 0x30
 #define ALIGN16(val) (((val) + 0xF) & ~0xF)
 
-ExportResult FZX::SoundFontHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::SoundFontHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto soundFontData = std::static_pointer_cast<SoundFontData>(raw);
-    
+
     write << "extern u32 " << symbol << "Offsets[];\n";
 
     for (const auto& entry : soundFontData->mEntries) {
@@ -109,7 +112,8 @@ ExportResult FZX::SoundFontHeaderExporter::Export(std::ostream &write, std::shar
     return std::nullopt;
 }
 
-ExportResult FZX::SoundFontCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult FZX::SoundFontCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto soundFontData = std::static_pointer_cast<SoundFontData>(raw);
@@ -189,7 +193,8 @@ ExportResult FZX::SoundFontCodeExporter::Export(std::ostream &write, std::shared
         }
 
         dataNameToSizeMap[entry.name] = size;
-        SPDLOG_INFO("ENTRY OUT {} {}, 0x{:X} (size 0x{:X})", sSoundFontDataTypeMap[entry.type], entry.name, rollingOffset, size);
+        SPDLOG_INFO("ENTRY OUT {} {}, 0x{:X} (size 0x{:X})", sSoundFontDataTypeMap[entry.type], entry.name,
+                    rollingOffset, size);
         rollingOffset += size;
     }
     uint32_t totalSize = rollingOffset;
@@ -246,7 +251,8 @@ ExportResult FZX::SoundFontCodeExporter::Export(std::ostream &write, std::shared
                 auto drum = std::get<Drum>(entry.data);
                 write << "Drum " << entry.name << " = {\n";
                 write << fourSpaceTab << (uint32_t)drum.adsrDecayIndex << ", " << (uint32_t)drum.pan << ", 0,\n";
-                write << fourSpaceTab << "{ " << FORMAT_HEX(dataNameToOffsetMap[drum.tunedSample.sampleRef], 1) << ", " << FORMAT_FLOAT(drum.tunedSample.tuning, 7, 7) << " },\n";
+                write << fourSpaceTab << "{ " << FORMAT_HEX(dataNameToOffsetMap[drum.tunedSample.sampleRef], 1) << ", "
+                      << FORMAT_FLOAT(drum.tunedSample.tuning, 7, 7) << " },\n";
                 write << fourSpaceTab << FORMAT_HEX(dataNameToOffsetMap[drum.envelopeRef], 1) << ",\n";
                 write << "};\n\n";
                 break;
@@ -255,7 +261,8 @@ ExportResult FZX::SoundFontCodeExporter::Export(std::ostream &write, std::shared
                 auto sfxList = std::get<std::vector<SoundEffect>>(entry.data);
                 write << "SoundEffect " << entry.name << "[] = {\n";
                 for (const auto& sfx : sfxList) {
-                    write << fourSpaceTab << "{ { " << FORMAT_HEX(dataNameToOffsetMap[sfx.tunedSample.sampleRef], 1) << ", " << FORMAT_FLOAT(sfx.tunedSample.tuning, 7, 7) << " } },\n";
+                    write << fourSpaceTab << "{ { " << FORMAT_HEX(dataNameToOffsetMap[sfx.tunedSample.sampleRef], 1)
+                          << ", " << FORMAT_FLOAT(sfx.tunedSample.tuning, 7, 7) << " } },\n";
                 }
                 write << "};\n\n";
                 break;
@@ -263,10 +270,18 @@ ExportResult FZX::SoundFontCodeExporter::Export(std::ostream &write, std::shared
             case DataType::Instrument: {
                 auto instrument = std::get<Instrument>(entry.data);
                 write << "Instrument " << entry.name << " = {\n";
-                write << fourSpaceTab << "0, " << (uint32_t)instrument.normalRangeLo << ", " << (uint32_t)instrument.normalRangeHi << ", " << (uint32_t)instrument.adsrDecayIndex << ", " << FORMAT_HEX(dataNameToOffsetMap[instrument.envelopeRef], 1) << ",\n";
-                write << fourSpaceTab << "{ " << FORMAT_HEX(dataNameToOffsetMap[instrument.lowPitchTunedSample.sampleRef], 1) << ", " << FORMAT_FLOAT(instrument.lowPitchTunedSample.tuning, 7, 7) << " },\n";
-                write << fourSpaceTab << "{ " << FORMAT_HEX(dataNameToOffsetMap[instrument.normalPitchTunedSample.sampleRef], 1) << ", " << FORMAT_FLOAT(instrument.normalPitchTunedSample.tuning, 7, 7) << " },\n";
-                write << fourSpaceTab << "{ " << FORMAT_HEX(dataNameToOffsetMap[instrument.highPitchTunedSample.sampleRef], 1) << ", " << FORMAT_FLOAT(instrument.highPitchTunedSample.tuning, 7, 7) << " },\n";
+                write << fourSpaceTab << "0, " << (uint32_t)instrument.normalRangeLo << ", "
+                      << (uint32_t)instrument.normalRangeHi << ", " << (uint32_t)instrument.adsrDecayIndex << ", "
+                      << FORMAT_HEX(dataNameToOffsetMap[instrument.envelopeRef], 1) << ",\n";
+                write << fourSpaceTab << "{ "
+                      << FORMAT_HEX(dataNameToOffsetMap[instrument.lowPitchTunedSample.sampleRef], 1) << ", "
+                      << FORMAT_FLOAT(instrument.lowPitchTunedSample.tuning, 7, 7) << " },\n";
+                write << fourSpaceTab << "{ "
+                      << FORMAT_HEX(dataNameToOffsetMap[instrument.normalPitchTunedSample.sampleRef], 1) << ", "
+                      << FORMAT_FLOAT(instrument.normalPitchTunedSample.tuning, 7, 7) << " },\n";
+                write << fourSpaceTab << "{ "
+                      << FORMAT_HEX(dataNameToOffsetMap[instrument.highPitchTunedSample.sampleRef], 1) << ", "
+                      << FORMAT_FLOAT(instrument.highPitchTunedSample.tuning, 7, 7) << " },\n";
                 write << "};\n\n";
                 break;
             }
@@ -288,8 +303,11 @@ ExportResult FZX::SoundFontCodeExporter::Export(std::ostream &write, std::shared
                 if (soundFontData->mSupportSfx) {
                     write << "0, ";
                 }
-                write << sCodecMap.at(sample.codec) << ", " << sMediumMap.at(sample.medium) << ", " << sample.unk_bit26 << ", 0, " << FORMAT_HEX(sample.size, 1) << ",\n";
-                write << fourSpaceTab << FORMAT_HEX(sample.rawSampleOffset, 1) << ", " << FORMAT_HEX(dataNameToOffsetMap[sample.loopRef], 1) << ", " << FORMAT_HEX(dataNameToOffsetMap[sample.bookRef], 1);
+                write << sCodecMap.at(sample.codec) << ", " << sMediumMap.at(sample.medium) << ", " << sample.unk_bit26
+                      << ", 0, " << FORMAT_HEX(sample.size, 1) << ",\n";
+                write << fourSpaceTab << FORMAT_HEX(sample.rawSampleOffset, 1) << ", "
+                      << FORMAT_HEX(dataNameToOffsetMap[sample.loopRef], 1) << ", "
+                      << FORMAT_HEX(dataNameToOffsetMap[sample.bookRef], 1);
 
                 write << "\n};\n\n";
                 break;
@@ -318,10 +336,12 @@ ExportResult FZX::SoundFontCodeExporter::Export(std::ostream &write, std::shared
                 auto loop = std::get<AdpcmLoop>(entry.data);
                 if (loop.count != 0) {
                     write << "AdpcmLoop " << entry.name << " = {\n";
-                    write << fourSpaceTab << "{ " << loop.start << ", " << loop.end << ", " << FORMAT_HEX(loop.count, 1) << ", { 0 } },";
+                    write << fourSpaceTab << "{ " << loop.start << ", " << loop.end << ", " << FORMAT_HEX(loop.count, 1)
+                          << ", { 0 } },";
                 } else {
                     write << "AdpcmLoopHeader " << entry.name << " = {\n";
-                    write << fourSpaceTab << loop.start << ", " << loop.end << ", " << FORMAT_HEX(loop.count, 1) << ", { 0 },";
+                    write << fourSpaceTab << loop.start << ", " << loop.end << ", " << FORMAT_HEX(loop.count, 1)
+                          << ", { 0 },";
                 }
 
                 if (loop.count != 0) {
@@ -368,12 +388,16 @@ ExportResult FZX::SoundFontCodeExporter::Export(std::ostream &write, std::shared
     return offset + totalSize;
 }
 
-ExportResult FZX::SoundFontBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult FZX::SoundFontBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
 
     return std::nullopt;
 }
 
-std::string FZX::SoundFontFactory::RegisterSoundFontData(std::string symbol, FZX::DataType dataType, uint32_t offset, std::map<uint32_t, std::pair<FZX::DataType, std::string>>& dataMap, std::unordered_map<FZX::DataType, uint32_t>& dataCountMap) {
+std::string
+FZX::SoundFontFactory::RegisterSoundFontData(std::string symbol, FZX::DataType dataType, uint32_t offset,
+                                             std::map<uint32_t, std::pair<FZX::DataType, std::string>>& dataMap,
+                                             std::unordered_map<FZX::DataType, uint32_t>& dataCountMap) {
     std::string dataName;
 
     if (Torch::contains(dataMap, offset)) {
@@ -422,7 +446,8 @@ std::string FZX::SoundFontFactory::RegisterSoundFontData(std::string symbol, FZX
     return dataName;
 }
 
-std::optional<std::shared_ptr<IParsedData>> FZX::SoundFontFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> FZX::SoundFontFactory::parse(std::vector<uint8_t>& buffer,
+                                                                         YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto symbol = GetSafeNode<std::string>(node, "symbol");
@@ -490,9 +515,10 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SoundFontFactory::parse(std::ve
         drum.pan = reader.ReadUByte();
         drum.isRelocated = reader.ReadUByte();
         reader.ReadUByte();
-        
+
         auto sampleOffset = reader.ReadUInt32();
-        drum.tunedSample.sampleRef = RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
+        drum.tunedSample.sampleRef =
+            RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
         sampleOffsets.insert(sampleOffset);
         drum.tunedSample.tuning = reader.ReadFloat();
         auto envelopeOffset = reader.ReadUInt32();
@@ -506,18 +532,19 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SoundFontFactory::parse(std::ve
     if (supportSfx) {
         SPDLOG_INFO("FZX SOUNDFONT SEEK sfx 0x{:X}", sfxOffset);
         reader.Seek(sfxOffset, LUS::SeekOffsetType::Start);
-        
+
         if (numSfx > 0) {
             std::vector<SoundEffect> soundEffects;
             for (uint32_t i = 0; i < numSfx; i++) {
                 SoundEffect soundEffect;
                 auto sampleOffset = reader.ReadUInt32();
-                soundEffect.tunedSample.sampleRef = RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
+                soundEffect.tunedSample.sampleRef =
+                    RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
                 sampleOffsets.insert(sampleOffset);
                 soundEffect.tunedSample.tuning = reader.ReadFloat();
                 soundEffects.push_back(soundEffect);
             }
-   
+
             soundFontMap[dataMap.at(sfxOffset).second] = soundEffects;
         }
     }
@@ -534,26 +561,30 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SoundFontFactory::parse(std::ve
         instrument.normalRangeHi = reader.ReadUByte();
         instrument.adsrDecayIndex = reader.ReadUByte();
         auto envelopeOffset = reader.ReadUInt32();
-        instrument.envelopeRef = RegisterSoundFontData(symbol, DataType::Envelope, envelopeOffset, dataMap, dataCountMap);
+        instrument.envelopeRef =
+            RegisterSoundFontData(symbol, DataType::Envelope, envelopeOffset, dataMap, dataCountMap);
         envelopeOffsets.insert(envelopeOffset);
 
         sampleOffset = reader.ReadUInt32();
         if (sampleOffset != 0) {
-            instrument.lowPitchTunedSample.sampleRef = RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
+            instrument.lowPitchTunedSample.sampleRef =
+                RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
             sampleOffsets.insert(sampleOffset);
         }
         instrument.lowPitchTunedSample.tuning = reader.ReadFloat();
 
         sampleOffset = reader.ReadUInt32();
         if (sampleOffset != 0) {
-            instrument.normalPitchTunedSample.sampleRef = RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
+            instrument.normalPitchTunedSample.sampleRef =
+                RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
             sampleOffsets.insert(sampleOffset);
         }
         instrument.normalPitchTunedSample.tuning = reader.ReadFloat();
 
         sampleOffset = reader.ReadUInt32();
         if (sampleOffset != 0) {
-            instrument.highPitchTunedSample.sampleRef = RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
+            instrument.highPitchTunedSample.sampleRef =
+                RegisterSoundFontData(symbol, DataType::Sample, sampleOffset, dataMap, dataCountMap);
             sampleOffsets.insert(sampleOffset);
         }
         instrument.highPitchTunedSample.tuning = reader.ReadFloat();
@@ -586,7 +617,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SoundFontFactory::parse(std::ve
         Sample sample;
         SPDLOG_INFO("FZX SOUNDFONT SEEK sample 0x{:X}", sampleOffset);
         reader.Seek(sampleOffset, LUS::SeekOffsetType::Start);
-        
+
         uint32_t sampleBitfield = reader.ReadUInt32();
         sample.codec = (sampleBitfield & (0b0111 << 28)) >> 28;
         sample.medium = (sampleBitfield & (0b11 << 26)) >> 26;
@@ -601,7 +632,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SoundFontFactory::parse(std::ve
         auto bookOffset = reader.ReadUInt32();
         sample.bookRef = RegisterSoundFontData(symbol, DataType::Book, bookOffset, dataMap, dataCountMap);
         bookOffsets.insert(bookOffset);
-        
+
         soundFontMap[dataMap.at(sampleOffset).second] = sample;
     }
 
@@ -650,6 +681,6 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SoundFontFactory::parse(std::ve
 
         soundFontEntries.push_back(entry);
     }
-    
+
     return std::make_shared<SoundFontData>(soundFontEntries, supportSfx);
 }

@@ -7,10 +7,11 @@
 #include <factories/sf64/audio/AudioDecompressor.h>
 #include <factories/naudio/v0/AIFCDecode.h>
 
-ExportResult NSampleHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult NSampleHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -20,36 +21,40 @@ ExportResult NSampleHeaderExporter::Export(std::ostream &write, std::shared_ptr<
     return std::nullopt;
 }
 
-ExportResult NSampleCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult NSampleCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                         YAML::Node& node, std::string* replacement) {
     return std::nullopt;
 }
 
-ExportResult NSampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult NSampleBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<NSampleData>(raw);
 
     WriteHeader(writer, Torch::ResourceType::Sample, 1);
-    writer.Write((uint8_t) data->codec);
-    writer.Write((uint8_t) data->medium);
-    writer.Write((uint8_t) data->unk);
-    writer.Write((uint32_t) data->size);
+    writer.Write((uint8_t)data->codec);
+    writer.Write((uint8_t)data->medium);
+    writer.Write((uint8_t)data->unk);
+    writer.Write((uint32_t)data->size);
 
     writer.Write(AudioContext::GetPathByAddr(data->loop));
     writer.Write(AudioContext::GetPathByAddr(data->book));
 
     auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
-    writer.Write((char*) table.buffer.data() + table.info->entries[data->sampleBankId].addr + data->sampleAddr, data->size);
+    writer.Write((char*)table.buffer.data() + table.info->entries[data->sampleBankId].addr + data->sampleAddr,
+                 data->size);
 
     writer.Finish(write);
     return std::nullopt;
 }
 
-ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult NSampleModdingExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto aiff = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<NSampleData>(raw);
 
 #ifdef SF64_SUPPORT
-    if(AudioContext::driver == NAudioDrivers::SF64 && data->codec == 2) {
+    if (AudioContext::driver == NAudioDrivers::SF64 && data->codec == 2) {
         *replacement += ".pcm";
         auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
         auto ptr = table.buffer.data() + table.info->entries[data->sampleBankId].addr + data->sampleAddr;
@@ -57,7 +62,7 @@ ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr
         auto output = new int16_t[data->size * 2];
         SF64::DecompressAudio(vec, output);
         auto writer = LUS::BinaryWriter();
-        writer.Write((char*) output, data->size);
+        writer.Write((char*)output, data->size);
         writer.Finish(write);
     } else {
 #endif
@@ -66,7 +71,7 @@ ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr
         AudioConverter::SampleV1ToAIFC(data.get(), aifc);
         auto cnv = aifc.ToVector();
 
-        if(!cnv.empty()){
+        if (!cnv.empty()) {
             write_aiff(cnv, aiff);
             aiff.Finish(write);
         }
@@ -74,11 +79,11 @@ ExportResult NSampleModdingExporter::Export(std::ostream &write, std::shared_ptr
     }
 #endif
 
-
     return std::nullopt;
 }
 
-ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult NSampleXMLExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                        YAML::Node& node, std::string* replacement) {
     auto entry = std::static_pointer_cast<NSampleData>(raw);
 
     auto path = fs::path(*replacement);
@@ -93,8 +98,9 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
     root->SetAttribute("Relocated", 0);
     root->SetAttribute("Path", (path.string() + "_data").c_str());
 
-    if(entry->loop != 0) {
-        auto loop = std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(entry->loop)->data.value());
+    if (entry->loop != 0) {
+        auto loop =
+            std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(entry->loop)->data.value());
         tinyxml2::XMLElement* adpcmLoop = sample.NewElement("ADPCMLoop");
         adpcmLoop->SetAttribute("Start", loop->start);
         adpcmLoop->SetAttribute("End", loop->end);
@@ -108,9 +114,10 @@ ExportResult NSampleXMLExporter::Export(std::ostream &write, std::shared_ptr<IPa
         }
         root->InsertEndChild(adpcmLoop);
     }
-    
-    if(entry->book != 0) {
-        auto book = std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(entry->book)->data.value());
+
+    if (entry->book != 0) {
+        auto book =
+            std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(entry->book)->data.value());
         tinyxml2::XMLElement* adpcmBook = sample.NewElement("ADPCMBook");
         adpcmBook->SetAttribute("Order", book->order);
         adpcmBook->SetAttribute("Npredictors", book->numPredictors);
@@ -159,7 +166,7 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     auto loopAddr = reader.ReadUInt32();
     auto bookAddr = reader.ReadUInt32();
 
-    if(loopAddr != 0){
+    if (loopAddr != 0) {
         loopAddr += table.addr;
         YAML::Node loop;
         loop["type"] = "NAUDIO:V1:ADPCM_LOOP";
@@ -167,7 +174,7 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
         Companion::Instance->AddAsset(loop);
     }
 
-    if(bookAddr != 0){
+    if (bookAddr != 0) {
         bookAddr += table.addr;
         YAML::Node book;
         book["type"] = "NAUDIO:V1:ADPCM_BOOK";

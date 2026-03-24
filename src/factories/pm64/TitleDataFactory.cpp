@@ -10,7 +10,8 @@
 // Sub-images are byte-addressed (IA8 = 1 byte/pixel, RGBA32 = 4 bytes/pixel)
 // so no byte-swapping is needed.
 
-std::optional<std::shared_ptr<IParsedData>> PM64TitleDataFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> PM64TitleDataFactory::parse(std::vector<uint8_t>& buffer,
+                                                                        YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto subOffset = GetSafeNode<uint32_t>(node, "sub_offset");
     auto size = GetSafeNode<uint32_t>(node, "size");
@@ -23,8 +24,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64TitleDataFactory::parse(std::vec
     }
 
     if (subOffset + size > decoded->size) {
-        SPDLOG_ERROR("PM64:TITLE_DATA: Sub-image at 0x{:X} + {} exceeds decompressed size {}",
-                     subOffset, size, decoded->size);
+        SPDLOG_ERROR("PM64:TITLE_DATA: Sub-image at 0x{:X} + {} exceeds decompressed size {}", subOffset, size,
+                     decoded->size);
         return std::nullopt;
     }
 
@@ -35,7 +36,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64TitleDataFactory::parse(std::vec
     return std::make_shared<RawBuffer>(result);
 }
 
-ExportResult PM64TitleDataBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64TitleDataBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -47,7 +49,8 @@ ExportResult PM64TitleDataBinaryExporter::Export(std::ostream& write, std::share
     return std::nullopt;
 }
 
-ExportResult PM64TitleDataHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64TitleDataHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {

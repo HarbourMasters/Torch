@@ -2,10 +2,11 @@
 #include "utils/Decompressor.h"
 #include "Companion.h"
 
-ExportResult ADPCMLoopHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult ADPCMLoopHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -15,11 +16,13 @@ ExportResult ADPCMLoopHeaderExporter::Export(std::ostream &write, std::shared_pt
     return std::nullopt;
 }
 
-ExportResult ADPCMLoopCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult ADPCMLoopCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
     return std::nullopt;
 }
 
-ExportResult ADPCMLoopBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult ADPCMLoopBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<ADPCMLoopData>(raw);
 
@@ -27,8 +30,8 @@ ExportResult ADPCMLoopBinaryExporter::Export(std::ostream &write, std::shared_pt
     writer.Write(data->start);
     writer.Write(data->end);
     writer.Write(data->count);
-    if(data->count != 0){
-        for(size_t i = 0; i < 16; i++){
+    if (data->count != 0) {
+        for (size_t i = 0; i < 16; i++) {
             writer.Write(data->predictorState[i]);
         }
     }
@@ -46,8 +49,8 @@ std::optional<std::shared_ptr<IParsedData>> ADPCMLoopFactory::parse(std::vector<
     loop->end = reader.ReadUInt32();
     loop->count = reader.ReadUInt32();
 
-    if(loop->count != 0){
-        for(size_t i = 0; i < 16; i++){
+    if (loop->count != 0) {
+        for (size_t i = 0; i < 16; i++) {
             loop->predictorState[i] = reader.ReadInt16();
         }
     }

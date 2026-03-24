@@ -5,7 +5,8 @@
 
 #define ANIMINDEX_COUNT(boneCount) (((boneCount) + 1) * 6)
 
-ExportResult SM64::AnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::AnimationBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                   std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto anim = std::static_pointer_cast<AnimationData>(raw);
 
@@ -32,7 +33,8 @@ ExportResult SM64::AnimationBinaryExporter::Export(std::ostream &write, std::sha
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::vector<uint8_t>& buffer,
+                                                                          YAML::Node& node) {
     auto offset = node["offset"];
 
     auto [raw, data] = Decompressor::AutoDecode(node, buffer);
@@ -54,7 +56,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
     const auto indexLength = ANIMINDEX_COUNT(unusedBoneCount);
     const auto valuesSize = !segmented ? length * sizeof(int16_t) : indexAddr - valuesAddr;
 
-    if(segmented) {
+    if (segmented) {
         valuesAddr = SEGMENT_OFFSET(valuesAddr);
         indexAddr = SEGMENT_OFFSET(indexAddr);
     }
@@ -86,5 +88,6 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
         valuesData.push_back(values.ReadInt16());
     }
 
-    return std::make_shared<AnimationData>(flags, animYTransDivisor, startFrame, loopStart, loopEnd, unusedBoneCount, length, indicesData, valuesData);
+    return std::make_shared<AnimationData>(flags, animYTransDivisor, startFrame, loopStart, loopEnd, unusedBoneCount,
+                                           length, indicesData, valuesData);
 }

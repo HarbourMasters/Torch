@@ -29,18 +29,18 @@ static void ByteSwapBackgroundData(uint8_t* data, size_t size) {
     uint16_t* header16 = reinterpret_cast<uint16_t*>(data);
 
     // Swap 16-bit dimension fields first (we need these for validation)
-    header16[4] = BSWAP16(header16[4]);  // startX at offset 0x08
-    header16[5] = BSWAP16(header16[5]);  // startY at offset 0x0A
-    header16[6] = BSWAP16(header16[6]);  // width at offset 0x0C
-    header16[7] = BSWAP16(header16[7]);  // height at offset 0x0E
+    header16[4] = BSWAP16(header16[4]); // startX at offset 0x08
+    header16[5] = BSWAP16(header16[5]); // startY at offset 0x0A
+    header16[6] = BSWAP16(header16[6]); // width at offset 0x0C
+    header16[7] = BSWAP16(header16[7]); // height at offset 0x0E
 
     // The N64 header contains absolute VRAM addresses (0x802xxxxx) that cannot be
     // converted to file offsets. The background data has a fixed layout:
     //   - Palette at offset 0x10 (right after 16-byte header)
     //   - Raster at offset 0x210 (after header + 512-byte palette)
     // We ignore the N64 addresses and write the correct fixed offsets.
-    constexpr uint32_t paletteOffset = 0x10;   // Right after 16-byte header
-    constexpr uint32_t rasterOffset = 0x210;   // After header (16) + palette (512)
+    constexpr uint32_t paletteOffset = 0x10; // Right after 16-byte header
+    constexpr uint32_t rasterOffset = 0x210; // After header (16) + palette (512)
 
     header32[0] = rasterOffset;
     header32[1] = paletteOffset;
@@ -49,7 +49,8 @@ static void ByteSwapBackgroundData(uint8_t* data, size_t size) {
     // Also, Raster data is CI8 (byte indices) - no swap needed
 }
 
-std::optional<std::shared_ptr<IParsedData>> PM64BackgroundFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> PM64BackgroundFactory::parse(std::vector<uint8_t>& buffer,
+                                                                         YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     // Check if compressed (YAY0)
@@ -78,7 +79,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64BackgroundFactory::parse(std::ve
     }
 }
 
-ExportResult PM64BackgroundBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64BackgroundBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -91,7 +93,8 @@ ExportResult PM64BackgroundBinaryExporter::Export(std::ostream& write, std::shar
     return std::nullopt;
 }
 
-ExportResult PM64BackgroundHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64BackgroundHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {

@@ -13,41 +13,40 @@
 // [0x10] Keyframe data (keyframesCount * vtxCount * 12 bytes, positions byte-swapped)
 // [0x10 + keyframeDataSize] GFX data (gfxCount * 8 bytes, N64 Gfx commands word-swapped)
 
-std::optional<std::shared_ptr<IParsedData>> PM64ImgFXAnimFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> PM64ImgFXAnimFactory::parse(std::vector<uint8_t>& buffer,
+                                                                        YAML::Node& node) {
     auto segmentBase = GetSafeNode<uint32_t>(node, "offset");
     auto headerOffset = GetSafeNode<uint32_t>(node, "header_offset");
 
     uint32_t headerRomAddr = segmentBase + headerOffset;
 
     if (headerRomAddr + 16 > buffer.size()) {
-        SPDLOG_ERROR("PM64:IMGFX_ANIM: Header at 0x{:X} exceeds buffer size 0x{:X}",
-                     headerRomAddr, buffer.size());
+        SPDLOG_ERROR("PM64:IMGFX_ANIM: Header at 0x{:X} exceeds buffer size 0x{:X}", headerRomAddr, buffer.size());
         return std::nullopt;
     }
 
     // Read 16-byte N64 header (big-endian)
     uint8_t* hdr = buffer.data() + headerRomAddr;
     uint32_t n64KeyframesOffset = BSWAP32(*(uint32_t*)(hdr + 0x00));
-    uint32_t n64GfxOffset       = BSWAP32(*(uint32_t*)(hdr + 0x04));
-    uint16_t vtxCount           = BSWAP16(*(uint16_t*)(hdr + 0x08));
-    uint16_t gfxCount           = BSWAP16(*(uint16_t*)(hdr + 0x0A));
-    uint16_t keyframesCount     = BSWAP16(*(uint16_t*)(hdr + 0x0C));
-    uint16_t flags              = BSWAP16(*(uint16_t*)(hdr + 0x0E));
+    uint32_t n64GfxOffset = BSWAP32(*(uint32_t*)(hdr + 0x04));
+    uint16_t vtxCount = BSWAP16(*(uint16_t*)(hdr + 0x08));
+    uint16_t gfxCount = BSWAP16(*(uint16_t*)(hdr + 0x0A));
+    uint16_t keyframesCount = BSWAP16(*(uint16_t*)(hdr + 0x0C));
+    uint16_t flags = BSWAP16(*(uint16_t*)(hdr + 0x0E));
 
-    uint32_t keyframeDataSize = keyframesCount * vtxCount * 12;  // sizeof(ImgFXVtx) = 0x0C
-    uint32_t gfxDataSize = gfxCount * 8;  // sizeof(N64 Gfx) = 8
+    uint32_t keyframeDataSize = keyframesCount * vtxCount * 12; // sizeof(ImgFXVtx) = 0x0C
+    uint32_t gfxDataSize = gfxCount * 8;                        // sizeof(N64 Gfx) = 8
 
     uint32_t keyframesRomAddr = segmentBase + n64KeyframesOffset;
     uint32_t gfxRomAddr = segmentBase + n64GfxOffset;
 
     if (keyframesRomAddr + keyframeDataSize > buffer.size()) {
-        SPDLOG_ERROR("PM64:IMGFX_ANIM: Keyframe data at 0x{:X} (size 0x{:X}) exceeds buffer",
-                     keyframesRomAddr, keyframeDataSize);
+        SPDLOG_ERROR("PM64:IMGFX_ANIM: Keyframe data at 0x{:X} (size 0x{:X}) exceeds buffer", keyframesRomAddr,
+                     keyframeDataSize);
         return std::nullopt;
     }
     if (gfxRomAddr + gfxDataSize > buffer.size()) {
-        SPDLOG_ERROR("PM64:IMGFX_ANIM: GFX data at 0x{:X} (size 0x{:X}) exceeds buffer",
-                     gfxRomAddr, gfxDataSize);
+        SPDLOG_ERROR("PM64:IMGFX_ANIM: GFX data at 0x{:X} (size 0x{:X}) exceeds buffer", gfxRomAddr, gfxDataSize);
         return std::nullopt;
     }
 
@@ -71,9 +70,9 @@ std::optional<std::shared_ptr<IParsedData>> PM64ImgFXAnimFactory::parse(std::vec
     memcpy(kfDst, kfSrc, keyframeDataSize);
     for (uint32_t i = 0; i + 12 <= keyframeDataSize; i += 12) {
         uint16_t* v = reinterpret_cast<uint16_t*>(kfDst + i);
-        v[0] = BSWAP16(v[0]);  // ob[0]
-        v[1] = BSWAP16(v[1]);  // ob[1]
-        v[2] = BSWAP16(v[2]);  // ob[2]
+        v[0] = BSWAP16(v[0]); // ob[0]
+        v[1] = BSWAP16(v[1]); // ob[1]
+        v[2] = BSWAP16(v[2]); // ob[2]
         // bytes 6-11: u8/s8 fields, no swap needed
     }
 
@@ -90,7 +89,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64ImgFXAnimFactory::parse(std::vec
     return std::make_shared<RawBuffer>(blob);
 }
 
-ExportResult PM64ImgFXAnimBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64ImgFXAnimBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -102,6 +102,7 @@ ExportResult PM64ImgFXAnimBinaryExporter::Export(std::ostream& write, std::share
     return std::nullopt;
 }
 
-ExportResult PM64ImgFXAnimHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64ImgFXAnimHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     return std::nullopt;
 }

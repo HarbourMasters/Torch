@@ -23,9 +23,12 @@ uint32_t FZX::CourseData::CalculateChecksum(void) {
         trackSegmentInfo &= ~TRACK_FORM_MASK;
         trackSegmentInfo &= ~TRACK_FLAG_CONTINUOUS;
 
-        checksum += (int32_t) ((controlPointInfo.controlPoint.pos.x + ((1.1f + (0.7f * counter)) * controlPointInfo.controlPoint.pos.y)) +
-                   ((2.2f + (1.2f * counter)) * controlPointInfo.controlPoint.pos.z * (4.4f + (0.9f * counter))) +
-                   controlPointInfo.controlPoint.radiusLeft + ((5.5f + (0.8f * counter)) * controlPointInfo.controlPoint.radiusRight * 4.8f)) +
+        checksum +=
+            (int32_t)((controlPointInfo.controlPoint.pos.x +
+                       ((1.1f + (0.7f * counter)) * controlPointInfo.controlPoint.pos.y)) +
+                      ((2.2f + (1.2f * counter)) * controlPointInfo.controlPoint.pos.z * (4.4f + (0.9f * counter))) +
+                      controlPointInfo.controlPoint.radiusLeft +
+                      ((5.5f + (0.8f * counter)) * controlPointInfo.controlPoint.radiusRight * 4.8f)) +
             trackSegmentInfo * (0xFE - counter) + controlPointInfo.bankAngle * (0x93DE - counter * 2);
         checksum += (controlPointInfo.pit * counter);
         checksum += (controlPointInfo.dash * (counter + 0x10));
@@ -39,14 +42,14 @@ uint32_t FZX::CourseData::CalculateChecksum(void) {
         counter++;
     }
 
-
     return checksum;
 }
 
-ExportResult FZX::CourseHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::CourseHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                               std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -56,7 +59,8 @@ ExportResult FZX::CourseHeaderExporter::Export(std::ostream &write, std::shared_
     return std::nullopt;
 }
 
-ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::CourseCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto course = std::static_pointer_cast<CourseData>(raw);
@@ -73,7 +77,8 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     write << fourSpaceTab << (int32_t)controlPointCount << ", /* Control Point Count */\n";
     write << fourSpaceTab << static_cast<Venue>(course->mVenue) << ", /* Venue */\n";
     write << fourSpaceTab << static_cast<Skybox>(course->mSkybox) << ", /* Skybox */\n";
-    write << fourSpaceTab << "0x" << std::hex << std::uppercase << course->CalculateChecksum() << std::dec << ", /* Checksum */\n";
+    write << fourSpaceTab << "0x" << std::hex << std::uppercase << course->CalculateChecksum() << std::dec
+          << ", /* Checksum */\n";
     write << fourSpaceTab << (int32_t)course->mFlag << ", /* Flag */\n";
 
     write << fourSpaceTab << "{ ";
@@ -82,14 +87,15 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
         if (i != 0) {
             write << ", ";
         }
-        if (!(course->mFileName.at(i) >= '0' && course->mFileName.at(i) <= '9') && !(course->mFileName.at(i) >= 'A' && course->mFileName.at(i) <= 'Z')
-            && !(course->mFileName.at(i) >= 'a' && course->mFileName.at(i) <= 'z')) {
+        if (!(course->mFileName.at(i) >= '0' && course->mFileName.at(i) <= '9') &&
+            !(course->mFileName.at(i) >= 'A' && course->mFileName.at(i) <= 'Z') &&
+            !(course->mFileName.at(i) >= 'a' && course->mFileName.at(i) <= 'z')) {
             write << "0x" << FORMAT_HEX((uint32_t)(uint8_t)course->mFileName.at(i), 2);
             continue;
         }
         write << "\'" << course->mFileName.at(i) << "\'";
     }
-    
+
     write << std::dec << " }, /* File Name */\n";
 
     write << fourSpaceTab << (int32_t)course->mBgm << ",\n";
@@ -100,7 +106,8 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
         write << fourSpaceTab << fourSpaceTab;
         if (i < controlPointCount) {
             const ControlPointInfo& controlPointInfo = course->mControlPointInfos.at(i);
-            Vec3f pos(controlPointInfo.controlPoint.pos.x, controlPointInfo.controlPoint.pos.y, controlPointInfo.controlPoint.pos.z);
+            Vec3f pos(controlPointInfo.controlPoint.pos.x, controlPointInfo.controlPoint.pos.y,
+                      controlPointInfo.controlPoint.pos.z);
             write << "{ { " << FORMAT_FLOAT(pos, 6, 4) << " }, ";
             write << controlPointInfo.controlPoint.radiusLeft << ", ";
             write << controlPointInfo.controlPoint.radiusRight << ",\n";
@@ -432,7 +439,8 @@ ExportResult FZX::CourseCodeExporter::Export(std::ostream &write, std::shared_pt
     return offset + sizeof(CourseRawData);
 }
 
-ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::CourseBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                               std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto course = std::static_pointer_cast<CourseData>(raw);
     int8_t controlPointCount = (int8_t)course->mControlPointInfos.size();
@@ -473,7 +481,8 @@ ExportResult FZX::CourseBinaryExporter::Export(std::ostream &write, std::shared_
     return std::nullopt;
 }
 
-ExportResult FZX::CourseModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::CourseModdingExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto course = std::static_pointer_cast<CourseData>(raw);
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
@@ -498,8 +507,9 @@ ExportResult FZX::CourseModdingExporter::Export(std::ostream &write, std::shared
     out << YAML::Key << "Name";
     out << YAML::Value << YAML::Flow << YAML::BeginSeq;
     for (size_t i = 0; i < course->mFileName.size(); i++) {
-        if (!(course->mFileName.at(i) >= '0' && course->mFileName.at(i) <= '9') && !(course->mFileName.at(i) >= 'A' && course->mFileName.at(i) <= 'Z')
-            && !(course->mFileName.at(i) >= 'a' && course->mFileName.at(i) <= 'z')) {
+        if (!(course->mFileName.at(i) >= '0' && course->mFileName.at(i) <= '9') &&
+            !(course->mFileName.at(i) >= 'A' && course->mFileName.at(i) <= 'Z') &&
+            !(course->mFileName.at(i) >= 'a' && course->mFileName.at(i) <= 'z')) {
             out << YAML::Hex << (uint32_t)(uint8_t)course->mFileName.at(i) << YAML::Dec;
         } else {
             out << course->mFileName.at(i);
@@ -648,15 +658,16 @@ std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse(std::vecto
     return std::make_shared<CourseData>(creatorId, venue, skybox, flag, fileName, bgm, controlPointInfos);
 }
 
-std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> FZX::CourseFactory::parse_modding(std::vector<uint8_t>& buffer,
+                                                                              YAML::Node& node) {
     YAML::Node assetNode;
 
     try {
-        std::string text((char*) buffer.data(), buffer.size());
+        std::string text((char*)buffer.data(), buffer.size());
         assetNode = YAML::Load(text.c_str());
     } catch (YAML::ParserException& e) {
         SPDLOG_ERROR("Failed to parse message data: {}", e.what());
-        SPDLOG_ERROR("{}", (char*) buffer.data());
+        SPDLOG_ERROR("{}", (char*)buffer.data());
         return std::nullopt;
     }
 

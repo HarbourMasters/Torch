@@ -8,9 +8,9 @@ NAudioDrivers AudioContext::driver = NAudioDrivers::UNKNOWN;
 std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto driver = GetSafeNode<std::string>(node, "driver");
 
-    if(driver == "SF64") {
+    if (driver == "SF64") {
         AudioContext::driver = NAudioDrivers::SF64;
-    } else if(driver == "FZEROX"){
+    } else if (driver == "FZEROX") {
         AudioContext::driver = NAudioDrivers::FZEROX;
     } else {
         throw std::runtime_error("Unknown NAudio driver");
@@ -28,9 +28,12 @@ std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vect
     auto tableSize = GetSafeNode<uint32_t>(table, "size");
     auto tableOffset = GetSafeNode<uint32_t>(table, "offset");
 
-    AudioContext::tables[AudioTableType::SEQ_TABLE].buffer = std::vector<uint8_t>(buffer.begin() + seqOffset, buffer.begin() + seqOffset + seqSize);
-    AudioContext::tables[AudioTableType::FONT_TABLE].buffer = std::vector<uint8_t>(buffer.begin() + bankOffset, buffer.begin() + bankOffset + bankSize);
-    AudioContext::tables[AudioTableType::SAMPLE_TABLE].buffer = std::vector<uint8_t>(buffer.begin() + tableOffset, buffer.begin() + tableOffset + tableSize);
+    AudioContext::tables[AudioTableType::SEQ_TABLE].buffer =
+        std::vector<uint8_t>(buffer.begin() + seqOffset, buffer.begin() + seqOffset + seqSize);
+    AudioContext::tables[AudioTableType::FONT_TABLE].buffer =
+        std::vector<uint8_t>(buffer.begin() + bankOffset, buffer.begin() + bankOffset + bankSize);
+    AudioContext::tables[AudioTableType::SAMPLE_TABLE].buffer =
+        std::vector<uint8_t>(buffer.begin() + tableOffset, buffer.begin() + tableOffset + tableSize);
 
     AudioContext::tables[AudioTableType::SEQ_TABLE].offset = seqOffset;
     AudioContext::tables[AudioTableType::FONT_TABLE].offset = bankOffset;
@@ -57,8 +60,8 @@ TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t pa
     auto sampleAddr = reader.ReadUInt32();
     auto tuning = reader.ReadFloat();
 
-    if(sampleAddr == 0){
-        if(tuning != 0.0f){
+    if (sampleAddr == 0) {
+        if (tuning != 0.0f) {
             throw std::runtime_error("The provided tuned sample is invalid");
         }
         return { 0, 0, 0.0f };
@@ -76,7 +79,7 @@ TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t pa
 }
 
 uint64_t AudioContext::GetPathByAddr(uint32_t addr) {
-    if(addr == 0){
+    if (addr == 0) {
         return 0;
     }
 

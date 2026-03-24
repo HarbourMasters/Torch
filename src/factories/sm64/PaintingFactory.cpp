@@ -6,10 +6,11 @@
 #include "utils/TorchUtils.h"
 #include <regex>
 
-ExportResult SM64::PaintingHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::PaintingHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -18,7 +19,8 @@ ExportResult SM64::PaintingHeaderExporter::Export(std::ostream &write, std::shar
     return std::nullopt;
 }
 
-ExportResult SM64::PaintingCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::PaintingCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -96,24 +98,34 @@ ExportResult SM64::PaintingCodeExporter::Export(std::ostream &write, std::shared
     write << fourSpaceTab << "/* id */ " << std::hex << "0x" << painting->id << ",\n";
     write << fourSpaceTab << "/* Image Count */ " << std::hex << "0x" << (uint32_t)painting->imageCount << ",\n";
     write << fourSpaceTab << "/* Texture Type */ " << textureType.str() << ",\n";
-    write << fourSpaceTab << "/* Floor Status */ " << std::hex << "0x" << (uint32_t)painting->lastFloor << ", " << std::hex << "0x" << (uint32_t)painting->currFloor << ", " << std::hex << "0x" << (uint32_t)painting->floorEntered << ",\n";
+    write << fourSpaceTab << "/* Floor Status */ " << std::hex << "0x" << (uint32_t)painting->lastFloor << ", "
+          << std::hex << "0x" << (uint32_t)painting->currFloor << ", " << std::hex << "0x"
+          << (uint32_t)painting->floorEntered << ",\n";
     write << fourSpaceTab << "/* Ripple Status */ " << (uint32_t)painting->state << ",\n";
     write << fourSpaceTab << "/* Rotation */ " << painting->pitch << ", " << painting->yaw << ",\n";
-    write << fourSpaceTab << "/* Position */ " << painting->posX << ", " << painting->posY << ", " << painting->posZ << ",\n";
-    write << fourSpaceTab << "/* Ripple Magnitude */ " << painting->currRippleMag << ", " << painting->passiveRippleMag << ", " << painting->entryRippleMag << ",\n";
-    write << fourSpaceTab << "/* Ripple Decay */ " << painting->rippleDecay << ", " << painting->passiveRippleDecay << ", " << painting->entryRippleDecay << ",\n";
-    write << fourSpaceTab << "/* Ripple Rate */ " << painting->currRippleRate << ", " << painting->passiveRippleRate << ", " << painting->entryRippleRate << ",\n";
-    write << fourSpaceTab << "/* Ripple Dispersion */ " << painting->dispersionFactor << ", " << painting->passiveDispersionFactor << ", " << painting->entryDispersionFactor << ",\n";
+    write << fourSpaceTab << "/* Position */ " << painting->posX << ", " << painting->posY << ", " << painting->posZ
+          << ",\n";
+    write << fourSpaceTab << "/* Ripple Magnitude */ " << painting->currRippleMag << ", " << painting->passiveRippleMag
+          << ", " << painting->entryRippleMag << ",\n";
+    write << fourSpaceTab << "/* Ripple Decay */ " << painting->rippleDecay << ", " << painting->passiveRippleDecay
+          << ", " << painting->entryRippleDecay << ",\n";
+    write << fourSpaceTab << "/* Ripple Rate */ " << painting->currRippleRate << ", " << painting->passiveRippleRate
+          << ", " << painting->entryRippleRate << ",\n";
+    write << fourSpaceTab << "/* Ripple Dispersion */ " << painting->dispersionFactor << ", "
+          << painting->passiveDispersionFactor << ", " << painting->entryDispersionFactor << ",\n";
     write << fourSpaceTab << "/* Curr Ripple Timer */ " << painting->rippleTimer << ",\n";
     write << fourSpaceTab << "/* Curr Ripple x, y */ " << painting->rippleX << ", " << painting->rippleY << ",\n";
     write << fourSpaceTab << "/* Normal DList */ " << nDLSymbol.str() << ",\n";
     write << fourSpaceTab << "/* Texture Maps */ " << tMapSymbol.str() << ",\n";
     write << fourSpaceTab << "/* Textures */ " << tArrSymbol.str() << ",\n";
-    write << fourSpaceTab << "/* Texture w, h */ " << std::dec << painting->textureWidth << ", " << painting->textureHeight << ",\n";
+    write << fourSpaceTab << "/* Texture w, h */ " << std::dec << painting->textureWidth << ", "
+          << painting->textureHeight << ",\n";
     write << fourSpaceTab << "/* Ripple DList */ " << rDLSymbol.str() << ",\n";
     write << fourSpaceTab << "/* Ripple Trigger */ " << rippleTrigger.str() << ",\n";
     write << fourSpaceTab << "/* Alpha */ " << std::dec << (uint32_t)painting->alpha << ",\n";
-    write << fourSpaceTab << "/* Mario Below */ " << std::hex << "0x" << (uint32_t)painting->marioWasUnder << ", " << std::hex << "0x" << (uint32_t)painting->marioIsUnder << ", " << std::hex << "0x" << (uint32_t)painting->marioWentUnder << ",\n";
+    write << fourSpaceTab << "/* Mario Below */ " << std::hex << "0x" << (uint32_t)painting->marioWasUnder << ", "
+          << std::hex << "0x" << (uint32_t)painting->marioIsUnder << ", " << std::hex << "0x"
+          << (uint32_t)painting->marioWentUnder << ",\n";
     write << fourSpaceTab << "/* Size */ " << painting->size << ",\n";
 
     write << "};\n";
@@ -121,7 +133,8 @@ ExportResult SM64::PaintingCodeExporter::Export(std::ostream &write, std::shared
     return offset + 120;
 }
 
-ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::PaintingBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto painting = std::static_pointer_cast<SM64::Painting>(raw);
     uint32_t ptr;
@@ -165,7 +178,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
             writer.Write(hash);
         } else {
             SPDLOG_WARN("Could not find DisplayList at 0x{:X}", ptr);
-            writer.Write((uint64_t) 0);
+            writer.Write((uint64_t)0);
         }
     }
 
@@ -178,7 +191,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
             writer.Write(hash);
         } else {
             SPDLOG_WARN("Could not find Texture Maps at 0x{:X}", ptr);
-            writer.Write((uint64_t) 0);
+            writer.Write((uint64_t)0);
         }
     }
 
@@ -191,7 +204,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
             writer.Write(hash);
         } else {
             SPDLOG_WARN("Could not find Texture Arrays at 0x{:X}", ptr);
-            writer.Write((uint64_t) 0);
+            writer.Write((uint64_t)0);
         }
     }
 
@@ -207,7 +220,7 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
             writer.Write(hash);
         } else {
             SPDLOG_WARN("Could not find DisplayList at 0x{:X}", ptr);
-            writer.Write((uint64_t) 0);
+            writer.Write((uint64_t)0);
         }
     }
 
@@ -222,7 +235,8 @@ ExportResult SM64::PaintingBinaryExporter::Export(std::ostream &write, std::shar
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::PaintingFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::PaintingFactory::parse(std::vector<uint8_t>& buffer,
+                                                                         YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
@@ -280,5 +294,11 @@ std::optional<std::shared_ptr<IParsedData>> SM64::PaintingFactory::parse(std::ve
     rDLNode["offset"] = rippleDisplayList;
     Companion::Instance->AddAsset(rDLNode);
 
-    return std::make_shared<SM64::Painting>(id, imageCount, textureType, lastFloor, currFloor, floorEntered, state, pitch, yaw, posX, posY, posZ, currRippleMag, passiveRippleMag, entryRippleMag, rippleDecay, passiveRippleDecay, entryRippleDecay, currRippleRate, passiveRippleRate, entryRippleRate, dispersionFactor, passiveDispersionFactor, entryDispersionFactor, rippleTimer, rippleX, rippleY, normalDisplayList, textureMaps, textureArray, textureWidth, textureHeight, rippleDisplayList, rippleTrigger, alpha, marioWasUnder, marioIsUnder, marioWentUnder, size);
+    return std::make_shared<SM64::Painting>(
+        id, imageCount, textureType, lastFloor, currFloor, floorEntered, state, pitch, yaw, posX, posY, posZ,
+        currRippleMag, passiveRippleMag, entryRippleMag, rippleDecay, passiveRippleDecay, entryRippleDecay,
+        currRippleRate, passiveRippleRate, entryRippleRate, dispersionFactor, passiveDispersionFactor,
+        entryDispersionFactor, rippleTimer, rippleX, rippleY, normalDisplayList, textureMaps, textureArray,
+        textureWidth, textureHeight, rippleDisplayList, rippleTrigger, alpha, marioWasUnder, marioIsUnder,
+        marioWentUnder, size);
 }

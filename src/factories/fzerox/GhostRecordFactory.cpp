@@ -30,13 +30,13 @@ uint16_t FZX::GhostRecordData::CalculateRecordChecksum(void) {
     checksum += Save_CalculateChecksum(&mUnk10, sizeof(mUnk10));
     checksum += Save_CalculateChecksum((void*)mTrackName.c_str(), mTrackName.length());
     checksum += Save_CalculateChecksum(&mGhostMachineInfo, sizeof(mGhostMachineInfo));
-    
+
     return checksum;
 }
 
 uint16_t FZX::GhostRecordData::CalculateDataChecksum(void) {
     uint16_t checksum = 0;
-    
+
     checksum += Save_CalculateChecksum(&mReplayEnd, sizeof(mReplayEnd));
     checksum += Save_CalculateChecksum(&mReplaySize, sizeof(mReplaySize));
 
@@ -68,10 +68,12 @@ int32_t FZX::GhostRecordData::CalculateReplayChecksum(void) {
     return checksum;
 }
 
-ExportResult FZX::GhostRecordHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::GhostRecordHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                    std::string& entryName, YAML::Node& node,
+                                                    std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "Record[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -83,15 +85,17 @@ ExportResult FZX::GhostRecordHeaderExporter::Export(std::ostream &write, std::sh
     return std::nullopt;
 }
 
-ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto record = std::static_pointer_cast<GhostRecordData>(raw);
 
     // HACK!!
-    // These checksums when read from disk do not line up to the data since the save of the data calculates the checksum with unsaved and unused buffer data, and therefore is uncalculable.
-    // The record checksum can occasionally not align with the value for some other unknown reason.
-    // When modding these values will be read in as 0 and calculated here
+    // These checksums when read from disk do not line up to the data since the save of the data calculates the checksum
+    // with unsaved and unused buffer data, and therefore is uncalculable. The record checksum can occasionally not
+    // align with the value for some other unknown reason. When modding these values will be read in as 0 and calculated
+    // here
     if (record->mReplayChecksum == 0) {
         record->mReplayChecksum = record->CalculateReplayChecksum();
     }
@@ -104,13 +108,16 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
 
     write << "GhostRecord " << symbol << "Record = {\n";
 
-    write << fourSpaceTab << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << record->mRecordChecksum << std::dec << ", /* Checksum */\n";
+    write << fourSpaceTab << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(4)
+          << record->mRecordChecksum << std::dec << ", /* Checksum */\n";
 
     write << fourSpaceTab << static_cast<GhostType>(record->mGhostType) << ",\n";
 
-    write << fourSpaceTab << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << record->mReplayChecksum << std::dec << ", /* Replay Checksum */\n";
+    write << fourSpaceTab << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8)
+          << record->mReplayChecksum << std::dec << ", /* Replay Checksum */\n";
 
-    write << fourSpaceTab << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << record->mCourseEncoding << std::dec << ", /* Course Encoding */\n";
+    write << fourSpaceTab << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8)
+          << record->mCourseEncoding << std::dec << ", /* Course Encoding */\n";
 
     write << fourSpaceTab << record->mRaceTime << ", /* Race Time */ \n";
 
@@ -146,10 +153,10 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
 
     write << "};\n\n";
 
-
     write << "GhostReplayInfo " << symbol << "ReplayInfo = {\n";
 
-    write << fourSpaceTab << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << record->mDataChecksum << std::dec << ", /* Checksum */\n";
+    write << fourSpaceTab << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(4)
+          << record->mDataChecksum << std::dec << ", /* Checksum */\n";
 
     write << fourSpaceTab << "0,\n";
 
@@ -172,7 +179,6 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
 
     write << "};\n\n";
 
-
     write << "s8 " << symbol << "Data[] = {\n";
 
     write << fourSpaceTab;
@@ -184,7 +190,8 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
         if (replayData == -0x80) {
             write << "";
 
-            replayData = (int16_t)(((uint32_t)(uint8_t)record->mReplayData.at(i + 1) << 8) | (uint8_t)record->mReplayData.at(i + 2));
+            replayData = (int16_t)(((uint32_t)(uint8_t)record->mReplayData.at(i + 1) << 8) |
+                                   (uint8_t)record->mReplayData.at(i + 2));
             write << "REPLAY_DATA_LARGE(" << replayData << ")";
 
             i += 2;
@@ -209,7 +216,9 @@ ExportResult FZX::GhostRecordCodeExporter::Export(std::ostream &write, std::shar
     return offset + 0x20 + 0x40 + ALIGN4(record->mReplayData.size());
 }
 
-ExportResult FZX::GhostRecordBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::GhostRecordBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                    std::string& entryName, YAML::Node& node,
+                                                    std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto record = std::static_pointer_cast<GhostRecordData>(raw);
 
@@ -258,7 +267,9 @@ ExportResult FZX::GhostRecordBinaryExporter::Export(std::ostream &write, std::sh
     return std::nullopt;
 }
 
-ExportResult FZX::GhostRecordModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::GhostRecordModdingExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                     std::string& entryName, YAML::Node& node,
+                                                     std::string* replacement) {
     const auto record = std::static_pointer_cast<GhostRecordData>(raw);
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
@@ -353,7 +364,8 @@ ExportResult FZX::GhostRecordModdingExporter::Export(std::ostream &write, std::s
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse(std::vector<uint8_t>& buffer,
+                                                                           YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     bool isDiskDrive = GetSafeNode<bool>(node, "disk_drive", false);
@@ -366,12 +378,12 @@ std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse(std::
     int32_t replayChecksum = reader.ReadInt32();
     int32_t courseEncoding = reader.ReadInt32();
     int32_t raceTime = reader.ReadInt32();
-    
+
     uint16_t unk_10 = reader.ReadInt16();
     for (int32_t i = 0; i < 5; i++) {
         reader.ReadInt8();
     }
-    
+
     char trackNameBuffer[9];
     for (int32_t i = 0; i < ARRAY_COUNT(trackNameBuffer); i++) {
         trackNameBuffer[i] = reader.ReadChar();
@@ -427,18 +439,21 @@ std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse(std::
         replayData.push_back(reader.ReadInt8());
     }
 
-    return std::make_shared<GhostRecordData>(recordChecksum, ghostType, replayChecksum, courseEncoding, raceTime, unk_10, trackName, ghostMachineInfo, dataChecksum, lapTimes, replayEnd, replaySize, replayData);
+    return std::make_shared<GhostRecordData>(recordChecksum, ghostType, replayChecksum, courseEncoding, raceTime,
+                                             unk_10, trackName, ghostMachineInfo, dataChecksum, lapTimes, replayEnd,
+                                             replaySize, replayData);
 }
 
-std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse_modding(std::vector<uint8_t>& buffer,
+                                                                                   YAML::Node& node) {
     YAML::Node assetNode;
-    
+
     try {
-        std::string text((char*) buffer.data(), buffer.size());
+        std::string text((char*)buffer.data(), buffer.size());
         assetNode = YAML::Load(text.c_str());
     } catch (YAML::ParserException& e) {
         SPDLOG_ERROR("Failed to parse message data: {}", e.what());
-        SPDLOG_ERROR("{}", (char*) buffer.data());
+        SPDLOG_ERROR("{}", (char*)buffer.data());
         return std::nullopt;
     }
 
@@ -472,14 +487,13 @@ std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse_moddi
     ghostMachineInfo.cockpitR = info["GhostMachineInfo"]["CockpitR"].as<uint32_t>();
     ghostMachineInfo.cockpitG = info["GhostMachineInfo"]["CockpitG"].as<uint32_t>();
     ghostMachineInfo.cockpitB = info["GhostMachineInfo"]["CockpitB"].as<uint32_t>();
-    
+
     auto lapTimesInfo = info["LapTimes"];
     std::vector<int32_t> lapTimes;
 
     for (YAML::iterator it = lapTimesInfo.begin(); it != lapTimesInfo.end(); ++it) {
         lapTimes.push_back((*it).as<int32_t>());
     }
-
 
     if (lapTimes.size() < 3) {
         throw std::runtime_error("Invalid number of lap times in Ghost " + node["symbol"].as<std::string>());
@@ -498,6 +512,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::GhostRecordFactory::parse_moddi
     if (replayData.size() != replaySize) {
         throw std::runtime_error("Invalid replay size in Ghost " + node["symbol"].as<std::string>());
     }
-    
-    return std::make_shared<GhostRecordData>(0, ghostType, 0, courseEncoding, raceTime, unk_10, trackName, ghostMachineInfo, 0, lapTimes, replayEnd, replaySize, replayData);
+
+    return std::make_shared<GhostRecordData>(0, ghostType, 0, courseEncoding, raceTime, unk_10, trackName,
+                                             ghostMachineInfo, 0, lapTimes, replayEnd, replaySize, replayData);
 }

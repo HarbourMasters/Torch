@@ -53,7 +53,7 @@ ExportResult MK64::PathBinaryExporter::Export(std::ostream& write, std::shared_p
     auto writer = LUS::BinaryWriter();
 
     WriteHeader(writer, Torch::ResourceType::Paths, 0);
-    writer.Write((uint32_t) paths.size());
+    writer.Write((uint32_t)paths.size());
     for (auto w : paths) {
         writer.Write(w.posX);
         writer.Write(w.posY);

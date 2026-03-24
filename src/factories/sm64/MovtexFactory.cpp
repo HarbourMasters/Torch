@@ -6,10 +6,11 @@
 #include "utils/TorchUtils.h"
 #include <regex>
 
-ExportResult SM64::MovtexHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::MovtexHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -18,7 +19,8 @@ ExportResult SM64::MovtexHeaderExporter::Export(std::ostream &write, std::shared
     return std::nullopt;
 }
 
-ExportResult SM64::MovtexCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::MovtexCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -35,10 +37,14 @@ ExportResult SM64::MovtexCodeExporter::Export(std::ostream &write, std::shared_p
             uint32_t base = 1 + (i * 14);
             write << fourSpaceTab << "MOV_TEX_ROT_SPEED(" << movtex->mMovtexData.at(base + 0) << "),\n";
             write << fourSpaceTab << "MOV_TEX_ROT_SCALE(" << movtex->mMovtexData.at(base + 1) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 2) << ", " << movtex->mMovtexData.at(base + 3) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 4) << ", " << movtex->mMovtexData.at(base + 5) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 6) << ", " << movtex->mMovtexData.at(base + 7) << "),\n";
-            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 8) << ", " << movtex->mMovtexData.at(base + 9) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 2) << ", "
+                  << movtex->mMovtexData.at(base + 3) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 4) << ", "
+                  << movtex->mMovtexData.at(base + 5) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 6) << ", "
+                  << movtex->mMovtexData.at(base + 7) << "),\n";
+            write << fourSpaceTab << "MOV_TEX_4_BOX_TRIS(" << movtex->mMovtexData.at(base + 8) << ", "
+                  << movtex->mMovtexData.at(base + 9) << "),\n";
             write << fourSpaceTab << "MOV_TEX_ROT(" << movtex->mMovtexData.at(base + 10) << "),\n";
             write << fourSpaceTab << "MOV_TEX_ALPHA(" << movtex->mMovtexData.at(base + 11) << "),\n";
             write << fourSpaceTab << "MOV_TEX_DEFINE(" << movtex->mMovtexData.at(base + 12) << "),\n";
@@ -50,7 +56,8 @@ ExportResult SM64::MovtexCodeExporter::Export(std::ostream &write, std::shared_p
         additionalSize += 1;
         if (movtex->mHasColor) {
             for (uint32_t i = 0; i < movtex->mVertexCount; ++i) {
-                // There is also a MOV_TEX_LIGHT_TRIS macro, however this is identical in result to using MOV_TEX_ROT_TRIS and would require more params on the yaml
+                // There is also a MOV_TEX_LIGHT_TRIS macro, however this is identical in result to using
+                // MOV_TEX_ROT_TRIS and would require more params on the yaml
                 write << fourSpaceTab << "MOV_TEX_ROT_TRIS(";
                 write << movtex->mMovtexData.at(i * 8 + 1) << ", ";
                 write << movtex->mMovtexData.at(i * 8 + 2) << ", ";
@@ -82,7 +89,8 @@ ExportResult SM64::MovtexCodeExporter::Export(std::ostream &write, std::shared_p
     return offset + (additionalSize * sizeof(int16_t));
 }
 
-ExportResult SM64::MovtexBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::MovtexBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto movtex = std::static_pointer_cast<SM64::MovtexData>(raw);
 
@@ -92,28 +100,28 @@ ExportResult SM64::MovtexBinaryExporter::Export(std::ostream &write, std::shared
 
     if (movtex->mIsQuad) {
         auto numLists = movtex->mMovtexData.at(0);
-        
+
         buffer.push_back(numLists);
         buffer.push_back(0); // Alignment padding
-        
+
         for (uint32_t i = 0; i < numLists; ++i) {
-            for(size_t j = 0; j < 14; j++){
+            for (size_t j = 0; j < 14; j++) {
                 buffer.push_back(movtex->mMovtexData.at(1 + (i * 14) + j));
             }
         }
     } else {
         buffer.push_back(movtex->mMovtexData.at(0));
-        
+
         size_t triSize = movtex->mHasColor ? 8 : 5;
         for (uint32_t i = 0; i < movtex->mVertexCount * triSize; ++i) {
             buffer.push_back(movtex->mMovtexData.at(1 + i));
         }
-        
+
         buffer.push_back(0); // MOV_TEX_END
     }
 
-    writer.Write((uint32_t) buffer.size());
-    writer.Write((char*) buffer.data(), buffer.size() * sizeof(int16_t));
+    writer.Write((uint32_t)buffer.size());
+    writer.Write((char*)buffer.data(), buffer.size() * sizeof(int16_t));
 
     writer.Finish(write);
     return std::nullopt;

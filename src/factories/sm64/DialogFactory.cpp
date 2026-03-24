@@ -2,18 +2,19 @@
 #include "spdlog/spdlog.h"
 #include "utils/Decompressor.h"
 
-ExportResult SM64::DialogBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::DialogBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto dialog = std::static_pointer_cast<DialogData>(raw);
 
     WriteHeader(writer, Torch::ResourceType::SDialog, 0);
-    writer.Write((uint32_t) dialog->mUnused);
-    writer.Write((int8_t) dialog->mLinesPerBox);
-    writer.Write((int16_t) dialog->mLeftOffset);
-    writer.Write((int16_t) dialog->mWidth);
+    writer.Write((uint32_t)dialog->mUnused);
+    writer.Write((int8_t)dialog->mLinesPerBox);
+    writer.Write((int16_t)dialog->mLeftOffset);
+    writer.Write((int16_t)dialog->mWidth);
 
-    writer.Write((uint32_t) dialog->mText.size());
-    writer.Write((char*) dialog->mText.data(), dialog->mText.size());
+    writer.Write((uint32_t)dialog->mText.size());
+    writer.Write((char*)dialog->mText.data(), dialog->mText.size());
     writer.Finish(write);
     return std::nullopt;
 }
@@ -37,7 +38,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vect
     auto str = SEGMENT_OFFSET(reader.ReadInt32());
     std::vector<uint8_t> text;
 
-    while(root->data[str] != 0xFF){
+    while (root->data[str] != 0xFF) {
         auto c = root->data[str++];
         text.push_back(c);
     }

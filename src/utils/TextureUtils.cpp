@@ -29,7 +29,7 @@ size_t TextureUtils::CalculateTextureSize(TextureType type, uint32_t width, uint
     }
 }
 
-std::vector<uint8_t> TextureUtils::alloc_ia8_text_from_i1(uint16_t *in, int16_t width, int16_t height) {
+std::vector<uint8_t> TextureUtils::alloc_ia8_text_from_i1(uint16_t* in, int16_t width, int16_t height) {
     int32_t inPos;
     uint16_t bitMask;
     int16_t outPos = 0;

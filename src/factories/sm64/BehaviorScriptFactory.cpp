@@ -6,10 +6,12 @@
 #include "utils/TorchUtils.h"
 #include <regex>
 
-ExportResult SM64::BehaviorScriptHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::BehaviorScriptHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                        std::string& entryName, YAML::Node& node,
+                                                        std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -18,7 +20,9 @@ ExportResult SM64::BehaviorScriptHeaderExporter::Export(std::ostream &write, std
     return std::nullopt;
 }
 
-ExportResult SM64::BehaviorScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::BehaviorScriptCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                      std::string& entryName, YAML::Node& node,
+                                                      std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto commands = std::static_pointer_cast<BehaviorScriptData>(raw)->mCommands;
@@ -26,10 +30,11 @@ ExportResult SM64::BehaviorScriptCodeExporter::Export(std::ostream &write, std::
 
     write << "static const BehaviorScript " << symbol << "[] = {\n";
 
-    for(auto& [opcode, arguments] : commands) {
+    for (auto& [opcode, arguments] : commands) {
         bool commaFlag = false;
 
-        if (opcode == BehaviorOpcode::END_LOOP || opcode == BehaviorOpcode::END_REPEAT || opcode == BehaviorOpcode::END_REPEAT_CONTINUE) {
+        if (opcode == BehaviorOpcode::END_LOOP || opcode == BehaviorOpcode::END_REPEAT ||
+            opcode == BehaviorOpcode::END_REPEAT_CONTINUE) {
             --indentCount;
         }
 
@@ -42,14 +47,14 @@ ExportResult SM64::BehaviorScriptCodeExporter::Export(std::ostream &write, std::
         }
 
         write << opcode << "(";
-        for(auto& args : arguments) {
+        for (auto& args : arguments) {
             if (commaFlag) {
                 write << ", ";
             } else {
                 commaFlag = true;
             }
 
-            switch(static_cast<BehaviorArgumentType>(args.index())) {
+            switch (static_cast<BehaviorArgumentType>(args.index())) {
                 case BehaviorArgumentType::U8: {
                     write << std::hex << "0x" << static_cast<uint32_t>(std::get<uint8_t>(args));
                     break;
@@ -110,7 +115,9 @@ ExportResult SM64::BehaviorScriptCodeExporter::Export(std::ostream &write, std::
     return offset + size;
 }
 
-ExportResult SM64::BehaviorScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::BehaviorScriptBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                        std::string& entryName, YAML::Node& node,
+                                                        std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto commands = std::static_pointer_cast<BehaviorScriptData>(raw)->mCommands;
 
@@ -118,11 +125,11 @@ ExportResult SM64::BehaviorScriptBinaryExporter::Export(std::ostream &write, std
 
     writer.Write((uint32_t)commands.size());
 
-    for(auto& [opcode, arguments] : commands) {
+    for (auto& [opcode, arguments] : commands) {
         writer.Write(static_cast<uint8_t>(opcode));
 
-        for(auto& args : arguments) {
-            switch(static_cast<BehaviorArgumentType>(args.index())) {
+        for (auto& args : arguments) {
+            switch (static_cast<BehaviorArgumentType>(args.index())) {
                 case BehaviorArgumentType::U8: {
                     writer.Write(std::get<uint8_t>(args));
                     break;
@@ -176,13 +183,14 @@ ExportResult SM64::BehaviorScriptBinaryExporter::Export(std::ostream &write, std
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::BehaviorScriptFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::BehaviorScriptFactory::parse(std::vector<uint8_t>& buffer,
+                                                                               YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     auto cmd = segment.data;
     bool processing = true;
     std::vector<BehaviorCommand> commands;
 
-    while(processing) {
+    while (processing) {
         auto opcode = static_cast<BehaviorOpcode>(cmd[0x00]);
 
         SPDLOG_INFO("Processing Command {}", opcode);

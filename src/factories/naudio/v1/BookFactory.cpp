@@ -2,10 +2,11 @@
 #include "utils/Decompressor.h"
 #include "Companion.h"
 
-ExportResult ADPCMBookHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult ADPCMBookHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -15,20 +16,22 @@ ExportResult ADPCMBookHeaderExporter::Export(std::ostream &write, std::shared_pt
     return std::nullopt;
 }
 
-ExportResult ADPCMBookCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult ADPCMBookCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
     return std::nullopt;
 }
 
-ExportResult ADPCMBookBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult ADPCMBookBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<ADPCMBookData>(raw);
 
     WriteHeader(writer, Torch::ResourceType::AdpcmBook, 0);
     writer.Write(data->order);
     writer.Write(data->numPredictors);
-    writer.Write((uint32_t) data->book.size());
+    writer.Write((uint32_t)data->book.size());
 
-    for(auto& page : data->book){
+    for (auto& page : data->book) {
         writer.Write(page);
     }
 
@@ -46,7 +49,7 @@ std::optional<std::shared_ptr<IParsedData>> ADPCMBookFactory::parse(std::vector<
     book->numPredictors = reader.ReadInt32();
     size_t length = 8 * book->order * book->numPredictors;
 
-    for(size_t i = 0; i < length; i++){
+    for (size_t i = 0; i < length; i++) {
         book->book.push_back(reader.ReadInt16());
     }
 

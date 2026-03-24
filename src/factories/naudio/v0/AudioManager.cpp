@@ -27,29 +27,30 @@ std::vector<uint32_t> PyUtils::range(uint32_t start, uint32_t end) {
     return result;
 }
 
-std::string gen_name(const std::string& prefix){
-    if(!Torch::contains(name_table, prefix)){
+std::string gen_name(const std::string& prefix) {
+    if (!Torch::contains(name_table, prefix)) {
         name_table[prefix] = 0;
     }
     return prefix + std::to_string(name_table[prefix]++);
 }
 
-AudioBankSample* SampleBank::AddSample(uint32_t addr, size_t sampleSize, const AdpcmBook& book, const AdpcmLoop& loop){
+AudioBankSample* SampleBank::AddSample(uint32_t addr, size_t sampleSize, const AdpcmBook& book, const AdpcmLoop& loop) {
     assert(sampleSize % 2 == 0);
-    if(sampleSize % 9 != 0){
+    if (sampleSize % 9 != 0) {
         assert(sampleSize % 9 == 1);
         sampleSize -= 1;
     }
 
     AudioBankSample* entry;
 
-    if(Torch::contains(this->entries, addr)){
+    if (Torch::contains(this->entries, addr)) {
         entry = this->entries[addr];
         assert(entry->book == book);
         assert(entry->loop == loop);
         assert(entry->data.size() == sampleSize);
     } else {
-        entry = new AudioBankSample{ gen_name("aifc"), PyUtils::slice(this->data, addr, addr + sampleSize), book, loop };
+        entry =
+            new AudioBankSample{ gen_name("aifc"), PyUtils::slice(this->data, addr, addr + sampleSize), book, loop };
         this->entries[addr] = entry;
     }
 
@@ -68,9 +69,9 @@ void Bank::print() const {
     SPDLOG_DEBUG("Sample Bank Offset: {}", std::to_string(sampleBank->offset));
 }
 
-std::vector<Entry> AudioManager::parse_seq_file(std::vector<uint8_t>& buffer, uint32_t offset, bool isCTL){
+std::vector<Entry> AudioManager::parse_seq_file(std::vector<uint8_t>& buffer, uint32_t offset, bool isCTL) {
     std::vector<Entry> entries;
-    LUS::BinaryReader reader((char*) buffer.data(), buffer.size());
+    LUS::BinaryReader reader((char*)buffer.data(), buffer.size());
     reader.SetEndianness(Torch::Endianness::Big);
     reader.Seek(offset, LUS::SeekOffsetType::Start);
 
@@ -85,22 +86,22 @@ std::vector<Entry> AudioManager::parse_seq_file(std::vector<uint8_t>& buffer, ui
         uint32_t addr = reader.ReadUInt32();
         uint32_t length = reader.ReadUInt32();
 
-        if(isCTL){
+        if (isCTL) {
             assert(addr == prev);
         } else {
             assert(addr <= prev);
         }
 
         prev = std::max(prev, addr + length);
-        entries.push_back({addr, length});
+        entries.push_back({ addr, length });
     }
 
     reader.Close();
     return entries;
 }
 
-CTLHeader AudioManager::parse_ctl_header(std::vector<uint8_t>& data){
-    LUS::BinaryReader reader((char*) data.data(), data.size());
+CTLHeader AudioManager::parse_ctl_header(std::vector<uint8_t>& data) {
+    LUS::BinaryReader reader((char*)data.data(), data.size());
     reader.SetEndianness(Torch::Endianness::Big);
 
     CTLHeader header = { reader.ReadUInt32(), reader.ReadUInt32(), reader.ReadUInt32() };
@@ -116,7 +117,7 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     std::string name = ss.str();
     uint32_t numInstruments = header.instruments;
     uint32_t numDrums = header.numDrums;
-    char* rawData = (char*) data.data();
+    char* rawData = (char*)data.data();
 
     uint32_t drumBaseAddr;
     memcpy(&drumBaseAddr, rawData, 4);
@@ -124,12 +125,12 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
 
     std::vector<uint32_t> drumOffsets;
 
-    if(numDrums != 0){
+    if (numDrums != 0) {
         assert(drumBaseAddr != 0);
         for (size_t i = 0; i < numDrums; ++i) {
             uint32_t drumOffset;
             memcpy(&drumOffset, rawData + drumBaseAddr + i * 4, 4);
-            if(drumOffset == 0){
+            if (drumOffset == 0) {
                 continue;
             }
 
@@ -147,7 +148,7 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         uint32_t instOffset;
         memcpy(&instOffset, rawData + (instrumentBaseAddr + i * 4), 4);
         instOffset = BSWAP32(instOffset);
-        if(instOffset == 0){
+        if (instOffset == 0) {
             instrumentList.push_back(NONE);
             instrumentOffsets.push_back(NONE);
         } else {
@@ -156,11 +157,11 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         }
     }
 
-//    std::sort(instrumentOffsets.begin(), instrumentOffsets.end());
+    //    std::sort(instrumentOffsets.begin(), instrumentOffsets.end());
 
     std::vector<Instrument> insts;
-    for(auto &offset : instrumentOffsets){
-        if(offset == NONE){
+    for (auto& offset : instrumentOffsets) {
+        if (offset == NONE) {
             Instrument invalid = { .valid = false };
             insts.push_back(invalid);
             continue;
@@ -171,7 +172,7 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     }
 
     std::vector<Drum> drums;
-    for(auto &offset : drumOffsets){
+    for (auto& offset : drumOffsets) {
         auto rDrum = PyUtils::slice(data, offset, offset + 16);
         Drum drum = parse_drum(rDrum, offset);
         drums.push_back(drum);
@@ -181,16 +182,16 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     auto sampleOffsets = std::vector<uint32_t>();
     auto tunings = std::unordered_map<uint32_t, float>();
 
-    for(auto &inst : insts){
-        for(auto &sound : {inst.soundLo, inst.soundMed, inst.soundHi}){
-            if(sound.has_value()){
+    for (auto& inst : insts) {
+        for (auto& sound : { inst.soundLo, inst.soundMed, inst.soundHi }) {
+            if (sound.has_value()) {
                 sampleOffsets.push_back(sound.value().offset);
                 tunings[sound.value().offset] = sound.value().tuning;
             }
         }
         envOffsets.push_back(inst.envelope);
     }
-    for(auto &drum : drums){
+    for (auto& drum : drums) {
         sampleOffsets.push_back(drum.sound.offset);
         tunings[drum.sound.offset] = drum.sound.tuning;
         envOffsets.push_back(drum.envelope);
@@ -200,10 +201,12 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     // but it works for our purposes.)
     std::vector<std::variant<Instrument, std::vector<Drum>>> allInsts;
     bool needDrums = !drums.empty();
-    for(auto &inst : insts){
-        std::vector<std::optional<AudioBankSound>> sounds = {inst.soundLo, inst.soundMed, inst.soundHi};
+    for (auto& inst : insts) {
+        std::vector<std::optional<AudioBankSound>> sounds = { inst.soundLo, inst.soundMed, inst.soundHi };
 
-        if(needDrums && std::any_of(sounds.cbegin(), sounds.cend(), [&drums](std::optional<AudioBankSound> sound){ return sound.has_value() && sound.value().offset > drums[0].sound.offset; })){
+        if (needDrums && std::any_of(sounds.cbegin(), sounds.cend(), [&drums](std::optional<AudioBankSound> sound) {
+                return sound.has_value() && sound.value().offset > drums[0].sound.offset;
+            })) {
             allInsts.emplace_back(drums);
             needDrums = false;
         }
@@ -211,17 +214,16 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
         allInsts.emplace_back(inst);
     }
 
-
-    if(needDrums){
+    if (needDrums) {
         allInsts.emplace_back(drums);
     }
 
     std::map<uint32_t, AudioBankSample*> samples;
     std::sort(sampleOffsets.begin(), sampleOffsets.end());
-    for(auto &offset : sampleOffsets){
+    for (auto& offset : sampleOffsets) {
         auto rSample = PyUtils::slice(data, offset, offset + 20);
         AudioBankSample* sample = parse_sample(rSample, data, bank);
-        for(auto &tuning : tunings){
+        for (auto& tuning : tunings) {
             sample->tunings.push_back(tuning.second);
         }
         samples[offset] = sample;
@@ -230,21 +232,21 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     std::unordered_map<uint32_t, std::vector<AdsrEnvelope>> envData;
     std::vector<uint32_t> usedEnvOffsets;
     std::sort(envOffsets.begin(), envOffsets.end());
-    for(auto &offset : envOffsets){
+    for (auto& offset : envOffsets) {
         auto env = parse_envelope(offset, data);
         envData[offset] = env;
-        for(int i = 0; i < ALIGN(env.size(), 4); i++){
+        for (int i = 0; i < ALIGN(env.size(), 4); i++) {
             usedEnvOffsets.push_back(offset + (i * 4));
         }
     }
 
     std::vector<uint32_t> unusedEnvOffsets;
-    if(!usedEnvOffsets.empty()){
+    if (!usedEnvOffsets.empty()) {
         size_t min = std::min_element(usedEnvOffsets.begin(), usedEnvOffsets.end()) - usedEnvOffsets.begin();
         size_t max = std::max_element(usedEnvOffsets.begin(), usedEnvOffsets.end()) - usedEnvOffsets.begin();
-        for(size_t idx = min + 4; idx < max; idx += 4){
+        for (size_t idx = min + 4; idx < max; idx += 4) {
             uint32_t addr = usedEnvOffsets[idx];
-            if(std::find(usedEnvOffsets.begin(), usedEnvOffsets.end(), addr) == usedEnvOffsets.end()){
+            if (std::find(usedEnvOffsets.begin(), usedEnvOffsets.end(), addr) == usedEnvOffsets.end()) {
                 unusedEnvOffsets.push_back(addr);
                 uint32_t stubMarker;
                 memcpy(&stubMarker, rawData + addr, 4);
@@ -252,7 +254,7 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
                 assert(stubMarker == 0);
                 auto env = parse_envelope(addr, data);
                 envData[addr] = env;
-                for(int i = 0; i < ALIGN(env.size(), 4); i++){
+                for (int i = 0; i < ALIGN(env.size(), 4); i++) {
                     usedEnvOffsets.push_back(addr + (i * 4));
                 }
             }
@@ -260,7 +262,7 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
     }
 
     std::map<uint32_t, Envelope> envelopes;
-    for(auto &entry : envData){
+    for (auto& entry : envData) {
         Envelope env = { gen_name("envelope"), entry.second };
         envelopes[entry.first] = env;
     }
@@ -270,13 +272,13 @@ Bank AudioManager::parse_ctl(CTLHeader header, std::vector<uint8_t> data, Sample
 }
 
 std::optional<AudioBankSound> AudioManager::parse_sound(std::vector<uint8_t> data) {
-    LUS::BinaryReader reader((char*) data.data(), data.size());
+    LUS::BinaryReader reader((char*)data.data(), data.size());
     reader.SetEndianness(Torch::Endianness::Big);
 
     uint32_t addr = reader.ReadUInt32();
     float tuning = reader.ReadFloat();
 
-    if(addr == 0){
+    if (addr == 0) {
         assert(tuning == 0.0f);
         return std::nullopt;
     }
@@ -288,7 +290,7 @@ std::optional<AudioBankSound> AudioManager::parse_sound(std::vector<uint8_t> dat
 }
 
 Drum AudioManager::parse_drum(std::vector<uint8_t>& data, uint32_t addr) {
-    LUS::BinaryReader reader((char*) data.data(), data.size());
+    LUS::BinaryReader reader((char*)data.data(), data.size());
     reader.SetEndianness(Torch::Endianness::Big);
     std::string name = gen_name("drum");
 
@@ -312,14 +314,14 @@ Instrument AudioManager::parse_inst(std::vector<uint8_t>& data, uint32_t addr) {
     uint8_t releaseRate = data[3];
 
     uint32_t envAddr;
-    memcpy(&envAddr, (char*) data.data() + 4, 4);
+    memcpy(&envAddr, (char*)data.data() + 4, 4);
     envAddr = BSWAP32(envAddr);
 
     assert(envAddr != 0);
 
-    auto soundLo  = parse_sound(PyUtils::slice(data, 8, 16));
+    auto soundLo = parse_sound(PyUtils::slice(data, 8, 16));
     auto soundMed = parse_sound(PyUtils::slice(data, 16, 24));
-    auto soundHi  = parse_sound(PyUtils::slice(data, 24));
+    auto soundHi = parse_sound(PyUtils::slice(data, 24));
 
     if (soundLo == std::nullopt) {
         assert(normalRangeLo == 0);
@@ -328,12 +330,14 @@ Instrument AudioManager::parse_inst(std::vector<uint8_t>& data, uint32_t addr) {
         assert(normalRangeHi == 127);
     }
 
-    Instrument inst = { true, name, addr, releaseRate, normalRangeLo, normalRangeHi, envAddr, soundLo, soundMed, soundHi };
+    Instrument inst = {
+        true, name, addr, releaseRate, normalRangeLo, normalRangeHi, envAddr, soundLo, soundMed, soundHi
+    };
     return inst;
 }
 
-AdpcmLoop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData){
-    LUS::BinaryReader reader((char*) bankData.data(), bankData.size());
+AdpcmLoop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData) {
+    LUS::BinaryReader reader((char*)bankData.data(), bankData.size());
     reader.SetEndianness(Torch::Endianness::Big);
     reader.Seek(addr, LUS::SeekOffsetType::Start);
 
@@ -343,7 +347,7 @@ AdpcmLoop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData
     int32_t count = reader.ReadInt32();
     uint32_t pad = reader.ReadUInt32();
 
-    if(count != 0){
+    if (count != 0) {
         state = std::vector<int16_t>();
         for (size_t i = 0; i < 16; ++i) {
             state.value().push_back(reader.ReadInt16());
@@ -353,8 +357,8 @@ AdpcmLoop AudioManager::parse_loop(uint32_t addr, std::vector<uint8_t>& bankData
     return loop;
 }
 
-AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData){
-    LUS::BinaryReader reader((char*) bankData.data(), bankData.size());
+AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData) {
+    LUS::BinaryReader reader((char*)bankData.data(), bankData.size());
     reader.SetEndianness(Torch::Endianness::Big);
     reader.Seek(addr, LUS::SeekOffsetType::Start);
 
@@ -366,7 +370,7 @@ AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData
 
     std::vector<int16_t> table;
     std::vector<uint8_t> tableData = PyUtils::slice(bankData, addr + 8, addr + 8 + 16 * order * npredictors);
-    for (size_t i = 0; i < ( 16 * order * npredictors ); i += 2) {
+    for (size_t i = 0; i < (16 * order * npredictors); i += 2) {
         int16_t dtable;
         memcpy(&dtable, tableData.data() + i, 2);
         table.push_back(BSWAP16(dtable));
@@ -376,8 +380,9 @@ AdpcmBook AudioManager::parse_book(uint32_t addr, std::vector<uint8_t>& bankData
     return book;
 }
 
-AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData, SampleBank* sampleBank){
-    LUS::BinaryReader reader((char*) data.data(), data.size());
+AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vector<uint8_t>& bankData,
+                                            SampleBank* sampleBank) {
+    LUS::BinaryReader reader((char*)data.data(), data.size());
     reader.SetEndianness(Torch::Endianness::Big);
 
     uint32_t zero = reader.ReadUInt32();
@@ -403,20 +408,19 @@ AudioBankSample* AudioManager::parse_sample(std::vector<uint8_t>& data, std::vec
     return sampleBank->AddSample(addr, sampleSize, bookData, loopData);
 }
 
-
-std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank){
+std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vector<uint8_t>& dataBank) {
     std::vector<AdsrEnvelope> entries;
-    LUS::BinaryReader reader((char*) dataBank.data(), dataBank.size());
+    LUS::BinaryReader reader((char*)dataBank.data(), dataBank.size());
     reader.SetEndianness(Torch::Endianness::Big);
 
-    while(true){
+    while (true) {
         reader.Seek(addr, LUS::SeekOffsetType::Start);
         int16_t delay = reader.ReadInt16();
         int16_t arg = reader.ReadInt16();
         AdsrEnvelope entry = { delay, arg };
         entries.push_back(entry);
         addr += 4;
-        if (1 <= (-delay) % (1 << 16) && (-delay) % (1 << 16) <= 3){
+        if (1 <= (-delay) % (1 << 16) && (-delay) % (1 << 16) <= 3) {
             break;
         }
     }
@@ -428,12 +432,11 @@ std::vector<AdsrEnvelope> AudioManager::parse_envelope(uint32_t addr, std::vecto
 TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& entries) {
     TBLFile tbl;
     std::unordered_map<uint32_t, std::string> cache;
-    for(auto &entry : entries){
-        if(!Torch::contains(cache, entry.offset)){
+    for (auto& entry : entries) {
+        if (!Torch::contains(cache, entry.offset)) {
             std::string name = gen_name("sample_bank");
-            auto* sampleBank = new SampleBank{
-                name, entry.offset, PyUtils::slice(data, entry.offset, entry.offset + entry.length)
-            };
+            auto* sampleBank =
+                new SampleBank{ name, entry.offset, PyUtils::slice(data, entry.offset, entry.offset + entry.length) };
             tbl.banks.push_back(sampleBank);
             tbl.map[name] = sampleBank;
             cache[entry.offset] = name;
@@ -479,23 +482,23 @@ void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
     }
 
     int32_t idx = -1;
-    for(auto &sample_bank : this->loaded_tbl.banks){
+    for (auto& sample_bank : this->loaded_tbl.banks) {
         auto offsets = PyUtils::keys(sample_bank->entries);
         std::sort(offsets.begin(), offsets.end());
 
-        for(auto &offset : offsets){
+        for (auto& offset : offsets) {
             this->sampleMap[sample_bank->entries[offset]] = ++idx;
         }
     }
 }
 
-void AudioManager::bind_sample(YAML::Node& node, const std::string& path){
+void AudioManager::bind_sample(YAML::Node& node, const std::string& path) {
     auto id = GetSafeNode<uint32_t>(node, "id");
     sample_table[id] = path;
 }
 
 std::string& AudioManager::get_sample(uint32_t id) {
-    if(!Torch::contains(sample_table, id)) {
+    if (!Torch::contains(sample_table, id)) {
         throw std::runtime_error("Failed to find sample with id " + std::to_string(id));
     }
     return sample_table[id];
@@ -520,12 +523,12 @@ void AudioManager::create_aifc(int32_t index, LUS::BinaryWriter &out) {
 
 AudioBankSample AudioManager::get_aifc(int32_t index) {
     int32_t idx = 0;
-    for(auto &sample_bank : this->loaded_tbl.banks){
+    for (auto& sample_bank : this->loaded_tbl.banks) {
         auto offsets = PyUtils::keys(sample_bank->entries);
         std::sort(offsets.begin(), offsets.end());
 
-        for(auto &offset : offsets){
-            if(idx++ == index){
+        for (auto& offset : offsets) {
+            if (idx++ == index) {
                 return *sample_bank->entries[offset];
             }
         }
@@ -536,7 +539,7 @@ AudioBankSample AudioManager::get_aifc(int32_t index) {
 }
 
 uint32_t AudioManager::get_index(AudioBankSample* entry) {
-    if(!Torch::contains(this->sampleMap, entry)){
+    if (!Torch::contains(this->sampleMap, entry)) {
         return -1;
     }
     return this->sampleMap[entry];
@@ -552,10 +555,10 @@ std::vector<SampleBank*> AudioManager::get_loaded_banks() {
 
 std::vector<AudioBankSample*> AudioManager::get_samples() {
     std::vector<AudioBankSample*> samples;
-    for(auto &bank : this->loaded_tbl.banks){
-        for(auto &entry : bank->entries){
+    for (auto& bank : this->loaded_tbl.banks) {
+        for (auto& entry : bank->entries) {
             // Avoid duplicates
-            if(std::find(samples.begin(), samples.end(), entry.second) == samples.end()){
+            if (std::find(samples.begin(), samples.end(), entry.second) == samples.end()) {
                 samples.push_back(entry.second);
             }
         }

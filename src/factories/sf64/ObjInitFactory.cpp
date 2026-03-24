@@ -6,10 +6,11 @@
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 #define FLOAT(x, w) std::dec << std::setfill(' ') << std::setw(w) << std::fixed << std::setprecision(1) << x << "f"
 
-ExportResult SF64::ObjInitHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::ObjInitHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -18,15 +19,16 @@ ExportResult SF64::ObjInitHeaderExporter::Export(std::ostream &write, std::share
     return std::nullopt;
 }
 
-ExportResult SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ObjInitCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                               std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto objs = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
 
     write << "ObjectInit " << symbol << "[] = {\n";
-    for(auto& obj : objs) {
+    for (auto& obj : objs) {
         auto enumName = Companion::Instance->GetEnumFromValue("ObjectId", obj.id).value_or(std::to_string(obj.id));
-        if(obj.id >= 1000) {
+        if (obj.id >= 1000) {
             enumName = "ACTOR_EVENT_ID + " + std::to_string(obj.id - 1000);
         }
         write << fourSpaceTab << "{ ";
@@ -46,14 +48,15 @@ ExportResult SF64::ObjInitCodeExporter::Export(std::ostream &write, std::shared_
     return offset + sizeof(ObjectInit) * objs.size();
 }
 
-ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
 
     WriteHeader(writer, Torch::ResourceType::ObjectInit, 0);
     auto count = data.size();
-    writer.Write((uint32_t) count);
-    for(size_t i = 0; i < data.size(); i++) {
+    writer.Write((uint32_t)count);
+    for (size_t i = 0; i < data.size(); i++) {
         writer.Write(data[i].zPos1);
         writer.Write(data[i].zPos2);
         writer.Write(data[i].xPos);
@@ -67,7 +70,8 @@ ExportResult SF64::ObjInitBinaryExporter::Export(std::ostream &write, std::share
     return std::nullopt;
 }
 
-ExportResult SF64::ObjInitXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ObjInitXMLExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto data = std::static_pointer_cast<ObjInitData>(raw)->mObjInit;
 
     tinyxml2::XMLPrinter printer;
@@ -76,7 +80,7 @@ ExportResult SF64::ObjInitXMLExporter::Export(std::ostream &write, std::shared_p
 
     *replacement += ".meta";
 
-    for(auto & i : data) {
+    for (auto& i : data) {
         tinyxml2::XMLElement* obj = root->InsertNewChildElement("ObjInit");
         auto enumName = Companion::Instance->GetEnumFromValue("ObjectId", i.id).value_or(std::to_string(i.id));
 
@@ -97,7 +101,8 @@ ExportResult SF64::ObjInitXMLExporter::Export(std::ostream &write, std::shared_p
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vector<uint8_t>& buffer,
+                                                                        YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
 
     LUS::BinaryReader reader(segment.data, segment.size);
@@ -106,7 +111,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vec
     bool terminator = false;
 
     bool processing = true;
-    while(processing) {
+    while (processing) {
         float zPos1 = reader.ReadFloat();
         int16_t zPos2 = reader.ReadInt16();
         int16_t xPos = reader.ReadInt16();
@@ -117,13 +122,13 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ObjInitFactory::parse(std::vec
         int16_t id = reader.ReadInt16();
         reader.ReadInt16();
 
-        if(id == -1) {
+        if (id == -1) {
             terminator = true;
         }
-        if(terminator && ((zPos1*zPos2*xPos*yPos*rotX*rotY*rotZ) != 0 || id != -1)) {
+        if (terminator && ((zPos1 * zPos2 * xPos * yPos * rotX * rotY * rotZ) != 0 || id != -1)) {
             processing = false;
         } else {
-            objects.push_back({ zPos1, zPos2, xPos, yPos, {rotX, rotY, rotZ}, id});
+            objects.push_back({ zPos1, zPos2, xPos, yPos, { rotX, rotY, rotZ }, id });
         }
     }
 

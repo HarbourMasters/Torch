@@ -62,7 +62,8 @@ static std::vector<PM64DisplayListInfo>* gCollectedDisplayLists = nullptr;
 
 // Convert N64 virtual address to file offset
 static uint32_t N64AddrToOffset(uint32_t addr) {
-    if (addr == 0) return 0;
+    if (addr == 0)
+        return 0;
 
     // Check if it looks like an N64 virtual address (segment in high byte)
     if (addr >= 0x80000000) {
@@ -87,25 +88,30 @@ static bool IsValidOffset(uint32_t offset, size_t size) {
 }
 
 // F3DEX2 GBI opcodes used in shape display lists
-#define F3DEX2_G_ENDDL   0xDF
-#define F3DEX2_G_VTX     0x01
-#define F3DEX2_G_DL      0xDE
+#define F3DEX2_G_ENDDL 0xDF
+#define F3DEX2_G_VTX 0x01
+#define F3DEX2_G_DL 0xDE
 #define F3DEX2_G_SETTIMG 0xFD
 
 // Check if an opcode is a valid F3DEX2 GBI command.
 // Valid ranges: 0x00-0x07 (geometry), 0xD7-0xDF (matrix/mode), 0xE4-0xFF (RDP).
 static bool IsValidF3DEX2Opcode(uint8_t opcode) {
-    if (opcode <= 0x07) return true;                    // G_NOOP..G_QUAD
-    if (opcode >= 0xD7 && opcode <= 0xDF) return true;  // G_TEXTURE..G_ENDDL
-    if (opcode >= 0xE4) return true;                    // G_TEXRECT..G_SETCIMG
+    if (opcode <= 0x07)
+        return true; // G_NOOP..G_QUAD
+    if (opcode >= 0xD7 && opcode <= 0xDF)
+        return true; // G_TEXTURE..G_ENDDL
+    if (opcode >= 0xE4)
+        return true; // G_TEXRECT..G_SETCIMG
     return false;
 }
 
 // Byte-swap display list commands, convert embedded N64 addresses to file offsets,
 // and collect the display list for separate resource export
 static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 8)) return;
-    if (gVisitedDisplayLists.count(offset)) return;  // Already processed
+    if (!IsValidOffset(offset, size - 8))
+        return;
+    if (gVisitedDisplayLists.count(offset))
+        return; // Already processed
     gVisitedDisplayLists.insert(offset);
 
     uint8_t* ptr = data + offset;
@@ -127,8 +133,8 @@ static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
         // Stop if we hit a non-F3DEX2 opcode — we've overrun past the display list
         // into adjacent data (e.g., string data, vertex data, padding).
         if (!IsValidF3DEX2Opcode(opcode)) {
-            SPDLOG_WARN("DL at 0x{:X}: invalid opcode 0x{:02X} at offset 0x{:X}, stopping",
-                        offset, opcode, (uint32_t)(ptr - data));
+            SPDLOG_WARN("DL at 0x{:X}: invalid opcode 0x{:02X} at offset 0x{:X}, stopping", offset, opcode,
+                        (uint32_t)(ptr - data));
             break;
         }
 
@@ -145,7 +151,7 @@ static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
                 vtxByteOffset = vtxFileOffset;
             }
             uint32_t vtxIndex = vtxByteOffset / 16;
-            w1 = vtxIndex * 24;  // sizeof(Vtx) with GBI_FLOATS = 24
+            w1 = vtxIndex * 24; // sizeof(Vtx) with GBI_FLOATS = 24
         }
 
         // Handle G_SETTIMG - convert texture address to file offset
@@ -176,7 +182,7 @@ static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
             break;
         }
 
-        ptr += 8;  // Move to next Gfx command (8 bytes each)
+        ptr += 8; // Move to next Gfx command (8 bytes each)
     }
 
     // Add to collected display lists
@@ -189,7 +195,8 @@ static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
 #define MODEL_PROP_KEY_TEXTURE_NAME 0x5E
 
 static void ByteSwapModelNodeProperty(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 0xC)) return;
+    if (!IsValidOffset(offset, size - 0xC))
+        return;
 
     uint32_t* prop = reinterpret_cast<uint32_t*>(data + offset);
     int32_t key = static_cast<int32_t>(BSWAP32(prop[0]));
@@ -207,7 +214,8 @@ static void ByteSwapModelNodeProperty(uint8_t* data, uint32_t offset, size_t siz
 }
 
 static void ByteSwapModelDisplayData(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 0x8)) return;
+    if (!IsValidOffset(offset, size - 0x8))
+        return;
 
     // Track this offset so vertex byte-swapping skips it
     gVisitedDisplayData.insert(offset);
@@ -230,8 +238,10 @@ static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size);
 static void ByteSwapModelNode(uint8_t* data, uint32_t offset, size_t size);
 
 static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 0x14)) return;
-    if (gVisitedGroups.count(offset)) return;  // Already processed
+    if (!IsValidOffset(offset, size - 0x14))
+        return;
+    if (gVisitedGroups.count(offset))
+        return; // Already processed
     gVisitedGroups.insert(offset);
 
     uint32_t* group = reinterpret_cast<uint32_t*>(data + offset);
@@ -291,8 +301,10 @@ static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size) 
 }
 
 static void ByteSwapModelNode(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 0x14)) return;
-    if (gVisitedNodes.count(offset)) return;  // Already processed
+    if (!IsValidOffset(offset, size - 0x14))
+        return;
+    if (gVisitedNodes.count(offset))
+        return; // Already processed
     gVisitedNodes.insert(offset);
 
     uint32_t* node = reinterpret_cast<uint32_t*>(data + offset);
@@ -340,7 +352,7 @@ static uint32_t FindRootNodeOffset(uint8_t* data, size_t size) {
     for (uint32_t offset = 0x20; offset < size - 0x14; offset += 4) {
         int32_t type = static_cast<int32_t>(BSWAP32(*reinterpret_cast<uint32_t*>(data + offset)));
 
-        if (type == 7) {  // SHAPE_TYPE_ROOT
+        if (type == 7) { // SHAPE_TYPE_ROOT
             // Validate surrounding fields look like a ModelNode
             uint32_t displayAddr = BSWAP32(*reinterpret_cast<uint32_t*>(data + offset + 0x04));
             int32_t numProps = static_cast<int32_t>(BSWAP32(*reinterpret_cast<uint32_t*>(data + offset + 0x08)));
@@ -361,7 +373,7 @@ static uint32_t FindRootNodeOffset(uint8_t* data, size_t size) {
 }
 
 static void ByteSwapShapeData(uint8_t* data, size_t size, std::vector<PM64DisplayListInfo>& collectedDLs,
-                               uint32_t& outVtxTableOffset, uint32_t& outVtxDataSize) {
+                              uint32_t& outVtxTableOffset, uint32_t& outVtxDataSize) {
     outVtxTableOffset = 0;
     outVtxDataSize = 0;
 
@@ -447,27 +459,36 @@ static void ByteSwapShapeData(uint8_t* data, size_t size, std::vector<PM64Displa
         // This marks where non-vertex data begins (display lists, model nodes, etc.)
         uint32_t minVisitedOffset = size;
         for (uint32_t off : gVisitedNodes) {
-            if (off > vertexTable && off < minVisitedOffset) minVisitedOffset = off;
+            if (off > vertexTable && off < minVisitedOffset)
+                minVisitedOffset = off;
         }
         for (uint32_t off : gVisitedGroups) {
-            if (off > vertexTable && off < minVisitedOffset) minVisitedOffset = off;
+            if (off > vertexTable && off < minVisitedOffset)
+                minVisitedOffset = off;
         }
         for (uint32_t off : gVisitedDisplayLists) {
-            if (off > vertexTable && off < minVisitedOffset) minVisitedOffset = off;
+            if (off > vertexTable && off < minVisitedOffset)
+                minVisitedOffset = off;
         }
         for (uint32_t off : gVisitedDisplayData) {
-            if (off > vertexTable && off < minVisitedOffset) minVisitedOffset = off;
+            if (off > vertexTable && off < minVisitedOffset)
+                minVisitedOffset = off;
         }
         for (uint32_t off : gVisitedProperties) {
-            if (off > vertexTable && off < minVisitedOffset) minVisitedOffset = off;
+            if (off > vertexTable && off < minVisitedOffset)
+                minVisitedOffset = off;
         }
 
         // Also check name tables and header structures
         uint32_t vtxEnd = minVisitedOffset;
-        if (root > vertexTable && root < vtxEnd) vtxEnd = root;
-        if (modelNames > vertexTable && modelNames < vtxEnd) vtxEnd = modelNames;
-        if (colliderNames > vertexTable && colliderNames < vtxEnd) vtxEnd = colliderNames;
-        if (zoneNames > vertexTable && zoneNames < vtxEnd) vtxEnd = zoneNames;
+        if (root > vertexTable && root < vtxEnd)
+            vtxEnd = root;
+        if (modelNames > vertexTable && modelNames < vtxEnd)
+            vtxEnd = modelNames;
+        if (colliderNames > vertexTable && colliderNames < vtxEnd)
+            vtxEnd = colliderNames;
+        if (zoneNames > vertexTable && zoneNames < vtxEnd)
+            vtxEnd = zoneNames;
 
         size_t vtxSize = vtxEnd - vertexTable;
         size_t numVertices = vtxSize / 16;
@@ -492,7 +513,8 @@ static void ByteSwapShapeData(uint8_t* data, size_t size, std::vector<PM64Displa
     // Each table is an array of BE u32 pointers to null-terminated strings.
     // The terminator is an entry whose pointed-to string content is literally "db".
     auto swapNameTable = [&](uint32_t tableOffset) {
-        if (!IsValidOffset(tableOffset, size - 4)) return;
+        if (!IsValidOffset(tableOffset, size - 4))
+            return;
 
         uint32_t* names = reinterpret_cast<uint32_t*>(data + tableOffset);
         while (reinterpret_cast<uint8_t*>(names) < data + size - 4) {
@@ -543,7 +565,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64ShapeFactory::parse(std::vector<
         std::vector<uint8_t> shapeData(decoded->data, decoded->data + decoded->size);
         ByteSwapShapeData(shapeData.data(), shapeData.size(), collectedDLs, vtxTableOffset, vtxDataSize);
 
-        return std::make_shared<PM64ShapeData>(std::move(shapeData), std::move(collectedDLs), vtxTableOffset, vtxDataSize);
+        return std::make_shared<PM64ShapeData>(std::move(shapeData), std::move(collectedDLs), vtxTableOffset,
+                                               vtxDataSize);
     } else {
         // Uncompressed - read raw data with size from YAML
         auto size = GetSafeNode<size_t>(node, "size");
@@ -552,14 +575,15 @@ std::optional<std::shared_ptr<IParsedData>> PM64ShapeFactory::parse(std::vector<
         std::vector<uint8_t> shapeData(segment.data, segment.data + segment.size);
         ByteSwapShapeData(shapeData.data(), shapeData.size(), collectedDLs, vtxTableOffset, vtxDataSize);
 
-        return std::make_shared<PM64ShapeData>(std::move(shapeData), std::move(collectedDLs), vtxTableOffset, vtxDataSize);
+        return std::make_shared<PM64ShapeData>(std::move(shapeData), std::move(collectedDLs), vtxTableOffset,
+                                               vtxDataSize);
     }
 }
 
 // Export vertex data as a separate OTR Vertex resource (V1 format with float ob[])
 // Returns the resource path used for hashing in G_VTX_OTR_HASH commands
-static std::string ExportVertexResource(const std::string& shapeName, const uint8_t* shapeData,
-                                         uint32_t vtxTableOffset, uint32_t vtxDataSize) {
+static std::string ExportVertexResource(const std::string& shapeName, const uint8_t* shapeData, uint32_t vtxTableOffset,
+                                        uint32_t vtxDataSize) {
     if (vtxDataSize == 0) {
         SPDLOG_WARN("No vertex data to export for shape {}", shapeName);
         return "";
@@ -577,13 +601,16 @@ static std::string ExportVertexResource(const std::string& shapeName, const uint
     writer.Write(count);
     for (uint32_t i = 0; i < count; i++) {
         const uint8_t* src = shapeData + vtxTableOffset + i * 16;
-        writer.Write(*reinterpret_cast<const int16_t*>(src + 0));   // ob[0]
-        writer.Write(*reinterpret_cast<const int16_t*>(src + 2));   // ob[1]
-        writer.Write(*reinterpret_cast<const int16_t*>(src + 4));   // ob[2]
-        writer.Write(*reinterpret_cast<const uint16_t*>(src + 6));  // flag
-        writer.Write(*reinterpret_cast<const int16_t*>(src + 8));   // tc[0]
-        writer.Write(*reinterpret_cast<const int16_t*>(src + 10));  // tc[1]
-        writer.Write(src[12]); writer.Write(src[13]); writer.Write(src[14]); writer.Write(src[15]); // cn[4]
+        writer.Write(*reinterpret_cast<const int16_t*>(src + 0));  // ob[0]
+        writer.Write(*reinterpret_cast<const int16_t*>(src + 2));  // ob[1]
+        writer.Write(*reinterpret_cast<const int16_t*>(src + 4));  // ob[2]
+        writer.Write(*reinterpret_cast<const uint16_t*>(src + 6)); // flag
+        writer.Write(*reinterpret_cast<const int16_t*>(src + 8));  // tc[0]
+        writer.Write(*reinterpret_cast<const int16_t*>(src + 10)); // tc[1]
+        writer.Write(src[12]);
+        writer.Write(src[13]);
+        writer.Write(src[14]);
+        writer.Write(src[15]); // cn[4]
     }
 
     // Finish writing and register as companion file
@@ -640,7 +667,7 @@ static void ExportDisplayListResource(const std::string& shapeName, const PM64Di
         if (opcode == F3DEX2_G_SETTIMG) {
             // Replace G_SETTIMG with G_NOOP - PM64 textures are loaded via texture handle system
             // G_NOOP is a standard 8-byte command
-            writer.Write(static_cast<uint32_t>(0x00 << 24));  // G_NOOP
+            writer.Write(static_cast<uint32_t>(0x00 << 24)); // G_NOOP
             writer.Write(static_cast<uint32_t>(0));
             // NO PADDING - standard command is 8 bytes
         } else if (opcode == F3DEX2_G_VTX) {
@@ -656,7 +683,7 @@ static void ExportDisplayListResource(const std::string& shapeName, const PM64Di
             // Replace opcode with G_VTX_OTR_HASH, keep n and v0 encoding
             uint32_t newW0 = (G_VTX_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
             writer.Write(newW0);
-            writer.Write(w1);  // w1 is vertex-table-relative offset
+            writer.Write(w1); // w1 is vertex-table-relative offset
 
             // Write hash (extra 8 bytes for expanded command)
             writer.Write(static_cast<uint32_t>(vtxHash >> 32));
@@ -694,7 +721,8 @@ static void ExportDisplayListResource(const std::string& shapeName, const PM64Di
     Companion::Instance->RegisterCompanionFile(path, data);
 }
 
-ExportResult PM64ShapeBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64ShapeBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto shapeData = std::static_pointer_cast<PM64ShapeData>(raw);
     auto writer = LUS::BinaryWriter();
 
@@ -706,8 +734,8 @@ ExportResult PM64ShapeBinaryExporter::Export(std::ostream& write, std::shared_pt
     }
 
     // Export vertex data as a separate OTR resource
-    ExportVertexResource(shapeName, shapeData->mBuffer.data(),
-                         shapeData->mVertexTableOffset, shapeData->mVertexDataSize);
+    ExportVertexResource(shapeName, shapeData->mBuffer.data(), shapeData->mVertexTableOffset,
+                         shapeData->mVertexDataSize);
 
     // Export each display list as a separate OTR resource
     for (const auto& dlInfo : shapeData->mDisplayLists) {
@@ -723,7 +751,8 @@ ExportResult PM64ShapeBinaryExporter::Export(std::ostream& write, std::shared_pt
     return std::nullopt;
 }
 
-ExportResult PM64ShapeHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64ShapeHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {

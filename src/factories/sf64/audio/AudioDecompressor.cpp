@@ -213,7 +213,7 @@ void AudioSynth_HartleyTransform(float* arg0, int32_t arg1, float* arg2) {
             arg0[2] = temp_fv1 - temp_fa0;
             break;
         default:
-            if (length != (int32_t) *arg2) {
+            if (length != (int32_t)*arg2) {
                 *arg2 = length;
 
                 var_s0 = &arg2[1];
@@ -372,11 +372,11 @@ void AudioSynth_InverseDiscreteCosineTransform(float* buffer0, float* buffer1, i
     half = size >> 1;
 
     // Initialize buffer 2 if it is the wrong size for this calculation
-    if (size != (int32_t) buffer2[0]) {
+    if (size != (int32_t)buffer2[0]) {
         buf2half2 = &buffer2[half];
         buf2half3 = &buf2half2[half];
         var_fs0 = 0.0f;
-        temp_ft0 = C_M_PI / (float) (2 * size);
+        temp_ft0 = C_M_PI / (float)(2 * size);
         for (i = 0; i < half; i++) {
             *buf2half2++ = (cosf(var_fs0) - sinf(var_fs0)) * 0.707107f;
             *buf2half3++ = (cosf(var_fs0) + sinf(var_fs0)) * 0.707107f;
@@ -457,7 +457,7 @@ void func_80009504(int16_t* arg0, StupidDMAStruct* arg1) {
     }
 
     for (i = 0; i < 0x100; i++, arg0++) {
-        *arg0 = (int16_t) DFT_80145D48[i];
+        *arg0 = (int16_t)DFT_80145D48[i];
     }
 }
 
@@ -489,14 +489,14 @@ int32_t func_8000967C(int32_t length, int16_t* inputAddr, int16_t* ramAddr, Stup
 
 void SF64::DecompressAudio(std::vector<uint8_t> data, int16_t* output) {
     StupidDMAStruct arg3 = {};
-    arg3.unk_0 = (int16_t*) data.data();
+    arg3.unk_0 = (int16_t*)data.data();
     arg3.unk_4 = 0;
     arg3.unk_8 = 0;
     arg3.unk18 = 0;
 
-    for(int i = 0; i < data.size() / 2; i++){
+    for (int i = 0; i < data.size() / 2; i++) {
         arg3.unk_0[i] = BSWAP16(arg3.unk_0[i]);
     }
 
-    func_8000967C((int32_t) data.size(), arg3.unk_0, (int16_t*) output, &arg3);
+    func_8000967C((int32_t)data.size(), arg3.unk_0, (int16_t*)output, &arg3);
 }

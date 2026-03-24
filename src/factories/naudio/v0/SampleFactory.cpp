@@ -6,13 +6,14 @@
 #include "spdlog/spdlog.h"
 #include <factories/naudio/v1/AudioConverter.h>
 
-ExportResult SampleModdingExporter::Export(std::ostream& writer, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
-   auto sample = std::static_pointer_cast<SampleData>(raw);
-   *replacement += ".aiff";
+ExportResult SampleModdingExporter::Export(std::ostream& writer, std::shared_ptr<IParsedData> raw,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
+    auto sample = std::static_pointer_cast<SampleData>(raw);
+    *replacement += ".aiff";
 
     LUS::BinaryWriter aifc = LUS::BinaryWriter();
     AudioConverter::SampleV0ToAIFC(&sample->mSample, aifc);
-    
+
     LUS::BinaryWriter aiff = LUS::BinaryWriter();
     write_aiff(aifc.ToVector(), aiff);
     aifc.Close();
@@ -20,7 +21,8 @@ ExportResult SampleModdingExporter::Export(std::ostream& writer, std::shared_ptr
     return std::nullopt;
 }
 
-ExportResult SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SampleBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                          YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto sample = std::static_pointer_cast<SampleData>(raw)->mSample;
 
@@ -30,7 +32,7 @@ ExportResult SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
     writer.Write(sample.loop.count);
     writer.Write(sample.loop.pad);
 
-    if(sample.loop.state.has_value()){
+    if (sample.loop.state.has_value()) {
         auto state = sample.loop.state.value();
         writer.Write(static_cast<uint32_t>(state.size()));
         writer.Write(reinterpret_cast<char*>(state.data()), state.size() * sizeof(int16_t));
@@ -55,7 +57,7 @@ ExportResult SampleBinaryExporter::Export(std::ostream &write, std::shared_ptr<I
 
 std::optional<std::shared_ptr<IParsedData>> SampleFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
     const auto id = data["id"].as<int32_t>();
-    if(AudioManager::Instance == nullptr){
+    if (AudioManager::Instance == nullptr) {
         throw std::runtime_error("AudioManager not initialized");
     }
     AudioBankSample entry = AudioManager::Instance->get_aifc(id);

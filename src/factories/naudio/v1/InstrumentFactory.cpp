@@ -4,10 +4,11 @@
 #include "EnvelopeFactory.h"
 #include <tinyxml2.h>
 
-ExportResult InstrumentHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult InstrumentHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -17,11 +18,13 @@ ExportResult InstrumentHeaderExporter::Export(std::ostream &write, std::shared_p
     return std::nullopt;
 }
 
-ExportResult InstrumentCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult InstrumentCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
     return std::nullopt;
 }
 
-ExportResult InstrumentBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult InstrumentBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<InstrumentData>(raw);
 
@@ -63,7 +66,7 @@ std::optional<std::shared_ptr<IParsedData>> InstrumentFactory::parse(std::vector
     envelope["offset"] = envAddr;
     instrument->envelope = envAddr;
     Companion::Instance->AddAsset(envelope);
-    
+
     instrument->lowPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
     instrument->normalPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
     instrument->highPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);

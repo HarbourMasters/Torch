@@ -1,3 +1,4 @@
 #include "BinaryWrapper.h"
 
-BinaryWrapper::BinaryWrapper(const std::string& path) : mPath(path) {}
+BinaryWrapper::BinaryWrapper(const std::string& path) : mPath(path) {
+}

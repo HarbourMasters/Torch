@@ -28,7 +28,7 @@ uint64_t RegisterAutoGen(uint32_t ptr, std::string type) {
 void StoreFunc(uint32_t vram) {
     return;
 
-    if(!Torch::contains(gFunctionMap, vram)) {
+    if (!Torch::contains(gFunctionMap, vram)) {
         return;
     }
 
@@ -57,7 +57,8 @@ SM64::GeoLayoutFactory::GeoLayoutFactory() {
     // }
 }
 
-ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+ExportResult SM64::GeoCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto cmds = std::static_pointer_cast<GeoLayout>(data)->commands;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     uint32_t indentCount = 1;
@@ -65,7 +66,7 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
 
     write << "GeoLayout " << symbol << "[] = {\n";
 
-    for(auto& [opcode, arguments, skip] : cmds) {
+    for (auto& [opcode, arguments, skip] : cmds) {
         bool commaFlag = false;
 
         if (opcode == GeoOpcode::OpenNode) {
@@ -81,14 +82,14 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
         }
 
         write << opcode << "(";
-        for(auto& args : arguments) {
+        for (auto& args : arguments) {
             if (commaFlag) {
                 write << ", ";
             } else {
                 commaFlag = true;
             }
 
-            switch(static_cast<GeoArgumentType>(args.index())) {
+            switch (static_cast<GeoArgumentType>(args.index())) {
                 case GeoArgumentType::U8: {
                     write << std::hex << "0x" << static_cast<uint32_t>(std::get<uint8_t>(args));
                     break;
@@ -143,12 +144,12 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
                 }
                 case GeoArgumentType::VEC3S: {
                     const auto [x, y, z] = std::get<Vec3s>(args);
-                    write << std::dec <<  x << ", " << y << ", " << z;
+                    write << std::dec << x << ", " << y << ", " << z;
                     break;
                 }
                 case GeoArgumentType::VEC3I: {
                     const auto [x, y, z] = std::get<Vec3i>(args);
-                    write << std::dec <<  x << ", " << y << ", " << z;
+                    write << std::dec << x << ", " << y << ", " << z;
                     break;
                 }
                 case GeoArgumentType::VEC4F: {
@@ -158,7 +159,7 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
                 }
                 case GeoArgumentType::VEC4S: {
                     const auto [x, y, z, w] = std::get<Vec4s>(args);
-                    write << std::dec <<  x << ", " << y << ", " << z << ", " << w;
+                    write << std::dec << x << ", " << y << ", " << z << ", " << w;
                     break;
                 }
                 case GeoArgumentType::STRING: {
@@ -170,7 +171,7 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
                 }
             }
         }
-        if(skip){
+        if (skip) {
             write << "), //! more close than open nodes\n";
         } else {
             write << "),\n";
@@ -189,20 +190,21 @@ ExportResult SM64::GeoCodeExporter::Export(std::ostream&write, std::shared_ptr<I
     return std::nullopt;
 }
 
-ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+ExportResult SM64::GeoBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto layout = std::static_pointer_cast<GeoLayout>(data).get();
 
     auto writer = LUS::BinaryWriter();
 
-    for(auto& [opcode, arguments, skip] : layout->commands) {
-        if(skip){
+    for (auto& [opcode, arguments, skip] : layout->commands) {
+        if (skip) {
             opcode = GeoOpcode::End;
             arguments.clear();
         }
         writer.Write(static_cast<uint8_t>(opcode));
 
-        for(auto& args : arguments) {
-            switch(static_cast<GeoArgumentType>(args.index())) {
+        for (auto& args : arguments) {
+            switch (static_cast<GeoArgumentType>(args.index())) {
                 case GeoArgumentType::U8: {
                     writer.Write(std::get<uint8_t>(args));
                     break;
@@ -304,10 +306,11 @@ ExportResult SM64::GeoBinaryExporter::Export(std::ostream&write, std::shared_ptr
     return std::nullopt;
 }
 
-ExportResult SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr<IParsedData> data, std::string&entryName, YAML::Node&node, std::string* replacement) {
+ExportResult SM64::GeoHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -317,7 +320,8 @@ ExportResult SM64::GeoHeaderExporter::Export(std::ostream&write, std::shared_ptr
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::vector<uint8_t>& buffer,
+                                                                          YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     auto cmd = segment.data;
 
@@ -325,7 +329,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
     int32_t openCount = 0;
     std::vector<GeoCommand> commands;
 
-    while(processing) {
+    while (processing) {
         auto opcode = static_cast<GeoOpcode>(cmd[0x00]);
         auto skip = false;
 
@@ -333,7 +337,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
         std::vector<GeoArgument> arguments;
 
-        switch(opcode){
+        switch (opcode) {
             case GeoOpcode::BranchAndLink: {
                 auto ptr = cur_geo_cmd_u32(0x04);
                 if (ptr == 0) {
@@ -498,7 +502,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                 Vec3s translation = {};
                 Vec3s rotation = {};
                 auto params = cur_geo_cmd_u8(0x01);
-                auto cmd_pos = reinterpret_cast<int16_t *>(cmd);
+                auto cmd_pos = reinterpret_cast<int16_t*>(cmd);
 
                 arguments.emplace_back(params);
 
@@ -532,14 +536,14 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                     cmd_pos += 2 << CMD_SIZE_SHIFT;
                 }
 
-                cmd = reinterpret_cast<uint8_t *>(cmd_pos);
+                cmd = reinterpret_cast<uint8_t*>(cmd_pos);
                 break;
             }
-            case GeoOpcode::NodeTranslation: 
+            case GeoOpcode::NodeTranslation:
             case GeoOpcode::NodeRotation: {
                 Vec3s vector = {};
                 auto params = cur_geo_cmd_u8(0x01);
-                auto cmd_pos = reinterpret_cast<int16_t *>(cmd);
+                auto cmd_pos = reinterpret_cast<int16_t*>(cmd);
 
                 arguments.emplace_back(params);
 
@@ -553,7 +557,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
                     cmd_pos += 2 << CMD_SIZE_SHIFT;
                 }
 
-                cmd = reinterpret_cast<uint8_t *>(cmd_pos);
+                cmd = reinterpret_cast<uint8_t*>(cmd_pos);
                 break;
             }
             case GeoOpcode::NodeAnimatedPart: {
@@ -672,7 +676,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
             }
             case GeoOpcode::NodeScale: {
                 auto params = cur_geo_cmd_u8(0x01);
-                auto scale  = cur_geo_cmd_u32(0x04);
+                auto scale = cur_geo_cmd_u32(0x04);
 
                 arguments.emplace_back(params);
                 arguments.emplace_back(scale);

@@ -64,9 +64,10 @@ static void ByteSwapHitFileHeader(uint8_t* data, uint32_t headerOffset, size_t t
     uint32_t* boundingBoxesOffset = reinterpret_cast<uint32_t*>(header + 0x14);
     *boundingBoxesOffset = BSWAP32(*boundingBoxesOffset);
 
-    SPDLOG_DEBUG("HitFileHeader at 0x{:X}: numColliders={}, collidersOffset=0x{:X}, numVertices={}, verticesOffset=0x{:X}, bbSize={}, bbOffset=0x{:X}",
-                 headerOffset, *numColliders, *collidersOffset, *numVertices, *verticesOffset,
-                 *boundingBoxesDataSize, *boundingBoxesOffset);
+    SPDLOG_DEBUG("HitFileHeader at 0x{:X}: numColliders={}, collidersOffset=0x{:X}, numVertices={}, "
+                 "verticesOffset=0x{:X}, bbSize={}, bbOffset=0x{:X}",
+                 headerOffset, *numColliders, *collidersOffset, *numVertices, *verticesOffset, *boundingBoxesDataSize,
+                 *boundingBoxesOffset);
 
     // Byte-swap colliders array (HitAssetCollider, 0x0C bytes each)
     uint32_t collOffset = *collidersOffset;
@@ -137,7 +138,8 @@ static void ByteSwapCollisionData(uint8_t* data, size_t size) {
     ByteSwapHitFileHeader(data, zoneOffset, size);
 }
 
-std::optional<std::shared_ptr<IParsedData>> PM64CollisionFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> PM64CollisionFactory::parse(std::vector<uint8_t>& buffer,
+                                                                        YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     // Check if compressed (YAY0)
@@ -166,7 +168,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64CollisionFactory::parse(std::vec
     }
 }
 
-ExportResult PM64CollisionBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64CollisionBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -179,7 +182,8 @@ ExportResult PM64CollisionBinaryExporter::Export(std::ostream& write, std::share
     return std::nullopt;
 }
 
-ExportResult PM64CollisionHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64CollisionHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {

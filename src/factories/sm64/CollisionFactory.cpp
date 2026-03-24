@@ -90,7 +90,8 @@ std::unordered_map<int16_t, SpecialPresetTypes> specialPresetMap = {
     { 0xFF, SpecialPresetTypes::SPTYPE_NO_YROT_OR_PARAMS },
 };
 
-ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::CollisionCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto collision = std::static_pointer_cast<Collision>(data).get();
@@ -109,7 +110,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
         write << "COL_VERTEX_INIT(" << FORMAT_HEX(collision->mVertices.size()) << "),\n";
         ++count;
     }
-    for (auto &vertex : collision->mVertices) {
+    for (auto& vertex : collision->mVertices) {
         write << fourSpaceTab;
         write << "COL_VERTEX(";
         write << vertex.x << ", ";
@@ -119,7 +120,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
     }
 
     // Surfaces
-    for (auto &surface : collision->mSurfaces) {
+    for (auto& surface : collision->mSurfaces) {
         // size check is probably not necessary here
         if (surface.tris.size() > 0) {
             write << fourSpaceTab;
@@ -130,19 +131,19 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
         }
         bool hasForce = false;
         switch (surface.surfaceType) {
-                case SurfaceType::SURFACE_0004:
-                case SurfaceType::SURFACE_FLOWING_WATER:
-                case SurfaceType::SURFACE_DEEP_MOVING_QUICKSAND:
-                case SurfaceType::SURFACE_SHALLOW_MOVING_QUICKSAND:
-                case SurfaceType::SURFACE_MOVING_QUICKSAND:
-                case SurfaceType::SURFACE_HORIZONTAL_WIND:
-                case SurfaceType::SURFACE_INSTANT_MOVING_QUICKSAND:
-                    hasForce = true;
-                    break;
-                default:
-                    break;
-            }
-        for (auto &tri : surface.tris) {
+            case SurfaceType::SURFACE_0004:
+            case SurfaceType::SURFACE_FLOWING_WATER:
+            case SurfaceType::SURFACE_DEEP_MOVING_QUICKSAND:
+            case SurfaceType::SURFACE_SHALLOW_MOVING_QUICKSAND:
+            case SurfaceType::SURFACE_MOVING_QUICKSAND:
+            case SurfaceType::SURFACE_HORIZONTAL_WIND:
+            case SurfaceType::SURFACE_INSTANT_MOVING_QUICKSAND:
+                hasForce = true;
+                break;
+            default:
+                break;
+        }
+        for (auto& tri : surface.tris) {
             write << fourSpaceTab;
             if (hasForce) {
                 write << "COL_TRI_SPECIAL(";
@@ -174,7 +175,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
         write << "COL_SPECIAL_INIT(" << collision->mSpecialObjects.size() << "),\n";
         count += 2;
     }
-    for (auto &specialObject : collision->mSpecialObjects) {
+    for (auto& specialObject : collision->mSpecialObjects) {
         write << fourSpaceTab;
         if (specialPresetMap.find((int16_t)specialObject.presetId) == specialPresetMap.end()) {
             throw std::runtime_error("Special Preset Id has no associated Type");
@@ -218,7 +219,7 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
         write << "COL_WATER_BOX_INIT(" << collision->mEnvRegionBoxes.size() << "),\n";
         count += 2;
     }
-    for (auto &envRegionBox : collision->mEnvRegionBoxes) {
+    for (auto& envRegionBox : collision->mEnvRegionBoxes) {
         write << fourSpaceTab;
         write << "COL_WATER_BOX(";
         write << envRegionBox.id << ", ";
@@ -243,10 +244,11 @@ ExportResult SM64::CollisionCodeExporter::Export(std::ostream &write, std::share
     return offset + count * sizeof(int16_t);
 }
 
-ExportResult SM64::CollisionHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::CollisionHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data,
+                                                   std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -255,7 +257,8 @@ ExportResult SM64::CollisionHeaderExporter::Export(std::ostream &write, std::sha
     return std::nullopt;
 }
 
-ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::CollisionBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data,
+                                                   std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto collision = std::static_pointer_cast<Collision>(data).get();
 
     std::vector<int16_t> commands;
@@ -266,14 +269,14 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
     if (collision->mVertices.size() > 0) {
         commands.push_back((int16_t)COL_VERTEX_INIT(collision->mVertices.size()));
     }
-    for (auto &vertex : collision->mVertices) {
+    for (auto& vertex : collision->mVertices) {
         commands.push_back(vertex.x);
         commands.push_back(vertex.y);
         commands.push_back(vertex.z);
     }
 
     // Surfaces
-    for (auto &surface : collision->mSurfaces) {
+    for (auto& surface : collision->mSurfaces) {
         // size check is probably not necessary here
         if (surface.tris.size() > 0) {
             commands.push_back((int16_t)surface.surfaceType);
@@ -293,7 +296,7 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
             default:
                 break;
         }
-        for (auto &tri : surface.tris) {
+        for (auto& tri : surface.tris) {
             commands.push_back(tri.x);
             commands.push_back(tri.y);
             commands.push_back(tri.z);
@@ -311,7 +314,7 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
         commands.push_back((int16_t)TERRAIN_LOAD_OBJECTS);
         commands.push_back((int16_t)collision->mSpecialObjects.size());
     }
-    for (auto &specialObject : collision->mSpecialObjects) {
+    for (auto& specialObject : collision->mSpecialObjects) {
         commands.push_back((int16_t)specialObject.presetId);
         commands.push_back(specialObject.x);
         commands.push_back(specialObject.y);
@@ -326,7 +329,7 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
         commands.push_back((int16_t)TERRAIN_LOAD_ENVIRONMENT);
         commands.push_back((int16_t)collision->mEnvRegionBoxes.size());
     }
-    for (auto &envRegionBox : collision->mEnvRegionBoxes) {
+    for (auto& envRegionBox : collision->mEnvRegionBoxes) {
         commands.push_back(envRegionBox.id);
         commands.push_back(envRegionBox.x1);
         commands.push_back(envRegionBox.z1);
@@ -335,19 +338,20 @@ ExportResult SM64::CollisionBinaryExporter::Export(std::ostream &write, std::sha
         commands.push_back(envRegionBox.height);
     }
 
-    commands.push_back((int16_t) COL_END());
+    commands.push_back((int16_t)COL_END());
 
     LUS::BinaryWriter output = LUS::BinaryWriter();
     WriteHeader(output, Torch::ResourceType::Collision, 0);
 
     output.Write(static_cast<uint32_t>(commands.size()));
-    output.Write((char*) commands.data(), commands.size() * sizeof(int16_t));
+    output.Write((char*)commands.data(), commands.size() * sizeof(int16_t));
     output.Finish(write);
     output.Close();
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::CollisionFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::CollisionFactory::parse(std::vector<uint8_t>& buffer,
+                                                                          YAML::Node& node) {
     std::vector<CollisionVertex> vertices;
     std::vector<CollisionSurface> surfaces;
     std::vector<SpecialObject> specialObjects;
@@ -441,7 +445,8 @@ std::optional<std::shared_ptr<IParsedData>> SM64::CollisionFactory::parse(std::v
                 envRegionBoxes.emplace_back(id, x1, z1, x2, z2, height);
             }
         } else if (terrainLoadType == TERRAIN_LOAD_CONTINUE) {
-            // need to figure out a way to handle when this should appear in exporters. seems to always be after vertices
+            // need to figure out a way to handle when this should appear in exporters. seems to always be after
+            // vertices
         } else if (terrainLoadType == TERRAIN_LOAD_END) {
             processing = false;
         } else if (TERRAIN_LOAD_IS_SURFACE_TYPE_HIGH(terrainLoadType)) {

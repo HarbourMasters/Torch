@@ -124,7 +124,8 @@ static void ByteSwapSpriteData(uint8_t* data, size_t size) {
                     compData16[3] = BSWAP16(compData16[3]); // compOffset.z
 
                     // Byte-swap command list (array of u16)
-                    if (cmdListOffset > 0 && cmdListOffset < size && cmdListSize > 0 && !processedCmdLists.count(cmdListOffset)) {
+                    if (cmdListOffset > 0 && cmdListOffset < size && cmdListSize > 0 &&
+                        !processedCmdLists.count(cmdListOffset)) {
                         processedCmdLists.insert(cmdListOffset);
 
                         uint16_t* cmdList = reinterpret_cast<uint16_t*>(data + cmdListOffset);
@@ -182,7 +183,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64SpriteFactory::parse(std::vector
     }
 }
 
-ExportResult PM64SpriteBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64SpriteBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -195,7 +197,8 @@ ExportResult PM64SpriteBinaryExporter::Export(std::ostream& write, std::shared_p
     return std::nullopt;
 }
 
-ExportResult PM64SpriteHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64SpriteHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {

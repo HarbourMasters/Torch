@@ -7,10 +7,11 @@
 #define FORMAT_HEX(x) std::hex << "0x" << std::uppercase << x << std::nouppercase << std::dec
 #define FZX_LIMB_SIZE 0x36
 
-ExportResult FZX::EADLimbHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::EADLimbHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -20,7 +21,8 @@ ExportResult FZX::EADLimbHeaderExporter::Export(std::ostream &write, std::shared
     return std::nullopt;
 }
 
-ExportResult FZX::EADLimbCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::EADLimbCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto limb = std::static_pointer_cast<EADLimbData>(raw);
@@ -107,7 +109,8 @@ ExportResult FZX::EADLimbCodeExporter::Export(std::ostream &write, std::shared_p
     return offset + FZX_LIMB_SIZE;
 }
 
-ExportResult FZX::EADLimbBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::EADLimbBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto limb = std::static_pointer_cast<EADLimbData>(raw);
 
@@ -154,5 +157,6 @@ std::optional<std::shared_ptr<IParsedData>> FZX::EADLimbFactory::parse(std::vect
     }
     auto limbId = reader.ReadInt16();
 
-    return std::make_shared<EADLimbData>(dl, scale, pos, rot, nextLimb, childLimb, associatedLimb, associatedLimbDL, limbId);
+    return std::make_shared<EADLimbData>(dl, scale, pos, rot, nextLimb, childLimb, associatedLimb, associatedLimbDL,
+                                         limbId);
 }

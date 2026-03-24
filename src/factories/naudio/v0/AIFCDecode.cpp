@@ -37,7 +37,9 @@ typedef float f32;
 #define BSWAP32(x) x = bswap32(x)
 #endif
 
-#define BSWAP16_MANY(x, n) for (s32 _i = 0; _i < n; _i++) BSWAP16((x)[_i])
+#define BSWAP16_MANY(x, n)         \
+    for (s32 _i = 0; _i < n; _i++) \
+    BSWAP16((x)[_i])
 
 #ifndef WIN32
 #define NORETURN __attribute__((noreturn))
@@ -103,27 +105,25 @@ typedef struct {
     s16 nEntries;
 } CodeChunk;
 
-typedef struct
-{
+typedef struct {
     u32 start;
     u32 end;
     u32 count;
     s16 state[16];
 } ALADPCMloop;
 
-#define checked_fread(a, b, c, d) d.Read((char*) a, b * c)
+#define checked_fread(a, b, c, d) d.Read((char*)a, b* c)
 
 NORETURN
-void fail_parse(const char *fmt, ...)
-{
-    char *formatted = nullptr;
+void fail_parse(const char* fmt, ...) {
+    char* formatted = nullptr;
     va_list ap;
     va_start(ap, fmt);
     int size = vsnprintf(nullptr, 0, fmt, ap);
     va_end(ap);
     if (size >= 0) {
         size++;
-        formatted = static_cast<char *>(malloc(size));
+        formatted = static_cast<char*>(malloc(size));
         if (formatted != nullptr) {
             va_start(ap, fmt);
             size = vsnprintf(formatted, size, fmt, ap);
@@ -142,36 +142,35 @@ void fail_parse(const char *fmt, ...)
     throw std::runtime_error("Error parsing file");
 }
 
-s32 myrand()
-{
+s32 myrand() {
     static u64 state = 1619236481962341ULL;
     state *= 3123692312231ULL;
     state++;
     return state >> 33;
 }
 
-s16 qsample(s32 x, s32 scale)
-{
+s16 qsample(s32 x, s32 scale) {
     // Compute x / 2^scale rounded to the nearest integer, breaking ties towards zero.
-    if (scale == 0) return x;
+    if (scale == 0)
+        return x;
     return (x + (1 << (scale - 1)) - (x > 0)) >> scale;
 }
 
-s16 clamp_to_s16(s32 x)
-{
-    if (x < -0x8000) return -0x8000;
-    if (x > 0x7fff) return 0x7fff;
-    return (s16) x;
+s16 clamp_to_s16(s32 x) {
+    if (x < -0x8000)
+        return -0x8000;
+    if (x > 0x7fff)
+        return 0x7fff;
+    return (s16)x;
 }
 
-s32 toi4(s32 x)
-{
-    if (x >= 8) return x - 16;
+s32 toi4(s32 x) {
+    if (x >= 8)
+        return x - 16;
     return x;
 }
 
-s32 readaifccodebook(LUS::BinaryReader& fhandle, s32 ****table, s16 *order, s16 *npredictors)
-{
+s32 readaifccodebook(LUS::BinaryReader& fhandle, s32**** table, s16* order, s16* npredictors) {
     checked_fread(order, sizeof(s16), 1, fhandle);
     BSWAP16(*order);
     checked_fread(npredictors, sizeof(s16), 1, fhandle);
@@ -185,7 +184,7 @@ s32 readaifccodebook(LUS::BinaryReader& fhandle, s32 ****table, s16 *order, s16 
     }
 
     for (s32 i = 0; i < *npredictors; i++) {
-        s32 **table_entry = (*table)[i];
+        s32** table_entry = (*table)[i];
         for (s32 j = 0; j < *order; j++) {
             for (s32 k = 0; k < 8; k++) {
                 s16 ts;
@@ -215,10 +214,10 @@ s32 readaifccodebook(LUS::BinaryReader& fhandle, s32 ****table, s16 *order, s16 
     return 0;
 }
 
-ALADPCMloop *readlooppoints(LUS::BinaryReader& reader, s16 *nloops) {
+ALADPCMloop* readlooppoints(LUS::BinaryReader& reader, s16* nloops) {
     checked_fread(nloops, sizeof(s16), 1, reader);
     BSWAP16(*nloops);
-    auto *al = static_cast<ALADPCMloop *>(malloc(*nloops * sizeof(ALADPCMloop)));
+    auto* al = static_cast<ALADPCMloop*>(malloc(*nloops * sizeof(ALADPCMloop)));
     for (s32 i = 0; i < *nloops; i++) {
         checked_fread(&al[i], sizeof(ALADPCMloop), 1, reader);
         BSWAP32(al[i].start);
@@ -229,8 +228,7 @@ ALADPCMloop *readlooppoints(LUS::BinaryReader& reader, s16 *nloops) {
     return al;
 }
 
-s32 inner_product(s32 length, s32 *v1, s32 *v2)
-{
+s32 inner_product(s32 length, s32* v1, s32* v2) {
     s32 out = 0;
     for (s32 i = 0; i < length; i++) {
         out += v1[i] * v2[i];
@@ -242,8 +240,7 @@ s32 inner_product(s32 length, s32 *v1, s32 *v2)
     return dout - (out - fiout < 0);
 }
 
-void my_decodeframe(u8 *frame, s32 *state, s32 order, s32 ***coefTable)
-{
+void my_decodeframe(u8* frame, s32* state, s32 order, s32*** coefTable) {
     s32 ix[16];
 
     u8 header = frame[0];
@@ -251,13 +248,14 @@ void my_decodeframe(u8 *frame, s32 *state, s32 order, s32 ***coefTable)
     s32 optimalp = header & 0xf;
 
     for (s32 i = 0; i < 16; i += 2) {
-        u8 c = frame[1 + i/2];
+        u8 c = frame[1 + i / 2];
         ix[i] = c >> 4;
         ix[i + 1] = c & 0xf;
     }
 
     for (s32 i = 0; i < 16; i++) {
-        if (ix[i] >= 8) ix[i] -= 16;
+        if (ix[i] >= 8)
+            ix[i] -= 16;
         ix[i] *= scale;
     }
 
@@ -281,8 +279,7 @@ void my_decodeframe(u8 *frame, s32 *state, s32 order, s32 ***coefTable)
     }
 }
 
-void my_encodeframe(u8 *out, s16 *inBuffer, s32 *state, s32 ***coefTable, s32 order, s32 npredictors)
-{
+void my_encodeframe(u8* out, s16* inBuffer, s32* state, s32*** coefTable, s32 order, s32 npredictors) {
     s16 ix[16];
     s32 prediction[16];
     s32 inVector[16];
@@ -307,7 +304,7 @@ void my_encodeframe(u8 *out, s16 *inBuffer, s32 *state, s32 ***coefTable, s32 or
 
         f32 se = 0.0f;
         for (s32 j = 0; j < 16; j++) {
-            se += (f32) e[j] * (f32) e[j];
+            se += (f32)e[j] * (f32)e[j];
         }
 
         if (se < min) {
@@ -339,7 +336,8 @@ void my_encodeframe(u8 *out, s16 *inBuffer, s32 *state, s32 ***coefTable, s32 or
     }
 
     for (scale = 0; scale <= 12; scale++) {
-        if (max <= 7 && max >= -8) break;
+        if (max <= 7 && max >= -8)
+            break;
         max /= 2;
     }
 
@@ -349,7 +347,8 @@ void my_encodeframe(u8 *out, s16 *inBuffer, s32 *state, s32 ***coefTable, s32 or
 
     for (s32 nIter = 0, again = 1; nIter < 2 && again; nIter++) {
         again = 0;
-        if (nIter == 1) scale++;
+        if (nIter == 1)
+            scale++;
         if (scale > 12) {
             scale = 12;
         }
@@ -357,8 +356,7 @@ void my_encodeframe(u8 *out, s16 *inBuffer, s32 *state, s32 ***coefTable, s32 or
         for (s32 j = 0; j < 2; j++) {
             s32 base = j * 8;
             for (s32 i = 0; i < order; i++) {
-                inVector[i] = (j == 0 ?
-                        saveState[16 - order + i] : state[8 - order + i]);
+                inVector[i] = (j == 0 ? saveState[16 - order + i] : state[8 - order + i]);
             }
 
             for (s32 i = 0; i < 8; i++) {
@@ -366,7 +364,8 @@ void my_encodeframe(u8 *out, s16 *inBuffer, s32 *state, s32 ***coefTable, s32 or
                 s32 se = inBuffer[base + i] - prediction[base + i];
                 ix[base + i] = qsample(se, scale);
                 s32 cV = clamp_to_s16(ix[base + i]) - ix[base + i];
-                if (cV > 1 || cV < -1) again = 1;
+                if (cV > 1 || cV < -1)
+                    again = 1;
                 ix[base + i] += cV;
                 inVector[i + order] = ix[base + i] * (1 << scale);
                 state[base + i] = prediction[base + i] + inVector[i + order];
@@ -378,12 +377,11 @@ void my_encodeframe(u8 *out, s16 *inBuffer, s32 *state, s32 ***coefTable, s32 or
     out[0] = header;
     for (s32 i = 0; i < 16; i += 2) {
         u8 c = ((ix[i] & 0xf) << 4) | (ix[i + 1] & 0xf);
-        out[1 + i/2] = c;
+        out[1 + i / 2] = c;
     }
 }
 
-void permute(s16 *out, s32 *in, s32 scale)
-{
+void permute(s16* out, s32* in, s32 scale) {
     for (s32 i = 0; i < 16; i++) {
         out[i] = clamp_to_s16(in[i] - scale / 2 + myrand() % (scale + 1));
     }
@@ -391,7 +389,7 @@ void permute(s16 *out, s32 *in, s32 scale)
 
 void WriteString(const char* str, int32_t size, LUS::BinaryWriter& writer) {
     for (int i = 0; i < size; i++) {
-        writer.Write((uint8_t) str[i]);
+        writer.Write((uint8_t)str[i]);
     }
 }
 
@@ -403,10 +401,10 @@ void write_header(LUS::BinaryWriter& writer, std::string id, s32 size) {
 void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
     s16 order = -1;
     s16 nloops = 0;
-    ALADPCMloop *aloops = nullptr;
+    ALADPCMloop* aloops = nullptr;
     s16 npredictors = -1;
-    s32 ***coefTable = nullptr;
-    s32 state[16] = {0};
+    s32*** coefTable = nullptr;
+    s32 state[16] = { 0 };
     s32 soundPointer = -1;
     s32 currPos = 0;
     s32 nSamples = 0;
@@ -430,7 +428,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
         if (reader.GetBaseAddress() >= reader.GetLength()) {
             break;
         }
-        reader.Read((char*) &Header, sizeof(Header));
+        reader.Read((char*)&Header, sizeof(Header));
         u32 ts;
         BSWAP32(Header.ckID);
         BSWAP32(Header.ckSize);
@@ -439,7 +437,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
         Header.ckSize &= ~1;
         s32 offset = reader.GetBaseAddress();
 
-        if(Header.ckID == 0x434f4d4d) { // COMM
+        if (Header.ckID == 0x434f4d4d) { // COMM
             checked_fread(&CommChunk, sizeof(CommChunk), 1, reader);
             BSWAP16(CommChunk.numChannels);
             BSWAP16(CommChunk.numFramesH);
@@ -470,7 +468,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
             }
         }
 
-        if(Header.ckID == 0x53534e44) { //SSND
+        if (Header.ckID == 0x53534e44) { // SSND
             checked_fread(&SndDChunk, sizeof(SndDChunk), 1, reader);
             BSWAP32(SndDChunk.offset);
             BSWAP32(SndDChunk.blockSize);
@@ -479,7 +477,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
             soundPointer = reader.GetBaseAddress();
         }
 
-        if(Header.ckID == 0x4150504c){ // APPL
+        if (Header.ckID == 0x4150504c) { // APPL
             checked_fread(&ts, sizeof(u32), 1, reader);
             BSWAP32(ts);
             if (ts == 0x73746f63) { // stoc
@@ -497,8 +495,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
                             fail_parse("Unknown codebook chunk version");
                         }
                         readaifccodebook(reader, &coefTable, &order, &npredictors);
-                    }
-                    else if (strcmp("VADPCMLOOPS", ChunkName) == 0) {
+                    } else if (strcmp("VADPCMLOOPS", ChunkName) == 0) {
                         checked_fread(&version, sizeof(s16), 1, reader);
                         BSWAP16(version);
                         if (version != 1) {
@@ -529,12 +526,12 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
     reader.Seek(soundPointer, LUS::SeekOffsetType::Start);
 
     while (currPos < nSamples) {
-        u8 input[9] = {0};
-        u8 encoded[9] = {0};
-        s32 lastState[16] = {0};
-        s32 decoded[16] = {0};
-        s16 guess[16] = {0};
-        s16 origGuess[16] = {0};
+        u8 input[9] = { 0 };
+        u8 encoded[9] = { 0 };
+        s32 lastState[16] = { 0 };
+        s32 decoded[16] = { 0 };
+        s16 guess[16] = { 0 };
+        s16 origGuess[16] = { 0 };
 
         memcpy(lastState, state, sizeof(lastState));
         checked_fread(input, 9, 1, reader);
@@ -567,15 +564,16 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
             for (s32 failures = 0; failures < 50; failures++) {
                 s32 ind = myrand() % 16;
                 s32 old = guess[ind];
-                if (old == origGuess[ind]) continue;
+                if (old == origGuess[ind])
+                    continue;
                 guess[ind] = origGuess[ind];
-                if (myrand() % 2) guess[ind] += (old - origGuess[ind]) / 2;
+                if (myrand() % 2)
+                    guess[ind] += (old - origGuess[ind]) / 2;
                 memcpy(state, lastState, sizeof(lastState));
                 my_encodeframe(encoded, guess, state, coefTable, order, npredictors);
                 if (memcmp(input, encoded, 9) == 0) {
                     failures = -1;
-                }
-                else {
+                } else {
                     guess[ind] = old;
                 }
             }
@@ -584,7 +582,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
         memcpy(state, decoded, sizeof(lastState));
         BSWAP16_MANY(guess, 16);
         writer.Seek(currPos * 2, LUS::SeekOffsetType::Start);
-        writer.Write((char*) guess, sizeof(guess));
+        writer.Write((char*)guess, sizeof(guess));
         currPos += 16;
     }
 
@@ -600,20 +598,18 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
     BSWAP16(CommChunk.numFramesH);
     BSWAP16(CommChunk.numFramesL);
     BSWAP16(CommChunk.sampleSize);
-    writer.Write((char*) &CommChunk, sizeof(CommonChunk) - 4);
+    writer.Write((char*)&CommChunk, sizeof(CommonChunk) - 4);
 
     if (nloops > 0) {
         s32 startPos = aloops[0].start, endPos = aloops[0].end;
-        const char *markerNames[2] = {"start", "end"};
-        Marker markers[2] = {
-            {1, static_cast<u16>((u16) startPos >> 16), static_cast<u16>((u16) startPos & 0xffff)},
-            {2, static_cast<u16>(endPos >> 16), static_cast<u16>(endPos & 0xffff)}
-        };
+        const char* markerNames[2] = { "start", "end" };
+        Marker markers[2] = { { 1, static_cast<u16>((u16)startPos >> 16), static_cast<u16>((u16)startPos & 0xffff) },
+                              { 2, static_cast<u16>(endPos >> 16), static_cast<u16>(endPos & 0xffff) } };
         write_header(writer, "MARK", 2 + 2 * sizeof(Marker) + 1 + 5 + 1 + 3);
         s16 numMarkers = bswap16(2);
         writer.Write(numMarkers);
         for (s32 i = 0; i < 2; i++) {
-            u8 len = (u8) strlen(markerNames[i]);
+            u8 len = (u8)strlen(markerNames[i]);
             BSWAP16(markers[i].MarkerID);
             BSWAP16(markers[i].positionH);
             BSWAP16(markers[i].positionL);
@@ -621,7 +617,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
             writer.Write(markers[i].positionH);
             writer.Write(markers[i].positionL);
             writer.Write(len);
-            writer.Write((char*) markerNames[i], len);
+            writer.Write((char*)markerNames[i], len);
         }
 
         write_header(writer, "INST", sizeof(InstrumentChunk));
@@ -631,7 +627,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
         InstChunk.releaseLoop.playMode = 0;
         InstChunk.releaseLoop.beginLoop = 0;
         InstChunk.releaseLoop.endLoop = 0;
-        writer.Write((char*) &InstChunk, sizeof(InstrumentChunk));
+        writer.Write((char*)&InstChunk, sizeof(InstrumentChunk));
     }
 
     // Save the coefficient table for use when encoding. Ideally this wouldn't
@@ -643,9 +639,9 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
     cChunk.version = bswap16(1);
     cChunk.order = bswap16(order);
     cChunk.nEntries = bswap16(npredictors);
-    writer.Write((uint8_t) 0xB);
+    writer.Write((uint8_t)0xB);
     WriteString("VADPCMCODES", 11, writer);
-    writer.Write((char*) &cChunk, sizeof(CodeChunk));
+    writer.Write((char*)&cChunk, sizeof(CodeChunk));
     for (s32 i = 0; i < npredictors; i++) {
         for (s32 j = 0; j < order; j++) {
             for (s32 k = 0; k < 8; k++) {
@@ -658,7 +654,7 @@ void write_aiff(std::vector<char> data, LUS::BinaryWriter& writer) {
     write_header(writer, "SSND", outputBytes + 8);
     SndDChunk.offset = 0;
     SndDChunk.blockSize = 0;
-    writer.Write((char*) &SndDChunk, sizeof(SoundDataChunk));
+    writer.Write((char*)&SndDChunk, sizeof(SoundDataChunk));
 
     // Fix the size in the header
     s32 fileSize = bswap32(writer.GetLength() - 8);

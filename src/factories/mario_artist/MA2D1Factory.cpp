@@ -5,13 +5,15 @@
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
 
-ExportResult MA::MA2D1HeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult MA::MA2D1HeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     return std::nullopt;
 }
 
-ExportResult MA::MA2D1CodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MA::MA2D1CodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto data = std::static_pointer_cast<MA2D1Data>(raw);
@@ -46,7 +48,8 @@ ExportResult MA::MA2D1CodeExporter::Export(std::ostream &write, std::shared_ptr<
     return offset + 0x10;
 }
 
-ExportResult MA::MA2D1BinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult MA::MA2D1BinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     // Nothing Required Here For Binary Exporting
 
     return std::nullopt;

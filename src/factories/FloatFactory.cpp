@@ -7,10 +7,11 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) std::dec << std::setfill(' ') << std::setw(3) << c
 
-ExportResult FloatHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FloatHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                         YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -19,7 +20,8 @@ ExportResult FloatHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     return std::nullopt;
 }
 
-ExportResult FloatCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult FloatCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                       YAML::Node& node, std::string* replacement) {
     auto f = std::static_pointer_cast<FloatData>(raw)->mFloats;
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -42,7 +44,7 @@ ExportResult FloatCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
      *    0.1, 0.2, 0.3,
      * };
      *
-    */
+     */
     for (int i = 0; i < f.size(); ++i) {
 
         // Make a new line every fourth iteration
@@ -69,13 +71,14 @@ ExportResult FloatCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     return offset + f.size() * sizeof(float);
 }
 
-ExportResult FloatBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult FloatBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                         YAML::Node& node, std::string* replacement) {
     auto f = std::static_pointer_cast<FloatData>(raw);
     auto writer = LUS::BinaryWriter();
 
     WriteHeader(writer, Torch::ResourceType::Float, 0);
-    writer.Write((uint32_t) f->mFloats.size());
-    for(auto fl : f->mFloats) {
+    writer.Write((uint32_t)f->mFloats.size());
+    for (auto fl : f->mFloats) {
         writer.Write(fl);
     }
     throw std::runtime_error("Float factory untested for otr/o2r exporter");
@@ -92,7 +95,7 @@ std::optional<std::shared_ptr<IParsedData>> FloatFactory::parse(std::vector<uint
     reader.SetEndianness(Torch::Endianness::Big);
     std::vector<float> floats;
 
-    for(size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         auto f = reader.ReadFloat();
 
         floats.push_back(f);

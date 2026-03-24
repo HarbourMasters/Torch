@@ -10,32 +10,32 @@
 #define SEF_SIGNATURE 0x53454620  // 'SEF '
 #define PER_SIGNATURE 0x50455220  // 'PER '
 #define PRG_SIGNATURE 0x50524720  // 'PRG '
-#define BK_SIGNATURE 0x424B      // 'BK'
+#define BK_SIGNATURE 0x424B       // 'BK'
 #define MSEQ_SIGNATURE 0x4D534551 // 'MSEQ'
 
 // Audio file format types (upper byte of SBNFileEntry.data)
 // NOTE: PER and PRG share format 0x40 with MSEQ; distinguished by file signature
-#define AU_FMT_BGM  0x10
-#define AU_FMT_SEF  0x20
-#define AU_FMT_BK   0x30
+#define AU_FMT_BGM 0x10
+#define AU_FMT_SEF 0x20
+#define AU_FMT_BK 0x30
 #define AU_FMT_MSEQ 0x40
 
 // Structure sizes
-#define SBN_HEADER_SIZE     0x40
+#define SBN_HEADER_SIZE 0x40
 #define SBN_FILE_ENTRY_SIZE 8
-#define INIT_HEADER_SIZE    0x20
+#define INIT_HEADER_SIZE 0x20
 #define INIT_SONG_ENTRY_SIZE 8
 #define INIT_BANK_ENTRY_SIZE 4
-#define BGM_HEADER_SIZE     0x24
-#define BK_HEADER_SIZE      0x40
-#define SEF_HEADER_SIZE     0x22
-#define MSEQ_HEADER_SIZE    0x18
-#define PER_HEADER_SIZE     0x10
+#define BGM_HEADER_SIZE 0x24
+#define BK_HEADER_SIZE 0x40
+#define SEF_HEADER_SIZE 0x22
+#define MSEQ_HEADER_SIZE 0x18
+#define PER_HEADER_SIZE 0x10
 
 // SEF section entry counts (from game code)
-#define SEF_SECTION_0_3_ENTRIES 0xC0  // 192 entries for sections 0-3
-#define SEF_SECTION_4_7_ENTRIES 0x40  // 64 entries for sections 4-7
-#define SEF_EXTRA_ENTRIES       0x140 // 320 entries for extra section
+#define SEF_SECTION_0_3_ENTRIES 0xC0 // 192 entries for sections 0-3
+#define SEF_SECTION_4_7_ENTRIES 0x40 // 64 entries for sections 4-7
+#define SEF_EXTRA_ENTRIES 0x140      // 320 entries for extra section
 
 // BGMDrumInfo size
 #define BGM_DRUM_INFO_SIZE 0x0C
@@ -65,10 +65,10 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
     header32[1] = BSWAP32(header32[1]); // size
 
     uint32_t fileListOffset = BSWAP32(header32[4]); // 0x10
-    uint32_t numEntries = BSWAP32(header32[5]);      // 0x14
-    uint32_t fullFileSize = BSWAP32(header32[6]);    // 0x18
-    uint32_t versionOffset = BSWAP32(header32[7]);   // 0x1C
-    uint32_t initOffset = BSWAP32(header32[9]);      // 0x24
+    uint32_t numEntries = BSWAP32(header32[5]);     // 0x14
+    uint32_t fullFileSize = BSWAP32(header32[6]);   // 0x18
+    uint32_t versionOffset = BSWAP32(header32[7]);  // 0x1C
+    uint32_t initOffset = BSWAP32(header32[9]);     // 0x24
 
     header32[4] = fileListOffset;
     header32[5] = numEntries;
@@ -76,8 +76,8 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
     header32[7] = versionOffset;
     header32[9] = initOffset;
 
-    SPDLOG_DEBUG("SBN: signature=0x{:08X}, fileListOffset=0x{:X}, numEntries={}, initOffset=0x{:X}",
-                 signature, fileListOffset, numEntries, initOffset);
+    SPDLOG_DEBUG("SBN: signature=0x{:08X}, fileListOffset=0x{:X}, numEntries={}, initOffset=0x{:X}", signature,
+                 fileListOffset, numEntries, initOffset);
 
     if (signature != SBN_SIGNATURE) {
         SPDLOG_ERROR("Invalid SBN signature: 0x{:08X}", signature);
@@ -115,12 +115,13 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                             uint32_t* bgm32 = reinterpret_cast<uint32_t*>(fileData);
                             bgm32[0] = BSWAP32(bgm32[0]); // signature
                             uint32_t bgmFileSize = BSWAP32(bgm32[1]);
-                            bgm32[1] = bgmFileSize; // size
+                            bgm32[1] = bgmFileSize;       // size
                             bgm32[2] = BSWAP32(bgm32[2]); // name
                             // pad at 0x0C
 
                             // BGMFileInfo at offset 0x10:
-                            // u8 timingPreset, pad[3], u16 compositions[4], u16 drums, u16 drumCount, u16 instruments, u16 instrumentCount
+                            // u8 timingPreset, pad[3], u16 compositions[4], u16 drums, u16 drumCount, u16 instruments,
+                            // u16 instrumentCount
                             uint16_t* bgm16 = reinterpret_cast<uint16_t*>(fileData + 0x14);
                             bgm16[0] = BSWAP16(bgm16[0]); // compositions[0]
                             bgm16[1] = BSWAP16(bgm16[1]); // compositions[1]
@@ -136,7 +137,8 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                             std::set<uint32_t> swappedPhrases;
                             for (int comp = 0; comp < 4; comp++) {
                                 uint16_t compOff = bgm16[comp]; // already swapped
-                                if (compOff == 0) continue;
+                                if (compOff == 0)
+                                    continue;
 
                                 uint32_t compAbsOff = fileOffset + compOff * 4;
                                 uint32_t* cmdPtr = reinterpret_cast<uint32_t*>(data + compAbsOff);
@@ -144,7 +146,8 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                                 // Walk composition commands until BGM_COMP_END (0x00000000)
                                 while (compAbsOff + 4 <= size) {
                                     uint32_t raw = *cmdPtr;
-                                    if (raw == 0) break; // BGM_COMP_END is 0 in both endiannesses
+                                    if (raw == 0)
+                                        break; // BGM_COMP_END is 0 in both endiannesses
                                     uint32_t swapped = BSWAP32(raw);
                                     *cmdPtr = swapped;
 
@@ -153,8 +156,8 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                                         // Phrase offset is relative to compStartPos, in u32 units
                                         uint16_t phraseRelOff = swapped & 0xFFFF;
                                         uint32_t phraseAbsOff = fileOffset + compOff * 4 + phraseRelOff * 4;
-                                        if (swappedPhrases.find(phraseAbsOff) == swappedPhrases.end()
-                                            && CHECK_BOUNDS(phraseAbsOff, 16 * 4, size)) {
+                                        if (swappedPhrases.find(phraseAbsOff) == swappedPhrases.end() &&
+                                            CHECK_BOUNDS(phraseAbsOff, 16 * 4, size)) {
                                             swappedPhrases.insert(phraseAbsOff);
                                             // Swap 16 u32 track info entries
                                             uint32_t* phrasePtr = reinterpret_cast<uint32_t*>(data + phraseAbsOff);
@@ -202,8 +205,9 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
 
                     case AU_FMT_BK: {
                         // BK Header: u16 signature, pad[2], s32 size, s32 name, u16 format, u8 swizzled, pad[3],
-                        //            u16 instruments[16], u16 instrumentsLength, u16 loopStatesStart, u16 loopStatesLength,
-                        //            u16 predictorsStart, u16 predictorsLength, u16 envelopesStart, u16 envelopesLength
+                        //            u16 instruments[16], u16 instrumentsLength, u16 loopStatesStart, u16
+                        //            loopStatesLength, u16 predictorsStart, u16 predictorsLength, u16 envelopesStart,
+                        //            u16 envelopesLength
                         if (CHECK_BOUNDS(fileOffset, BK_HEADER_SIZE, size)) {
                             uint16_t* bk16 = reinterpret_cast<uint16_t*>(fileData);
                             bk16[0] = BSWAP16(bk16[0]); // signature
@@ -317,7 +321,8 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                                     for (uint32_t p = 0; p < numShorts; p++) {
                                         predData[p] = BSWAP16(predData[p]);
                                     }
-                                    SPDLOG_DEBUG("BK: swapped {} predictor shorts at offset 0x{:X}", numShorts, predictorsStart);
+                                    SPDLOG_DEBUG("BK: swapped {} predictor shorts at offset 0x{:X}", numShorts,
+                                                 predictorsStart);
                                 }
                             }
 
@@ -330,7 +335,8 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                                     for (uint32_t l = 0; l < numShorts; l++) {
                                         loopData[l] = BSWAP16(loopData[l]);
                                     }
-                                    SPDLOG_DEBUG("BK: swapped {} loop state shorts at offset 0x{:X}", numShorts, loopStatesStart);
+                                    SPDLOG_DEBUG("BK: swapped {} loop state shorts at offset 0x{:X}", numShorts,
+                                                 loopStatesStart);
                                 }
                             }
                         }
@@ -342,7 +348,7 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                         //             u16 sections[8], u16 section2000
                         if (CHECK_BOUNDS(fileOffset, SEF_HEADER_SIZE, size)) {
                             uint32_t* sef32 = reinterpret_cast<uint32_t*>(fileData);
-                            sef32[0] = BSWAP32(sef32[0]); // signature
+                            sef32[0] = BSWAP32(sef32[0]);         // signature
                             uint32_t sefSize = BSWAP32(sef32[1]); // size
                             sef32[1] = sefSize;
                             sef32[2] = BSWAP32(sef32[2]); // name
@@ -367,10 +373,12 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
 
                             // Swap sections 0-3 lookup tables
                             for (int j = 0; j < 4; j++) {
-                                if (sectionOffsets[j] == 0) continue;
+                                if (sectionOffsets[j] == 0)
+                                    continue;
                                 uint32_t secAbsOff = fileOffset + sectionOffsets[j];
                                 uint32_t entryCount = SEF_SECTION_0_3_ENTRIES;
-                                if (!CHECK_BOUNDS(secAbsOff, entryCount * 4, size)) continue;
+                                if (!CHECK_BOUNDS(secAbsOff, entryCount * 4, size))
+                                    continue;
 
                                 uint16_t* entries = reinterpret_cast<uint16_t*>(data + secAbsOff);
                                 for (uint32_t k = 0; k < entryCount; k++) {
@@ -379,18 +387,20 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                                     entries[k * 2] = cmdOffset;
                                     entries[k * 2 + 1] = cmdInfo;
 
-                                    if (cmdOffset == 0) continue;
+                                    if (cmdOffset == 0)
+                                        continue;
 
                                     // Check for polyphonic entries (bits 5-6 of info)
                                     uint8_t polyphonyMode = (cmdInfo & 0x60) >> 5;
-                                    if (polyphonyMode != 0 && swappedSubTables.find(cmdOffset) == swappedSubTables.end()) {
+                                    if (polyphonyMode != 0 &&
+                                        swappedSubTables.find(cmdOffset) == swappedSubTables.end()) {
                                         // Follow offset to polyphonic sub-table and swap it
                                         uint32_t trackCount = 2 << (polyphonyMode - 1); // 2, 4, or 8
                                         uint32_t subTableAbsOff = fileOffset + cmdOffset;
                                         if (CHECK_BOUNDS(subTableAbsOff, trackCount * 4, size)) {
                                             uint16_t* subEntries = reinterpret_cast<uint16_t*>(data + subTableAbsOff);
                                             for (uint32_t t = 0; t < trackCount; t++) {
-                                                subEntries[t * 2] = BSWAP16(subEntries[t * 2]);     // offset
+                                                subEntries[t * 2] = BSWAP16(subEntries[t * 2]);         // offset
                                                 subEntries[t * 2 + 1] = BSWAP16(subEntries[t * 2 + 1]); // info
                                             }
                                         }
@@ -402,8 +412,8 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                             // Sections 4-7: raw command bytes, no swap needed
                             // Extra section (section2000): raw command bytes, no swap needed
 
-                            SPDLOG_DEBUG("SEF: swapped {} section 0-3 lookup tables, {} polyphonic sub-tables",
-                                         4, swappedSubTables.size());
+                            SPDLOG_DEBUG("SEF: swapped {} section 0-3 lookup tables, {} polyphonic sub-tables", 4,
+                                         swappedSubTables.size());
                         }
                         break;
                     }
@@ -440,7 +450,8 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                             }
                         } else if (fileSig == PRG_SIGNATURE) {
                             // PRG file: s32 signature, s32 size, pad[8], then BGMInstrumentInfo data
-                            // BGMInstrumentInfo: u16 bankPatch, u8 volume, s8 pan, u8 reverb, s8 coarseTune, s8 fineTune, pad
+                            // BGMInstrumentInfo: u16 bankPatch, u8 volume, s8 pan, u8 reverb, s8 coarseTune, s8
+                            // fineTune, pad
                             if (CHECK_BOUNDS(fileOffset, PER_HEADER_SIZE, size)) {
                                 uint32_t* prg32 = reinterpret_cast<uint32_t*>(fileData);
                                 prg32[0] = BSWAP32(prg32[0]); // signature
@@ -475,7 +486,7 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                                 uint16_t* mseq16 = reinterpret_cast<uint16_t*>(fileData + 0x0E);
                                 uint16_t trackSettingsOffset = BSWAP16(mseq16[0]);
                                 mseq16[0] = trackSettingsOffset; // trackSettingsOffset
-                                mseq16[1] = BSWAP16(mseq16[1]); // dataStart
+                                mseq16[1] = BSWAP16(mseq16[1]);  // dataStart
 
                                 // Swap MSEQTrackData entries
                                 // Each entry: u8 trackIndex, u8 type, s16 time, s16 delta, s16 goal (8 bytes)
@@ -588,7 +599,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64AudioFactory::parse(std::vector<
     return std::make_shared<RawBuffer>(audioData);
 }
 
-ExportResult PM64AudioBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64AudioBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -601,7 +613,8 @@ ExportResult PM64AudioBinaryExporter::Export(std::ostream& write, std::shared_pt
     return std::nullopt;
 }
 
-ExportResult PM64AudioHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64AudioHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {

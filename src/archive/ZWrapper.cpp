@@ -23,10 +23,10 @@ bool ZWrapper::AddFile(const std::string& path, std::vector<char> data) {
     char* fileData = data.data();
     size_t fileSize = data.size();
 
-    if(Companion::Instance != nullptr && Companion::Instance->IsDebug()){
+    if (Companion::Instance != nullptr && Companion::Instance->IsDebug()) {
         SPDLOG_INFO("Creating debug file: debug/{}", path);
         std::string dpath = "debug/" + path;
-        if(!fs::exists(fs::path(dpath).parent_path())){
+        if (!fs::exists(fs::path(dpath).parent_path())) {
             fs::create_directories(fs::path(dpath).parent_path());
         }
         std::ofstream stream(dpath, std::ios::binary);

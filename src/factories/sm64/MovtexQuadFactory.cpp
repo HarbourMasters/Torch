@@ -6,10 +6,12 @@
 #include "utils/TorchUtils.h"
 #include <regex>
 
-ExportResult SM64::MovtexQuadHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::MovtexQuadHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                    std::string& entryName, YAML::Node& node,
+                                                    std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -18,7 +20,8 @@ ExportResult SM64::MovtexQuadHeaderExporter::Export(std::ostream &write, std::sh
     return std::nullopt;
 }
 
-ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -26,7 +29,7 @@ ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream &write, std::shar
 
     write << "const struct MovtexQuadCollection " << symbol << "[] = {\n";
 
-    for (auto &quad: quadData->mMovtexQuads) {
+    for (auto& quad : quadData->mMovtexQuads) {
         write << fourSpaceTab << "{" << quad.first << ", ";
         if (quad.second == 0) {
             write << "NULL";
@@ -53,17 +56,19 @@ ExportResult SM64::MovtexQuadCodeExporter::Export(std::ostream &write, std::shar
     return offset + quadData->mMovtexQuads.size() * 4;
 }
 
-ExportResult SM64::MovtexQuadBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::MovtexQuadBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                    std::string& entryName, YAML::Node& node,
+                                                    std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto quadData = std::static_pointer_cast<SM64::MovtexQuadData>(raw);
 
     WriteHeader(writer, Torch::ResourceType::MovtexQuad, 0);
-    writer.Write((uint32_t) quadData->mMovtexQuads.size());
+    writer.Write((uint32_t)quadData->mMovtexQuads.size());
 
-    for (auto &quad: quadData->mMovtexQuads) {
+    for (auto& quad : quadData->mMovtexQuads) {
         writer.Write(quad.first);
         if (quad.second == 0) {
-            writer.Write((uint64_t) quad.second);
+            writer.Write((uint64_t)quad.second);
         } else {
             auto dec = Companion::Instance->GetNodeByAddr(quad.second);
             if (dec.has_value()) {
@@ -82,7 +87,8 @@ ExportResult SM64::MovtexQuadBinaryExporter::Export(std::ostream &write, std::sh
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::MovtexQuadFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::MovtexQuadFactory::parse(std::vector<uint8_t>& buffer,
+                                                                           YAML::Node& node) {
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto symbol = GetSafeNode<std::string>(node, "symbol");
     const auto count = GetSafeNode<size_t>(node, "count");

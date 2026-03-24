@@ -16,19 +16,20 @@
 // NOTE: Palette is kept in big-endian format because libultraship's Fast3D
 // interpreter reads palette data as big-endian (see interpreter.cpp line 749, 785-786)
 
-std::optional<std::shared_ptr<IParsedData>> PM64StoryImageFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> PM64StoryImageFactory::parse(std::vector<uint8_t>& buffer,
+                                                                         YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto width = GetSafeNode<uint32_t>(node, "width");
     auto height = GetSafeNode<uint32_t>(node, "height");
     auto hasPalette = GetSafeNode<bool>(node, "has_palette");
 
-    size_t imageSize = width * height;  // CI8 or IA8 = 1 byte per pixel
-    size_t paletteSize = hasPalette ? 512 : 0;  // 256 colors * 2 bytes
+    size_t imageSize = width * height;         // CI8 or IA8 = 1 byte per pixel
+    size_t paletteSize = hasPalette ? 512 : 0; // 256 colors * 2 bytes
     size_t totalSize = imageSize + paletteSize;
 
     if (offset + totalSize > buffer.size()) {
-        SPDLOG_ERROR("PM64:STORY_IMAGE: Data at offset 0x{:X} exceeds buffer size (need {} bytes, have {})",
-                     offset, totalSize, buffer.size() - offset);
+        SPDLOG_ERROR("PM64:STORY_IMAGE: Data at offset 0x{:X} exceeds buffer size (need {} bytes, have {})", offset,
+                     totalSize, buffer.size() - offset);
         return std::nullopt;
     }
 
@@ -42,7 +43,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64StoryImageFactory::parse(std::ve
     return std::make_shared<RawBuffer>(result);
 }
 
-ExportResult PM64StoryImageBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64StoryImageBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -55,7 +57,8 @@ ExportResult PM64StoryImageBinaryExporter::Export(std::ostream& write, std::shar
     return std::nullopt;
 }
 
-ExportResult PM64StoryImageHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64StoryImageHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {

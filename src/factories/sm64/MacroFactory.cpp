@@ -6,10 +6,11 @@
 #include "utils/TorchUtils.h"
 #include <regex>
 
-ExportResult SM64::MacroHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::MacroHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                               std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -18,7 +19,8 @@ ExportResult SM64::MacroHeaderExporter::Export(std::ostream &write, std::shared_
     return std::nullopt;
 }
 
-ExportResult SM64::MacroCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::MacroCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -45,15 +47,16 @@ ExportResult SM64::MacroCodeExporter::Export(std::ostream &write, std::shared_pt
     return offset + size;
 }
 
-ExportResult SM64::MacroBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::MacroBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                               std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto macro = std::static_pointer_cast<SM64::MacroDataAlt>(raw);
 
     WriteHeader(writer, Torch::ResourceType::MacroObject, 0);
 
-    writer.Write((uint32_t) macro->mMacroData.size());
+    writer.Write((uint32_t)macro->mMacroData.size());
 
-    for(auto &entry : macro->mMacroData){
+    for (auto& entry : macro->mMacroData) {
         writer.Write(entry);
     }
     /*
@@ -66,7 +69,7 @@ ExportResult SM64::MacroBinaryExporter::Export(std::ostream &write, std::shared_
         writer.Write(object.behParam);
     }
     */
-    
+
     writer.Finish(write);
     return std::nullopt;
 }
@@ -78,9 +81,9 @@ std::optional<std::shared_ptr<IParsedData>> SM64::MacroFactory::parse(std::vecto
 
     std::vector<int16_t> entries;
 
-    while(reader.GetBaseAddress() < segment.size) {
+    while (reader.GetBaseAddress() < segment.size) {
         int16_t raw = reader.ReadInt16();
-        if(raw == 0x1E){
+        if (raw == 0x1E) {
             break;
         }
 

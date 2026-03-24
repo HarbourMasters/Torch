@@ -7,10 +7,12 @@
 #define FORMAT_HEX(x) std::hex << "0x" << std::uppercase << x << std::nouppercase << std::dec
 #define FZX_ANIMATION_SIZE 0x1C
 
-ExportResult FZX::EADAnimationHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::EADAnimationHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                     std::string& entryName, YAML::Node& node,
+                                                     std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -20,7 +22,8 @@ ExportResult FZX::EADAnimationHeaderExporter::Export(std::ostream &write, std::s
     return std::nullopt;
 }
 
-ExportResult FZX::EADAnimationCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::EADAnimationCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                   std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto anim = std::static_pointer_cast<EADAnimationData>(raw);
@@ -105,14 +108,17 @@ ExportResult FZX::EADAnimationCodeExporter::Export(std::ostream &write, std::sha
     return offset + FZX_ANIMATION_SIZE;
 }
 
-ExportResult FZX::EADAnimationBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult FZX::EADAnimationBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                     std::string& entryName, YAML::Node& node,
+                                                     std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto animation = std::static_pointer_cast<EADAnimationData>(raw);
 
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> FZX::EADAnimationFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> FZX::EADAnimationFactory::parse(std::vector<uint8_t>& buffer,
+                                                                            YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     const auto symbol = GetSafeNode<std::string>(node, "symbol");
@@ -179,5 +185,6 @@ std::optional<std::shared_ptr<IParsedData>> FZX::EADAnimationFactory::parse(std:
     positionInfoNode["symbol"] = symbol + "PositionInfo";
     Companion::Instance->AddAsset(positionInfoNode);
 
-    return std::make_shared<EADAnimationData>(frameCount, limbCount, scaleData, scaleInfo, rotationData, rotationInfo, positionData, positionInfo);
+    return std::make_shared<EADAnimationData>(frameCount, limbCount, scaleData, scaleInfo, rotationData, rotationInfo,
+                                              positionData, positionInfo);
 }

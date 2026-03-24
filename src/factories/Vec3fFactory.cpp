@@ -7,19 +7,20 @@
 
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
 
-Vec3fData::Vec3fData(std::vector<Vec3f> vecs): mVecs(vecs) {
+Vec3fData::Vec3fData(std::vector<Vec3f> vecs) : mVecs(vecs) {
     mMaxPrec = 1;
     mMaxWidth = 3;
-    for(Vec3f v : vecs) {
+    for (Vec3f v : vecs) {
         mMaxPrec = std::max(mMaxPrec, v.precision());
         mMaxWidth = std::max(mMaxWidth, v.width());
     }
 }
 
-ExportResult Vec3fHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult Vec3fHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                         YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -28,12 +29,12 @@ ExportResult Vec3fHeaderExporter::Export(std::ostream &write, std::shared_ptr<IP
     return std::nullopt;
 }
 
-
 int GetPrecision(Vec3f v) {
     return std::max(std::max(GetPrecision(v.x), GetPrecision(v.y)), GetPrecision(v.z));
 }
 
-ExportResult Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult Vec3fCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                       YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto vecData = std::static_pointer_cast<Vec3fData>(raw);
@@ -42,8 +43,8 @@ ExportResult Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     write << "Vec3f " << symbol << "[] = {";
 
     int cols = 120 / (3 * vecData->mMaxWidth + 8);
-    for(Vec3f v : vecData->mVecs) {
-        if((i++ % cols) == 0) {
+    for (Vec3f v : vecData->mVecs) {
+        if ((i++ % cols) == 0) {
             write << "\n" << fourSpaceTab;
         }
         write << FORMAT_FLOAT(v, vecData->mMaxWidth, vecData->mMaxPrec) << ", ";
@@ -58,14 +59,15 @@ ExportResult Vec3fCodeExporter::Export(std::ostream &write, std::shared_ptr<IPar
     return offset + vecData->mVecs.size() * sizeof(Vec3f);
 }
 
-ExportResult Vec3fBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult Vec3fBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                         YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto vecData = std::static_pointer_cast<Vec3fData>(raw);
 
     WriteHeader(writer, Torch::ResourceType::Vec3f, 0);
-    writer.Write((uint32_t) vecData->mVecs.size());
+    writer.Write((uint32_t)vecData->mVecs.size());
 
-    for(Vec3f v : vecData->mVecs) {
+    for (Vec3f v : vecData->mVecs) {
         auto [x, y, z] = v;
         writer.Write(x);
         writer.Write(y);
@@ -83,7 +85,7 @@ std::optional<std::shared_ptr<IParsedData>> Vec3fFactory::parse(std::vector<uint
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
 
-    for(int i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++) {
         auto vx = reader.ReadFloat();
         auto vy = reader.ReadFloat();
         auto vz = reader.ReadFloat();

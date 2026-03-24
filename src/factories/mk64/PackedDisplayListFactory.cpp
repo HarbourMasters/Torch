@@ -191,12 +191,10 @@
 
 #define BOWTIE_VAL 0
 
-#define gsSPTexture(s, t, level, tile, on)                                                                          \
-    {                                                                                                               \
-        (_SHIFTL(G_TEXTURE, 24, 8) | _SHIFTL(BOWTIE_VAL, 16, 8) | _SHIFTL((level), 11, 3) | _SHIFTL((tile), 8, 3) | \
-         _SHIFTL((on), 0, 8)),                                                                                      \
-            (_SHIFTL((s), 16, 16) | _SHIFTL((t), 0, 16))                                                            \
-    }
+#define gsSPTexture(s, t, level, tile, on)                                                                        \
+    { (_SHIFTL(G_TEXTURE, 24, 8) | _SHIFTL(BOWTIE_VAL, 16, 8) | _SHIFTL((level), 11, 3) | _SHIFTL((tile), 8, 3) | \
+       _SHIFTL((on), 0, 8)),                                                                                      \
+      (_SHIFTL((s), 16, 16) | _SHIFTL((t), 0, 16)) }
 
 #define GCCc0w0(saRGB0, mRGB0, saA0, mA0) \
     (_SHIFTL((saRGB0), 20, 4) | _SHIFTL((mRGB0), 15, 5) | _SHIFTL((saA0), 12, 3) | _SHIFTL((mA0), 9, 3))
@@ -216,9 +214,9 @@
             _SHIFTL(G_SETCOMBINE, 24, 8) | _SHIFTL(GCCc0w0(G_CCMUX_##a0, G_CCMUX_##c0, G_ACMUX_##Aa0, G_ACMUX_##Ac0) | \
                                                        GCCc1w0(G_CCMUX_##a1, G_CCMUX_##c1),                            \
                                                    0, 24),                                                             \
-                (unsigned int) (GCCc0w1(G_CCMUX_##b0, G_CCMUX_##d0, G_ACMUX_##Ab0, G_ACMUX_##Ad0) |                    \
-                                GCCc1w1(G_CCMUX_##b1, G_ACMUX_##Aa1, G_ACMUX_##Ac1, G_CCMUX_##d1, G_ACMUX_##Ab1,       \
-                                        G_ACMUX_##Ad1))                                                                \
+                (unsigned int)(GCCc0w1(G_CCMUX_##b0, G_CCMUX_##d0, G_ACMUX_##Ab0, G_ACMUX_##Ad0) |                     \
+                               GCCc1w1(G_CCMUX_##b1, G_ACMUX_##Aa1, G_ACMUX_##Ac1, G_CCMUX_##d1, G_ACMUX_##Ab1,        \
+                                       G_ACMUX_##Ad1))                                                                 \
         }                                                                                                              \
     }
 
@@ -231,9 +229,9 @@
 #define gsDPSetCombineMode(a, b) gsDPSetCombineLERP(a, b)
 #endif
 
-#define gsSPSetOtherMode(cmd, sft, len, data)                                                    \
-    {                                                                                            \
-        { _SHIFTL(cmd, 24, 8) | _SHIFTL(sft, 8, 8) | _SHIFTL(len, 0, 8), (unsigned int) (data) } \
+#define gsSPSetOtherMode(cmd, sft, len, data)                                                   \
+    {                                                                                           \
+        { _SHIFTL(cmd, 24, 8) | _SHIFTL(sft, 8, 8) | _SHIFTL(len, 0, 8), (unsigned int)(data) } \
     }
 
 #define gsDPSetRenderMode(c0, c1) gsSPSetOtherMode(G_SETOTHERMODE_L, G_MDSFT_RENDERMODE, 29, (c0) | (c1))
@@ -307,9 +305,9 @@
 #define G_RM_AA_ZB_XLU_DECAL RM_AA_ZB_XLU_DECAL(1)
 #define G_RM_AA_ZB_XLU_DECAL2 RM_AA_ZB_XLU_DECAL(2)
 
-#define gsSPGeometryMode(c, s)                                                       \
-    {                                                                                \
-        { (_SHIFTL(G_GEOMETRYMODE, 24, 8) | _SHIFTL(~(u32) (c), 0, 24)), (u32) (s) } \
+#define gsSPGeometryMode(c, s)                                                     \
+    {                                                                              \
+        { (_SHIFTL(G_GEOMETRYMODE, 24, 8) | _SHIFTL(~(u32)(c), 0, 24)), (u32)(s) } \
     }
 
 #define G_TEXTURE_ENABLE 0x00000002 /* Microcode use only */
@@ -317,14 +315,14 @@
 #define G_CULL_FRONT 0x00001000
 #define G_CULL_BACK 0x00002000
 #define G_CULL_BOTH 0x00003000 /* To make code cleaner */
-#define gsSPSetGeometryMode(word)                                    \
-    {                                                                \
-        { _SHIFTL(G_SETGEOMETRYMODE, 24, 8), (unsigned int) (word) } \
+#define gsSPSetGeometryMode(word)                                   \
+    {                                                               \
+        { _SHIFTL(G_SETGEOMETRYMODE, 24, 8), (unsigned int)(word) } \
     }
 
-#define gsSPClearGeometryMode(word)                                    \
-    {                                                                  \
-        { _SHIFTL(G_CLEARGEOMETRYMODE, 24, 8), (unsigned int) (word) } \
+#define gsSPClearGeometryMode(word)                                   \
+    {                                                                 \
+        { _SHIFTL(G_CLEARGEOMETRYMODE, 24, 8), (unsigned int)(word) } \
     }
 #define gsSPCullDisplayList(vstart, vend)                                                       \
     {                                                                                           \
@@ -347,40 +345,33 @@
 
 #define G_MWO_NUMLIGHT 0x00
 
-#define gsImmp21(c, p0, p1, dat) \
-    { _SHIFTL((c), 24, 8) | _SHIFTL((p0), 8, 16) | _SHIFTL((p1), 0, 8), (uintptr_t)(dat) }
+#define gsImmp21(c, p0, p1, dat) { _SHIFTL((c), 24, 8) | _SHIFTL((p0), 8, 16) | _SHIFTL((p1), 0, 8), (uintptr_t)(dat) }
 #define gsMoveWd(index, offset, data) gsImmp21(G_MOVEWORD, offset, index, data)
 #define gsSPNumLights(n) gsMoveWd(G_MW_NUMLIGHT, G_MWO_NUMLIGHT, NUML(n))
 
-#define gsDPSetTile(fmt, siz, line, tmem, tile, palette, cmt, maskt, shiftt, cms, masks, shifts)            \
-    {                                                                                                       \
-        (_SHIFTL(G_SETTILE, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(siz, 19, 2) | _SHIFTL(line, 9, 9) |      \
-         _SHIFTL(tmem, 0, 9)),                                                                              \
-            (_SHIFTL(tile, 24, 3) | _SHIFTL(palette, 20, 4) | _SHIFTL(cmt, 18, 2) | _SHIFTL(maskt, 14, 4) | \
-             _SHIFTL(shiftt, 10, 4) | _SHIFTL(cms, 8, 2) | _SHIFTL(masks, 4, 4) | _SHIFTL(shifts, 0, 4))    \
-    }
+#define gsDPSetTile(fmt, siz, line, tmem, tile, palette, cmt, maskt, shiftt, cms, masks, shifts)      \
+    { (_SHIFTL(G_SETTILE, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(siz, 19, 2) | _SHIFTL(line, 9, 9) |  \
+       _SHIFTL(tmem, 0, 9)),                                                                          \
+      (_SHIFTL(tile, 24, 3) | _SHIFTL(palette, 20, 4) | _SHIFTL(cmt, 18, 2) | _SHIFTL(maskt, 14, 4) | \
+       _SHIFTL(shiftt, 10, 4) | _SHIFTL(cms, 8, 2) | _SHIFTL(masks, 4, 4) | _SHIFTL(shifts, 0, 4)) }
 
 #define G_TX_RENDERTILE 0
 
-#define gsDPLoadTileGeneric(c, tile, uls, ult, lrs, lrt)                      \
-    {                                                                         \
-        _SHIFTL(c, 24, 8) | _SHIFTL(uls, 12, 12) | _SHIFTL(ult, 0, 12),       \
-            _SHIFTL(tile, 24, 3) | _SHIFTL(lrs, 12, 12) | _SHIFTL(lrt, 0, 12) \
-    }
+#define gsDPLoadTileGeneric(c, tile, uls, ult, lrs, lrt)              \
+    { _SHIFTL(c, 24, 8) | _SHIFTL(uls, 12, 12) | _SHIFTL(ult, 0, 12), \
+      _SHIFTL(tile, 24, 3) | _SHIFTL(lrs, 12, 12) | _SHIFTL(lrt, 0, 12) }
 
 #define gsDPSetTileSize(t, uls, ult, lrs, lrt) gsDPLoadTileGeneric(G_SETTILESIZE, t, uls, ult, lrs, lrt)
 
-#define gsDma1p(c, s, l, p) \
-    { (_SHIFTL((c), 24, 8) | _SHIFTL((p), 16, 8) | _SHIFTL((l), 0, 16)), (uintptr_t)(s) }
-#define gsSPVertex(v, n, v0) gsDma1p(G_VTX, (v), ((n) << 10) | (0x10 * (n)-1), (v0)*2)
+#define gsDma1p(c, s, l, p) { (_SHIFTL((c), 24, 8) | _SHIFTL((p), 16, 8) | _SHIFTL((l), 0, 16)), (uintptr_t)(s) }
+#define gsSPVertex(v, n, v0) gsDma1p(G_VTX, (v), ((n) << 10) | (0x10 * (n) - 1), (v0) * 2)
 
-#define __gsSP1Triangle_w1(v0, v1, v2) (_SHIFTL((v0)*2, 16, 8) | _SHIFTL((v1)*2, 8, 8) | _SHIFTL((v2)*2, 0, 8))
+#define __gsSP1Triangle_w1(v0, v1, v2) (_SHIFTL((v0) * 2, 16, 8) | _SHIFTL((v1) * 2, 8, 8) | _SHIFTL((v2) * 2, 0, 8))
 #define __gsSP1Triangle_w1f(v0, v1, v2, flag)         \
     (((flag) == 0)   ? __gsSP1Triangle_w1(v0, v1, v2) \
      : ((flag) == 1) ? __gsSP1Triangle_w1(v1, v2, v0) \
                      : __gsSP1Triangle_w1(v2, v0, v1))
-#define gsSP1Triangle(v0, v1, v2, flag) \
-    { _SHIFTL(G_TRI1, 24, 8), __gsSP1Triangle_w1f(v0, v1, v2, flag) }
+#define gsSP1Triangle(v0, v1, v2, flag) { _SHIFTL(G_TRI1, 24, 8), __gsSP1Triangle_w1f(v0, v1, v2, flag) }
 
 #define gsSP2Triangles(v00, v01, v02, flag0, v10, v11, v12, flag1) \
     { (_SHIFTL(G_TRI2, 24, 8) | __gsSP1Triangle_w1f(v00, v01, v02, flag0)), __gsSP1Triangle_w1f(v10, v11, v12, flag1) }
@@ -389,17 +380,15 @@
 #define gsSPDisplayList(dl) gsDma1p(G_DL, dl, 0, G_DL_PUSH)
 
 #define gsSetImage(cmd, fmt, siz, width, i) \
-    { _SHIFTL(cmd, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(siz, 19, 2) | _SHIFTL((width)-1, 0, 12), (uintptr_t)(i) }
+    { _SHIFTL(cmd, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(siz, 19, 2) | _SHIFTL((width) - 1, 0, 12), (uintptr_t)(i) }
 
 #define gsDPSetTextureImage(f, s, w, i) gsSetImage(G_SETTIMG, f, s, w, i)
 
 #define G_TX_LDBLK_MAX_TXL 4095
 
-#define gsDPLoadBlock(tile, uls, ult, lrs, dxt)                                                            \
-    {                                                                                                      \
-        (_SHIFTL(G_LOADBLOCK, 24, 8) | _SHIFTL(uls, 12, 12) | _SHIFTL(ult, 0, 12)),                        \
-            (_SHIFTL(tile, 24, 3) | _SHIFTL((MIN(lrs, G_TX_LDBLK_MAX_TXL)), 12, 12) | _SHIFTL(dxt, 0, 12)) \
-    }
+#define gsDPLoadBlock(tile, uls, ult, lrs, dxt)                                   \
+    { (_SHIFTL(G_LOADBLOCK, 24, 8) | _SHIFTL(uls, 12, 12) | _SHIFTL(ult, 0, 12)), \
+      (_SHIFTL(tile, 24, 3) | _SHIFTL((MIN(lrs, G_TX_LDBLK_MAX_TXL)), 12, 12) | _SHIFTL(dxt, 0, 12)) }
 
 #define G_TX_NOMIRROR 0
 #define G_TX_WRAP 0
@@ -409,43 +398,43 @@
 
 // Packed opcodes (alignés avec src/racing/memory.c)
 enum PackedOp : uint8_t {
-    PG_LIGHTS_0                  = 0x00, // 0..0x14 mappés sur unpack_lights côté runtime
-    PG_SETCOMBINE_CC_MODULATERGBA      = 0x15,
+    PG_LIGHTS_0 = 0x00, // 0..0x14 mappés sur unpack_lights côté runtime
+    PG_SETCOMBINE_CC_MODULATERGBA = 0x15,
     PG_SETCOMBINE_CC_MODULATERGBDECALA = 0x16,
-    PG_SETCOMBINE_CC_SHADE             = 0x17,
-    PG_RMODE_OPA              = 0x18,
-    PG_RMODE_TEXEDGE          = 0x19,
-    PG_TILECFG_A              = 0x1A,
-    PG_TILECFG_B              = 0x1B,
-    PG_TILECFG_C              = 0x1C,
-    PG_TILECFG_D              = 0x1D,
-    PG_TILECFG_E              = 0x1E,
-    PG_TILECFG_F              = 0x1F,
-    PG_TIMG_LOADBLOCK_0       = 0x20,
-    PG_TIMG_LOADBLOCK_1       = 0x21,
-    PG_TIMG_LOADBLOCK_2       = 0x22,
-    PG_TIMG_LOADBLOCK_3       = 0x23,
-    PG_TIMG_LOADBLOCK_4       = 0x24,
-    PG_TIMG_LOADBLOCK_5       = 0x25,
-    PG_TEXTURE_ON             = 0x26,
-    PG_TEXTURE_OFF            = 0x27,
-    PG_VTX1                   = 0x28,
-    PG_TRI1                   = 0x29,
-    PG_ENDDL                  = 0x2A,
-    PG_DL                     = 0x2B,
-    PG_TILECFG_G              = 0x2C,
-    PG_CULLDL                 = 0x2D,
-    PG_SETCOMBINE_ALT         = 0x2E,
-    PG_RMODE_XLU              = 0x2F,
-    PG_SPLINE3D               = 0x30,
-    PG_VTX_BASE               = 0x32, // 0x33..0x52 VTX2 variants
-    PG_SETCOMBINE_CC_DECALRGBA= 0x53,
-    PG_RMODE_OPA_DECAL        = 0x54,
-    PG_RMODE_XLU_DECAL        = 0x55,
-    PG_SETGEOMETRYMODE        = 0x56,
-    PG_CLEARGEOMETRYMODE      = 0x57,
-    PG_TRI2                   = 0x58,
-    PG_EOF                    = 0xFF,
+    PG_SETCOMBINE_CC_SHADE = 0x17,
+    PG_RMODE_OPA = 0x18,
+    PG_RMODE_TEXEDGE = 0x19,
+    PG_TILECFG_A = 0x1A,
+    PG_TILECFG_B = 0x1B,
+    PG_TILECFG_C = 0x1C,
+    PG_TILECFG_D = 0x1D,
+    PG_TILECFG_E = 0x1E,
+    PG_TILECFG_F = 0x1F,
+    PG_TIMG_LOADBLOCK_0 = 0x20,
+    PG_TIMG_LOADBLOCK_1 = 0x21,
+    PG_TIMG_LOADBLOCK_2 = 0x22,
+    PG_TIMG_LOADBLOCK_3 = 0x23,
+    PG_TIMG_LOADBLOCK_4 = 0x24,
+    PG_TIMG_LOADBLOCK_5 = 0x25,
+    PG_TEXTURE_ON = 0x26,
+    PG_TEXTURE_OFF = 0x27,
+    PG_VTX1 = 0x28,
+    PG_TRI1 = 0x29,
+    PG_ENDDL = 0x2A,
+    PG_DL = 0x2B,
+    PG_TILECFG_G = 0x2C,
+    PG_CULLDL = 0x2D,
+    PG_SETCOMBINE_ALT = 0x2E,
+    PG_RMODE_XLU = 0x2F,
+    PG_SPLINE3D = 0x30,
+    PG_VTX_BASE = 0x32, // 0x33..0x52 VTX2 variants
+    PG_SETCOMBINE_CC_DECALRGBA = 0x53,
+    PG_RMODE_OPA_DECAL = 0x54,
+    PG_RMODE_XLU_DECAL = 0x55,
+    PG_SETGEOMETRYMODE = 0x56,
+    PG_CLEARGEOMETRYMODE = 0x57,
+    PG_TRI2 = 0x58,
+    PG_EOF = 0xFF,
 };
 
 std::string opcode_to_string(uint8_t op) {
@@ -456,52 +445,93 @@ std::string opcode_to_string(uint8_t op) {
         return "PG_VTX_" + std::to_string(op - PG_VTX_BASE);
     }
     switch (op) {
-        case PG_SETCOMBINE_CC_MODULATERGBA: return "PG_SETCOMBINE_CC_MODULATERGBA";
-        case PG_SETCOMBINE_CC_MODULATERGBDECALA: return "PG_SETCOMBINE_CC_MODULATERGBDECALA";
-        case PG_SETCOMBINE_CC_SHADE: return "PG_SETCOMBINE_CC_SHADE";
-        case PG_RMODE_OPA: return "PG_RMODE_OPA";
-        case PG_RMODE_TEXEDGE: return "PG_RMODE_TEXEDGE";
-        case PG_TILECFG_A: return "PG_TILECFG_A";
-        case PG_TILECFG_B: return "PG_TILECFG_B";
-        case PG_TILECFG_C: return "PG_TILECFG_C";
-        case PG_TILECFG_D: return "PG_TILECFG_D";
-        case PG_TILECFG_E: return "PG_TILECFG_E";
-        case PG_TILECFG_F: return "PG_TILECFG_F";
-        case PG_TIMG_LOADBLOCK_0: return "PG_TIMG_LOADBLOCK_0";
-        case PG_TIMG_LOADBLOCK_1: return "PG_TIMG_LOADBLOCK_1";
-        case PG_TIMG_LOADBLOCK_2: return "PG_TIMG_LOADBLOCK_2";
-        case PG_TIMG_LOADBLOCK_3: return "PG_TIMG_LOADBLOCK_3";
-        case PG_TIMG_LOADBLOCK_4: return "PG_TIMG_LOADBLOCK_4";
-        case PG_TIMG_LOADBLOCK_5: return "PG_TIMG_LOADBLOCK_5";
-        case PG_TEXTURE_ON: return "PG_TEXTURE_ON";
-        case PG_TEXTURE_OFF: return "PG_TEXTURE_OFF";
-        case PG_VTX1: return "PG_VTX1";
-        case PG_TRI1: return "PG_TRI1";
-        case PG_ENDDL: return "PG_ENDDL";
-        case PG_DL: return "PG_DL";
-        case PG_TILECFG_G: return "PG_TILECFG_G";
-        case PG_CULLDL: return "PG_CULLDL";
-        case PG_SETCOMBINE_ALT: return "PG_SETCOMBINE_ALT";
-        case PG_RMODE_XLU: return "PG_RMODE_XLU";
-        case PG_SPLINE3D: return "PG_SPLINE3D";
-        case PG_SETCOMBINE_CC_DECALRGBA: return "PG_SETCOMBINE_CC_DECALRGBA";
-        case PG_RMODE_OPA_DECAL: return "PG_RMODE_OPA_DECAL";
-        case PG_RMODE_XLU_DECAL: return "PG_RMODE_XLU_DECAL";
-        case PG_SETGEOMETRYMODE: return "PG_SETGEOMETRYMODE";
-        case PG_CLEARGEOMETRYMODE: return "PG_CLEARGEOMETRYMODE";
-        case PG_TRI2: return "PG_TRI2";
-        case PG_EOF: return "PG_EOF";
-        default: return "PG_UNKNOWN_" + std::to_string(op);
+        case PG_SETCOMBINE_CC_MODULATERGBA:
+            return "PG_SETCOMBINE_CC_MODULATERGBA";
+        case PG_SETCOMBINE_CC_MODULATERGBDECALA:
+            return "PG_SETCOMBINE_CC_MODULATERGBDECALA";
+        case PG_SETCOMBINE_CC_SHADE:
+            return "PG_SETCOMBINE_CC_SHADE";
+        case PG_RMODE_OPA:
+            return "PG_RMODE_OPA";
+        case PG_RMODE_TEXEDGE:
+            return "PG_RMODE_TEXEDGE";
+        case PG_TILECFG_A:
+            return "PG_TILECFG_A";
+        case PG_TILECFG_B:
+            return "PG_TILECFG_B";
+        case PG_TILECFG_C:
+            return "PG_TILECFG_C";
+        case PG_TILECFG_D:
+            return "PG_TILECFG_D";
+        case PG_TILECFG_E:
+            return "PG_TILECFG_E";
+        case PG_TILECFG_F:
+            return "PG_TILECFG_F";
+        case PG_TIMG_LOADBLOCK_0:
+            return "PG_TIMG_LOADBLOCK_0";
+        case PG_TIMG_LOADBLOCK_1:
+            return "PG_TIMG_LOADBLOCK_1";
+        case PG_TIMG_LOADBLOCK_2:
+            return "PG_TIMG_LOADBLOCK_2";
+        case PG_TIMG_LOADBLOCK_3:
+            return "PG_TIMG_LOADBLOCK_3";
+        case PG_TIMG_LOADBLOCK_4:
+            return "PG_TIMG_LOADBLOCK_4";
+        case PG_TIMG_LOADBLOCK_5:
+            return "PG_TIMG_LOADBLOCK_5";
+        case PG_TEXTURE_ON:
+            return "PG_TEXTURE_ON";
+        case PG_TEXTURE_OFF:
+            return "PG_TEXTURE_OFF";
+        case PG_VTX1:
+            return "PG_VTX1";
+        case PG_TRI1:
+            return "PG_TRI1";
+        case PG_ENDDL:
+            return "PG_ENDDL";
+        case PG_DL:
+            return "PG_DL";
+        case PG_TILECFG_G:
+            return "PG_TILECFG_G";
+        case PG_CULLDL:
+            return "PG_CULLDL";
+        case PG_SETCOMBINE_ALT:
+            return "PG_SETCOMBINE_ALT";
+        case PG_RMODE_XLU:
+            return "PG_RMODE_XLU";
+        case PG_SPLINE3D:
+            return "PG_SPLINE3D";
+        case PG_SETCOMBINE_CC_DECALRGBA:
+            return "PG_SETCOMBINE_CC_DECALRGBA";
+        case PG_RMODE_OPA_DECAL:
+            return "PG_RMODE_OPA_DECAL";
+        case PG_RMODE_XLU_DECAL:
+            return "PG_RMODE_XLU_DECAL";
+        case PG_SETGEOMETRYMODE:
+            return "PG_SETGEOMETRYMODE";
+        case PG_CLEARGEOMETRYMODE:
+            return "PG_CLEARGEOMETRYMODE";
+        case PG_TRI2:
+            return "PG_TRI2";
+        case PG_EOF:
+            return "PG_EOF";
+        default:
+            return "PG_UNKNOWN_" + std::to_string(op);
     }
 }
 
 static inline uint32_t ImmediateSize(uint8_t op) {
     switch (op) {
-        case PG_TRI1: return 2;              // packed 2 bytes
-        case PG_TRI2: return 4;              // packed 4 bytes (2 tris)
-        case PG_DL: return 2;                // index
-        case PG_VTX1: return 4;              // vtx1: 4 bytes
-        case PG_SPLINE3D: return 3;          // spline3d: 3 bytes
+        case PG_TRI1:
+            return 2; // packed 2 bytes
+        case PG_TRI2:
+            return 4; // packed 4 bytes (2 tris)
+        case PG_DL:
+            return 2; // index
+        case PG_VTX1:
+            return 4; // vtx1: 4 bytes
+        case PG_SPLINE3D:
+            return 3; // spline3d: 3 bytes
         case PG_SETCOMBINE_CC_MODULATERGBA:
         case PG_SETCOMBINE_CC_MODULATERGBDECALA:
         case PG_SETCOMBINE_CC_SHADE:
@@ -514,14 +544,14 @@ static inline uint32_t ImmediateSize(uint8_t op) {
         case PG_RMODE_XLU_DECAL:
         case PG_SETGEOMETRYMODE:
         case PG_CLEARGEOMETRYMODE:
-            return 0;                        // pas d’immediate dans notre format packé
+            return 0; // pas d’immediate dans notre format packé
         case PG_TIMG_LOADBLOCK_0:
         case PG_TIMG_LOADBLOCK_1:
         case PG_TIMG_LOADBLOCK_2:
         case PG_TIMG_LOADBLOCK_3:
         case PG_TIMG_LOADBLOCK_4:
         case PG_TIMG_LOADBLOCK_5:
-            return 3;                        // fmt-dep tex, 3 bytes
+            return 3; // fmt-dep tex, 3 bytes
         case PG_TILECFG_A:
         case PG_TILECFG_B:
         case PG_TILECFG_C:
@@ -529,7 +559,7 @@ static inline uint32_t ImmediateSize(uint8_t op) {
         case PG_TILECFG_E:
         case PG_TILECFG_F:
         case PG_TILECFG_G:
-            return 2;                        // 2 bytes
+            return 2; // 2 bytes
         default:
             // VTX2 banked range: 0x33..0x52 → 2 bytes
             if (op >= (uint8_t)(PG_VTX_BASE) && op <= (uint8_t)(PG_VTX_BASE + 0x20)) {
@@ -544,7 +574,8 @@ static inline uint16_t RD16(const std::vector<uint8_t>& b, size_t i) {
     return (uint16_t)((b[i + 1] << 8) | b[i]);
 }
 
-std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& data) {
+std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std::vector<uint8_t>& buffer,
+                                                                            YAML::Node& data) {
     auto [_, segment] = Decompressor::AutoDecode(data, buffer);
     std::vector<uint8_t> decoded(segment.data, segment.data + segment.size);
 
@@ -564,7 +595,9 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
     while (i < decoded.size()) {
         uint8_t op = decoded[i++];
         // SPDLOG_INFO("PackedDListFactory: opcode 0x{:02X} ({})", op, opcode_to_string(op));
-        if (op == PG_EOF) { break; }
+        if (op == PG_EOF) {
+            break;
+        }
 
         // LIGHTS: 0x00..0x14
         if (op >= PG_LIGHTS_0 && op <= PG_LIGHTS_0 + 0x14) {
@@ -579,7 +612,9 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
 
         if (op >= (uint8_t)(PG_VTX_BASE + 0x01) && op <= (uint8_t)(PG_VTX_BASE + 0x20)) {
             // Mimic unpack_vtx2: banked variant encodes count in opcode
-            if (i + 2 > decoded.size()) { goto done; }
+            if (i + 2 > decoded.size()) {
+                goto done;
+            }
             uintptr_t vtxOff = RD16(decoded, i);
             i += 2;
             vtxOff *= 0x10; // bytes
@@ -598,24 +633,26 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
         switch (op) {
             case PG_VTX1: {
                 // Mimic unpack_vtx1
-                if (i + 4 > decoded.size()) { goto done; }
+                if (i + 4 > decoded.size()) {
+                    goto done;
+                }
                 uint8_t t0 = decoded[i++];
                 uint16_t vtxOff = ((uint16_t)decoded[i++] << 8) | t0;
                 vtxOff *= 0x10; // bytes
 
                 uint8_t b0 = decoded[i++];
                 uint8_t start = (uint8_t)(b0 & 0x3F);
-                
+
                 uint8_t b1 = decoded[i++];
                 uint8_t n = (uint8_t)(b1 & 0x3F);
 
                 // G_VTX encoding matches DisplayListFactory exporter expectations
-                uint32_t w0 = (_SHIFTL(G_VTX, 24, 8)
-                            | _SHIFTL((n * 2), 16, 8)
-                            | ((start << 10) + ((0x10 * start) - 1)));
-                // Use segmented address style: segment 0x04 is vertex pool in runtime; here we keep raw offset so exporter can attempt resolution
+                uint32_t w0 =
+                    (_SHIFTL(G_VTX, 24, 8) | _SHIFTL((n * 2), 16, 8) | ((start << 10) + ((0x10 * start) - 1)));
+                // Use segmented address style: segment 0x04 is vertex pool in runtime; here we keep raw offset so
+                // exporter can attempt resolution
                 uint32_t w1 = vtxOff; // exporter will patch/resolve if possible
-                
+
                 emit(w0, w1);
             } break;
             case PG_TILECFG_A:
@@ -626,16 +663,53 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
             case PG_TILECFG_F:
             case PG_TILECFG_G: {
                 // Mirror of unpack_tile_sync
-                if (i + 2 > decoded.size()) { goto done; }
+                if (i + 2 > decoded.size()) {
+                    goto done;
+                }
                 int width = 32, height = 32, fmt = 0, tmem = 0;
                 switch (op) {
-                    case PG_TILECFG_A: width = 32; height = 32; fmt = 0; tmem = 0; break;
-                    case PG_TILECFG_B: width = 64; height = 32; fmt = 0; tmem = 0; break;
-                    case PG_TILECFG_C: width = 32; height = 64; fmt = 0; tmem = 0; break;
-                    case PG_TILECFG_D: width = 32; height = 32; fmt = 3; tmem = 0; break;
-                    case PG_TILECFG_E: width = 64; height = 32; fmt = 3; tmem = 0; break;
-                    case PG_TILECFG_F: width = 32; height = 64; fmt = 3; tmem = 0; break;
-                    case PG_TILECFG_G: width = 32; height = 32; fmt = 0; tmem = 256; break;
+                    case PG_TILECFG_A:
+                        width = 32;
+                        height = 32;
+                        fmt = 0;
+                        tmem = 0;
+                        break;
+                    case PG_TILECFG_B:
+                        width = 64;
+                        height = 32;
+                        fmt = 0;
+                        tmem = 0;
+                        break;
+                    case PG_TILECFG_C:
+                        width = 32;
+                        height = 64;
+                        fmt = 0;
+                        tmem = 0;
+                        break;
+                    case PG_TILECFG_D:
+                        width = 32;
+                        height = 32;
+                        fmt = 3;
+                        tmem = 0;
+                        break;
+                    case PG_TILECFG_E:
+                        width = 64;
+                        height = 32;
+                        fmt = 3;
+                        tmem = 0;
+                        break;
+                    case PG_TILECFG_F:
+                        width = 32;
+                        height = 64;
+                        fmt = 3;
+                        tmem = 0;
+                        break;
+                    case PG_TILECFG_G:
+                        width = 32;
+                        height = 32;
+                        fmt = 0;
+                        tmem = 256;
+                        break;
                 }
                 const int sizBytes = G_IM_SIZ_16b_BYTES; // 2
                 const int line = (((width * 2) + 7) >> 3);
@@ -654,9 +728,11 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
                 }
 
                 // G_SETTILE
-                // uint32_t w0 = (_SHIFTL(G_SETTILE, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(G_IM_SIZ_16b_BYTES, 19, 2) | _SHIFTL(line, 9, 9) | _SHIFTL(tmem, 0, 9));
-                // uint32_t w1 = (_SHIFTL(cmt, 18, 3) | _SHIFTL(maskt, 14, 4) | _SHIFTL(cms, 8, 3) | _SHIFTL(masks, 4, 4));
-                N64Gfx macro = gsDPSetTile(fmt, G_IM_SIZ_16b, line, tmem, G_TX_RENDERTILE, 0, cmt, maskt, 0, cms, masks, 0);
+                // uint32_t w0 = (_SHIFTL(G_SETTILE, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(G_IM_SIZ_16b_BYTES, 19, 2) |
+                // _SHIFTL(line, 9, 9) | _SHIFTL(tmem, 0, 9)); uint32_t w1 = (_SHIFTL(cmt, 18, 3) | _SHIFTL(maskt, 14,
+                // 4) | _SHIFTL(cms, 8, 3) | _SHIFTL(masks, 4, 4));
+                N64Gfx macro =
+                    gsDPSetTile(fmt, G_IM_SIZ_16b, line, tmem, G_TX_RENDERTILE, 0, cmt, maskt, 0, cms, masks, 0);
                 emit(macro.words.w0, macro.words.w1);
 
                 // G_SETTILESIZE
@@ -673,15 +749,41 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
             case PG_TIMG_LOADBLOCK_4:
             case PG_TIMG_LOADBLOCK_5: {
                 // Mirror of unpack_tile_load_sync
-                if (i + 3 > decoded.size()) { goto done; }
+                if (i + 3 > decoded.size()) {
+                    goto done;
+                }
                 uint32_t width = 32, height = 32, fmt = 0;
                 switch (op) {
-                    case PG_TIMG_LOADBLOCK_0: width = 32; height = 32; fmt = 0; break;
-                    case PG_TIMG_LOADBLOCK_1: width = 64; height = 32; fmt = 0; break;
-                    case PG_TIMG_LOADBLOCK_2: width = 32; height = 64; fmt = 0; break;
-                    case PG_TIMG_LOADBLOCK_3: width = 32; height = 32; fmt = 3; break;
-                    case PG_TIMG_LOADBLOCK_4: width = 64; height = 32; fmt = 3; break;
-                    case PG_TIMG_LOADBLOCK_5: width = 32; height = 64; fmt = 3; break;
+                    case PG_TIMG_LOADBLOCK_0:
+                        width = 32;
+                        height = 32;
+                        fmt = 0;
+                        break;
+                    case PG_TIMG_LOADBLOCK_1:
+                        width = 64;
+                        height = 32;
+                        fmt = 0;
+                        break;
+                    case PG_TIMG_LOADBLOCK_2:
+                        width = 32;
+                        height = 64;
+                        fmt = 0;
+                        break;
+                    case PG_TIMG_LOADBLOCK_3:
+                        width = 32;
+                        height = 32;
+                        fmt = 3;
+                        break;
+                    case PG_TIMG_LOADBLOCK_4:
+                        width = 64;
+                        height = 32;
+                        fmt = 3;
+                        break;
+                    case PG_TIMG_LOADBLOCK_5:
+                        width = 32;
+                        height = 64;
+                        fmt = 3;
+                        break;
                 }
                 uint32_t offset = ((uint32_t)decoded[i++]) << 11; // index << 11
 
@@ -693,7 +795,7 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
 
                 // uint32_t w0 = (_SHIFTL(G_SETTIMG, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(siz, 19, 2));
                 N64Gfx macro = gsDPSetTextureImage(fmt, siz, 1, 0x05000000 | offset);
-                
+
                 emit(macro.words.w0, macro.words.w1);
 
                 // gsDPTileSync
@@ -705,7 +807,8 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
                 // G_SETTILE (fmt/siz/tmem) + tile en w1
                 // w0 = (_SHIFTL(G_SETTILE, 24, 8) | _SHIFTL(fmt, 21, 3) | _SHIFTL(siz, 19, 2) | _SHIFTL(tmem, 0, 9));
                 // uint32_t w1 = _SHIFTL(tile, 24, 3);
-                macro = gsDPSetTile(fmt, siz, 0, tmem, tile, 0, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD);
+                macro = gsDPSetTile(fmt, siz, 0, tmem, tile, 0, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD,
+                                    G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD);
                 emit(macro.words.w0, macro.words.w1);
 
                 // gsDPLoadSync
@@ -785,8 +888,11 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
                 emit(macro.words.w0, macro.words.w1);
             } break;
             case PG_TRI1: {
-                if (i + 2 > decoded.size()) { goto done; }
-                uint16_t c = RD16(decoded, i); i += 2;
+                if (i + 2 > decoded.size()) {
+                    goto done;
+                }
+                uint16_t c = RD16(decoded, i);
+                i += 2;
                 uint8_t a = (c & 0x1F);
                 uint8_t b = ((c >> 5) & 0x1F);
                 uint8_t d = ((c >> 10) & 0x1F);
@@ -794,9 +900,13 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
                 emit(macro.words.w0, macro.words.w1);
             } break;
             case PG_TRI2: {
-                if (i + 4 > decoded.size()) { goto done; }
-                uint16_t c0 = RD16(decoded, i); i += 2;
-                uint16_t c1 = RD16(decoded, i); i += 2;
+                if (i + 4 > decoded.size()) {
+                    goto done;
+                }
+                uint16_t c0 = RD16(decoded, i);
+                i += 2;
+                uint16_t c1 = RD16(decoded, i);
+                i += 2;
                 uint8_t a0 = (c0 & 0x1F);
                 uint8_t b0 = ((c0 >> 5) & 0x1F);
                 uint8_t d0 = ((c0 >> 10) & 0x1F);
@@ -808,7 +918,9 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
             } break;
             case PG_SPLINE3D: {
                 // Mimic unpack_spline_3D: map packed 3 bytes into a QUAD macro layout
-                if (i + 3 > decoded.size()) { goto done; }
+                if (i + 3 > decoded.size()) {
+                    goto done;
+                }
                 uint8_t b0 = decoded[i++];
                 uint8_t b1 = decoded[i++];
                 uint8_t b2 = decoded[i++];
@@ -821,30 +933,33 @@ std::optional<std::shared_ptr<IParsedData>> MK64::PackedDListFactory::parse(std:
                 uint8_t a0 = (uint8_t)(((b1 >> 7) & 0x1) | ((b2 & 0xF) * 2));
 
                 uint32_t w0 = _SHIFTL(G_QUAD, 24, 8);
-                uint32_t w1 = (_SHIFTL((uint8_t)(a0 * 2), 24, 8)
-                              | _SHIFTL((uint8_t)(t0 * 2), 16, 8)
-                              | _SHIFTL((uint8_t)(a3 * 2), 8, 8)
-                              | _SHIFTL((uint8_t)(a2 * 2), 0, 8));
+                uint32_t w1 = (_SHIFTL((uint8_t)(a0 * 2), 24, 8) | _SHIFTL((uint8_t)(t0 * 2), 16, 8) |
+                               _SHIFTL((uint8_t)(a3 * 2), 8, 8) | _SHIFTL((uint8_t)(a2 * 2), 0, 8));
                 emit(w0, w1);
             } break;
             case PG_DL: {
-                if (i + 2 > decoded.size()) { goto done; }
-                uint16_t idx = RD16(decoded, i); i += 2;
+                if (i + 2 > decoded.size()) {
+                    goto done;
+                }
+                uint16_t idx = RD16(decoded, i);
+                i += 2;
                 // uint32_t w0 = (_SHIFTL(G_DL, 24, 8)); // push
-                // // Encode as segmented address into segment 0x07 so exporter treats it as an index into packed DL buffer
-                // uint32_t w1 = 0x07000000u | (idx * 8);
-                N64Gfx macro = gsSPDisplayList(0x07000000u|(idx*8));
+                // // Encode as segmented address into segment 0x07 so exporter treats it as an index into packed DL
+                // buffer uint32_t w1 = 0x07000000u | (idx * 8);
+                N64Gfx macro = gsSPDisplayList(0x07000000u | (idx * 8));
                 emit(macro.words.w0, macro.words.w1);
             } break;
             case PG_ENDDL:
                 emit(_SHIFTL(G_ENDDL, 24, 8), 0);
                 SPDLOG_INFO("Size of packed DL: 0x{:X}", i - start);
                 goto done;
-        default: {
+            default: {
                 // Skip immediates for any known opcode (tilecfg, timg, spline, etc.)
                 uint32_t imm = ImmediateSize(op);
                 if (imm) {
-            if (i + imm > decoded.size()) { goto done; }
+                    if (i + imm > decoded.size()) {
+                        goto done;
+                    }
                     i += imm;
                 }
                 // Other 1-byte ops (combine, render, texture on/off, geom modes) produce no gfx here

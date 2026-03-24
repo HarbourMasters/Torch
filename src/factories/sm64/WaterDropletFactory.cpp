@@ -8,10 +8,12 @@
 
 #define FORMAT_FLOAT(x) std::fixed << std::setprecision(1) << x << "f"
 
-ExportResult SM64::WaterDropletHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::WaterDropletHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                      std::string& entryName, YAML::Node& node,
+                                                      std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -20,7 +22,9 @@ ExportResult SM64::WaterDropletHeaderExporter::Export(std::ostream &write, std::
     return std::nullopt;
 }
 
-ExportResult SM64::WaterDropletCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::WaterDropletCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                    std::string& entryName, YAML::Node& node,
+                                                    std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -101,18 +105,24 @@ ExportResult SM64::WaterDropletCodeExporter::Export(std::ostream &write, std::sh
     write << fourSpaceTab << "/* Flags */ " << flagData.str() << ",\n";
     write << fourSpaceTab << "/* Model */ " << model.str() << ",\n";
     write << fourSpaceTab << "/* Behavior */ " << bhvSymbol.str() << ",\n";
-    write << fourSpaceTab << "/* Move angle range */ " << std::hex << "0x" << waterDropletData->moveAngleRange << std::dec << ",\n";
+    write << fourSpaceTab << "/* Move angle range */ " << std::hex << "0x" << waterDropletData->moveAngleRange
+          << std::dec << ",\n";
     write << fourSpaceTab << "/* Unused (flag-specific) */ " << waterDropletData->moveRange << ",\n";
-    write << fourSpaceTab << "/* Random fvel offset, scale */ " << FORMAT_FLOAT(waterDropletData->randForwardVelOffset) << ", " << FORMAT_FLOAT(waterDropletData->randForwardVelScale) << ",\n";
-    write << fourSpaceTab << "/* Random yvel offset, scale */ " << FORMAT_FLOAT(waterDropletData->randYVelOffset) << ", " << FORMAT_FLOAT(waterDropletData->randYVelScale) << ",\n";
-    write << fourSpaceTab << "/* Random size offset, scale */ " << FORMAT_FLOAT(waterDropletData->randSizeOffset) << ", " << FORMAT_FLOAT(waterDropletData->randSizeScale) << ",\n";
+    write << fourSpaceTab << "/* Random fvel offset, scale */ " << FORMAT_FLOAT(waterDropletData->randForwardVelOffset)
+          << ", " << FORMAT_FLOAT(waterDropletData->randForwardVelScale) << ",\n";
+    write << fourSpaceTab << "/* Random yvel offset, scale */ " << FORMAT_FLOAT(waterDropletData->randYVelOffset)
+          << ", " << FORMAT_FLOAT(waterDropletData->randYVelScale) << ",\n";
+    write << fourSpaceTab << "/* Random size offset, scale */ " << FORMAT_FLOAT(waterDropletData->randSizeOffset)
+          << ", " << FORMAT_FLOAT(waterDropletData->randSizeScale) << ",\n";
 
     write << "};\n";
 
     return offset + 36;
 }
 
-ExportResult SM64::WaterDropletBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::WaterDropletBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                      std::string& entryName, YAML::Node& node,
+                                                      std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto waterDropletData = std::static_pointer_cast<SM64::WaterDropletData>(raw);
 
@@ -142,7 +152,8 @@ ExportResult SM64::WaterDropletBinaryExporter::Export(std::ostream &write, std::
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::WaterDropletFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::WaterDropletFactory::parse(std::vector<uint8_t>& buffer,
+                                                                             YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
@@ -165,5 +176,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::WaterDropletFactory::parse(std
     // bhvNode["offset"] = behavior;
     // Companion::Instance->AddAsset(bhvNode);
 
-    return std::make_shared<SM64::WaterDropletData>(flags, model, behavior, moveAngleRange, moveRange, randForwardVelOffset, randForwardVelScale, randYVelOffset, randYVelScale, randSizeOffset, randSizeScale);
+    return std::make_shared<SM64::WaterDropletData>(flags, model, behavior, moveAngleRange, moveRange,
+                                                    randForwardVelOffset, randForwardVelScale, randYVelOffset,
+                                                    randYVelScale, randSizeOffset, randSizeScale);
 }

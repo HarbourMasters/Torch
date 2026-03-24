@@ -6,10 +6,12 @@
 #include "utils/TorchUtils.h"
 #include <regex>
 
-ExportResult SM64::TrajectoryHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::TrajectoryHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                    std::string& entryName, YAML::Node& node,
+                                                    std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -18,7 +20,8 @@ ExportResult SM64::TrajectoryHeaderExporter::Export(std::ostream &write, std::sh
     return std::nullopt;
 }
 
-ExportResult SM64::TrajectoryCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::TrajectoryCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -26,14 +29,15 @@ ExportResult SM64::TrajectoryCodeExporter::Export(std::ostream &write, std::shar
 
     write << "const Trajectory " << symbol << "[] = {\n";
 
-    for (auto &trajectory : trajectoryData) {
+    for (auto& trajectory : trajectoryData) {
         write << fourSpaceTab;
-        if(trajectory.trajId == -1) {
+        if (trajectory.trajId == -1) {
             write << "TRAJECTORY_END(),\n";
             break;
         }
         write << "TRAJECTORY_POS(";
-        write << trajectory.trajId << ", " << trajectory.posX << ", " << trajectory.posY << ", " << trajectory.posZ << "),\n";
+        write << trajectory.trajId << ", " << trajectory.posX << ", " << trajectory.posY << ", " << trajectory.posZ
+              << "),\n";
     }
 
     write << "\n};\n";
@@ -43,7 +47,9 @@ ExportResult SM64::TrajectoryCodeExporter::Export(std::ostream &write, std::shar
     return offset + size;
 }
 
-ExportResult SM64::TrajectoryBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::TrajectoryBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                    std::string& entryName, YAML::Node& node,
+                                                    std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto trajectoryData = std::static_pointer_cast<SM64::TrajectoryData>(raw)->mTrajectoryData;
 
@@ -51,7 +57,7 @@ ExportResult SM64::TrajectoryBinaryExporter::Export(std::ostream &write, std::sh
 
     writer.Write((uint32_t)trajectoryData.size());
 
-    for (auto &trajectory : trajectoryData) {
+    for (auto& trajectory : trajectoryData) {
         writer.Write(trajectory.trajId);
         writer.Write(trajectory.posX);
         writer.Write(trajectory.posY);
@@ -62,7 +68,8 @@ ExportResult SM64::TrajectoryBinaryExporter::Export(std::ostream &write, std::sh
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::TrajectoryFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::TrajectoryFactory::parse(std::vector<uint8_t>& buffer,
+                                                                           YAML::Node& node) {
     std::vector<Trajectory> trajectoryData;
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);

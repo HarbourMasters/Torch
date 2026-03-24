@@ -7,7 +7,8 @@
 #include <factories/naudio/v1/AudioConverter.h>
 
 /*
-ExportResult AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName,
+YAML::Node& node, std::string* replacement) {
 
     auto samples = AudioManager::Instance->get_samples();
 
@@ -21,7 +22,7 @@ ExportResult AudioAIFCExporter::Export(std::ostream& write, std::shared_ptr<IPar
 
         LUS::BinaryWriter aifc = LUS::BinaryWriter();
         AudioConverter::SampleV0ToAIFC(sample, aifc);
-        
+
         LUS::BinaryWriter aiff = LUS::BinaryWriter();
         write_aiff(aifc.ToVector(), aiff);
         aifc.Close();

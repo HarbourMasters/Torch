@@ -6,19 +6,19 @@
 #include "utils/TorchUtils.h"
 #include <regex>
 
-
 #define NUM(x, w) std::dec << std::setfill(' ') << std::setw(w) << x
 #define FORMAT_FLOAT(x, w, p) std::dec << std::setfill(' ') << std::fixed << std::setprecision(p) << std::setw(w) << x
 
-SF64::ColPolyData::ColPolyData(std::vector<SF64::CollisionPoly> polys, std::vector<YAML::Node> meshNodes): mPolys(polys), mMeshNodes(meshNodes) {
-
+SF64::ColPolyData::ColPolyData(std::vector<SF64::CollisionPoly> polys, std::vector<YAML::Node> meshNodes)
+    : mPolys(polys), mMeshNodes(meshNodes) {
 }
 
-ExportResult SF64::ColPolyHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::ColPolyHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -27,7 +27,8 @@ ExportResult SF64::ColPolyHeaderExporter::Export(std::ostream &write, std::share
     return std::nullopt;
 }
 
-ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ColPolyCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                               std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
@@ -36,7 +37,7 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     write << "CollisionPoly " << symbol << "[] = {";
     int width = std::log10(meshSize) + 1;
 
-    for(SF64::CollisionPoly poly : colpolys->mPolys) {
+    for (SF64::CollisionPoly poly : colpolys->mPolys) {
         write << "\n" << fourSpaceTab;
         write << "{ " << NUM(poly.tri, width) << ",  ";
         if (poly.unk_06 != 0) {
@@ -44,7 +45,7 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
             write << "/* ALERT: NONZERO PAD */ ";
         }
         write << "{" << NUM(poly.norm, 6) << ",  ";
-        if(poly.unk_0E != 0) {
+        if (poly.unk_0E != 0) {
             SPDLOG_ERROR("SF64:COLPOLY error: Nonzero value found in padding");
             write << "/* ALERT: NONZERO PAD */ ";
         }
@@ -63,15 +64,16 @@ ExportResult SF64::ColPolyCodeExporter::Export(std::ostream &write, std::shared_
     return endOffset;
 }
 
-ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto colpolys = std::static_pointer_cast<SF64::ColPolyData>(raw);
 
     WriteHeader(writer, Torch::ResourceType::ColPoly, 0);
 
-    writer.Write((uint32_t) colpolys->mPolys.size());
+    writer.Write((uint32_t)colpolys->mPolys.size());
 
-    for(auto &poly : colpolys->mPolys) {
+    for (auto& poly : colpolys->mPolys) {
         writer.Write(poly.tri.x);
         writer.Write(poly.tri.y);
         writer.Write(poly.tri.z);
@@ -91,7 +93,8 @@ ExportResult SF64::ColPolyBinaryExporter::Export(std::ostream &write, std::share
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vector<uint8_t>& buffer,
+                                                                        YAML::Node& node) {
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto count = GetSafeNode<uint32_t>(node, "count");
     const auto meshCount = GetSafeNode<uint32_t>(node, "mesh_count", 1);
@@ -102,7 +105,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
 
-    for(int i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++) {
         int16_t v0 = reader.ReadInt16();
         meshSize = std::max(meshSize, (int)v0);
         int16_t v1 = reader.ReadInt16();
@@ -116,17 +119,17 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ColPolyFactory::parse(std::vec
         int16_t pad2 = reader.ReadInt16();
         int32_t dist = reader.ReadInt32();
 
-        polys.push_back(CollisionPoly({{v0, v1, v2}, pad1, {nx, ny, nz}, pad2, dist}));
+        polys.push_back(CollisionPoly({ { v0, v1, v2 }, pad1, { nx, ny, nz }, pad2, dist }));
     }
     meshSize++;
     auto meshOffset = GetSafeNode<uint32_t>(node, "mesh_offset", offset + count * sizeof(SF64::CollisionPoly));
-    for(int j = 0; j < meshCount; j++) {
+    for (int j = 0; j < meshCount; j++) {
         YAML::Node meshNode;
 
-        if(node["mesh_symbol"]) {
+        if (node["mesh_symbol"]) {
             auto meshSymbol = GetSafeNode<std::string>(node, "mesh_symbol");
             if (meshSymbol.find("OFFSET") == std::string::npos) {
-                if(meshCount > 1) {
+                if (meshCount > 1) {
                     meshSymbol += "_" + std::to_string(j);
                 }
             } else {

@@ -8,22 +8,23 @@
 #include "strhash64/StrHash64.h"
 
 // F3DEX2 GBI opcodes
-#define F3DEX2_G_ENDDL   0xDF
-#define F3DEX2_G_VTX     0x01
-#define F3DEX2_G_DL      0xDE
+#define F3DEX2_G_ENDDL 0xDF
+#define F3DEX2_G_VTX 0x01
+#define F3DEX2_G_DL 0xDE
 #define F3DEX2_G_SETTIMG 0xFD
 #define F3DEX2_G_MOVEMEM 0xDC
-#define F3DEX2_G_MTX     0xDA
+#define F3DEX2_G_MTX 0xDA
 
 // Walk a display list at the given offset, byte-swap commands from BE to native,
 // collect them, and recursively process nested display lists.
 // Buffer is const — overlapping display lists share tail commands,
 // so we must never modify the shared ROM data.
 static void WalkDisplayList(const uint8_t* data, uint32_t offset, size_t bufferSize,
-                            std::unordered_set<uint32_t>& visited,
-                            std::vector<PM64EntityDisplayListInfo>& collected) {
-    if (offset >= bufferSize - 8) return;
-    if (visited.count(offset)) return;
+                            std::unordered_set<uint32_t>& visited, std::vector<PM64EntityDisplayListInfo>& collected) {
+    if (offset >= bufferSize - 8)
+        return;
+    if (visited.count(offset))
+        return;
     visited.insert(offset);
 
     const uint8_t* ptr = data + offset;
@@ -79,14 +80,15 @@ static void WalkDisplayList(const uint8_t* data, uint32_t offset, size_t bufferS
     }
 }
 
-std::optional<std::shared_ptr<IParsedData>> PM64EntityGfxFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> PM64EntityGfxFactory::parse(std::vector<uint8_t>& buffer,
+                                                                        YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto size = GetSafeNode<uint32_t>(node, "size");
     auto dlistsNode = node["dlists"];
 
     if (offset + size > buffer.size()) {
-        SPDLOG_ERROR("PM64:ENTITY_GFX: Data at offset 0x{:X} exceeds buffer (need {}, have {})",
-                     offset, size, buffer.size() - offset);
+        SPDLOG_ERROR("PM64:ENTITY_GFX: Data at offset 0x{:X} exceeds buffer (need {}, have {})", offset, size,
+                     buffer.size() - offset);
         return std::nullopt;
     }
 
@@ -118,11 +120,13 @@ std::optional<std::shared_ptr<IParsedData>> PM64EntityGfxFactory::parse(std::vec
             if (opcode == F3DEX2_G_VTX) {
                 uint32_t n = (w0 >> 12) & 0xFF;
                 uint32_t end = w1 + n * 16;
-                if (end > maxReferencedEnd) maxReferencedEnd = end;
+                if (end > maxReferencedEnd)
+                    maxReferencedEnd = end;
             } else if (opcode == F3DEX2_G_SETTIMG || opcode == F3DEX2_G_MTX || opcode == F3DEX2_G_MOVEMEM) {
                 // We don't know exact sizes yet, but the offset itself must be in-bounds
                 // Add a generous margin (textures can be large)
-                if (w1 >= maxReferencedEnd) maxReferencedEnd = w1 + 0x800;
+                if (w1 >= maxReferencedEnd)
+                    maxReferencedEnd = w1 + 0x800;
             }
         }
     }
@@ -259,8 +263,8 @@ static void ExportEntityDisplayList(const std::string& entityName, const PM64Ent
 }
 
 // Export vertex data as a Vertex resource (V1 format with float ob[])
-static void ExportVertexResource_Entity(const std::string& entityName, const uint8_t* data,
-                              uint32_t offset, uint32_t size, uint32_t totalSize) {
+static void ExportVertexResource_Entity(const std::string& entityName, const uint8_t* data, uint32_t offset,
+                                        uint32_t size, uint32_t totalSize) {
     char pathBuf[256];
     snprintf(pathBuf, sizeof(pathBuf), "%s/vtx_%X", entityName.c_str(), offset);
     std::string path = pathBuf;
@@ -273,13 +277,16 @@ static void ExportVertexResource_Entity(const std::string& entityName, const uin
     writer.Write(count);
     for (uint32_t i = 0; i < count; i++) {
         const uint8_t* src = data + offset + i * 16;
-        writer.Write(static_cast<int16_t>((src[0] << 8) | src[1]));     // ob[0]
-        writer.Write(static_cast<int16_t>((src[2] << 8) | src[3]));     // ob[1]
-        writer.Write(static_cast<int16_t>((src[4] << 8) | src[5]));     // ob[2]
-        writer.Write(static_cast<uint16_t>((src[6] << 8) | src[7]));    // flag
-        writer.Write(static_cast<int16_t>((src[8] << 8) | src[9]));     // tc[0]
-        writer.Write(static_cast<int16_t>((src[10] << 8) | src[11]));   // tc[1]
-        writer.Write(src[12]); writer.Write(src[13]); writer.Write(src[14]); writer.Write(src[15]); // cn[4]
+        writer.Write(static_cast<int16_t>((src[0] << 8) | src[1]));   // ob[0]
+        writer.Write(static_cast<int16_t>((src[2] << 8) | src[3]));   // ob[1]
+        writer.Write(static_cast<int16_t>((src[4] << 8) | src[5]));   // ob[2]
+        writer.Write(static_cast<uint16_t>((src[6] << 8) | src[7]));  // flag
+        writer.Write(static_cast<int16_t>((src[8] << 8) | src[9]));   // tc[0]
+        writer.Write(static_cast<int16_t>((src[10] << 8) | src[11])); // tc[1]
+        writer.Write(src[12]);
+        writer.Write(src[13]);
+        writer.Write(src[14]);
+        writer.Write(src[15]); // cn[4]
     }
 
     std::stringstream ss;
@@ -292,27 +299,29 @@ static void ExportVertexResource_Entity(const std::string& entityName, const uin
 // Map N64 fmt/siz to Torch TextureType enum value
 static uint32_t N64FmtSizToTextureType(uint32_t fmt, uint32_t siz) {
     switch (fmt) {
-        case 0: // G_IM_FMT_RGBA
-            return (siz == 3) ? 1 : 2;  // RGBA32bpp or RGBA16bpp
-        case 2: // G_IM_FMT_CI
-            return (siz == 0) ? 3 : 4;  // Palette4bpp or Palette8bpp
-        case 4: // G_IM_FMT_I
-            return (siz == 0) ? 5 : 6;  // Grayscale4bpp or Grayscale8bpp
-        case 3: // G_IM_FMT_IA
-            if (siz == 0) return 7;      // GrayscaleAlpha4bpp
-            if (siz == 1) return 8;      // GrayscaleAlpha8bpp
-            return 9;                    // GrayscaleAlpha16bpp
+        case 0:                        // G_IM_FMT_RGBA
+            return (siz == 3) ? 1 : 2; // RGBA32bpp or RGBA16bpp
+        case 2:                        // G_IM_FMT_CI
+            return (siz == 0) ? 3 : 4; // Palette4bpp or Palette8bpp
+        case 4:                        // G_IM_FMT_I
+            return (siz == 0) ? 5 : 6; // Grayscale4bpp or Grayscale8bpp
+        case 3:                        // G_IM_FMT_IA
+            if (siz == 0)
+                return 7; // GrayscaleAlpha4bpp
+            if (siz == 1)
+                return 8; // GrayscaleAlpha8bpp
+            return 9;     // GrayscaleAlpha16bpp
         default:
-            return 2;  // Default to RGBA16bpp
+            return 2; // Default to RGBA16bpp
     }
 }
 
 // Export texture/palette data as a Texture resource (V1 format)
 // Fast3D interpreter reads pixel/palette data as BE byte pairs — keep raw ROM byte order.
-static void ExportTextureResource(const std::string& entityName, const uint8_t* data,
-                                   uint32_t offset, uint32_t size, const char* prefix,
-                                   uint32_t settimgW0) {
-    if (offset + size > 0x100000) return;  // Sanity check
+static void ExportTextureResource(const std::string& entityName, const uint8_t* data, uint32_t offset, uint32_t size,
+                                  const char* prefix, uint32_t settimgW0) {
+    if (offset + size > 0x100000)
+        return; // Sanity check
 
     char pathBuf[256];
     snprintf(pathBuf, sizeof(pathBuf), "%s/%s_%X", entityName.c_str(), prefix, offset);
@@ -326,25 +335,36 @@ static void ExportTextureResource(const std::string& entityName, const uint8_t* 
     // Compute height from data size and pixel format
     uint32_t bitsPerPixel;
     switch (siz) {
-        case 0: bitsPerPixel = 4; break;
-        case 1: bitsPerPixel = 8; break;
-        case 2: bitsPerPixel = 16; break;
-        case 3: bitsPerPixel = 32; break;
-        default: bitsPerPixel = 16; break;
+        case 0:
+            bitsPerPixel = 4;
+            break;
+        case 1:
+            bitsPerPixel = 8;
+            break;
+        case 2:
+            bitsPerPixel = 16;
+            break;
+        case 3:
+            bitsPerPixel = 32;
+            break;
+        default:
+            bitsPerPixel = 16;
+            break;
     }
     uint32_t bytesPerRow = (width * bitsPerPixel + 7) / 8;
     uint32_t height = (bytesPerRow > 0) ? (size / bytesPerRow) : 1;
-    if (height == 0) height = 1;
+    if (height == 0)
+        height = 1;
 
     auto writer = LUS::BinaryWriter();
     BaseExporter::WriteHeader(writer, Torch::ResourceType::Texture, 1);
-    writer.Write(N64FmtSizToTextureType(fmt, siz));   // Type
-    writer.Write(width);                               // Width
-    writer.Write(height);                              // Height
-    writer.Write(static_cast<uint32_t>(0));            // Flags
-    writer.Write(1.0f);                                // HByteScale
-    writer.Write(1.0f);                                // VPixelScale
-    writer.Write(static_cast<uint32_t>(size));         // ImageDataSize
+    writer.Write(N64FmtSizToTextureType(fmt, siz)); // Type
+    writer.Write(width);                            // Width
+    writer.Write(height);                           // Height
+    writer.Write(static_cast<uint32_t>(0));         // Flags
+    writer.Write(1.0f);                             // HByteScale
+    writer.Write(1.0f);                             // VPixelScale
+    writer.Write(static_cast<uint32_t>(size));      // ImageDataSize
     writer.Write(const_cast<char*>(reinterpret_cast<const char*>(data + offset)), size);
 
     std::stringstream ss;
@@ -355,9 +375,8 @@ static void ExportTextureResource(const std::string& entityName, const uint8_t* 
 }
 
 // Export matrix data as a Blob resource — convert N64 fixed-point to float[4][4]
-static void ExportMatrixBlob(const std::string& entityName, const uint8_t* data,
-                               uint32_t offset) {
-    const uint32_t MTX_SIZE = 64;  // N64 Mtx is 64 bytes (s15.16 interleaved)
+static void ExportMatrixBlob(const std::string& entityName, const uint8_t* data, uint32_t offset) {
+    const uint32_t MTX_SIZE = 64; // N64 Mtx is 64 bytes (s15.16 interleaved)
     std::vector<uint8_t> mtxData(data + offset, data + offset + MTX_SIZE);
 
     // Byte-swap 32-bit words from BE
@@ -395,8 +414,8 @@ static void ExportMatrixBlob(const std::string& entityName, const uint8_t* data,
 }
 
 // Export G_MOVEMEM data (lights, viewports) as a Blob resource
-static void ExportMovememBlob(const std::string& entityName, const uint8_t* data,
-                               uint32_t offset, uint32_t size, uint8_t index) {
+static void ExportMovememBlob(const std::string& entityName, const uint8_t* data, uint32_t offset, uint32_t size,
+                              uint8_t index) {
     std::vector<uint8_t> mmData(data + offset, data + offset + size);
 
     // Viewport data has s16 fields that need byte-swap
@@ -423,7 +442,8 @@ static void ExportMovememBlob(const std::string& entityName, const uint8_t* data
     Companion::Instance->RegisterCompanionFile(path, fileData);
 }
 
-ExportResult PM64EntityGfxBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64EntityGfxBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto entityData = std::static_pointer_cast<PM64EntityGfxData>(raw);
 
     // Extract entity name from entry path
@@ -435,9 +455,9 @@ ExportResult PM64EntityGfxBinaryExporter::Export(std::ostream& write, std::share
 
     // Collect all vertex, texture, matrix, and movemem offsets from display lists
     std::unordered_set<uint32_t> vtxOffsets;
-    std::unordered_map<uint32_t, uint32_t> texInfo;  // offset → G_SETTIMG w0
+    std::unordered_map<uint32_t, uint32_t> texInfo; // offset → G_SETTIMG w0
     std::unordered_set<uint32_t> mtxOffsets;
-    std::unordered_map<uint32_t, uint32_t> mmInfo;   // offset → w0
+    std::unordered_map<uint32_t, uint32_t> mmInfo; // offset → w0
 
     for (const auto& dl : entityData->mDisplayLists) {
         for (size_t i = 0; i < dl.commands.size(); i += 2) {
@@ -477,13 +497,16 @@ ExportResult PM64EntityGfxBinaryExporter::Export(std::ostream& write, std::share
                 if (op == F3DEX2_G_VTX && w1 == vtxOff) {
                     uint32_t n = (w0 >> 12) & 0xFF;
                     uint32_t candidateSize = n * 16;
-                    if (candidateSize > vtxSize) vtxSize = candidateSize;
+                    if (candidateSize > vtxSize)
+                        vtxSize = candidateSize;
                 }
             }
         }
-        if (vtxSize == 0) vtxSize = 256;
+        if (vtxSize == 0)
+            vtxSize = 256;
         if (vtxOff + vtxSize <= entityData->mBuffer.size()) {
-            ExportVertexResource_Entity(entityName, entityData->mBuffer.data(), vtxOff, vtxSize, entityData->mBuffer.size());
+            ExportVertexResource_Entity(entityName, entityData->mBuffer.data(), vtxOff, vtxSize,
+                                        entityData->mBuffer.size());
         }
     }
 
@@ -563,7 +586,8 @@ ExportResult PM64EntityGfxBinaryExporter::Export(std::ostream& write, std::share
     return std::nullopt;
 }
 
-ExportResult PM64EntityGfxHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64EntityGfxHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                 std::string& entryName, YAML::Node& node, std::string* replacement) {
     // Header generation handled by tools/extract-entity-offsets.py
     return std::nullopt;
 }

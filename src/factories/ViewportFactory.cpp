@@ -4,10 +4,11 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 
-ExportResult ViewportHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult ViewportHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -17,7 +18,8 @@ ExportResult ViewportHeaderExporter::Export(std::ostream &write, std::shared_ptr
     return std::nullopt;
 }
 
-ExportResult ViewportCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult ViewportCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                          YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto viewport = std::static_pointer_cast<VpData>(raw);
@@ -47,7 +49,8 @@ ExportResult ViewportCodeExporter::Export(std::ostream &write, std::shared_ptr<I
     return offset + sizeof(VpRaw);
 }
 
-ExportResult ViewportBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult ViewportBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto viewport = std::static_pointer_cast<VpData>(raw);
 

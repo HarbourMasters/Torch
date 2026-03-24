@@ -2,7 +2,8 @@
 #include "Companion.h"
 #include <tinyxml2.h>
 
-ExportResult SequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SequenceBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto sequence = std::static_pointer_cast<SequenceData>(raw);
 
@@ -12,13 +13,14 @@ ExportResult SequenceBinaryExporter::Export(std::ostream &write, std::shared_ptr
     for (auto& bank : sequence->mBanks) {
         writer.Write(bank);
     }
-    writer.Write( sequence->mSize);
+    writer.Write(sequence->mSize);
     writer.Write(reinterpret_cast<char*>(sequence->mBuffer.data()), sequence->mSize);
     writer.Finish(write);
     return std::nullopt;
 }
 
-ExportResult SequenceModdingExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SequenceModdingExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto sequence = std::static_pointer_cast<SequenceData>(raw);
     *replacement += ".m64";
@@ -27,9 +29,10 @@ ExportResult SequenceModdingExporter::Export(std::ostream &write, std::shared_pt
     return std::nullopt;
 }
 
-ExportResult SequenceXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SequenceXMLExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                         YAML::Node& node, std::string* replacement) {
     const auto sequence = std::static_pointer_cast<SequenceData>(raw);
-    
+
     auto path = fs::path(*replacement);
     tinyxml2::XMLDocument seq;
     tinyxml2::XMLElement* root = seq.NewElement("Sequence");
@@ -48,7 +51,7 @@ ExportResult SequenceXMLExporter::Export(std::ostream &write, std::shared_ptr<IP
     seq.Accept(&printer);
     write.write(printer.CStr(), printer.CStrSize() - 1);
 
-    auto data = (char*) sequence->mBuffer.data();
+    auto data = (char*)sequence->mBuffer.data();
     std::vector<char> m64(data, data + sequence->mBuffer.size());
     Companion::Instance->RegisterCompanionFile(path.filename().string() + "_data.m64", m64);
 
@@ -63,6 +66,7 @@ std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse(std::vector<u
     return std::make_shared<SequenceData>(id, size, buffer.data() + offset, banks);
 }
 
-std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SequenceFactory::parse_modding(std::vector<uint8_t>& buffer,
+                                                                           YAML::Node& node) {
     return std::make_shared<RawBuffer>(buffer.data(), buffer.size());
 }

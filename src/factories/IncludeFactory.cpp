@@ -7,11 +7,12 @@
 #define NUM(x) std::dec << std::setfill(' ') << std::setw(6) << x
 #define COL(c) std::dec << std::setfill(' ') << std::setw(3) << c
 
-ExportResult IncludeHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult IncludeHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto ctype = GetSafeNode<std::string>(node, "ctype");
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -20,11 +21,12 @@ ExportResult IncludeHeaderExporter::Export(std::ostream &write, std::shared_ptr<
     return std::nullopt;
 }
 
-ExportResult IncludeCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult IncludeCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                         YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto file = GetSafeNode<std::string>(node, "file_path");
     const auto ctype = GetSafeNode<std::string>(node, "ctype");
-        SPDLOG_INFO("writing INC");
+    SPDLOG_INFO("writing INC");
     write << ctype << " " << symbol << "[] = {\n";
 
     write << fourSpaceTab << "#include \"" << file << "\"\n";

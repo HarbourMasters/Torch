@@ -188,7 +188,8 @@ static void ByteSwapAllTextureHeaders(uint8_t* data, size_t size) {
     SPDLOG_DEBUG("Byte-swapped texture headers up to offset 0x{:X}", offset);
 }
 
-std::optional<std::shared_ptr<IParsedData>> PM64MapTextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> PM64MapTextureFactory::parse(std::vector<uint8_t>& buffer,
+                                                                         YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
 
     // Check if compressed (YAY0)
@@ -230,7 +231,8 @@ std::optional<std::shared_ptr<IParsedData>> PM64MapTextureFactory::parse(std::ve
     return std::make_shared<RawBuffer>(textureData);
 }
 
-ExportResult PM64MapTextureBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64MapTextureBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
@@ -243,7 +245,8 @@ ExportResult PM64MapTextureBinaryExporter::Export(std::ostream& write, std::shar
     return std::nullopt;
 }
 
-ExportResult PM64MapTextureHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node, std::string* replacement) {
+ExportResult PM64MapTextureHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                  std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
     if (Companion::Instance->IsOTRMode()) {

@@ -8,11 +8,12 @@
 
 #define FORMAT_HEX(ptr) (ptr)
 
-ExportResult AssetArrayHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult AssetArrayHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto data = std::static_pointer_cast<AssetArrayData>(raw);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -21,7 +22,8 @@ ExportResult AssetArrayHeaderExporter::Export(std::ostream &write, std::shared_p
     return std::nullopt;
 }
 
-ExportResult AssetArrayCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult AssetArrayCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
 
@@ -50,7 +52,8 @@ ExportResult AssetArrayCodeExporter::Export(std::ostream &write, std::shared_ptr
     return offset + size;
 }
 
-ExportResult AssetArrayBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult AssetArrayBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<AssetArrayData>(raw);
 
@@ -95,7 +98,7 @@ std::optional<std::shared_ptr<IParsedData>> AssetArrayFactory::parse(std::vector
             YAML::Node assetNode;
             assetNode["type"] = factoryType;
             assetNode["offset"] = ptr;
-            if(additional_info) {
+            if (additional_info) {
                 for (const auto& it : additional_info) {
                     assetNode[it.first.as<std::string>()] = it.second;
                 }

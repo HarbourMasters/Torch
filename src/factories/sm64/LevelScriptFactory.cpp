@@ -20,10 +20,12 @@ uint64_t RegisterPtr(uint32_t ptr, std::string type) {
     return ptr;
 }
 
-ExportResult SM64::LevelScriptHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SM64::LevelScriptHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                     std::string& entryName, YAML::Node& node,
+                                                     std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -32,7 +34,8 @@ ExportResult SM64::LevelScriptHeaderExporter::Export(std::ostream &write, std::s
     return std::nullopt;
 }
 
-ExportResult SM64::LevelScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::LevelScriptCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                   std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     const auto offset = GetSafeNode<uint32_t>(node, "offset");
     const auto commands = std::static_pointer_cast<LevelScriptData>(raw)->mCommands;
@@ -40,7 +43,7 @@ ExportResult SM64::LevelScriptCodeExporter::Export(std::ostream &write, std::sha
 
     write << "static const LevelScript " << symbol << "[] = {\n";
 
-    for(auto& [opcode, arguments] : commands) {
+    for (auto& [opcode, arguments] : commands) {
         bool commaFlag = false;
 
         if (opcode == LevelOpcode::END_AREA) {
@@ -56,14 +59,14 @@ ExportResult SM64::LevelScriptCodeExporter::Export(std::ostream &write, std::sha
         }
 
         write << opcode << "(";
-        for(auto& args : arguments) {
+        for (auto& args : arguments) {
             if (commaFlag) {
                 write << ", ";
             } else {
                 commaFlag = true;
             }
 
-            switch(static_cast<LevelArgumentType>(args.index())) {
+            switch (static_cast<LevelArgumentType>(args.index())) {
                 case LevelArgumentType::U8: {
                     write << std::hex << "0x" << static_cast<uint32_t>(std::get<uint8_t>(args));
                     break;
@@ -124,7 +127,9 @@ ExportResult SM64::LevelScriptCodeExporter::Export(std::ostream &write, std::sha
     return offset + size;
 }
 
-ExportResult SM64::LevelScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SM64::LevelScriptBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                     std::string& entryName, YAML::Node& node,
+                                                     std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     const auto commands = std::static_pointer_cast<LevelScriptData>(raw)->mCommands;
 
@@ -132,11 +137,11 @@ ExportResult SM64::LevelScriptBinaryExporter::Export(std::ostream &write, std::s
 
     writer.Write((uint32_t)commands.size());
 
-    for(auto& [opcode, arguments] : commands) {
+    for (auto& [opcode, arguments] : commands) {
         writer.Write(static_cast<uint8_t>(opcode));
 
-        for(auto& args : arguments) {
-            switch(static_cast<LevelArgumentType>(args.index())) {
+        for (auto& args : arguments) {
+            switch (static_cast<LevelArgumentType>(args.index())) {
                 case LevelArgumentType::U8: {
                     writer.Write(std::get<uint8_t>(args));
                     break;
@@ -190,7 +195,8 @@ ExportResult SM64::LevelScriptBinaryExporter::Export(std::ostream &write, std::s
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std::vector<uint8_t>& buffer,
+                                                                            YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     auto cmd = segment.data;
     bool processing = true;
@@ -203,7 +209,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std:
         count = 0;
     }
 
-    while(processing) {
+    while (processing) {
         auto opcode = static_cast<LevelOpcode>(cmd[0x00]);
 
         SPDLOG_INFO("Processing Command {}", opcode);

@@ -12,16 +12,20 @@
 
 #define CLAMP_MAX(val, max) (((val) < (max)) ? (val) : (max))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define VALUE_TO_ENUM(val, enumname, fallback) (Companion::Instance->GetEnumFromValue(enumname, val).value_or("/*" + std::string(fallback) + " */ " + std::to_string(val)));
+#define VALUE_TO_ENUM(val, enumname, fallback)            \
+    (Companion::Instance->GetEnumFromValue(enumname, val) \
+         .value_or("/*" + std::string(fallback) + " */ " + std::to_string(val)));
 
-SF64::ScriptData::ScriptData(std::vector<uint32_t> ptrs, std::vector<uint16_t> cmds, std::map<uint32_t, int> sizeMap, uint32_t ptrsStart, uint32_t cmdsStart): mPtrs(ptrs), mCmds(cmds), mSizeMap(sizeMap), mPtrsStart(ptrsStart), mCmdsStart(cmdsStart) {
-
+SF64::ScriptData::ScriptData(std::vector<uint32_t> ptrs, std::vector<uint16_t> cmds, std::map<uint32_t, int> sizeMap,
+                             uint32_t ptrsStart, uint32_t cmdsStart)
+    : mPtrs(ptrs), mCmds(cmds), mSizeMap(sizeMap), mPtrsStart(ptrsStart), mCmdsStart(cmdsStart) {
 }
 
-ExportResult SF64::ScriptHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult SF64::ScriptHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -34,7 +38,7 @@ std::string GetMsg(uint16_t msgId) {
     std::string msg = "";
     auto rawmsg = Companion::Instance->GetParseDataBySymbol("gMsg_ID_" + std::to_string(msgId));
 
-    if(rawmsg.has_value() && rawmsg.value().data.has_value()) {
+    if (rawmsg.has_value() && rawmsg.value().data.has_value()) {
         auto msgData = std::static_pointer_cast<SF64::MessageData>(rawmsg.value().data.value());
         auto msg = std::regex_replace(msgData->mMesgStr, std::regex(R"(\n)"), " ");
     }
@@ -53,11 +57,12 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 1: {
             auto f3 = arg1 & 0x7F;
             auto zmode = VALUE_TO_ENUM((arg1 >> 7) & 3, "EventModeZ", "EVOP_UNK");
-            
-            if(opcode == 0 && s2 == 1) {
+
+            if (opcode == 0 && s2 == 1) {
                 cmd << "EVENT_UPDATE_SPEED(" << std::dec << f3 << ", " << zmode;
             } else {
-                cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", " << s2;
+                cmd << "EVENT_SET_" << (opcode ? "ACCEL" : "SPEED") << "(" << std::dec << f3 << ", " << zmode << ", "
+                    << s2;
                 waitframes = s2;
             }
         } break;
@@ -84,15 +89,16 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 20:
         case 21: {
             auto rotcmd = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
-            if(opcode < 16 && s2 != 0) {
+            if (opcode < 16 && s2 != 0) {
                 waitframes = std::ceil(10.0f * arg1 / s2);
             }
-            if(opcode < 16 && (arg1 == s2 / 10) && arg1 != 0) {
+            if (opcode < 16 && (arg1 == s2 / 10) && arg1 != 0) {
                 cmd << rotcmd.replace(0, 4, "EVENT_UPDATE") << "(" << std::dec << arg1;
                 waitframes = 0;
             } else {
-                cmd << rotcmd.replace(0, 4, "EVENT") << "(" << std::dec << arg1 << ", " << std::fixed << std::setprecision(1) <<  s2 / 10.0f;
-                if(arg1 == 0) {
+                cmd << rotcmd.replace(0, 4, "EVENT") << "(" << std::dec << arg1 << ", " << std::fixed
+                    << std::setprecision(1) << s2 / 10.0f;
+                if (arg1 == 0) {
                     waitframes = 1;
                 }
             }
@@ -118,7 +124,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             cmd << "EVENT_SET_TARGET(" << teamId << ", " << std::dec << s2;
         } break;
         case 48:
-            if(s2 == 1) {
+            if (s2 == 1) {
                 cmd << "EVENT_UPDATE_ACTOR(";
             } else {
                 cmd << "EVENT_SET_WAIT(" << std::dec << s2;
@@ -131,14 +137,14 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         case 57: {
             auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
             cmd << "EVENT_RESTORE_TEAM(" << teamId;
-         } break;
+        } break;
         case 58:
         case 59: {
             auto sfxIndex = VALUE_TO_ENUM(s2, "EventSfx", "EVSFX_UNK");
             cmd << "EVENT_" << ((opcode == 58) ? "PLAY" : "STOP") << "_SFX(" << sfxIndex;
         } break;
         case 96:
-            if(s2 == 0) {
+            if (s2 == 0) {
                 cmd << "EVENT_CLEAR_TRIGGER(" << std::dec << arg1;
             } else {
                 if (s2 >= 100) {
@@ -158,10 +164,10 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
             cmd << "EVENT_SET_TEAM_ID(" << teamId;
         } break;
-        case 112:{
+        case 112: {
             auto actiontype = VALUE_TO_ENUM(s2, "EventAction", "EVACT_UNK");
             cmd << "EVENT_SET_ACTION(" << actiontype;
-            if((s2 == 14 || s2 == 15)) {
+            if ((s2 == 14 || s2 == 15)) {
                 waitframes = 1;
             }
         } break;
@@ -183,7 +189,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             auto rcidName = VALUE_TO_ENUM(arg1, "RadioCharacterId", "RCID_UNK");
             cmd << "EVENT_PLAY_MSG(" << rcidName << ", " << std::dec << s2;
             auto msg = GetMsg(s2);
-            if(!msg.empty()) {
+            if (!msg.empty()) {
                 comment << " // " << msg;
             }
         } break;
@@ -203,7 +209,7 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
             break;
         case 126:
             cmd << ((s2 == 0) ? "EVENT_GOTO(" : "EVENT_LOOP(");
-            if(s2 != 0) {
+            if (s2 != 0) {
                 cmd << std::dec << s2 << ", ";
             }
             cmd << ((arg1 < 200) ? "" : "EV_CHANGE_SCRIPT + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
@@ -214,13 +220,13 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
         default: {
             auto opcodeName = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
             cmd << "EVENT_CMD(" << opcodeName << ", " << std::dec << arg1 << ", " << s2;
-            if(opcode >= 40 && opcode <= 48) {
+            if (opcode >= 40 && opcode <= 48) {
                 waitframes = s2;
             }
         } break;
     }
     cmd << ")," << comment.str();
-    if(waitframes > 1) {
+    if (waitframes > 1) {
         cmd << "\n          // wait " << waitframes << " frames";
     } else if (waitframes == 1) {
         cmd << "\n          // update actor";
@@ -228,7 +234,8 @@ std::string MakeScriptCmd(uint16_t s1, uint16_t s2) {
     return cmd.str();
 }
 
-ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ScriptCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                              std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto script = std::static_pointer_cast<SF64::ScriptData>(raw);
@@ -238,11 +245,12 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
     auto cmdIndex = 0;
     std::map<uint32_t, std::string> scriptNames;
 
-    for(int i = 0; i < sortedPtrs.size(); i++) {
+    for (int i = 0; i < sortedPtrs.size(); i++) {
         std::ostringstream scriptDefaultName;
         auto scriptIndex = std::find(script->mPtrs.begin(), script->mPtrs.end(), sortedPtrs[i]) - script->mPtrs.begin();
 
-        scriptDefaultName << symbol << "_script_" << std::dec << scriptIndex << "_" << std::uppercase << std::hex << cmdOff;
+        scriptDefaultName << symbol << "_script_" << std::dec << scriptIndex << "_" << std::uppercase << std::hex
+                          << cmdOff;
         auto scriptName = GetSafeNode(node, "script_symbol", scriptDefaultName.str());
         scriptNames[sortedPtrs[i]] = scriptName;
         if (Companion::Instance->IsDebug()) {
@@ -251,9 +259,9 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
         write << "u16 " << scriptName << "[] = {";
 
         auto cmdCount = script->mSizeMap[sortedPtrs[i]] / 2;
-        for(int j = 0; j < cmdCount; j++, cmdIndex+=2) {
+        for (int j = 0; j < cmdCount; j++, cmdIndex += 2) {
             // if((j % 3) == 0) {
-            write  << "\n" << fourSpaceTab << "/* " << std::setfill(' ') << std::setw(2) << std::dec << j << " */ ";
+            write << "\n" << fourSpaceTab << "/* " << std::setfill(' ') << std::setw(2) << std::dec << j << " */ ";
             // }
             write << MakeScriptCmd(script->mCmds[cmdIndex], script->mCmds[cmdIndex + 1]);
         }
@@ -270,8 +278,8 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
 
     write << "// 0x" << std::hex << std::uppercase << ASSET_PTR(offset) << "\n";
     write << "u16* " << symbol << "[] = {";
-    for(int i = 0; i < script->mPtrs.size(); i++) {
-        if((i % 4) == 0) {
+    for (int i = 0; i < script->mPtrs.size(); i++) {
+        if ((i % 4) == 0) {
             write << "\n" << fourSpaceTab;
         }
         write << scriptNames[script->mPtrs[i]] << ", ";
@@ -282,13 +290,11 @@ ExportResult SF64::ScriptCodeExporter::Export(std::ostream &write, std::shared_p
         write << "// count: " << std::dec << script->mPtrs.size() << " events\n";
     }
 
-    return OffsetEntry {
-        script->mCmdsStart,
-        static_cast<uint32_t>(offset + script->mPtrs.size() * sizeof(uint32_t))
-    };
+    return OffsetEntry{ script->mCmdsStart, static_cast<uint32_t>(offset + script->mPtrs.size() * sizeof(uint32_t)) };
 }
 
-ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ScriptBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto scriptWriter = LUS::BinaryWriter();
     auto script = std::static_pointer_cast<SF64::ScriptData>(raw);
@@ -307,7 +313,7 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
         WriteHeader(cmdWriter, Torch::ResourceType::ScriptCmd, 0);
 
         auto cmdCount = script->mSizeMap.at(ptr) / 2;
-        cmdWriter.Write((uint32_t) cmdCount);
+        cmdWriter.Write((uint32_t)cmdCount);
 
         // Writing in pairs for readability
         for (uint32_t i = 0; i < cmdCount; ++i) {
@@ -329,7 +335,7 @@ ExportResult SF64::ScriptBinaryExporter::Export(std::ostream &write, std::shared
     // Export Script
     WriteHeader(scriptWriter, Torch::ResourceType::Script, 0);
     auto count = script->mPtrs.size();
-    scriptWriter.Write((uint32_t) count);
+    scriptWriter.Write((uint32_t)count);
     for (size_t i = 0; i < script->mPtrs.size(); i++) {
         scriptWriter.Write(ptrMap.at(script->mPtrs.at(i)));
     }
@@ -374,7 +380,8 @@ std::string MakeXMLScriptCmd(uint16_t s1, uint16_t s2) {
         case 20:
         case 21: {
             auto rotcmd = VALUE_TO_ENUM(opcode, "EventOpcode", "EVOP_UNK");
-            cmd << rotcmd.replace(0, 4, "EVENT") << "(" << std::dec << s2 << ", " << std::fixed << std::setprecision(1) <<  arg1 / 10.0f;
+            cmd << rotcmd.replace(0, 4, "EVENT") << "(" << std::dec << s2 << ", " << std::fixed << std::setprecision(1)
+                << arg1 / 10.0f;
         } break;
         case 24:
             cmd << "SET_ROTATE(";
@@ -405,14 +412,14 @@ std::string MakeXMLScriptCmd(uint16_t s1, uint16_t s2) {
         case 57: {
             auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
             cmd << "RESTORE_TEAM(" << teamId;
-         } break;
+        } break;
         case 58:
         case 59: {
             auto sfxIndex = VALUE_TO_ENUM(s2, "EventSfx", "EVSFX_UNK");
             cmd << "" << ((opcode == 58) ? "PLAY" : "STOP") << "_SFX(" << sfxIndex;
         } break;
         case 96:
-            if(s2 == 0) {
+            if (s2 == 0) {
                 cmd << "CLEAR_TRIGGER(" << std::dec << arg1;
             } else {
                 if (s2 >= 100) {
@@ -432,7 +439,7 @@ std::string MakeXMLScriptCmd(uint16_t s1, uint16_t s2) {
             auto teamId = VALUE_TO_ENUM(s2, "TeamId", "TEAMID_UNK");
             cmd << "SET_TEAM_ID(" << teamId;
         } break;
-        case 112:{
+        case 112: {
             auto actiontype = VALUE_TO_ENUM(s2, "EventAction", "EVACT_UNK");
             cmd << "SET_ACTION(" << actiontype;
         } break;
@@ -470,7 +477,7 @@ std::string MakeXMLScriptCmd(uint16_t s1, uint16_t s2) {
             break;
         case 126:
             cmd << ((s2 == 0) ? "GOTO(" : "LOOP(");
-            if(s2 != 0) {
+            if (s2 != 0) {
                 cmd << std::dec << s2 << ", ";
             }
             cmd << ((arg1 < 200) ? "" : "AI_CHANGE + ") << std::dec << ((arg1 < 200) ? arg1 : arg1 - 200);
@@ -487,7 +494,8 @@ std::string MakeXMLScriptCmd(uint16_t s1, uint16_t s2) {
     return cmd.str();
 }
 
-ExportResult SF64::ScriptXMLExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult SF64::ScriptXMLExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
     auto script = std::static_pointer_cast<SF64::ScriptData>(raw);
     auto sortedPtrs = script->mPtrs;
@@ -503,18 +511,19 @@ ExportResult SF64::ScriptXMLExporter::Export(std::ostream &write, std::shared_pt
     tinyxml2::XMLElement* event = root.NewElement("EventScript");
 
     tinyxml2::XMLElement* routine = event->InsertNewChildElement("Routine");
-    for(unsigned int sortedPtr : sortedPtrs) {
+    for (unsigned int sortedPtr : sortedPtrs) {
         tinyxml2::XMLElement* src = routine->InsertNewChildElement("Script");
         std::ostringstream scriptDefaultName;
         auto scriptIndex = std::find(script->mPtrs.begin(), script->mPtrs.end(), sortedPtr) - script->mPtrs.begin();
 
-        scriptDefaultName << symbol << "_script_" << std::dec << scriptIndex << "_" << std::uppercase << std::hex << cmdOff;
+        scriptDefaultName << symbol << "_script_" << std::dec << scriptIndex << "_" << std::uppercase << std::hex
+                          << cmdOff;
         auto scriptName = GetSafeNode(node, "script_symbol", scriptDefaultName.str());
         scriptNames[sortedPtr] = scriptName;
         src->SetAttribute("ID", scriptName.c_str());
         auto cmdCount = script->mSizeMap[sortedPtr] / 2;
-        
-        for(int j = 0; j < cmdCount; j++, cmdIndex+=2) {
+
+        for (int j = 0; j < cmdCount; j++, cmdIndex += 2) {
             tinyxml2::XMLElement* obj = src->InsertNewChildElement("Run");
             obj->SetText(MakeXMLScriptCmd(script->mCmds[cmdIndex], script->mCmds[cmdIndex + 1]).c_str());
             src->InsertEndChild(obj);
@@ -524,7 +533,7 @@ ExportResult SF64::ScriptXMLExporter::Export(std::ostream &write, std::shared_pt
 
     tinyxml2::XMLElement* program = event->InsertNewChildElement("Program");
 
-    for(unsigned int mPtr : script->mPtrs) {
+    for (unsigned int mPtr : script->mPtrs) {
         tinyxml2::XMLElement* obj = program->InsertNewChildElement("Run");
         obj->SetAttribute("Script", scriptNames[mPtr].c_str());
         program->InsertEndChild(obj);
@@ -548,7 +557,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ScriptFactory::parse(std::vect
     reader.SetEndianness(Torch::Endianness::Big);
     auto ptr = reader.ReadUInt32();
 
-    while(SEGMENT_NUMBER(ptr) == SEGMENT_NUMBER(offset)) {
+    while (SEGMENT_NUMBER(ptr) == SEGMENT_NUMBER(offset)) {
         scriptPtrs.push_back(ptr);
         ptr = reader.ReadUInt32();
     }
@@ -558,8 +567,8 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ScriptFactory::parse(std::vect
 
     auto cmdsStart = sortedPtrs[0];
 
-    for(int i = 0; i < sortedPtrs.size() - 1; i++) {
-        sizeMap[sortedPtrs[i]] = (sortedPtrs[i+1] - sortedPtrs[i]) / sizeof(uint16_t);
+    for (int i = 0; i < sortedPtrs.size() - 1; i++) {
+        sizeMap[sortedPtrs[i]] = (sortedPtrs[i + 1] - sortedPtrs[i]) / sizeof(uint16_t);
     }
     sizeMap[sortedPtrs[sortedPtrs.size() - 1]] = (ptrsStart - sortedPtrs[sortedPtrs.size() - 1]) / sizeof(uint16_t);
 
@@ -569,7 +578,7 @@ std::optional<std::shared_ptr<IParsedData>> SF64::ScriptFactory::parse(std::vect
     auto [__, scriptSegment] = Decompressor::AutoDecode(scriptNode, buffer, scriptLen * sizeof(uint16_t));
     LUS::BinaryReader scriptReader(scriptSegment.data, scriptSegment.size);
     scriptReader.SetEndianness(Torch::Endianness::Big);
-    for(int i = 0; i < scriptLen; i++) {
+    for (int i = 0; i < scriptLen; i++) {
         scriptCmds.push_back(scriptReader.ReadUInt16());
     }
     return std::make_shared<SF64::ScriptData>(scriptPtrs, scriptCmds, sizeMap, ptrsStart, cmdsStart);

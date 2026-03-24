@@ -2,10 +2,11 @@
 #include "utils/Decompressor.h"
 #include "Companion.h"
 
-ExportResult DrumHeaderExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement) {
+ExportResult DrumHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                        YAML::Node& node, std::string* replacement) {
     const auto symbol = GetSafeNode(node, "symbol", entryName);
 
-    if(Companion::Instance->IsOTRMode()){
+    if (Companion::Instance->IsOTRMode()) {
         write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
         return std::nullopt;
     }
@@ -15,11 +16,13 @@ ExportResult DrumHeaderExporter::Export(std::ostream &write, std::shared_ptr<IPa
     return std::nullopt;
 }
 
-ExportResult DrumCodeExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult DrumCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                      YAML::Node& node, std::string* replacement) {
     return std::nullopt;
 }
 
-ExportResult DrumBinaryExporter::Export(std::ostream &write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node &node, std::string* replacement ) {
+ExportResult DrumBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
+                                        YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<DrumData>(raw);
 
@@ -48,7 +51,8 @@ std::optional<std::shared_ptr<IParsedData>> DrumFactory::parse(std::vector<uint8
     drum->adsrDecayIndex = reader.ReadInt8();
     drum->pan = reader.ReadInt8();
     drum->isRelocated = reader.ReadUByte();
-    reader.ReadUByte();;
+    reader.ReadUByte();
+    ;
 
     drum->tunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
 
