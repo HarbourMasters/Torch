@@ -288,3 +288,32 @@ if(NOT USE_STANDALONE)
     target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_include_directories(${PROJECT_NAME} PUBLIC ${yaml-cpp_SOURCE_DIR}/include)
 endif()
+
+# Unit Tests
+option(BUILD_TESTS "Build unit tests" OFF)
+if(BUILD_TESTS)
+    set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.15.2
+    )
+    FetchContent_MakeAvailable(googletest)
+
+    enable_testing()
+
+    file(GLOB TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
+
+    set(TEST_SRC_DIR ${SRC_DIR})
+    list(FILTER TEST_SRC_DIR EXCLUDE REGEX "main\\.cpp$")
+
+    add_executable(torch_tests ${TEST_FILES} ${TEST_SRC_DIR})
+    target_include_directories(torch_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(torch_tests PRIVATE gtest_main yaml-cpp tinyxml2 N64Graphics BinaryTools spdlog)
+    add_test(NAME torch_tests COMMAND torch_tests)
+endif()
