@@ -21,13 +21,18 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 | Area | Files | Scale |
 |---|---|---|
-| Core orchestration | `src/Companion.h/cpp` | ~2,000 LOC |
-| Factory classes | `src/factories/` | ~71 factories |
+| Core orchestration | `src/Companion.h/cpp` | ~2,100 LOC |
+| Factory classes | `src/factories/` | 79 factories |
 | N64 ROM handling | `src/n64/` | Cartridge, GBI macros |
 | Utilities | `src/utils/` | Decompressor, TextureUtils, etc. |
 | Data types | `src/types/` | Vec3D variants, RawBuffer |
 | Binary I/O lib | `lib/binarytools/` | BinaryReader, BinaryWriter |
 | Compression libs | `lib/libmio0/`, `lib/libyay0/` | MIO0, YAY0 |
+| N64 graphics lib | `lib/n64graphics/` | Texture format conversion |
+| String hashing lib | `lib/strhash64/` | CRC64 string hashing |
+| Archive libs | `lib/miniz/`, StormLib | ZIP and MPQ archive support |
+| Preprocessing | `src/preprocess/` | CompTool ROM decompression |
+| Other libs | CLI11, TinySHA1, `lib/hj/`, `lib/nposix/` | CLI parsing, SHA1, utilities, POSIX compat |
 
 ---
 
@@ -57,7 +62,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 - `Vec3f`, `Vec3s`, `Vec3i`, `Vec3iu`, `Vec2f`, `Vec4f`, `Vec4s`: construction, field access, stream output
 - Width/precision calculation methods used in code generation
 - `RawBuffer`: construction from `vector<uint8_t>`, size tracking
-- `SegmentedAddr`: segmented vs. physical address distinction, segment extraction
+- `SegmentedAddr`: simple struct wrapping a `uint32_t offset` — verify construction and field access
 
 **Why this matters:** These types are used throughout all factory and exporter code.
 
@@ -75,6 +80,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 - `Cartridge`: parsing a synthetic ROM header produces correct title, country code, CRC, version
 - `_SHIFTL`/`_SHIFTR` macros: bit shifting behavior
 - `CMD_BBBB`, `CMD_BBH`, `CMD_HH`: command packing output
+- `StringHelper` static methods: `Split`, `Strip`, `Replace`, `ReplaceOriginal`, `StartsWith`, `Contains`, `EndsWith`, `Sprintf`, `Implode`, `StrToL`, `BoolStr`, `HasOnlyDigits`, `IsValidHex`, `IsValidOffset`, `IEquals` — all pure functions, easy to test
 
 ---
 
@@ -93,7 +99,34 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 5. Base Factory Pattern (`src/factories/BaseFactory.h`)
+### 5. ROM Preprocessing (`src/preprocess/CompTool.h/cpp`)
+
+**What to test:**
+- `Decompress()`: given a known compressed ROM buffer, produces correct decompressed output
+- CRC calculation logic
+- File table detection and parsing
+
+**Why this matters:** CompTool handles full ROM decompression before any factory parsing can occur — it's on the critical path.
+
+---
+
+### 6. N64 Graphics Library (`lib/n64graphics/`)
+
+**What to test:**
+- Texture format conversion functions used by TextureUtils
+- Pixel format encoding/decoding for N64-specific formats
+
+---
+
+### 7. String Hashing (`lib/strhash64/`)
+
+**What to test:**
+- CRC64 hash computation produces expected values for known inputs
+- Empty string and edge cases
+
+---
+
+### 8. Base Factory Pattern (`src/factories/BaseFactory.h`)
 
 **Files:** `BaseFactory.h`, `ResourceType.h`
 
@@ -106,7 +139,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 6. Vertex Factory (`src/factories/VtxFactory.h/cpp`)
+### 9. Vertex Factory (`src/factories/VtxFactory.h/cpp`)
 
 **What to test:**
 - `VtxFactory::parse()`: known byte sequence → `VtxData` with correct `VtxRaw` fields
@@ -118,7 +151,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 7. Display List Factory (`src/factories/DisplayListFactory.h/cpp`)
+### 10. Display List Factory (`src/factories/DisplayListFactory.h/cpp`)
 
 **What to test:**
 - `DListFactory::parse()`: known GBI command sequence → `DListData` with correct `mGfxs` words
@@ -129,7 +162,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 8. Texture Factory (`src/factories/TextureFactory.h/cpp`)
+### 11. Texture Factory (`src/factories/TextureFactory.h/cpp`)
 
 **What to test:**
 - `TextureFactory::parse()`: binary data → `TextureData` with correct format, width, height, raw buffer
@@ -141,7 +174,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 9. Matrix Factory (`src/factories/MtxFactory.h/cpp`)
+### 12. Matrix Factory (`src/factories/MtxFactory.h/cpp`)
 
 **What to test:**
 - `MtxFactory::parse()`: 64-byte fixed-point N64 matrix → `MtxData` with correct float[16]
@@ -151,7 +184,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 10. Float/Blob/Lights/Viewport Factories
+### 13. Float/Blob/Lights/Viewport Factories
 
 **What to test (per factory):**
 - Known binary input → expected parsed data structure
@@ -160,16 +193,16 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 11. SM64 Factories (`src/factories/sm64/`)
+### 14. SM64 Factories (`src/factories/sm64/`)
 
 **GeoLayout** (`GeoLayoutFactory.h/cpp`):
-- Parse known geo commands: 45+ opcodes (`BranchAndLink`, `End`, `OpenNode`, `CloseNode`, `NodeRoot`, `NodePerspective`, `NodeTranslation`, `NodeAnimation`, etc.)
+- Parse known geo commands: 33 opcodes (`BranchAndLink`, `End`, `OpenNode`, `CloseNode`, `NodeRoot`, `NodePerspective`, `NodeTranslation`, `NodeCullingRadius`, etc.)
 - Hierarchical command nesting is preserved
 - `skipped` flag handling
 - Code and binary exporters
 
 **BehaviorScript** (`BehaviorScriptFactory.h/cpp`):
-- 70+ opcodes (BEGIN, DELAY, CALL, RETURN, GOTO, LOOP, etc.)
+- 56 opcodes (BEGIN, DELAY, CALL, RETURN, GOTO, BEGIN_LOOP, END_LOOP, SPAWN_CHILD, etc.)
 - Argument parsing: integers, floats, pointer variants
 - Code exporter produces macro-style output
 
@@ -189,7 +222,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 12. SF64 Factories (`src/factories/sf64/`)
+### 15. SF64 Factories (`src/factories/sf64/`)
 
 **SkeletonFactory:**
 - `LimbData` hierarchy: address, display list, Vec3f translation, Vec3s rotation, sibling/child pointers
@@ -202,7 +235,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 13. MK64 Factories (`src/factories/mk64/`)
+### 16. MK64 Factories (`src/factories/mk64/`)
 
 **PackedDisplayListFactory:**
 - MK64 packed bytecode → expanded `DListData` with standard Gfx commands
@@ -211,7 +244,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 14. F-Zero X Factories (`src/factories/fzerox/`)
+### 17. F-Zero X Factories (`src/factories/fzerox/`)
 
 **SequenceFactory:**
 - `SeqCommand`: position, opcode, state, channel, layer, arguments
@@ -221,7 +254,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 15. NAudio v1 Factories (`src/factories/naudio/v1/`)
+### 18. NAudio v1 Factories (`src/factories/naudio/v1/`)
 
 **AudioContext:**
 - `MakeReader()` returns valid `BinaryReader` over audio table data
@@ -240,7 +273,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 16. GenericArrayFactory / AssetArrayFactory
+### 19. GenericArrayFactory / AssetArrayFactory
 
 **GenericArrayFactory:**
 - Variant type dispatch: u8, s8, u16, s16, u32, s32, float
@@ -252,7 +285,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 17. Companion Orchestration (`src/Companion.h/cpp`)
+### 20. Companion Orchestration (`src/Companion.h/cpp`)
 
 **What to test:**
 - `RegisterFactory()` + `GetFactory()`: register a factory, retrieve it by type string
@@ -267,7 +300,7 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 
 ---
 
-### 18. Archive Handling (`src/archive/`)
+### 21. Archive Handling (`src/archive/`)
 
 **Files:** `BinaryWrapper.h`, `ZWrapper.h/cpp`, `SWrapper.h/cpp`
 
@@ -285,10 +318,12 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 |---|---|---|
 | P0 | BinaryReader/Writer | Foundation for all parsing |
 | P0 | Decompressor | Required before any factory can parse |
+| P0 | StringHelper | Pure functions, used everywhere, easy to test |
 | P1 | TextureUtils (CalculateTextureSize) | Used by many factories |
 | P1 | Vec3D data types | Used pervasively |
 | P1 | VtxFactory | Simple, well-bounded, high coverage value |
 | P1 | DisplayListFactory | Core rendering asset |
+| P1 | CompTool | Critical path for ROM decompression |
 | P2 | MtxFactory, FloatFactory, LightsFactory, ViewportFactory | Simple factories |
 | P2 | SM64 GeoLayout, Collision, BehaviorScript | Complex but high value |
 | P2 | Companion factory registration/lookup | Core dispatch mechanism |
@@ -296,6 +331,8 @@ The CMakeLists.txt does not include a test target or any test framework (Google 
 | P3 | SF64 Skeleton, Message | Game-specific |
 | P3 | NAudio v1 context and fonts | Audio system |
 | P3 | Archive wrappers | Integration-level |
+| P3 | n64graphics texture conversion | Used by TextureUtils |
+| P3 | strhash64 | Small but testable |
 | P4 | MK64 PackedDList, F-Zero Sequence, PM64 factories | Less critical initially |
 | P4 | Companion full YAML parse + Process() | Integration test territory |
 
@@ -329,4 +366,8 @@ After implementing the test framework and first tests:
 - `src/utils/Decompressor.h/cpp`, `TextureUtils.h/cpp`
 - `src/types/Vec3D.h/cpp`, `RawBuffer.h`, `SegmentedAddr.h`
 - `lib/binarytools/BinaryReader.h/cpp`, `BinaryWriter.h/cpp`
+- `src/utils/StringHelper.h/cpp` — pure utility functions
+- `src/preprocess/CompTool.h/cpp` — ROM decompression
+- `lib/n64graphics/` — texture format conversion
+- `lib/strhash64/` — CRC64 hashing
 - `CMakeLists.txt` — needs test target added
