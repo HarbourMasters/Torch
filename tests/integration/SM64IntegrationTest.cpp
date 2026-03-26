@@ -379,6 +379,19 @@ TEST_F(SM64USIntegrationTest, GeoLayoutBomb) {
     EXPECT_GT(blobSize, 0u) << "Expected non-empty geo layout data";
 }
 
+TEST_F(SM64USIntegrationTest, GeoLayoutGoomba) {
+    auto& data = GetAsset("test_geo_goomba");
+    ASSERT_FALSE(data.empty()) << "Goomba GeoLayout asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Blob));
+
+    ASSERT_GE(data.size(), 0x44u) << "GeoLayout too small to contain size";
+
+    uint32_t blobSize;
+    std::memcpy(&blobSize, data.data() + 0x40, 4);
+    EXPECT_GT(blobSize, 0u) << "Expected non-empty geo layout data";
+}
+
 // Error handling tests: verify the pipeline doesn't crash on bad input
 static const std::string SM64_US_ERROR_CONFIG_DIR = GetTestDir() + "/sm64/us_error";
 
