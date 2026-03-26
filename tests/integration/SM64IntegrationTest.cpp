@@ -66,3 +66,19 @@ TEST_F(SM64USIntegrationTest, TextureRGBA16) {
     EXPECT_EQ(bufSize, 2048u);
     EXPECT_EQ(data.size(), 0x40u + 16u + 2048u) << "Total size mismatch";
 }
+
+TEST_F(SM64USIntegrationTest, VtxBasic) {
+    auto& data = GetAsset("test_vtx");
+    ASSERT_FALSE(data.empty()) << "VTX asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Vertex));
+
+    // After 0x40 header: uint32 count, then count * 16 bytes per vertex
+    ASSERT_GE(data.size(), 0x44u) << "VTX too small to contain count";
+
+    uint32_t count;
+    std::memcpy(&count, data.data() + 0x40, 4);
+
+    EXPECT_EQ(count, 4u);
+    EXPECT_EQ(data.size(), 0x40u + 4u + count * 16u) << "Total size mismatch";
+}
