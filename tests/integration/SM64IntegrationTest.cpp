@@ -291,6 +291,51 @@ TEST_F(SM64USIntegrationTest, DictionaryBasic) {
     EXPECT_EQ(dictSize, 3u) << "Expected 3 dictionary entries";
 }
 
+TEST_F(SM64USIntegrationTest, CollisionLevel) {
+    auto& data = GetAsset("test_collision_level");
+    ASSERT_FALSE(data.empty()) << "Level collision asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Collision));
+
+    ASSERT_GE(data.size(), 0x44u) << "Collision too small to contain count";
+
+    uint32_t cmdCount;
+    std::memcpy(&cmdCount, data.data() + 0x40, 4);
+
+    // Bob-omb Battlefield level collision is large — has vertices, surfaces,
+    // special objects, and environment boxes
+    EXPECT_GT(cmdCount, 100u) << "Expected a large collision command set";
+    EXPECT_EQ(data.size(), 0x40u + 4u + cmdCount * 2u) << "Total size mismatch";
+}
+
+TEST_F(SM64USIntegrationTest, MovtexNonQuad) {
+    auto& data = GetAsset("test_movtex_nonquad");
+    ASSERT_FALSE(data.empty()) << "Non-quad movtex asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Movtex));
+
+    ASSERT_GE(data.size(), 0x44u) << "Movtex too small to contain size";
+
+    uint32_t bufSize;
+    std::memcpy(&bufSize, data.data() + 0x40, 4);
+    EXPECT_GT(bufSize, 0u) << "Expected non-empty movtex data";
+    EXPECT_EQ(data.size(), 0x40u + 4u + bufSize * 2u) << "Movtex size mismatch";
+}
+
+TEST_F(SM64USIntegrationTest, MovtexNonQuadColor) {
+    auto& data = GetAsset("test_movtex_nonquad_color");
+    ASSERT_FALSE(data.empty()) << "Non-quad color movtex asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Movtex));
+
+    ASSERT_GE(data.size(), 0x44u) << "Movtex too small to contain size";
+
+    uint32_t bufSize;
+    std::memcpy(&bufSize, data.data() + 0x40, 4);
+    EXPECT_GT(bufSize, 0u) << "Expected non-empty movtex data";
+    EXPECT_EQ(data.size(), 0x40u + 4u + bufSize * 2u) << "Movtex size mismatch";
+}
+
 // Error handling tests: verify the pipeline doesn't crash on bad input
 static const std::string SM64_US_ERROR_CONFIG_DIR = GetTestDir() + "/sm64/us_error";
 
