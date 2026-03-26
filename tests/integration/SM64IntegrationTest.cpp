@@ -336,6 +336,22 @@ TEST_F(SM64USIntegrationTest, MovtexNonQuadColor) {
     EXPECT_EQ(data.size(), 0x40u + 4u + bufSize * 2u) << "Movtex size mismatch";
 }
 
+TEST_F(SM64USIntegrationTest, CollisionWater) {
+    auto& data = GetAsset("test_collision_water");
+    ASSERT_FALSE(data.empty()) << "Water collision asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Collision));
+
+    ASSERT_GE(data.size(), 0x44u) << "Collision too small to contain count";
+
+    uint32_t cmdCount;
+    std::memcpy(&cmdCount, data.data() + 0x40, 4);
+
+    // JRB area 1 collision should have water environment boxes
+    EXPECT_GT(cmdCount, 100u) << "Expected a large collision command set";
+    EXPECT_EQ(data.size(), 0x40u + 4u + cmdCount * 2u) << "Total size mismatch";
+}
+
 // Error handling tests: verify the pipeline doesn't crash on bad input
 static const std::string SM64_US_ERROR_CONFIG_DIR = GetTestDir() + "/sm64/us_error";
 
