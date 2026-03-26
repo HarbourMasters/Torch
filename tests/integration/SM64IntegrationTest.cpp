@@ -98,3 +98,19 @@ TEST_F(SM64USIntegrationTest, BlobBasic) {
     EXPECT_EQ(blobSize, 64u);
     EXPECT_EQ(data.size(), 0x40u + 4u + blobSize) << "Total size mismatch";
 }
+
+TEST_F(SM64USIntegrationTest, CollisionBasic) {
+    auto& data = GetAsset("test_collision");
+    ASSERT_FALSE(data.empty()) << "Collision asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Collision));
+
+    // After 0x40 header: uint32 command_count, then command_count * int16_t
+    ASSERT_GE(data.size(), 0x44u) << "Collision too small to contain count";
+
+    uint32_t cmdCount;
+    std::memcpy(&cmdCount, data.data() + 0x40, 4);
+
+    EXPECT_GT(cmdCount, 0u) << "Expected at least one collision command";
+    EXPECT_EQ(data.size(), 0x40u + 4u + cmdCount * 2u) << "Total size mismatch";
+}
