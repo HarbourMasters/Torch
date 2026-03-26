@@ -114,3 +114,23 @@ TEST_F(SM64USIntegrationTest, CollisionBasic) {
     EXPECT_GT(cmdCount, 0u) << "Expected at least one collision command";
     EXPECT_EQ(data.size(), 0x40u + 4u + cmdCount * 2u) << "Total size mismatch";
 }
+
+// Error handling tests: verify the pipeline doesn't crash on bad input
+static const std::string SM64_US_ERROR_CONFIG_DIR = GetTestDir() + "/sm64/us_error";
+
+TEST(SM64USErrorTest, BadInputDoesNotCrash) {
+    if (!RomExists(SM64_US_ROM)) {
+        GTEST_SKIP() << "SM64 US ROM not found";
+    }
+    auto romPath = GetRomDir() + "/" + SM64_US_ROM;
+
+    // This runs the pipeline with YAMLs that have bad offsets, invalid formats, and missing fields.
+    // We just verify it doesn't crash (SEGV/abort).
+    EXPECT_NO_FATAL_FAILURE({
+        try {
+            auto assets = RunPipeline(SM64_US_ERROR_CONFIG_DIR, romPath);
+        } catch (...) {
+            // Any exception is fine - we just don't want crashes
+        }
+    });
+}
