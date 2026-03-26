@@ -181,3 +181,51 @@ TEST(N64GraphicsTest, I8RoundTrip) {
     EXPECT_EQ(output[0], 0x40);
     free(img);
 }
+
+// CI (color-indexed) format tests
+
+TEST(N64GraphicsTest, Raw2CI8SinglePixel) {
+    // CI8: 1 byte per pixel, index passthrough
+    uint8_t raw[] = {42};
+    ci* img = raw2ci_torch(raw, 1, 1, 8);
+    ASSERT_NE(img, nullptr);
+    EXPECT_EQ(img[0].index, 42);
+    free(img);
+}
+
+TEST(N64GraphicsTest, Raw2CI4TwoPixels) {
+    // CI4: 4-bit indices packed, 2 pixels per byte
+    // 0xA3 = pixel0=0xA, pixel1=0x3
+    uint8_t raw[] = {0xA3};
+    ci* img = raw2ci_torch(raw, 2, 1, 4);
+    ASSERT_NE(img, nullptr);
+    EXPECT_EQ(img[0].index, 0x0A);
+    EXPECT_EQ(img[1].index, 0x03);
+    free(img);
+}
+
+TEST(N64GraphicsTest, CI8RoundTrip) {
+    uint8_t original[] = {0, 1, 2, 255};
+    ci* img = raw2ci_torch(original, 4, 1, 8);
+    ASSERT_NE(img, nullptr);
+
+    uint8_t output[4];
+    ci2raw_torch(output, img, 4, 1, 8);
+    EXPECT_EQ(output[0], 0);
+    EXPECT_EQ(output[1], 1);
+    EXPECT_EQ(output[2], 2);
+    EXPECT_EQ(output[3], 255);
+    free(img);
+}
+
+TEST(N64GraphicsTest, CI4RoundTrip) {
+    // 0x5A = pixel0=5, pixel1=A
+    uint8_t original[] = {0x5A};
+    ci* img = raw2ci_torch(original, 2, 1, 4);
+    ASSERT_NE(img, nullptr);
+
+    uint8_t output[1];
+    ci2raw_torch(output, img, 2, 1, 4);
+    EXPECT_EQ(output[0], 0x5A);
+    free(img);
+}
