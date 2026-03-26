@@ -19,7 +19,7 @@ modding/*
 
 # Coverage
 coverage-report/
-coverage.info
+*.info
 
 # Doxygen output
 docs/html
