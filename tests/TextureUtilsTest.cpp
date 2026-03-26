@@ -65,3 +65,34 @@ TEST(TextureUtilsTest, Palette4bppOddDimension) {
     // 16x16 / 2 = 128
     EXPECT_EQ(TextureUtils::CalculateTextureSize(TextureType::Palette4bpp, 16, 16), 128u);
 }
+
+// alloc_ia8_text_from_i1 tests
+// Converts 1-bit-per-pixel data (packed in big-endian uint16) to 8-bit-per-pixel
+
+TEST(TextureUtilsTest, AllocIA8AllOnes) {
+    // All bits set: 0xFFFF in big-endian → all 16 output bytes should be 0xFF
+    // BSWAP16 will swap the bytes, so we need to store in native endian
+    // such that after BSWAP16 we get 0xFFFF (which is still 0xFFFF)
+    uint16_t input = 0xFFFF;
+    auto result = TextureUtils::alloc_ia8_text_from_i1(&input, 16, 1);
+    ASSERT_EQ(result.size(), 16u);
+    for (size_t i = 0; i < 16; i++) {
+        EXPECT_EQ(result[i], 0xFF) << "byte " << i;
+    }
+}
+
+TEST(TextureUtilsTest, AllocIA8AllZeros) {
+    uint16_t input = 0x0000;
+    auto result = TextureUtils::alloc_ia8_text_from_i1(&input, 16, 1);
+    ASSERT_EQ(result.size(), 16u);
+    for (size_t i = 0; i < 16; i++) {
+        EXPECT_EQ(result[i], 0x00) << "byte " << i;
+    }
+}
+
+TEST(TextureUtilsTest, AllocIA8OutputSize) {
+    // 32x16 = 512 pixels, input needs 512/16 = 32 uint16_t values
+    std::vector<uint16_t> input(32, 0);
+    auto result = TextureUtils::alloc_ia8_text_from_i1(input.data(), 32, 16);
+    EXPECT_EQ(result.size(), 512u);
+}
