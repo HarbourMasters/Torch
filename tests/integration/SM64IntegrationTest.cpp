@@ -115,6 +115,36 @@ TEST_F(SM64USIntegrationTest, CollisionBasic) {
     EXPECT_EQ(data.size(), 0x40u + 4u + cmdCount * 2u) << "Total size mismatch";
 }
 
+TEST_F(SM64USIntegrationTest, GfxBasic) {
+    auto& data = GetAsset("test_gfx");
+    ASSERT_FALSE(data.empty()) << "GFX asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::DisplayList));
+
+    // After 0x40 header: int8 GBI version, padding to 8-byte align, then marker + commands
+    ASSERT_GE(data.size(), 0x50u) << "GFX too small";
+
+    // GBI version byte at 0x40
+    int8_t gbiVersion;
+    std::memcpy(&gbiVersion, data.data() + 0x40, 1);
+    EXPECT_GE(gbiVersion, 0) << "Invalid GBI version";
+
+    // BEEFBEEF marker at 0x4C (after 8-byte aligned padding + G_MARKER word)
+    uint32_t beefMarker;
+    std::memcpy(&beefMarker, data.data() + 0x4C, 4);
+    EXPECT_EQ(beefMarker, 0xBEEFBEEFu) << "Missing BEEFBEEF marker";
+}
+
+TEST_F(SM64USIntegrationTest, LightsBasic) {
+    auto& data = GetAsset("test_lights");
+    ASSERT_FALSE(data.empty()) << "Lights asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Lights));
+
+    // After 0x40 header: raw Lights1Raw struct (24 bytes)
+    EXPECT_EQ(data.size(), 0x40u + 24u) << "Lights size mismatch";
+}
+
 // Error handling tests: verify the pipeline doesn't crash on bad input
 static const std::string SM64_US_ERROR_CONFIG_DIR = GetTestDir() + "/sm64/us_error";
 

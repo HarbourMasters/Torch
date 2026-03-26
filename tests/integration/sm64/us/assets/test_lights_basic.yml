@@ -1,0 +1,10 @@
+:config:
+  segments:
+    - [ 0x8, 0x1F2200 ]
+  force: true
+
+test_lights:
+  type: LIGHTS
+  size: 24
+  offset: 0x4040
+  symbol: test_cannon_lid_lights
