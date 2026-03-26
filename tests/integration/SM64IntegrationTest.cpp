@@ -82,3 +82,19 @@ TEST_F(SM64USIntegrationTest, VtxBasic) {
     EXPECT_EQ(count, 4u);
     EXPECT_EQ(data.size(), 0x40u + 4u + count * 16u) << "Total size mismatch";
 }
+
+TEST_F(SM64USIntegrationTest, BlobBasic) {
+    auto& data = GetAsset("test_blob");
+    ASSERT_FALSE(data.empty()) << "Blob asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Blob));
+
+    // After 0x40 header: uint32 size, then raw data
+    ASSERT_GE(data.size(), 0x44u) << "Blob too small to contain size";
+
+    uint32_t blobSize;
+    std::memcpy(&blobSize, data.data() + 0x40, 4);
+
+    EXPECT_EQ(blobSize, 64u);
+    EXPECT_EQ(data.size(), 0x40u + 4u + blobSize) << "Total size mismatch";
+}
