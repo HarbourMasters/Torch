@@ -316,4 +316,24 @@ if(BUILD_TESTS)
     )
     target_link_libraries(torch_tests PRIVATE gtest_main yaml-cpp tinyxml2 N64Graphics BinaryTools spdlog)
     add_test(NAME torch_tests COMMAND torch_tests)
+
+    # Integration Tests
+    option(BUILD_INTEGRATION_TESTS "Build integration tests (require ROM files)" OFF)
+    if(BUILD_INTEGRATION_TESTS)
+        file(GLOB INTEGRATION_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/*.cpp)
+
+        add_executable(torch_integration_tests ${INTEGRATION_TEST_FILES} ${TEST_SRC_DIR})
+        target_include_directories(torch_integration_tests PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/lib
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration
+        )
+        target_compile_definitions(torch_integration_tests PRIVATE
+            INTEGRATION_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/integration"
+            INTEGRATION_ROM_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/roms"
+        )
+        target_link_libraries(torch_integration_tests PRIVATE gtest_main yaml-cpp tinyxml2 N64Graphics BinaryTools spdlog)
+        add_test(NAME torch_integration_tests COMMAND torch_integration_tests)
+    endif()
 endif()
