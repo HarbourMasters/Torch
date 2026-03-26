@@ -120,6 +120,12 @@ if(ENABLE_ASAN)
     add_link_options(-fsanitize=address)
 endif()
 
+option(ENABLE_COVERAGE "Enable code coverage instrumentation" OFF)
+if(ENABLE_COVERAGE)
+    add_compile_options(--coverage -fno-inline)
+    add_link_options(--coverage)
+endif()
+
 # Build
 if (USE_STANDALONE)
     add_definitions(-DSTANDALONE)

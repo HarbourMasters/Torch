@@ -12,9 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get install cmake ninja-build libbz2-dev
+        run: sudo apt-get install cmake ninja-build libbz2-dev lcov
       - name: Configure
-        run: cmake -H. -Bbuild -GNinja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_INTEGRATION_TESTS=ON
+        run: cmake -H. -Bbuild -GNinja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_INTEGRATION_TESTS=ON -DENABLE_COVERAGE=ON
       - name: Build
         run: cmake --build build -j
       - name: Unit Tests
@@ -23,3 +23,13 @@ jobs:
         # Integration tests require ROM files not present in CI.
         # Tests will self-skip via GTEST_SKIP when ROMs are not found.
         run: build/torch_integration_tests
+      - name: Collect Coverage
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch,inconsistent
+          lcov --remove coverage.info '/usr/*' '*/lib/*' '*/build/_deps/*' '*/tests/*' --output-file coverage.info --ignore-errors unused
+          genhtml coverage.info --output-directory coverage-report --ignore-errors inconsistent
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-report/

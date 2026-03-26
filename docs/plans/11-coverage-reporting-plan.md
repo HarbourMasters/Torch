@@ -45,9 +45,9 @@ Changes to the existing workflow:
 
 - name: Collect Coverage
   run: |
-    lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
-    lcov --remove coverage.info '/usr/*' '*/lib/*' '*/build/_deps/*' '*/tests/*' --output-file coverage.info
-    genhtml coverage.info --output-directory coverage-report
+    lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch,inconsistent
+    lcov --remove coverage.info '/usr/*' '*/lib/*' '*/build/_deps/*' '*/tests/*' --output-file coverage.info --ignore-errors unused
+    genhtml coverage.info --output-directory coverage-report --ignore-errors inconsistent
 
 - name: Upload Coverage Report
   uses: actions/upload-artifact@v4
@@ -58,7 +58,7 @@ Changes to the existing workflow:
 
 Key details:
 - `lcov --remove` filters out system headers, third-party libs (`lib/`, `_deps/`), and test code itself — we only want coverage of `src/`
-- `--ignore-errors mismatch` handles gcov version mismatches that sometimes occur in CI
+- `--ignore-errors mismatch,inconsistent` handles gcov/lcov version mismatches (lcov 2.0+ is stricter about gcov output consistency)
 - The report is uploaded as an artifact, downloadable from the Actions tab
 
 ### 3. Local developer workflow
@@ -74,9 +74,9 @@ cmake --build build-cov -j
 build-cov/torch_tests
 
 # Collect and view report
-lcov --capture --directory build-cov --output-file coverage.info --ignore-errors mismatch
-lcov --remove coverage.info '/usr/*' '*/lib/*' '*/build-cov/_deps/*' '*/tests/*' --output-file coverage.info
-genhtml coverage.info --output-directory coverage-report
+lcov --capture --directory build-cov --output-file coverage.info --ignore-errors mismatch,inconsistent
+lcov --remove coverage.info '/usr/*' '*/lib/*' '*/build-cov/_deps/*' '*/tests/*' --output-file coverage.info --ignore-errors unused
+genhtml coverage.info --output-directory coverage-report --ignore-errors inconsistent
 # Open coverage-report/index.html in browser
 ```
 
@@ -98,8 +98,8 @@ ls build-cov/CMakeFiles/torch_tests.dir/src/**/*.gcno  # should exist
 
 # Run tests and collect coverage
 build-cov/torch_tests
-lcov --capture --directory build-cov --output-file coverage.info --ignore-errors mismatch
-lcov --remove coverage.info '/usr/*' '*/lib/*' '*/build-cov/_deps/*' '*/tests/*' --output-file coverage.info
-genhtml coverage.info --output-directory coverage-report
+lcov --capture --directory build-cov --output-file coverage.info --ignore-errors mismatch,inconsistent
+lcov --remove coverage.info '/usr/*' '*/lib/*' '*/build-cov/_deps/*' '*/tests/*' --output-file coverage.info --ignore-errors unused
+genhtml coverage.info --output-directory coverage-report --ignore-errors inconsistent
 # Open coverage-report/index.html — verify src/ files show line coverage
 ```
