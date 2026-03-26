@@ -74,8 +74,8 @@ The on-disk format is: u32 addr + u32 size + i8 medium + i8 policy + i16 sd1 + i
 **Add BinaryReader test for limb data:**
 Each limb is 0x20 (32) bytes: u32 dList + 3×float trans + 3×int16_t rot + i16 pad + u32 sibling + u32 child. Craft a single limb buffer and verify all fields parse correctly.
 
-### Tests that STAY as struct-only (factory parse needs Companion):
-- **PM64DataTest.cpp** — PM64ShapeFactory::parse has complex ByteSwapShapeData that processes entire shape files with address translation. Not feasible without Companion.
+### Tests that STAY as struct-only:
+- **PM64DataTest.cpp** — `PM64ShapeFactory::parse` delegates to `ByteSwapShapeData`, a ~170-line monolithic format processor that recursively walks Paper Mario's shape file structure: it reads a 5-pointer header of N64 virtual addresses, computes a base address by scanning for a ROOT marker, recursively traverses model nodes/groups/display lists (converting embedded N64 addresses to file offsets), interprets GBI opcodes within display lists, infers vertex data extent from visited structure offsets, and walks sentinel-terminated name tables. The function uses ~6 global state variables and each step depends on prior steps having set up correct state. To test with a synthetic buffer you'd need to craft a complete, internally-consistent PM64 shape file (header, node tree, display lists with valid GBI opcodes, vertex data, name tables) — that's reimplementing the format, not a unit test. Integration tests with real ROMs are the right level for this.
 - **ViewportFactoryTest.cpp, LightsFactoryTest.cpp, FloatFactoryTest.cpp, VtxFactoryTest.cpp** — Already have BinaryReader parse tests. No changes needed.
 
 ---
