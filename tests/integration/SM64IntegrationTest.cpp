@@ -193,6 +193,89 @@ TEST_F(SM64USIntegrationTest, TextBasic) {
     EXPECT_EQ(data.size(), 0x40u + 4u + textSize) << "Text size mismatch";
 }
 
+TEST_F(SM64USIntegrationTest, MacroBasic) {
+    auto& data = GetAsset("test_macro");
+    ASSERT_FALSE(data.empty()) << "Macro asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::MacroObject));
+
+    // After 0x40 header: uint32 count, then count * int16
+    ASSERT_GE(data.size(), 0x44u) << "Macro too small to contain count";
+
+    uint32_t count;
+    std::memcpy(&count, data.data() + 0x40, 4);
+    EXPECT_GT(count, 0u) << "Expected at least one macro entry";
+    EXPECT_EQ(data.size(), 0x40u + 4u + count * 2u) << "Macro size mismatch";
+}
+
+TEST_F(SM64USIntegrationTest, MovtexBasic) {
+    auto& data = GetAsset("test_movtex");
+    ASSERT_FALSE(data.empty()) << "Movtex asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Movtex));
+
+    // After 0x40 header: uint32 size, then int16 data
+    ASSERT_GE(data.size(), 0x44u) << "Movtex too small to contain size";
+
+    uint32_t bufSize;
+    std::memcpy(&bufSize, data.data() + 0x40, 4);
+    EXPECT_GT(bufSize, 0u) << "Expected non-empty movtex data";
+    EXPECT_EQ(data.size(), 0x40u + 4u + bufSize * 2u) << "Movtex size mismatch";
+}
+
+TEST_F(SM64USIntegrationTest, MovtexQuadBasic) {
+    auto& data = GetAsset("test_movtex_quad");
+    ASSERT_FALSE(data.empty()) << "MovtexQuad asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::MovtexQuad));
+
+    // After 0x40 header: uint32 count, then (int16 id + uint64 hash) per quad
+    ASSERT_GE(data.size(), 0x44u) << "MovtexQuad too small to contain count";
+
+    uint32_t count;
+    std::memcpy(&count, data.data() + 0x40, 4);
+    EXPECT_EQ(count, 2u) << "Expected 2 movtex quads";
+}
+
+TEST_F(SM64USIntegrationTest, TrajectoryBasic) {
+    auto& data = GetAsset("test_trajectory");
+    ASSERT_FALSE(data.empty()) << "Trajectory asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Trajectory));
+
+    // After 0x40 header: uint32 count, then count * (4x int16 = 8 bytes)
+    ASSERT_GE(data.size(), 0x44u) << "Trajectory too small to contain count";
+
+    uint32_t count;
+    std::memcpy(&count, data.data() + 0x40, 4);
+    EXPECT_GT(count, 0u) << "Expected at least one trajectory point";
+    EXPECT_EQ(data.size(), 0x40u + 4u + count * 8u) << "Trajectory size mismatch";
+}
+
+TEST_F(SM64USIntegrationTest, PaintingBasic) {
+    auto& data = GetAsset("test_painting");
+    ASSERT_FALSE(data.empty()) << "Painting asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Painting));
+
+    // Painting is a large fixed struct - just verify it's bigger than the header
+    EXPECT_GT(data.size(), 0x40u + 20u) << "Painting too small";
+}
+
+TEST_F(SM64USIntegrationTest, PaintingMapBasic) {
+    auto& data = GetAsset("test_painting_map");
+    ASSERT_FALSE(data.empty()) << "PaintingMap asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::PaintingData));
+
+    // After 0x40 header: uint32 total elements, then mappings and groups
+    ASSERT_GE(data.size(), 0x44u) << "PaintingMap too small to contain count";
+
+    uint32_t totalElements;
+    std::memcpy(&totalElements, data.data() + 0x40, 4);
+    EXPECT_GT(totalElements, 0u) << "Expected at least one painting map element";
+}
+
 // Error handling tests: verify the pipeline doesn't crash on bad input
 static const std::string SM64_US_ERROR_CONFIG_DIR = GetTestDir() + "/sm64/us_error";
 
