@@ -1,0 +1,9 @@
+:config:
+  force: true
+
+test_dictionary:
+  type: SM64:DICTIONARY
+  keys:
+    TEXT_ZERO: 8177343
+    TEXT_COIN: 8155500
+    TEXT_STAR: 8142922

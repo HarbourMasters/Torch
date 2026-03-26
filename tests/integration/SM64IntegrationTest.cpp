@@ -276,6 +276,20 @@ TEST_F(SM64USIntegrationTest, PaintingMapBasic) {
     EXPECT_GT(totalElements, 0u) << "Expected at least one painting map element";
 }
 
+TEST_F(SM64USIntegrationTest, DictionaryBasic) {
+    auto& data = GetAsset("test_dictionary");
+    ASSERT_FALSE(data.empty()) << "Dictionary asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Dictionary));
+
+    // After 0x40 header: uint32 dict size, then key-value pairs
+    ASSERT_GE(data.size(), 0x44u) << "Dictionary too small to contain size";
+
+    uint32_t dictSize;
+    std::memcpy(&dictSize, data.data() + 0x40, 4);
+    EXPECT_EQ(dictSize, 3u) << "Expected 3 dictionary entries";
+}
+
 // Error handling tests: verify the pipeline doesn't crash on bad input
 static const std::string SM64_US_ERROR_CONFIG_DIR = GetTestDir() + "/sm64/us_error";
 
