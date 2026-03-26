@@ -72,3 +72,89 @@ TEST(Vec3DTest, Vec4sConstruction) {
     EXPECT_EQ(v.z, 30);
     EXPECT_EQ(v.w, 40);
 }
+
+// Precision tests
+TEST(Vec3DTest, Vec3fPrecisionWholeNumbers) {
+    Vec3f v(1.0f, 2.0f, 3.0f);
+    EXPECT_EQ(v.precision(), 0);
+}
+
+TEST(Vec3DTest, Vec3fPrecisionOneDecimal) {
+    Vec3f v(1.5f, 2.0f, 3.0f);
+    EXPECT_EQ(v.precision(), 1);
+}
+
+TEST(Vec3DTest, Vec3fPrecisionMaxOfComponents) {
+    // precision returns the max precision across all components
+    Vec3f v(1.0f, 2.5f, 3.25f);
+    EXPECT_EQ(v.precision(), 2);
+}
+
+// Width tests
+TEST(Vec3DTest, Vec3fWidthWholeNumbers) {
+    // width = max_magnitude + 1 + precision
+    // (1.0, 2.0, 3.0): max magnitude is 1 (for 3.0), precision is 0
+    // width = 1 + 1 + 0 = 2
+    Vec3f v(1.0f, 2.0f, 3.0f);
+    EXPECT_EQ(v.width(), 2);
+}
+
+TEST(Vec3DTest, Vec3sWidth) {
+    // width = max_magnitude (no precision for integers)
+    // (100, -200, 300): magnitudes are 3, 4 (neg adds 1), 3 → max = 4
+    Vec3s v(100, -200, 300);
+    EXPECT_EQ(v.width(), 4);
+}
+
+TEST(Vec3DTest, Vec3sWidthZeros) {
+    Vec3s v(0, 0, 0);
+    EXPECT_EQ(v.width(), 1);
+}
+
+TEST(Vec3DTest, Vec4sWidth) {
+    Vec4s v(1, 10, 100, 1000);
+    // magnitudes: 1, 2, 3, 4 → max = 4
+    EXPECT_EQ(v.width(), 4);
+}
+
+// Stream output tests
+TEST(Vec3DTest, Vec3fStreamOutput) {
+    Vec3f v(1.0f, 2.0f, 3.0f);
+    std::ostringstream oss;
+    oss << v;
+    std::string result = oss.str();
+    EXPECT_NE(result.find("1"), std::string::npos);
+    EXPECT_NE(result.find("2"), std::string::npos);
+    EXPECT_NE(result.find("3"), std::string::npos);
+    EXPECT_NE(result.find("{"), std::string::npos);
+    EXPECT_NE(result.find("}"), std::string::npos);
+}
+
+TEST(Vec3DTest, Vec3sStreamOutput) {
+    Vec3s v(10, 20, 30);
+    std::ostringstream oss;
+    oss << v;
+    std::string result = oss.str();
+    EXPECT_NE(result.find("10"), std::string::npos);
+    EXPECT_NE(result.find("20"), std::string::npos);
+    EXPECT_NE(result.find("30"), std::string::npos);
+}
+
+TEST(Vec3DTest, Vec2fStreamOutput) {
+    Vec2f v(1.5f, 2.5f);
+    std::ostringstream oss;
+    oss << v;
+    std::string result = oss.str();
+    EXPECT_NE(result.find("1.5"), std::string::npos);
+    EXPECT_NE(result.find("2.5"), std::string::npos);
+}
+
+TEST(Vec3DTest, Vec4fStreamOutput) {
+    Vec4f v(1.0f, 2.0f, 3.0f, 4.0f);
+    std::ostringstream oss;
+    oss << v;
+    std::string result = oss.str();
+    // Should contain all 4 values and braces
+    EXPECT_NE(result.find("{"), std::string::npos);
+    EXPECT_NE(result.find("}"), std::string::npos);
+}
