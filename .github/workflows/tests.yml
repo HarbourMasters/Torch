@@ -1,0 +1,23 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get install cmake ninja-build libbz2-dev
+      - name: Configure
+        run: cmake -H. -Bbuild -GNinja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_INTEGRATION_TESTS=ON
+      - name: Build
+        run: cmake --build build -j
+      - name: Unit Tests
+        run: build/torch_tests
+      - name: Integration Tests
+        run: build/torch_integration_tests
