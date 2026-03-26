@@ -145,6 +145,54 @@ TEST_F(SM64USIntegrationTest, LightsBasic) {
     EXPECT_EQ(data.size(), 0x40u + 24u) << "Lights size mismatch";
 }
 
+TEST_F(SM64USIntegrationTest, AnimBasic) {
+    auto& data = GetAsset("test_anim");
+    ASSERT_FALSE(data.empty()) << "Anim asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Anim));
+
+    // After 0x40 header: 6x int16 (12 bytes) + uint64 length (8 bytes)
+    // + uint32 indices count + indices + uint32 entries count + entries
+    ASSERT_GE(data.size(), 0x40u + 20u + 4u) << "Anim too small";
+
+    // Read indices count at offset 0x54 (0x40 + 12 + 8)
+    uint32_t indicesCount;
+    std::memcpy(&indicesCount, data.data() + 0x54, 4);
+    EXPECT_GT(indicesCount, 0u) << "Expected at least one animation index";
+}
+
+TEST_F(SM64USIntegrationTest, DialogBasic) {
+    auto& data = GetAsset("test_dialog");
+    ASSERT_FALSE(data.empty()) << "Dialog asset not found in output";
+
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::SDialog));
+
+    // After 0x40 header: uint32 unused + int8 linesPerBox + int16 leftOffset + int16 width
+    // + uint32 text size + text data
+    ASSERT_GE(data.size(), 0x40u + 4u + 1u + 2u + 2u + 4u) << "Dialog too small";
+
+    // Read text size at offset 0x49 (0x40 + 4 + 1 + 2 + 2)
+    uint32_t textSize;
+    std::memcpy(&textSize, data.data() + 0x49, 4);
+    EXPECT_GT(textSize, 0u) << "Expected non-empty dialog text";
+    EXPECT_EQ(data.size(), 0x40u + 4u + 1u + 2u + 2u + 4u + textSize) << "Dialog size mismatch";
+}
+
+TEST_F(SM64USIntegrationTest, TextBasic) {
+    auto& data = GetAsset("test_text");
+    ASSERT_FALSE(data.empty()) << "Text asset not found in output";
+
+    // SM64:TEXT exports as Blob type
+    ValidateHeader(data, static_cast<uint32_t>(Torch::ResourceType::Blob));
+
+    ASSERT_GE(data.size(), 0x44u) << "Text too small to contain size";
+
+    uint32_t textSize;
+    std::memcpy(&textSize, data.data() + 0x40, 4);
+    EXPECT_GT(textSize, 0u) << "Expected non-empty text data";
+    EXPECT_EQ(data.size(), 0x40u + 4u + textSize) << "Text size mismatch";
+}
+
 // Error handling tests: verify the pipeline doesn't crash on bad input
 static const std::string SM64_US_ERROR_CONFIG_DIR = GetTestDir() + "/sm64/us_error";
 
