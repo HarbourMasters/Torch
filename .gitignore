@@ -17,6 +17,10 @@ tools/
 modding/*
 .cache
 
+# Coverage
+coverage-report/
+coverage.info
+
 # Doxygen output
 docs/html
 docs/latex
