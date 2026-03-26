@@ -20,4 +20,6 @@ jobs:
       - name: Unit Tests
         run: build/torch_tests
       - name: Integration Tests
+        # Integration tests require ROM files not present in CI.
+        # Tests will self-skip via GTEST_SKIP when ROMs are not found.
         run: build/torch_integration_tests

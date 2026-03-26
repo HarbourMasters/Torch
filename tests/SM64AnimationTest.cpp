@@ -2,9 +2,6 @@
 #include "factories/sm64/AnimationFactory.h"
 #include <vector>
 
-// ANIMINDEX_COUNT macro equivalent
-#define ANIMINDEX_COUNT(boneCount) (((boneCount) + 1) * 6)
-
 TEST(SM64AnimationTest, AnimationDataConstruction) {
     std::vector<uint16_t> indices = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     std::vector<int16_t> entries = {100, 200, 300, -100, -200, -300};

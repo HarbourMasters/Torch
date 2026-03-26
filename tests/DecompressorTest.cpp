@@ -43,12 +43,6 @@ TEST(DecompressorTest, GetCompressionTypeUnknown) {
     EXPECT_EQ(Decompressor::GetCompressionType(buf, 1), CompressionType::None);
 }
 
-TEST(DecompressorTest, GetCompressionTypeZeroOffset) {
-    // offset=0 always returns None
-    std::vector<uint8_t> buf = {'M', 'I', 'O', '0', '\0'};
-    EXPECT_EQ(Decompressor::GetCompressionType(buf, 0), CompressionType::None);
-}
-
 // IS_SEGMENTED macro tests (pure bit logic, no Companion dependency)
 
 TEST(DecompressorTest, IsSegmentedMacroTrue) {

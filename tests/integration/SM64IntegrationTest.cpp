@@ -30,8 +30,9 @@ protected:
     }
 
     const std::vector<char>& GetAsset(const std::string& name) {
+        const std::string suffix = "/" + name;
         for (auto& [key, value] : sAssets) {
-            if (key.find(name) != std::string::npos) {
+            if (key == name || key.ends_with(suffix)) {
                 return value;
             }
         }

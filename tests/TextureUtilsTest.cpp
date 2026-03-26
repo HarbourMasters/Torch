@@ -32,6 +32,9 @@ TEST(TextureUtilsTest, GrayscaleAlpha8bpp) {
 }
 
 TEST(TextureUtilsTest, GrayscaleAlpha1bpp) {
+    // Returns decoded/output buffer size (1 byte per pixel), not raw/encoded size.
+    // alloc_ia8_text_from_i1 expands 1-bit input to 8-bit output, so the texture
+    // in memory is width*height bytes. See TODO in TextureUtils.cpp.
     EXPECT_EQ(TextureUtils::CalculateTextureSize(TextureType::GrayscaleAlpha1bpp, 32, 32), 1024u);
 }
 
@@ -87,6 +90,22 @@ TEST(TextureUtilsTest, AllocIA8AllZeros) {
     ASSERT_EQ(result.size(), 16u);
     for (size_t i = 0; i < 16; i++) {
         EXPECT_EQ(result[i], 0x00) << "byte " << i;
+    }
+}
+
+TEST(TextureUtilsTest, AllocIA8NonPalindrome) {
+    // 0x8000 is NOT a byte-palindrome, so BSWAP16 changes it to 0x0080.
+    // Bit pattern of 0x0080: only bit 7 is set.
+    // bitMask iterates from 0x8000 down, so bit 7 is hit at output index 8.
+    uint16_t input = 0x8000;
+    auto result = TextureUtils::alloc_ia8_text_from_i1(&input, 16, 1);
+    ASSERT_EQ(result.size(), 16u);
+    for (size_t i = 0; i < 16; i++) {
+        if (i == 8) {
+            EXPECT_EQ(result[i], 0xFF) << "byte " << i << " should be set";
+        } else {
+            EXPECT_EQ(result[i], 0x00) << "byte " << i << " should be clear";
+        }
     }
 }
 

@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "factories/sf64/SkeletonFactory.h"
 #include "factories/sf64/MessageFactory.h"
+#include "lib/binarytools/BinaryReader.h"
+#include "lib/binarytools/endianness.h"
 #include <vector>
 
 // SF64 LimbData
@@ -70,6 +72,73 @@ TEST(SF64DataTest, MessageFactoryExporters) {
     EXPECT_TRUE(factory.GetExporter(ExportType::Binary).has_value());
     EXPECT_TRUE(factory.GetExporter(ExportType::Modding).has_value());
     EXPECT_TRUE(factory.GetExporter(ExportType::XML).has_value());
+}
+
+// BinaryReader parse test — SF64 limb data format (0x20 = 32 bytes per limb)
+// u32 dList + 3×float trans + 3×int16 rot + i16 pad + u32 sibling + u32 child
+TEST(SF64DataTest, ManualLimbParse) {
+    std::vector<uint8_t> buf = {
+        0x06, 0x00, 0x20, 0x00,  // dList = 0x06002000
+        0x3F, 0x80, 0x00, 0x00,  // trans.x = 1.0f
+        0x40, 0x00, 0x00, 0x00,  // trans.y = 2.0f
+        0x40, 0x40, 0x00, 0x00,  // trans.z = 3.0f
+        0x00, 0x0A,              // rot.x = 10
+        0x00, 0x14,              // rot.y = 20
+        0x00, 0x1E,              // rot.z = 30
+        0x00, 0x00,              // pad (rw)
+        0x06, 0x00, 0x30, 0x00,  // sibling = 0x06003000
+        0x06, 0x00, 0x40, 0x00,  // child = 0x06004000
+    };
+
+    LUS::BinaryReader reader(buf.data(), buf.size());
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    auto dList = reader.ReadUInt32();
+    auto tx = reader.ReadFloat(); auto ty = reader.ReadFloat(); auto tz = reader.ReadFloat();
+    Vec3f trans(tx, ty, tz);
+    auto rx = reader.ReadInt16(); auto ry = reader.ReadInt16(); auto rz = reader.ReadInt16();
+    Vec3s rot(rx, ry, rz);
+    reader.ReadInt16(); // pad
+    auto sibling = reader.ReadUInt32();
+    auto child = reader.ReadUInt32();
+
+    SF64::LimbData limb(0x06001000, dList, trans, rot, sibling, child, 0);
+
+    EXPECT_EQ(limb.mDList, 0x06002000u);
+    EXPECT_FLOAT_EQ(limb.mTrans.x, 1.0f);
+    EXPECT_FLOAT_EQ(limb.mTrans.y, 2.0f);
+    EXPECT_FLOAT_EQ(limb.mTrans.z, 3.0f);
+    EXPECT_EQ(limb.mRot.x, 10);
+    EXPECT_EQ(limb.mRot.y, 20);
+    EXPECT_EQ(limb.mRot.z, 30);
+    EXPECT_EQ(limb.mSibling, 0x06003000u);
+    EXPECT_EQ(limb.mChild, 0x06004000u);
+}
+
+// BinaryReader parse test — SF64 message format (uint16_t codes until END_CODE=0)
+TEST(SF64DataTest, ManualMessageParse) {
+    std::vector<uint8_t> buf = {
+        0x00, 0x20,  // code 0x20 ('A')
+        0x00, 0x21,  // code 0x21 ('B')
+        0x00, 0x01,  // NEWLINE_CODE
+        0x00, 0x00,  // END_CODE
+    };
+
+    LUS::BinaryReader reader(buf.data(), buf.size());
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    std::vector<uint16_t> message;
+    uint16_t c;
+    do {
+        c = reader.ReadUInt16();
+        message.push_back(c);
+    } while (c != 0x0000);
+
+    ASSERT_EQ(message.size(), 4u);
+    EXPECT_EQ(message[0], 0x20);   // 'A'
+    EXPECT_EQ(message[1], 0x21);   // 'B'
+    EXPECT_EQ(message[2], 0x01);   // NEWLINE
+    EXPECT_EQ(message[3], 0x00);   // END
 }
 
 TEST(SF64DataTest, MessageFactorySupportsModding) {

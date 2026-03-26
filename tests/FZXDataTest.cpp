@@ -3,6 +3,8 @@
 #include "factories/fzerox/EADLimbFactory.h"
 #include "factories/fzerox/SoundFontFactory.h"
 #include "factories/fzerox/SequenceFactory.h"
+#include "lib/binarytools/BinaryReader.h"
+#include "lib/binarytools/endianness.h"
 #include <vector>
 
 // EADAnimationData
@@ -158,6 +160,104 @@ TEST(FZXDataTest, SequenceFactoryExporters) {
     EXPECT_TRUE(factory.GetExporter(ExportType::Header).has_value());
     EXPECT_TRUE(factory.GetExporter(ExportType::Binary).has_value());
     EXPECT_FALSE(factory.GetExporter(ExportType::Modding).has_value());
+}
+
+// BinaryReader parse test — EADAnimation header format
+TEST(FZXDataTest, ManualEADAnimationHeaderParse) {
+    // 28 bytes: int16_t frameCount + int16_t limbCount + 6×uint32_t pointers
+    std::vector<uint8_t> buf = {
+        0x00, 0x1E,              // frameCount = 30
+        0x00, 0x0A,              // limbCount = 10
+        0x00, 0x00, 0x10, 0x00,  // scaleData = 0x1000
+        0x00, 0x00, 0x20, 0x00,  // scaleInfo = 0x2000
+        0x00, 0x00, 0x30, 0x00,  // rotationData = 0x3000
+        0x00, 0x00, 0x40, 0x00,  // rotationInfo = 0x4000
+        0x00, 0x00, 0x50, 0x00,  // positionData = 0x5000
+        0x00, 0x00, 0x60, 0x00,  // positionInfo = 0x6000
+    };
+
+    LUS::BinaryReader reader(buf.data(), buf.size());
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    auto frameCount = reader.ReadInt16();
+    auto limbCount = reader.ReadInt16();
+    auto scaleData = reader.ReadUInt32();
+    auto scaleInfo = reader.ReadUInt32();
+    auto rotationData = reader.ReadUInt32();
+    auto rotationInfo = reader.ReadUInt32();
+    auto positionData = reader.ReadUInt32();
+    auto positionInfo = reader.ReadUInt32();
+
+    FZX::EADAnimationData anim(frameCount, limbCount, scaleData, scaleInfo,
+                                rotationData, rotationInfo, positionData, positionInfo);
+
+    EXPECT_EQ(anim.mFrameCount, 30);
+    EXPECT_EQ(anim.mLimbCount, 10);
+    EXPECT_EQ(anim.mScaleData, 0x1000u);
+    EXPECT_EQ(anim.mScaleInfo, 0x2000u);
+    EXPECT_EQ(anim.mRotationData, 0x3000u);
+    EXPECT_EQ(anim.mRotationInfo, 0x4000u);
+    EXPECT_EQ(anim.mPositionData, 0x5000u);
+    EXPECT_EQ(anim.mPositionInfo, 0x6000u);
+}
+
+// BinaryReader parse test — EADLimb format
+TEST(FZXDataTest, ManualEADLimbParse) {
+    // 52 bytes: u32 dl + 3×float scale + 3×float pos + 3×int16 rot + i16 pad
+    //           + u32 next + u32 child + u32 assocLimb + u32 assocDL + i16 limbId
+    std::vector<uint8_t> buf = {
+        0x06, 0x00, 0x10, 0x00,              // dl = 0x06001000
+        0x3F, 0x80, 0x00, 0x00,              // scale.x = 1.0f
+        0x40, 0x00, 0x00, 0x00,              // scale.y = 2.0f
+        0x40, 0x40, 0x00, 0x00,              // scale.z = 3.0f
+        0x41, 0x20, 0x00, 0x00,              // pos.x = 10.0f
+        0x41, 0xA0, 0x00, 0x00,              // pos.y = 20.0f
+        0x41, 0xF0, 0x00, 0x00,              // pos.z = 30.0f
+        0x00, 0x64,                          // rot.x = 100
+        0x00, 0xC8,                          // rot.y = 200
+        0x01, 0x2C,                          // rot.z = 300
+        0x00, 0x00,                          // pad
+        0x06, 0x00, 0x20, 0x00,              // nextLimb = 0x06002000
+        0x06, 0x00, 0x30, 0x00,              // childLimb = 0x06003000
+        0x06, 0x00, 0x40, 0x00,              // associatedLimb = 0x06004000
+        0x06, 0x00, 0x50, 0x00,              // associatedLimbDL = 0x06005000
+        0x00, 0x05,                          // limbId = 5
+    };
+
+    LUS::BinaryReader reader(buf.data(), buf.size());
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    auto dl = reader.ReadUInt32();
+    auto sx = reader.ReadFloat(); auto sy = reader.ReadFloat(); auto sz = reader.ReadFloat();
+    Vec3f scale(sx, sy, sz);
+    auto px = reader.ReadFloat(); auto py = reader.ReadFloat(); auto pz = reader.ReadFloat();
+    Vec3f pos(px, py, pz);
+    auto rx = reader.ReadInt16(); auto ry = reader.ReadInt16(); auto rz = reader.ReadInt16();
+    Vec3s rot(rx, ry, rz);
+    reader.ReadInt16(); // pad
+    auto nextLimb = reader.ReadUInt32();
+    auto childLimb = reader.ReadUInt32();
+    auto assocLimb = reader.ReadUInt32();
+    auto assocDL = reader.ReadUInt32();
+    auto limbId = reader.ReadInt16();
+
+    FZX::EADLimbData limb(dl, scale, pos, rot, nextLimb, childLimb, assocLimb, assocDL, limbId);
+
+    EXPECT_EQ(limb.mDl, 0x06001000u);
+    EXPECT_FLOAT_EQ(limb.mScale.x, 1.0f);
+    EXPECT_FLOAT_EQ(limb.mScale.y, 2.0f);
+    EXPECT_FLOAT_EQ(limb.mScale.z, 3.0f);
+    EXPECT_FLOAT_EQ(limb.mPos.x, 10.0f);
+    EXPECT_FLOAT_EQ(limb.mPos.y, 20.0f);
+    EXPECT_FLOAT_EQ(limb.mPos.z, 30.0f);
+    EXPECT_EQ(limb.mRot.x, 100);
+    EXPECT_EQ(limb.mRot.y, 200);
+    EXPECT_EQ(limb.mRot.z, 300);
+    EXPECT_EQ(limb.mNextLimb, 0x06002000u);
+    EXPECT_EQ(limb.mChildLimb, 0x06003000u);
+    EXPECT_EQ(limb.mAssociatedLimb, 0x06004000u);
+    EXPECT_EQ(limb.mAssociatedLimbDL, 0x06005000u);
+    EXPECT_EQ(limb.mLimbId, 5);
 }
 
 // DataType enum coverage

@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "factories/sm64/BehaviorScriptFactory.h"
+#include "lib/binarytools/endianness.h"
 #include <vector>
+#include <cstring>
 
 using namespace SM64;
 
@@ -60,4 +62,47 @@ TEST(SM64BehaviorScriptTest, BehaviorArgumentVariantTypes) {
     EXPECT_EQ(std::get<int32_t>(s32_arg), -100000);
     EXPECT_FLOAT_EQ(std::get<float>(f32_arg), 3.14f);
     EXPECT_EQ(std::get<uint64_t>(ptr_arg), 0x8033B000u);
+}
+
+// Byte-level command parsing tests — verify binary format using the same
+// BSWAP logic that cur_behavior_cmd_* macros use in BehaviorScriptFactory::parse
+
+TEST(SM64BehaviorScriptTest, ByteLevelBeginCommand) {
+    // BEGIN (opcode 0x00): 4 bytes
+    // [0x00, objList, 0x00, 0x00]
+    uint8_t cmd[] = { 0x00, 0x31, 0x00, 0x00 };
+
+    auto opcode = static_cast<BehaviorOpcode>(cmd[0]);
+    EXPECT_EQ(opcode, BehaviorOpcode::BEGIN);
+
+    // cur_behavior_cmd_u8(0x01) reads object list
+    uint8_t objList = cmd[0x01];
+    EXPECT_EQ(objList, 0x31);
+}
+
+TEST(SM64BehaviorScriptTest, ByteLevelSetIntCommand) {
+    // SET_INT (BehaviorOpcode::SET_INT = 16 = 0x10): 4 bytes
+    // [0x10, field, value_hi, value_lo]
+    uint8_t cmd[] = { 0x10, 0x1C, 0x00, 0x64 };
+
+    auto opcode = static_cast<BehaviorOpcode>(cmd[0]);
+    EXPECT_EQ(opcode, BehaviorOpcode::SET_INT);
+
+    uint8_t field = cmd[0x01];
+    int16_t value = (int16_t)BSWAP16(*(int16_t*)&cmd[0x02]);
+    EXPECT_EQ(field, 0x1C);
+    EXPECT_EQ(value, 100);
+}
+
+TEST(SM64BehaviorScriptTest, ByteLevelCallCommand) {
+    // CALL (opcode 0x02): 8 bytes
+    // [0x02, 0x00, 0x00, 0x00, addr3, addr2, addr1, addr0]
+    uint8_t cmd[] = { 0x02, 0x00, 0x00, 0x00, 0x80, 0x33, 0xB0, 0x00 };
+
+    auto opcode = static_cast<BehaviorOpcode>(cmd[0]);
+    EXPECT_EQ(opcode, BehaviorOpcode::CALL);
+
+    // cur_behavior_cmd_u32(0x04)
+    uint32_t addr = BSWAP32(*(uint32_t*)&cmd[0x04]);
+    EXPECT_EQ(addr, 0x8033B000u);
 }

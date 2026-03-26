@@ -2,6 +2,8 @@
 #include "factories/naudio/v1/AudioTableFactory.h"
 #include "factories/naudio/v1/EnvelopeFactory.h"
 #include "factories/naudio/v1/AudioContext.h"
+#include "lib/binarytools/BinaryReader.h"
+#include "lib/binarytools/endianness.h"
 #include <vector>
 
 // AudioTableEntry
@@ -63,6 +65,67 @@ TEST(NAudioDataTest, TunedSampleConstruction) {
     EXPECT_EQ(ts.sample, 0x1234u);
     EXPECT_EQ(ts.sampleBankId, 0u);
     EXPECT_FLOAT_EQ(ts.tuning, 1.0f);
+}
+
+// BinaryReader parse test — AudioTable on-disk format
+// Header: i16 count + i16 medium + u32 addr + 8 pad bytes = 16 bytes
+// Per-entry: u32 addr + u32 size + i8 medium + i8 policy + i16 sd1 + i16 sd2 + i16 sd3 = 16 bytes
+TEST(NAudioDataTest, ManualAudioTableParse) {
+    std::vector<uint8_t> buf = {
+        // Header
+        0x00, 0x02,              // count = 2
+        0x00, 0x03,              // medium = 3
+        0x00, 0x00, 0x50, 0x00,  // addr = 0x5000
+        0x00, 0x00, 0x00, 0x00,  // pad
+        0x00, 0x00, 0x00, 0x00,  // pad
+        // Entry 0: addr=0x1000, size=0x100, medium=0, policy=0, sd1=0, sd2=0, sd3=0
+        0x00, 0x00, 0x10, 0x00,
+        0x00, 0x00, 0x01, 0x00,
+        0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        // Entry 1: addr=0x2000, size=0x200, medium=2, policy=1, sd1=10, sd2=20, sd3=30
+        0x00, 0x00, 0x20, 0x00,
+        0x00, 0x00, 0x02, 0x00,
+        0x02, 0x01,
+        0x00, 0x0A, 0x00, 0x14, 0x00, 0x1E,
+    };
+
+    LUS::BinaryReader reader(buf.data(), buf.size());
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    // Read header
+    auto count = reader.ReadInt16();
+    auto medium = reader.ReadInt16();
+    auto addr = reader.ReadUInt32();
+    reader.Seek(16, LUS::SeekOffsetType::Start); // skip pad to offset 16
+
+    EXPECT_EQ(count, 2);
+    EXPECT_EQ(medium, 3);
+    EXPECT_EQ(addr, 0x5000u);
+
+    // Read entries
+    std::vector<AudioTableEntry> entries;
+    for (int i = 0; i < count; i++) {
+        auto eAddr = reader.ReadUInt32();
+        auto eSize = reader.ReadUInt32();
+        auto eMedium = reader.ReadInt8();
+        auto ePolicy = reader.ReadInt8();
+        auto eSd1 = reader.ReadInt16();
+        auto eSd2 = reader.ReadInt16();
+        auto eSd3 = reader.ReadInt16();
+        entries.push_back(AudioTableEntry{ eAddr, eSize, eMedium, ePolicy, eSd1, eSd2, eSd3, 0 });
+    }
+
+    ASSERT_EQ(entries.size(), 2u);
+    EXPECT_EQ(entries[0].addr, 0x1000u);
+    EXPECT_EQ(entries[0].size, 0x100u);
+    EXPECT_EQ(entries[1].addr, 0x2000u);
+    EXPECT_EQ(entries[1].size, 0x200u);
+    EXPECT_EQ(entries[1].medium, 2);
+    EXPECT_EQ(entries[1].cachePolicy, 1);
+    EXPECT_EQ(entries[1].shortData1, 10);
+    EXPECT_EQ(entries[1].shortData2, 20);
+    EXPECT_EQ(entries[1].shortData3, 30);
 }
 
 // NAudioDrivers enum
