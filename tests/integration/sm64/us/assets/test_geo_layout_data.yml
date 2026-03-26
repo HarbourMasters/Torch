@@ -1,0 +1,35 @@
+:config:
+  segments:
+    - [ 0x3, 0x201410 ]
+  force: true
+
+mist_vtx_0:
+  type: VTX
+  count: 4
+  offset: 0x0
+  symbol: test_mist_vtx_0
+
+mist_vtx_40:
+  type: VTX
+  count: 4
+  offset: 0x40
+  symbol: test_mist_vtx_40
+
+mist_texture:
+  type: TEXTURE
+  size: 2048
+  width: 32
+  height: 32
+  offset: 0x80
+  format: IA16
+  symbol: test_mist_texture
+
+mist_dl_880:
+  type: GFX
+  offset: 0x880
+  symbol: test_mist_dl_880
+
+mist_dl_920:
+  type: GFX
+  offset: 0x920
+  symbol: test_mist_dl_920
