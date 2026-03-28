@@ -82,7 +82,6 @@
 #include "factories/pm64/StoryImageFactory.h"
 #include "factories/pm64/ImgFXAnimFactory.h"
 #include "factories/pm64/TitleDataFactory.h"
-#include "factories/pm64/EntityGfxFactory.h"
 #endif
 
 #ifdef FZERO_SUPPORT
@@ -209,7 +208,6 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
     this->RegisterFactory("PM64:STORY_IMAGE", std::make_shared<PM64StoryImageFactory>());
     this->RegisterFactory("PM64:IMGFX_ANIM", std::make_shared<PM64ImgFXAnimFactory>());
     this->RegisterFactory("PM64:TITLE_DATA", std::make_shared<PM64TitleDataFactory>());
-    this->RegisterFactory("PM64:ENTITY_GFX", std::make_shared<PM64EntityGfxFactory>());
 #endif
 
 #ifdef SF64_SUPPORT

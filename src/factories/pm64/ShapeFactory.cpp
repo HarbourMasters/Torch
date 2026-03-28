@@ -139,19 +139,20 @@ static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
         }
 
         // Handle G_VTX - convert vertex address to vertex-table-relative offset
-        // With GBI_FLOATS, Vtx is 24 bytes (not 16), so convert byte offset accordingly
         if (opcode == F3DEX2_G_VTX) {
             // w1 contains the N64 vertex address - convert to file offset first
             uint32_t vtxFileOffset = N64AddrToOffset(w1);
-            // Then convert to vertex-table-relative offset with 16->24 byte stride conversion
-            uint32_t vtxByteOffset;
+            // Then convert to vertex-table-relative byte offset (stride is 16, same as sizeof(Vtx))
             if (gVertexTableOffset > 0 && vtxFileOffset >= gVertexTableOffset) {
-                vtxByteOffset = vtxFileOffset - gVertexTableOffset;
+                w1 = vtxFileOffset - gVertexTableOffset;
             } else {
-                vtxByteOffset = vtxFileOffset;
+                w1 = vtxFileOffset;
             }
-            uint32_t vtxIndex = vtxByteOffset / 16;
-            w1 = vtxIndex * 24; // sizeof(Vtx) with GBI_FLOATS = 24
+            if (Companion::Instance->GetConfig().gbi.useFloats) {
+                // N64 Vtx is 16 bytes, float Vtx is 24 bytes — rescale the byte offset
+                uint32_t vtxIndex = w1 / 16;
+                w1 = vtxIndex * 24;
+            }
         }
 
         // Handle G_SETTIMG - convert texture address to file offset
@@ -264,27 +265,27 @@ static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size) 
     group[3] = static_cast<uint32_t>(numChildren);
     group[4] = childList;
 
-    // Convert N64 fixed-point matrix (s15.16 interleaved) to float[4][4]
-    // Multiple groups can share the same matrix — only convert once
+    // Byte-swap transform matrix — multiple groups can share the same matrix, only convert once
     if (IsValidOffset(transformMatrix, size - 0x40) && !gVisitedMatrices.count(transformMatrix)) {
         gVisitedMatrices.insert(transformMatrix);
         uint32_t* raw = reinterpret_cast<uint32_t*>(data + transformMatrix);
-        // First byte-swap all 16 words from BE
         for (int i = 0; i < 16; i++) {
             raw[i] = BSWAP32(raw[i]);
         }
-        // Decode interleaved integer/fraction parts to float
-        int32_t* addr = reinterpret_cast<int32_t*>(raw);
-        float matrix[4][4];
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 2; j++) {
-                int32_t int_part = addr[i * 2 + j];
-                uint32_t frac_part = addr[8 + i * 2 + j];
-                matrix[i][j * 2] = (int32_t)((int_part & 0xFFFF0000) | (frac_part >> 16)) / 65536.0f;
-                matrix[i][j * 2 + 1] = (int32_t)((int_part << 16) | (frac_part & 0xFFFF)) / 65536.0f;
+        if (Companion::Instance->GetConfig().gbi.useFloats) {
+            // Decode interleaved integer/fraction parts to float[4][4]
+            int32_t* addr = reinterpret_cast<int32_t*>(raw);
+            float matrix[4][4];
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 2; j++) {
+                    int32_t int_part = addr[i * 2 + j];
+                    uint32_t frac_part = addr[8 + i * 2 + j];
+                    matrix[i][j * 2] = (int32_t)((int_part & 0xFFFF0000) | (frac_part >> 16)) / 65536.0f;
+                    matrix[i][j * 2 + 1] = (int32_t)((int_part << 16) | (frac_part & 0xFFFF)) / 65536.0f;
+                }
             }
+            memcpy(raw, matrix, sizeof(matrix));
         }
-        memcpy(raw, matrix, sizeof(matrix));
     }
 
     // Byte-swap child list and recurse into child nodes
