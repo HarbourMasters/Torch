@@ -112,12 +112,29 @@ ExportResult MtxBinaryExporter::Export(std::ostream& write, std::shared_ptr<IPar
 
     WriteHeader(writer, Torch::ResourceType::Matrix, 0);
 
-    for (size_t i = 0; i < 4; i++) {
-        for (size_t j = 0; j < 4; j++) {
-            if (floats) {
+    if(floats){
+        for(size_t i = 0; i < 4; i++){
+            for(size_t j = 0; j < 4; j++){
                 writer.Write(mtx->mMtxs[0].mtx[i * 4 + j]);
-            } else {
-                writer.Write(mtx->mMtxs[0].mt.mint[i][j]);
+            }
+        }
+    } else {
+        // Write int32 words with explicit uint16 packing to avoid
+        // endian-dependent int32/uint16 union overlay mismatch on LE.
+        // N64 format: each int32 packs two adjacent columns as (col_even << 16) | col_odd.
+        auto& mt = mtx->mMtxs[0].mt;
+        // First 8 words: integer parts (4 rows × 2 column-pairs)
+        for(size_t i = 0; i < 4; i++){
+            for(size_t j = 0; j < 2; j++){
+                int32_t packed = ((int32_t)mt.intPart[i][j * 2] << 16) | mt.intPart[i][j * 2 + 1];
+                writer.Write(packed);
+            }
+        }
+        // Next 8 words: fractional parts (4 rows × 2 column-pairs)
+        for(size_t i = 0; i < 4; i++){
+            for(size_t j = 0; j < 2; j++){
+                int32_t packed = ((int32_t)mt.fracPart[i][j * 2] << 16) | mt.fracPart[i][j * 2 + 1];
+                writer.Write(packed);
             }
         }
     }
