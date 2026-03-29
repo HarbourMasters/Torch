@@ -11,6 +11,15 @@
 
 namespace OoT {
 
+// Cutscene field packing macros (matching OTRExporter's command_macros_base.h)
+static inline uint32_t CS_CMD_HH(uint16_t a, uint16_t b) { return ((uint32_t)b << 16) | (uint32_t)a; }
+static inline uint32_t CS_CMD_BBH(int8_t a, int8_t b, int16_t c) {
+    return ((uint32_t)(uint8_t)a) | ((uint32_t)(uint8_t)b << 8) | ((uint32_t)(uint16_t)c << 16);
+}
+static inline uint32_t CS_CMD_HBB(uint16_t a, uint8_t b, uint8_t c) {
+    return (uint32_t)a | ((uint32_t)b << 16) | ((uint32_t)c << 24);
+}
+
 // Scene command IDs (matching OoT's RoomCommand enum)
 enum SceneCmdID : uint32_t {
     SetStartPositionList = 0x00,
@@ -834,18 +843,132 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 }
             }
 
-            // Now copy the exact cutscene data
+            // Re-serialize cutscene: read BE ROM fields, write LE with macro packing
             auto csReader = ReadSubArray(buffer, cmdArg2, totalCsBytes);
             LUS::BinaryWriter csFileWriter;
             BaseExporter::WriteHeader(csFileWriter, Torch::ResourceType::OoTCutscene, 0);
 
-            // Size in uint32 words
-            csFileWriter.Write(static_cast<uint32_t>(totalCsBytes / 4));
+            // Placeholder for word count (filled in after)
+            uint32_t csSizePos = csFileWriter.GetStream()->GetLength();
+            csFileWriter.Write(static_cast<uint32_t>(0));
+            uint32_t csStartPos = csFileWriter.GetStream()->GetLength();
 
-            // Copy raw cutscene bytes
-            for (uint32_t b = 0; b < totalCsBytes; b += 4) {
-                csFileWriter.Write(csReader.ReadUInt32());
+            // CS_BEGIN: numCommands, endFrame
+            uint32_t csNumCmds = csReader.ReadUInt32();
+            uint32_t csEndFrame = csReader.ReadUInt32();
+            csFileWriter.Write(csNumCmds);
+            csFileWriter.Write(csEndFrame);
+
+            for (uint32_t ci = 0; ci < csNumCmds; ci++) {
+                uint32_t cid = csReader.ReadUInt32();
+                if (cid == 0xFFFFFFFF) break;
+                csFileWriter.Write(cid);
+
+                if (cid == 1 || cid == 2 || cid == 5 || cid == 6) {
+                    // Camera spline: 3-word header + variable points
+                    uint16_t camHdr1a = csReader.ReadUInt16(); // 0x0001 or similar
+                    uint16_t camStartFrame = csReader.ReadUInt16();
+                    csFileWriter.Write(CS_CMD_HH(camHdr1a, camStartFrame));
+                    uint16_t camEndFrame = csReader.ReadUInt16();
+                    uint16_t camHdr2b = csReader.ReadUInt16();
+                    csFileWriter.Write(CS_CMD_HH(camEndFrame, camHdr2b));
+
+                    while (true) {
+                        int8_t continueFlag = csReader.ReadInt8();
+                        int8_t cameraRoll = csReader.ReadInt8();
+                        int16_t nextPointFrame = csReader.ReadInt16();
+                        float viewAngle = csReader.ReadFloat();
+                        int16_t posX = csReader.ReadInt16();
+                        int16_t posY = csReader.ReadInt16();
+                        int16_t posZ = csReader.ReadInt16();
+                        int16_t unused = csReader.ReadInt16();
+
+                        csFileWriter.Write(CS_CMD_BBH(continueFlag, cameraRoll, nextPointFrame));
+                        csFileWriter.Write(viewAngle);
+                        csFileWriter.Write(CS_CMD_HH(posX, posY));
+                        csFileWriter.Write(CS_CMD_HH(posZ, unused));
+
+                        if ((uint8_t)continueFlag == 0xFF) break;
+                    }
+                } else if (cid == 0x2D || cid == 0x3E8) {
+                    // Transition / Destination: fixed 4-word format
+                    csReader.ReadUInt32(); // entry count from ROM (always 1, skip)
+                    csFileWriter.Write(static_cast<uint32_t>(1));
+                    uint16_t trBase = csReader.ReadUInt16();
+                    uint16_t trStartFrame = csReader.ReadUInt16();
+                    uint16_t trEndFrame = csReader.ReadUInt16();
+                    csReader.ReadUInt16(); // padding/unknown
+                    csFileWriter.Write(CS_CMD_HH(trBase, trStartFrame));
+                    csFileWriter.Write(CS_CMD_HH(trEndFrame, trEndFrame));
+                } else {
+                    // Standard command with entry count
+                    uint32_t entryCount = csReader.ReadUInt32();
+                    csFileWriter.Write(entryCount);
+
+                    for (uint32_t ei = 0; ei < entryCount; ei++) {
+                        if (cid == 0x09) {
+                            // Rumble: 0x0C bytes
+                            uint16_t base = csReader.ReadUInt16();
+                            uint16_t startF = csReader.ReadUInt16();
+                            uint16_t endF = csReader.ReadUInt16();
+                            uint8_t srcStr = csReader.ReadUByte();
+                            uint8_t dur = csReader.ReadUByte();
+                            uint8_t decRate = csReader.ReadUByte();
+                            uint8_t unk09 = csReader.ReadUByte();
+                            uint16_t unk0A = csReader.ReadUInt16();
+                            csFileWriter.Write(CS_CMD_HH(base, startF));
+                            csFileWriter.Write(CS_CMD_HBB(endF, srcStr, dur));
+                            csFileWriter.Write(CS_CMD_BBH(decRate, unk09, unk0A));
+                        } else if (cid == 0x13) {
+                            // Textbox: 0x0C bytes
+                            uint16_t base = csReader.ReadUInt16();
+                            uint16_t startF = csReader.ReadUInt16();
+                            uint16_t endF = csReader.ReadUInt16();
+                            uint16_t type = csReader.ReadUInt16();
+                            uint16_t textId1 = csReader.ReadUInt16();
+                            uint16_t textId2 = csReader.ReadUInt16();
+                            csFileWriter.Write(CS_CMD_HH(base, startF));
+                            csFileWriter.Write(CS_CMD_HH(endF, type));
+                            csFileWriter.Write(CS_CMD_HH(textId1, textId2));
+                        } else if (cid == 0x8C) {
+                            // SetTime: 0x0C bytes
+                            uint16_t base = csReader.ReadUInt16();
+                            uint16_t startF = csReader.ReadUInt16();
+                            uint16_t endF = csReader.ReadUInt16();
+                            uint8_t hour = csReader.ReadUByte();
+                            uint8_t minute = csReader.ReadUByte();
+                            // Skip remaining 4 bytes padding
+                            csReader.ReadUInt32();
+                            csFileWriter.Write(CS_CMD_HH(base, startF));
+                            csFileWriter.Write(CS_CMD_HBB(endF, hour, minute));
+                            csFileWriter.Write(static_cast<uint32_t>(0));
+                        } else {
+                            // Actor cues / misc / lighting / BGM: 0x30 bytes
+                            uint16_t base = csReader.ReadUInt16();
+                            uint16_t startF = csReader.ReadUInt16();
+                            uint16_t endF = csReader.ReadUInt16();
+                            uint16_t field3 = csReader.ReadUInt16();
+                            csFileWriter.Write(CS_CMD_HH(base, startF));
+                            csFileWriter.Write(CS_CMD_HH(endF, field3));
+                            // Remaining 10 uint32 words (0x28 bytes)
+                            for (int w = 0; w < 10; w++) {
+                                csFileWriter.Write(csReader.ReadUInt32());
+                            }
+                        }
+                    }
+                }
             }
+
+            // CS_END
+            csFileWriter.Write(static_cast<uint32_t>(0xFFFFFFFF));
+            csFileWriter.Write(static_cast<uint32_t>(0));
+
+            // Fill in word count
+            uint32_t csEndPos = csFileWriter.GetStream()->GetLength();
+            uint32_t csWordCount = (csEndPos - csStartPos) / 4;
+            csFileWriter.Seek(csSizePos, LUS::SeekOffsetType::Start);
+            csFileWriter.Write(csWordCount);
+            csFileWriter.Seek(csEndPos, LUS::SeekOffsetType::Start);
 
             std::stringstream csSS;
             csFileWriter.Finish(csSS);
