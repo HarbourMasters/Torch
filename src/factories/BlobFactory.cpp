@@ -53,7 +53,9 @@ ExportResult BlobBinaryExporter::Export(std::ostream& write, std::shared_ptr<IPa
 
     WriteHeader(writer, Torch::ResourceType::Blob, 0);
     writer.Write((uint32_t)data.size());
-    writer.Write((char*)data.data(), data.size());
+    if (!data.empty()) {
+        writer.Write((char*)data.data(), data.size());
+    }
     writer.Finish(write);
     return std::nullopt;
 }
