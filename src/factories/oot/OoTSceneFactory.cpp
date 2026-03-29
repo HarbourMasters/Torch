@@ -943,16 +943,34 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                             csFileWriter.Write(CS_CMD_HBB(endF, hour, minute));
                             csFileWriter.Write(static_cast<uint32_t>(0));
                         } else {
-                            // Actor cues / misc / lighting / BGM: 0x30 bytes
+                            // 0x30-byte entries: actor cues vs misc/lighting/BGM
                             uint16_t base = csReader.ReadUInt16();
                             uint16_t startF = csReader.ReadUInt16();
                             uint16_t endF = csReader.ReadUInt16();
                             uint16_t field3 = csReader.ReadUInt16();
                             csFileWriter.Write(CS_CMD_HH(base, startF));
                             csFileWriter.Write(CS_CMD_HH(endF, field3));
-                            // Remaining 10 uint32 words (0x28 bytes)
-                            for (int w = 0; w < 10; w++) {
-                                csFileWriter.Write(csReader.ReadUInt32());
+
+                            // Actor cues (0x0A-0x27, 0x2E-0x55, 0x58-0x7B, 0x7D-0x8B, 0x8D+)
+                            // have rotY/rotZ as word 2, then 6 int32 + 3 float.
+                            // Misc (0x03), Lighting (0x04), BGM (0x56,0x57,0x7C) have 10 raw uint32s.
+                            bool isActorCue = (cid != 0x03 && cid != 0x04 &&
+                                               cid != 0x56 && cid != 0x57 && cid != 0x7C);
+
+                            if (isActorCue) {
+                                // Word 2: CMD_HH(rotY, rotZ)
+                                uint16_t rotY = csReader.ReadUInt16();
+                                uint16_t rotZ = csReader.ReadUInt16();
+                                csFileWriter.Write(CS_CMD_HH(rotY, rotZ));
+                                // Words 3-11: 6 int32 positions + 3 float normals (all raw)
+                                for (int w = 0; w < 9; w++) {
+                                    csFileWriter.Write(csReader.ReadUInt32());
+                                }
+                            } else {
+                                // 10 raw uint32 words
+                                for (int w = 0; w < 10; w++) {
+                                    csFileWriter.Write(csReader.ReadUInt32());
+                                }
                             }
                         }
                     }
