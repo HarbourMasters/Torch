@@ -722,7 +722,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
 
             if (resolved.empty()) {
                 uint32_t csOffset = SEGMENT_OFFSET(csAddr);
-                csSymbol = MakeAssetName(baseName, "CutsceneData", csOffset);
+                csSymbol = MakeAssetName(entryName, "CutsceneData", csOffset);
                 resolved = currentDir + "/" + csSymbol;
             } else {
                 csSymbol = resolved.substr(resolved.rfind('/') + 1);
