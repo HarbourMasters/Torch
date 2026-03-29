@@ -760,43 +760,92 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             }
             cmdWriter.Write(resolved);
 
-            // Build Cutscene companion file
-            // Read raw cutscene data from ROM (uint32 words until CS_END)
-            auto csReader = ReadSubArray(buffer, cmdArg2, 0x10000);
-            LUS::BinaryWriter csFileWriter;
-            BaseExporter::WriteHeader(csFileWriter, Torch::ResourceType::OoTCutscene, 0);
+            // Calculate cutscene data size by parsing command structure.
+            // The ROM format is: CS_BEGIN(numCmds, endFrame) + commands + CS_END.
+            // Each command has [cmdID: u32][entryCount: u32][entries...].
+            // We can't scan for 0xFFFFFFFF because it appears in data values.
+            auto csSizeCalc = ReadSubArray(buffer, cmdArg2, 0x10000);
+            uint32_t numCsCommands = csSizeCalc.ReadUInt32(); // CS_BEGIN word 0
+            csSizeCalc.ReadUInt32(); // endFrame (skip)
 
-            // Placeholder for size (will be filled in)
-            uint32_t sizePos = csFileWriter.GetStream()->GetLength();
-            csFileWriter.Write(static_cast<uint32_t>(0));
+            uint32_t csMaxBytes = 0x10000;
+            bool csParseOk = true;
+            for (uint32_t csCmd = 0; csCmd < numCsCommands && csParseOk; csCmd++) {
+                if (csSizeCalc.GetBaseAddress() + 8 > csMaxBytes) { csParseOk = false; break; }
+                uint32_t csCmdId = csSizeCalc.ReadUInt32();
+                if (csCmdId == 0xFFFFFFFF) break; // CS_END reached early
 
-            uint32_t startPos = csFileWriter.GetStream()->GetLength();
+                uint32_t csCmdWord2 = csSizeCalc.ReadUInt32();
 
-            // Copy raw uint32 words including CS_BEGIN
-            bool foundEnd = false;
-            for (uint32_t i = 0; i < 0x4000; i++) {
-                uint32_t word = csReader.ReadUInt32();
-                csFileWriter.Write(word);
-                if (word == 0xFFFFFFFF) {
-                    // CS_END marker - write the trailing 0
-                    csFileWriter.Write(csReader.ReadUInt32());
-                    foundEnd = true;
-                    break;
+                if (csCmdId == 1 || csCmdId == 2 || csCmdId == 5 || csCmdId == 6) {
+                    // Camera splines: header has startFrame/endFrame, then 0x10-byte
+                    // entries terminated by continueFlag == 0xFF (last entry included).
+                    if (csSizeCalc.GetBaseAddress() + 4 > csMaxBytes) { csParseOk = false; break; }
+                    csSizeCalc.ReadUInt32(); // CMD_HH(endFrame, 0)
+                    for (uint32_t camIdx = 0; camIdx < 1000; camIdx++) {
+                        if (csSizeCalc.GetBaseAddress() + 0x10 > csMaxBytes) { csParseOk = false; break; }
+                        uint8_t continueFlag = csSizeCalc.ReadUByte();
+                        csSizeCalc.Seek(csSizeCalc.GetBaseAddress() + 0x0F, LUS::SeekOffsetType::Start);
+                        if (continueFlag == 0xFF) break;
+                    }
+                } else if (csCmdId == 0x2D || csCmdId == 0x3E8) {
+                    // Scene transition / Destination: fixed 0x08 bytes after header
+                    if (csSizeCalc.GetBaseAddress() + 0x08 > csMaxBytes) { csParseOk = false; break; }
+                    csSizeCalc.Seek(csSizeCalc.GetBaseAddress() + 0x08, LUS::SeekOffsetType::Start);
+                } else {
+                    // Standard command: entryCount entries of fixed size
+                    uint32_t entryCount = csCmdWord2;
+                    uint32_t entrySize;
+                    switch (csCmdId) {
+                        case 0x09: case 0x13: case 0x8C:
+                            entrySize = 0x0C; break;
+                        default:
+                            entrySize = 0x30; break;
+                    }
+                    uint32_t skipBytes = entryCount * entrySize;
+                    if (csSizeCalc.GetBaseAddress() + skipBytes > csMaxBytes) {
+                        SPDLOG_WARN("Scene: CS cmd 0x{:X} count={} entrySize={} would overflow at pos {}",
+                                    csCmdId, entryCount, entrySize, csSizeCalc.GetBaseAddress());
+                        csParseOk = false; break;
+                    }
+                    csSizeCalc.Seek(csSizeCalc.GetBaseAddress() + skipBytes, LUS::SeekOffsetType::Start);
                 }
             }
 
-            if (!foundEnd) {
-                SPDLOG_WARN("Scene: Cutscene at 0x{:08X} didn't find CS_END", csAddr);
-                csFileWriter.Write(static_cast<uint32_t>(0xFFFFFFFF));
-                csFileWriter.Write(static_cast<uint32_t>(0));
+            uint32_t totalCsBytes;
+            if (csParseOk && csSizeCalc.GetBaseAddress() + 8 <= csMaxBytes) {
+                // CS_END: 0xFFFFFFFF + 0x00000000
+                csSizeCalc.ReadUInt32();
+                csSizeCalc.ReadUInt32();
+                totalCsBytes = csSizeCalc.GetBaseAddress();
+            } else {
+                // Fallback: scan for 0xFFFFFFFF followed by 0x00000000
+                SPDLOG_WARN("Scene: Cutscene parse failed at 0x{:08X}, falling back to scan", csAddr);
+                auto csFallback = ReadSubArray(buffer, cmdArg2, csMaxBytes);
+                totalCsBytes = 8; // minimum (CS_BEGIN)
+                for (uint32_t i = 0; i < csMaxBytes / 4 - 1; i++) {
+                    uint32_t w = csFallback.ReadUInt32();
+                    totalCsBytes += 4;
+                    if (w == 0xFFFFFFFF) {
+                        uint32_t next = csFallback.ReadUInt32();
+                        totalCsBytes += 4;
+                        if (next == 0x00000000) break;
+                    }
+                }
             }
 
-            // Fill in the size (in uint32 words)
-            uint32_t endPos = csFileWriter.GetStream()->GetLength();
-            uint32_t dataSize = (endPos - startPos) / 4;
-            csFileWriter.Seek(sizePos, LUS::SeekOffsetType::Start);
-            csFileWriter.Write(dataSize);
-            csFileWriter.Seek(endPos, LUS::SeekOffsetType::Start);
+            // Now copy the exact cutscene data
+            auto csReader = ReadSubArray(buffer, cmdArg2, totalCsBytes);
+            LUS::BinaryWriter csFileWriter;
+            BaseExporter::WriteHeader(csFileWriter, Torch::ResourceType::OoTCutscene, 0);
+
+            // Size in uint32 words
+            csFileWriter.Write(static_cast<uint32_t>(totalCsBytes / 4));
+
+            // Copy raw cutscene bytes
+            for (uint32_t b = 0; b < totalCsBytes; b += 4) {
+                csFileWriter.Write(csReader.ReadUInt32());
+            }
 
             std::stringstream csSS;
             csFileWriter.Finish(csSS);
