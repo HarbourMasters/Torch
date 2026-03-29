@@ -645,12 +645,16 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             break;
         }
         case SetPathways: {
+            // Read pathway list entries. Each entry is 8 bytes: u8 numPoints, pad[3], u32 pointsSegPtr.
+            // Use neighbor-based size inference to determine count (matches ZAPD behavior).
             // Read pathway list entries until zero terminator (listAddr == 0).
             // Each entry is 8 bytes: u8 numPoints, pad[3], u32 pointsSegPtr.
             uint8_t pathSeg = (cmdArg2 >> 24) & 0xFF;
-            auto pathReader = ReadSubArray(buffer, cmdArg2, 256 * 8);
+            uint32_t maxPaths = getNeighborSize(cmdArg2, 8);
+            if (maxPaths == 0) maxPaths = 256;
+            auto pathReader = ReadSubArray(buffer, cmdArg2, maxPaths * 8);
             std::vector<std::pair<uint8_t, uint32_t>> pathways; // numPoints, pointsAddr
-            for (uint32_t i = 0; i < 256; i++) {
+            for (uint32_t i = 0; i < maxPaths; i++) {
                 uint8_t np = pathReader.ReadUByte();
                 pathReader.ReadUByte(); pathReader.ReadUByte(); pathReader.ReadUByte(); // pad
                 uint32_t ptsAddr = pathReader.ReadUInt32();
@@ -661,6 +665,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             }
             if (pathways.empty()) pathways.push_back({0, 0}); // fallback
 
+            // OTRExporter has a bug where pathways are doubled when a ZPath XML resource
             // OTRExporter has a bug where pathways are doubled when a ZPath XML resource
             // exists at the same offset as the SetPathways command. This happens for all
             // scenes with >1 pathway. We must match this behavior for binary compatibility.
