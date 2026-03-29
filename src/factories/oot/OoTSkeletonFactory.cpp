@@ -402,6 +402,22 @@ std::optional<std::shared_ptr<IParsedData>> OoTSkeletonFactory::parse(std::vecto
         }
     }
 
+    // Create the limb table as a 0-byte blob (matches OTRExporter behavior).
+    // Named {skelSymbol}Limbs, e.g. gKeeseSkeletonLimbs.
+    if (limbsArrayAddr != 0) {
+        std::string limbTableSymbol = symbol + "Limbs";
+        YAML::Node limbTableNode;
+        limbTableNode["type"] = "BLOB";
+        limbTableNode["offset"] = limbsArrayAddr;
+        limbTableNode["size"] = 0;
+        limbTableNode["symbol"] = limbTableSymbol;
+        try {
+            Companion::Instance->AddAsset(limbTableNode);
+        } catch (const std::exception& e) {
+            SPDLOG_WARN("Skeleton: Failed to create limb table {}: {}", limbTableSymbol, e.what());
+        }
+    }
+
     auto skel = std::make_shared<OoTSkeletonData>();
     skel->skelType = skelType;
     skel->limbType = limbType;
