@@ -354,6 +354,10 @@ def main():
             print(f"Running torch... {elapsed(t0)}")
             o2r_file = run_torch(scratch_dir, args.rom, work_dir)
 
+            # Always save generated O2R for comparison (e.g. compare_asset.py)
+            gen_o2r_path = os.path.join(SOH_DIR, "o2r", "generated.o2r")
+            shutil.copy2(o2r_file, gen_o2r_path)
+
             if args.o2r_out:
                 os.makedirs(args.o2r_out, exist_ok=True)
                 shutil.copy2(o2r_file, args.o2r_out)

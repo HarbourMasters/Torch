@@ -117,9 +117,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<ui
     auto limb = std::make_shared<OoTLimbData>();
     limb->limbType = limbType;
     auto symbol = GetSafeNode<std::string>(node, "symbol");
-    // Auto-discovered limbs (created by skeleton factory) should not auto-discover GFX
-    // because the GFX processing may reference unconfigured segments and crash
-    bool canAutoDiscoverGfx = !node["auto_discovered"].IsDefined();
+    bool canAutoDiscoverGfx = true;
 
     if (limbType == OoTLimbType::Curve) {
         limb->childIndex = reader.ReadUByte();
@@ -127,8 +125,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<ui
         reader.ReadUInt16(); // padding
         uint32_t dListAddr = reader.ReadUInt32();
         uint32_t dList2Addr = reader.ReadUInt32();
-        limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL", canAutoDiscoverGfx);
-        limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "DL2", canAutoDiscoverGfx);
+        limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "CurveDL", canAutoDiscoverGfx);
+        limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "Curve2DL", canAutoDiscoverGfx);
     } else if (limbType == OoTLimbType::Legacy) {
         uint32_t dListAddr = reader.ReadUInt32();
         limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL", canAutoDiscoverGfx);
@@ -157,8 +155,10 @@ std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<ui
         } else if (limbType == OoTLimbType::LOD) {
             uint32_t dListAddr = reader.ReadUInt32();
             uint32_t dList2Addr = reader.ReadUInt32();
+            // Resolve far DList first — if near and far point to the same address,
+            // OTRExporter uses the Far name for both fields.
+            limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "FarDL", canAutoDiscoverGfx);
             limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL", canAutoDiscoverGfx);
-            limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "DL2", canAutoDiscoverGfx);
         } else if (limbType == OoTLimbType::Skin) {
             limb->skinSegmentType = static_cast<OoTLimbSkinType>(reader.ReadInt32());
             uint32_t skinSegmentAddr = reader.ReadUInt32();
