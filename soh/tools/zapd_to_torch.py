@@ -468,16 +468,18 @@ def process_xml(xml_path, xml_rel_path, dma_table, out_dir, allowed_types, xml_d
                 if not any(seg == extra_seg for seg, _ in file_extra_segments):
                     file_extra_segments.append((extra_seg, phys_start))
 
-        is_scene_file = xml_rel_path.startswith("scenes/")
+        is_room_file = xml_rel_path.startswith("scenes/") and "_room_" in out_name
 
         assets = []
         for elem in file_elem:
             if elem.tag in SKIP_ELEMENTS:
                 continue
 
-            # Skip DList entries in scene/room files — the scene factory
-            # auto-discovers them with room-prefixed names that match OTRExporter.
-            if is_scene_file and elem.tag == "DList":
+            # Skip DList entries in room files — the scene factory auto-discovers
+            # room mesh DLists with room-prefixed names that match OTRExporter.
+            # Scene-level DLists (gXxxDL_*) declared in room files are also skipped
+            # here to avoid conflicts; they need to be handled separately.
+            if is_room_file and elem.tag == "DList":
                 continue
 
             if allowed_types and elem.tag not in allowed_types:
