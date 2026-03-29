@@ -123,6 +123,10 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
     auto currentDir = Companion::Instance->GetCurrentDirectory();
     auto assetType = GetSafeNode<std::string>(node, "type");
 
+    // For alternate headers, use the parent's name for sub-asset naming (DLists,
+    // backgrounds, cutscenes) so names match OTRExporter which doesn't prefix with Set_.
+    std::string baseName = node["base_name"] ? node["base_name"].as<std::string>() : entryName;
+
     // Alternate headers are deferred until after all primary commands (incl. SetMesh)
     // so that primary DLists are registered first and alt headers reuse their names.
     struct PendingAltHeader { uint32_t seg; std::string symbol; };
@@ -466,7 +470,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     std::string opaPath;
                     if (opaAddr != 0) {
                         uint32_t opaOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(opaAddr));
-                        std::string opaSymbol = MakeAssetName(entryName, "DL", opaOffset);
+                        std::string opaSymbol = MakeAssetName(baseName, "DL", opaOffset);
                         opaPath = ResolveGfxPointer(opaAddr, opaSymbol, buffer);
                     }
                     cmdWriter.Write(opaPath.empty() ? std::string("") : opaPath);
@@ -475,7 +479,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     std::string xluPath;
                     if (xluAddr != 0) {
                         uint32_t xluOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(xluAddr));
-                        std::string xluSymbol = MakeAssetName(entryName, "DL", xluOffset);
+                        std::string xluSymbol = MakeAssetName(baseName, "DL", xluOffset);
                         xluPath = ResolveGfxPointer(xluAddr, xluSymbol, buffer);
                     }
                     cmdWriter.Write(xluPath.empty() ? std::string("") : xluPath);
@@ -496,12 +500,12 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 std::string opaPath, xluPath;
                 if (opaAddr != 0) {
                     uint32_t opaOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(opaAddr));
-                    std::string opaSymbol = MakeAssetName(entryName, "DL", opaOffset);
+                    std::string opaSymbol = MakeAssetName(baseName, "DL", opaOffset);
                     opaPath = ResolveGfxPointer(opaAddr, opaSymbol, buffer);
                 }
                 if (xluAddr != 0) {
                     uint32_t xluOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(xluAddr));
-                    std::string xluSymbol = MakeAssetName(entryName, "DL", xluOffset);
+                    std::string xluSymbol = MakeAssetName(baseName, "DL", xluOffset);
                     xluPath = ResolveGfxPointer(xluAddr, xluSymbol, buffer);
                 }
                 cmdWriter.Write(opaPath.empty() ? std::string("") : opaPath);
@@ -539,7 +543,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
 
                         // Resolve background blob
                         uint32_t bgOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(source));
-                        std::string bgSymbol = MakeAssetName(entryName, "Background", bgOffset);
+                        std::string bgSymbol = MakeAssetName(baseName, "Background", bgOffset);
                         std::string bgPath = ResolvePointer(source);
                         if (bgPath.empty()) {
                             bgPath = currentDir + "/" + bgSymbol;
@@ -576,7 +580,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     uint16_t tlutCount = bgReader.ReadUInt16();
 
                     uint32_t bgOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(source));
-                    std::string bgSymbol = MakeAssetName(entryName, "Background", bgOffset);
+                    std::string bgSymbol = MakeAssetName(baseName, "Background", bgOffset);
                     std::string bgPath = ResolvePointer(source);
                     if (bgPath.empty()) {
                         bgPath = currentDir + "/" + bgSymbol;
@@ -671,7 +675,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 for (uint32_t i = 0; i < pathways.size(); i++) {
                     auto [np, ptsAddr] = pathways[i];
                     uint32_t pointOffset = SEGMENT_OFFSET(ptsAddr);
-                    std::string pathSymbol = MakeAssetName(entryName, "PathwayList", pointOffset);
+                    std::string pathSymbol = MakeAssetName(baseName, "PathwayList", pointOffset);
                     std::string pathPath = currentDir + "/" + pathSymbol;
                     cmdWriter.Write(pathPath);
                 }
@@ -681,7 +685,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             for (uint32_t i = 0; i < pathways.size(); i++) {
                 auto [np, ptsAddr] = pathways[i];
                 uint32_t pointOffset = SEGMENT_OFFSET(ptsAddr);
-                std::string pathSymbol = MakeAssetName(entryName, "PathwayList", pointOffset);
+                std::string pathSymbol = MakeAssetName(baseName, "PathwayList", pointOffset);
 
                 // Build Path companion file: header + u32 numPathways + per-pathway data
                 // Companion files also reflect the doubled count to match OTRExporter.
@@ -718,7 +722,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
 
             if (resolved.empty()) {
                 uint32_t csOffset = SEGMENT_OFFSET(csAddr);
-                csSymbol = MakeAssetName(entryName, "Cs", csOffset);
+                csSymbol = MakeAssetName(baseName, "CutsceneData", csOffset);
                 resolved = currentDir + "/" + csSymbol;
             } else {
                 csSymbol = resolved.substr(resolved.rfind('/') + 1);
@@ -827,6 +831,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             altNode["type"] = assetType;
             altNode["offset"] = alt.seg;
             altNode["symbol"] = alt.symbol;
+            altNode["base_name"] = entryName;  // Use parent's name for sub-asset naming
             try {
                 Companion::Instance->AddAsset(altNode);
             } catch (const std::exception& e) {
