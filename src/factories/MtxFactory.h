@@ -19,8 +19,10 @@ struct MtxRaw {
 class MtxData : public IParsedData {
 public:
     std::vector<MtxRaw> mMtxs;
+    std::array<int32_t, 16> mRawInts;  // Raw int32_t values as read from ROM
 
-    explicit MtxData(std::vector<MtxRaw> mtxs) : mMtxs(mtxs) {}
+    MtxData(std::vector<MtxRaw> mtxs, std::array<int32_t, 16> rawInts) : mMtxs(mtxs), mRawInts(rawInts) {}
+    explicit MtxData(std::vector<MtxRaw> mtxs) : mMtxs(mtxs), mRawInts{} {}
 };
 
 class MtxHeaderExporter : public BaseExporter {

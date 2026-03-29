@@ -200,6 +200,7 @@ public:
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
+    std::string GetCurrentDirectory() const { return gCurrentDirectory.string(); }
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
 private:
     TorchConfig gConfig;

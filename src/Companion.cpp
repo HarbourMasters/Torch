@@ -98,6 +98,15 @@
 #include "factories/mario_artist/MA2D1Factory.h"
 #endif
 
+#ifdef OOT_SUPPORT
+#include "factories/oot/OoTArrayFactory.h"
+#include "factories/oot/OoTSkeletonFactory.h"
+#include "factories/oot/OoTAnimationFactory.h"
+#include "factories/oot/OoTCollisionFactory.h"
+#include "factories/oot/OoTTextFactory.h"
+#include "factories/oot/OoTSceneFactory.h"
+#endif
+
 #ifdef NAUDIO_SUPPORT
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/naudio/v0/BankFactory.h"
@@ -255,6 +264,20 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 #endif
+#ifdef OOT_SUPPORT
+    this->RegisterFactory("OOT:ARRAY", std::make_shared<OoT::OoTArrayFactory>());
+    this->RegisterFactory("OOT:SKELETON", std::make_shared<OoT::OoTSkeletonFactory>());
+    this->RegisterFactory("OOT:LIMB", std::make_shared<OoT::OoTLimbFactory>());
+    this->RegisterFactory("OOT:ANIMATION", std::make_shared<OoT::OoTAnimationFactory>());
+    this->RegisterFactory("OOT:CURVE_ANIMATION", std::make_shared<OoT::OoTCurveAnimationFactory>());
+    this->RegisterFactory("OOT:PLAYER_ANIMATION", std::make_shared<OoT::OoTPlayerAnimationHeaderFactory>());
+    this->RegisterFactory("OOT:PLAYER_ANIMATION_DATA", std::make_shared<OoT::OoTPlayerAnimationDataFactory>());
+    this->RegisterFactory("OOT:COLLISION", std::make_shared<OoT::OoTCollisionFactory>());
+    this->RegisterFactory("OOT:TEXT", std::make_shared<OoT::OoTTextFactory>());
+    this->RegisterFactory("OOT:SCENE", std::make_shared<OoT::OoTSceneFactory>());
+    this->RegisterFactory("OOT:ROOM", std::make_shared<OoT::OoTSceneFactory>());
+#endif
+
 #ifndef __EMSCRIPTEN__ // We call this manually
     this->Process(assetCount);
 #endif
@@ -322,7 +345,12 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
 
     auto factory = this->GetFactory(type);
     if (!factory.has_value()) {
+#ifdef THROW_ON_UNKNOWN_TYPE
         throw std::runtime_error("No factory by the name '" + type + "' found for '" + name + "'");
+#else
+        SPDLOG_WARN("No factory by the name '{}' found for '{}', skipping", type, name);
+        return std::nullopt;
+#endif
     }
 
     auto impl = factory->get();
@@ -684,6 +712,12 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
                     "<file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
             }
         }
+    }
+
+    // Allow YAML files to override their output directory.
+    // Used by scene room files that need assets output under the scene's directory.
+    if (auto directory = root[":config"]["directory"]) {
+        this->gCurrentDirectory = directory.as<std::string>();
     }
 
     for (auto asset = root.begin(); asset != root.end(); ++asset) {
@@ -1556,8 +1590,27 @@ std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uin
 uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
     if (addr & 0x80000000) {
         if (Torch::contains(gVirtualAddrMap, gCurrentFile)) {
-            addr -= std::get<0>(gVirtualAddrMap[gCurrentFile]);
-            addr += std::get<1>(gVirtualAddrMap[gCurrentFile]);
+            auto vramBase = std::get<0>(gVirtualAddrMap[gCurrentFile]);
+            auto physStart = std::get<1>(gVirtualAddrMap[gCurrentFile]);
+
+            // Only treat as VRAM if addr is actually within the virtual range.
+            // Segment-0x80 addresses (e.g. 0x800035A0) have bit 31 set but are NOT VRAM.
+            if (addr < vramBase) {
+                return addr;
+            }
+
+            auto relOffset = addr - vramBase;
+
+            // Find the segment number that maps to this phys_start to produce a segmented address.
+            // This keeps the patched address in the same form as YAML-declared offsets (e.g. 0x6001980).
+            for (auto& [seg, segOffset] : this->gConfig.segment.local) {
+                if (segOffset == physStart) {
+                    return (seg << 24) | relOffset;
+                }
+            }
+
+            // Fallback: return absolute ROM address
+            addr = relOffset + physStart;
         }
     }
 
@@ -1572,22 +1625,54 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
     // HACK: Adjust address to rom address if virtual address
     addr = PatchVirtualAddr(addr);
 
-    if (!Torch::contains(this->gAddrMap[this->gCurrentFile], addr)) {
-        for (auto& file : this->gCurrentExternalFiles) {
-            if (!Torch::contains(this->gAddrMap, file)) {
-                SPDLOG_WARN("GetNodeByAddr: External File {} Not Found.", file);
-                continue;
-            }
-
-            if (!Torch::contains(this->gAddrMap[file], addr)) {
-                continue;
-            }
-            return this->gAddrMap[file][addr];
-        }
-        return std::nullopt;
+    if (Torch::contains(this->gAddrMap[this->gCurrentFile], addr)) {
+        return this->gAddrMap[this->gCurrentFile][addr];
     }
 
-    return this->gAddrMap[this->gCurrentFile][addr];
+    // When multiple segments map to the same ROM data (e.g. segments 6 and 8-13 for overlays),
+    // a lookup for 0xD001980 won't match 0x6001980 even though they reference the same data.
+    // Only applies to overlay files that have virtual address mappings.
+    if (IS_SEGMENTED(addr) && Torch::contains(gVirtualAddrMap, gCurrentFile)) {
+        auto addrSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
+        if (addrSeg.has_value()) {
+            auto absAddr = addrSeg.value() + SEGMENT_OFFSET(addr);
+            for (auto& [storedAddr, entry] : this->gAddrMap[this->gCurrentFile]) {
+                if (storedAddr != addr && IS_SEGMENTED(storedAddr)) {
+                    auto storedSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(storedAddr));
+                    if (storedSeg.has_value() && storedSeg.value() + SEGMENT_OFFSET(storedAddr) == absAddr) {
+                        return entry;
+                    }
+                }
+            }
+        }
+    }
+
+    for (auto& file : this->gCurrentExternalFiles) {
+        if (!Torch::contains(this->gAddrMap, file)) {
+            SPDLOG_WARN("GetNodeByAddr: External File {} Not Found.", file);
+            continue;
+        }
+
+        if (Torch::contains(this->gAddrMap[file], addr)) {
+            return this->gAddrMap[file][addr];
+        }
+
+        // VRAM address resolution: if the address is a virtual address (0x80XXXXXX)
+        // and the external file has a virtual addr map, compute the file-relative
+        // offset and look up the segmented address in that file's addr map.
+        // Example: addr=0x800FBC20, vramBase=0x80010F00 → relOffset=0xEAD20
+        //          segmented addr = (0x80 << 24) | 0xEAD20 = 0x800EAD20
+        if ((addr & 0x80000000) && Torch::contains(gVirtualAddrMap, file)) {
+            auto vramBase = std::get<0>(gVirtualAddrMap[file]);
+            if (addr >= vramBase) {
+                uint32_t patchedAddr = 0x80000000 | (addr - vramBase);
+                if (Torch::contains(this->gAddrMap[file], patchedAddr)) {
+                    return this->gAddrMap[file][patchedAddr];
+                }
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> Companion::GetStringByAddr(const uint32_t addr) {

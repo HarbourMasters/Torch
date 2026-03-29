@@ -14,8 +14,12 @@ build/
 code/
 .vscode/
 tools/
+!soh/tools/
 modding/*
 .cache
+
+# Generated YAML asset definitions
+soh/assets/yml/
 
 # Doxygen output
 docs/html
