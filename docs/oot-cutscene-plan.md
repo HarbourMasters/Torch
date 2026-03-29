@@ -1,103 +1,73 @@
 # Plan: Fix OoT Cutscene Binary Export
 
 ## Context
-106 scene failures are cutscene-related. The current implementation copies raw uint32 words until `0xFFFFFFFF`, but `0xFFFFFFFF` legitimately appears in cutscene data (camera markers, padding). This causes early termination, producing truncated cutscene files.
+106 scene failures are cutscene-related. The current implementation has correct size calculation (command-aware parser) but writes raw BE ROM bytes. OTRExporter re-serializes cutscene data from BE ROM format into LE with field re-packing using CMD_HH/CMD_BBH/CMD_HBB macros. Raw copying doesn't match.
 
-The ROM cutscene format and OTRExporter output are byte-identical — no transformation needed. We just need to find the correct end of the cutscene data.
+## Root Cause
+ROM stores fields as sequential BE values. OTRExporter re-packs them into uint32 words using macros:
+- `CMD_HH(a, b)` = `(b << 16) | a` — packs two int16 into one uint32
+- `CMD_BBH(a, b, c)` = `a | (b << 8) | (c << 16)` — packs byte, byte, halfword
+- `CMD_HBB(a, b, c)` = `a | (b << 16) | (c << 24)` — packs halfword, byte, byte
 
-## Approach: Command-aware size calculation
+Then BinaryWriter writes these uint32 values in LE. This is NOT a simple BE→LE byte swap.
 
-Replace the naive `0xFFFFFFFF` scan with a command-aware parser that reads the cutscene structure to determine total size, then copies the raw data.
+## Approach: Parse BE fields, re-serialize with macro packing
 
-### Cutscene ROM Structure
+Replace the raw copy loop in `SetCutscenes` handler with a proper parser/serializer.
+
+### Command Types and Their Formats
+
+**Standard header (all commands except camera/transition/destination):**
 ```
-CS_BEGIN: [numCommands: u32] [endFrame: u32]
-For each command:
-  [commandID: u32] [entryCount: u32] [entries...]
-CS_END: [0xFFFFFFFF] [0x00000000]
+Write: CMD_W(commandID), CMD_W(entryCount)
 ```
 
-Each command has a fixed entry size based on its ID:
+**Camera Splines (0x01, 0x02, 0x05, 0x06):**
+- Header: `CMD_W(cmdId)`, `CMD_HH(0x0001, startFrame)`, `CMD_HH(endFrame, 0x0000)`
+- Per point (0x10 bytes ROM → 4 words):
+  - `CMD_BBH(continueFlag, cameraRoll, nextPointFrame)`
+  - `float viewAngle`
+  - `CMD_HH(posX, posY)`
+  - `CMD_HH(posZ, unused)`
+- Terminated by point with continueFlag == 0xFF
 
-| Command ID | Entry Size (bytes) | Notes |
-|---|---|---|
-| 0x01, 0x02, 0x05, 0x06 | 0x10 | Camera splines — BUT entry count in header is start/end frame, actual entries are terminated by continueFlag == -1. Need special handling. |
-| 0x03, 0x04, 0x56, 0x57, 0x7C | 0x30 | Misc, Lighting, BGM commands |
-| 0x09, 0x13, 0x8C | 0x0C | Rumble, Textbox, SetTime |
-| 0x2D | special | Scene transition: always 0x08 bytes after header (1 entry × 0x08) |
-| 0x3E8 | special | Destination: always 0x08 bytes after header |
-| 0x0A-0x27 (most) | 0x30 | Actor/Player cues |
-| default | 0x30 | Safe default for unknown command types |
+**0x30-byte entry commands (0x03 misc, 0x04 lighting, 0x56/0x57/0x7C BGM, actor cues 0x0A-0x27+):**
+- Per entry (0x30 bytes ROM → 12 words):
+  - `CMD_HH(base, startFrame)`, `CMD_HH(endFrame, rotXorPad)`
+  - For actor cues: `CMD_HH(rotY, rotZ)`, then 9 × `CMD_W(int32/float)`
+  - For misc/lighting/BGM: `CMD_HH(endFrame, pad)`, then 7 × `CMD_W(unused)`, then 3 × `0x00000000`
 
-### Camera Command Special Case
-Camera commands (0x01, 0x02, 0x05, 0x06) are different:
-- Header word 1 is NOT an entry count — it's `CMD_HH(0x0001, startFrame)`
-- Header word 2 is `CMD_HH(endFrame, 0x0000)`
-- Entries are 0x10 bytes each, terminated when `continueFlag` (first byte) is 0xFF (-1)
-- So: read 0x10-byte entries until first byte of an entry is 0xFF, then that entry is the last
+**0x0C-byte entry commands (0x09 rumble, 0x13 textbox, 0x8C settime):**
+- 0x09 rumble: `CMD_HH(base, startFrame)`, `CMD_HBB(endFrame, sourceStrength, duration)`, `CMD_BBH(decreaseRate, unk09, unk0A)`
+- 0x13 textbox: `CMD_HH(base, startFrame)`, `CMD_HH(endFrame, type)`, `CMD_HH(textId1, textId2)`
+- 0x8C settime: `CMD_HH(base, startFrame)`, `CMD_HBB(endFrame, hour, minute)`, `0x00000000`
 
-### Implementation
+**Special commands:**
+- 0x2D transition: `CMD_W(0x2D)`, `CMD_W(1)`, `CMD_HH(type, startFrame)`, `CMD_HH(endFrame, endFrame)`
+- 0x3E8 destination: `CMD_W(0x3E8)`, `CMD_W(1)`, `CMD_HH(destId, startFrame)`, `CMD_HH(endFrame, endFrame)`
 
-**File:** `src/factories/oot/OoTSceneFactory.cpp` (lines 764-806)
+### Implementation Structure
 
-Replace the cutscene copy loop with:
+In `OoTSceneFactory.cpp`, add helper functions:
 
 ```cpp
-// Calculate cutscene data size by parsing command structure
-auto csSizeReader = ReadSubArray(buffer, cmdArg2, 0x10000);
-uint32_t numCommands = csSizeReader.ReadUInt32();  // CS_BEGIN word 0
-csSizeReader.ReadUInt32();  // endFrame (skip)
-
-for (uint32_t cmd = 0; cmd < numCommands; cmd++) {
-    uint32_t cmdId = csSizeReader.ReadUInt32();
-    if (cmdId == 0xFFFFFFFF) break;  // CS_END (shouldn't happen before numCommands)
-
-    uint32_t word2 = csSizeReader.ReadUInt32();
-
-    if (cmdId == 1 || cmdId == 2 || cmdId == 5 || cmdId == 6) {
-        // Camera splines: read additional header word, then 0x10-byte entries until continueFlag == -1
-        csSizeReader.ReadUInt32();  // CMD_HH(endFrame, 0)
-        while (true) {
-            uint8_t continueFlag = csSizeReader.ReadUByte();
-            csSizeReader.Seek(csSizeReader.GetBaseAddress() + 0x0F);  // skip rest of 0x10-byte entry
-            if (continueFlag == 0xFF) break;
-        }
-    } else if (cmdId == 0x2D || cmdId == 0x3E8) {
-        // Scene transition / Destination: 0x08 bytes of data after header
-        csSizeReader.Seek(csSizeReader.GetBaseAddress() + 0x08);
-    } else {
-        // Standard command: entryCount entries of known size
-        uint32_t entryCount = word2;
-        uint32_t entrySize = getEntrySize(cmdId);
-        csSizeReader.Seek(csSizeReader.GetBaseAddress() + entryCount * entrySize);
-    }
-}
-// Skip CS_END (0xFFFFFFFF + 0x00000000)
-csSizeReader.ReadUInt32();
-csSizeReader.ReadUInt32();
-
-uint32_t totalCsSize = csSizeReader.GetBaseAddress();
+static uint32_t CMD_HH(uint16_t a, uint16_t b) { return ((uint32_t)b << 16) | (uint32_t)a; }
+static uint32_t CMD_BBH(uint8_t a, uint8_t b, uint16_t c) { return (uint32_t)a | ((uint32_t)b << 8) | ((uint32_t)c << 16); }
+static uint32_t CMD_HBB(uint16_t a, uint8_t b, uint8_t c) { return (uint32_t)a | ((uint32_t)b << 16) | ((uint32_t)c << 24); }
 ```
 
-Then copy `totalCsSize` bytes raw from ROM (same approach as now, but with correct size).
-
-Helper function:
-```cpp
-static uint32_t getCutsceneEntrySize(uint32_t cmdId) {
-    switch (cmdId) {
-        case 0x09: case 0x13: case 0x8C: return 0x0C;
-        default: return 0x30;  // Actor cues, misc, lighting, BGM
-    }
-}
-```
-
-### Why raw copy works
-The ROM format and OTRExporter output are byte-identical. OTRExporter re-serializes from parsed objects but produces the same bytes. We can skip the parse/re-serialize step and just copy the correct number of bytes.
+Then the SetCutscenes handler:
+1. Use existing command-aware size calculator to get total size
+2. Create a fresh BE reader over the cutscene data
+3. Read CS_BEGIN (numCommands, endFrame) → write as `CMD_W(numCommands), CMD_W(endFrame)`
+4. For each command: read cmdID, dispatch to per-type handler that reads BE fields and writes packed LE words
+5. Write CS_END (0xFFFFFFFF, 0x00000000)
+6. Prepend the word count
 
 ### Files to Modify
-1. `src/factories/oot/OoTSceneFactory.cpp` — replace cutscene copy loop (~lines 764-806) with command-aware size calculator + raw copy
+- `src/factories/oot/OoTSceneFactory.cpp` — replace cutscene raw copy with parse/re-serialize
 
 ### Verification
-1. `python3 soh/tools/test_assets.py soh/roms/pal_gc_0227d7.z64 --failures-only` — 106 fewer failures expected
-2. `python3 soh/tools/compare_asset.py scenes/nonmq/bdan_scene/bdan_sceneSet_013700CutsceneData_013080` — should pass
-3. No regressions in other categories
+1. `python3 soh/tools/compare_asset.py scenes/nonmq/bdan_scene/bdan_sceneSet_013700CutsceneData_013080` — should pass
+2. Full test should show ~106 fewer failures (all cutscene-related)
+3. No regressions
