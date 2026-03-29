@@ -26,6 +26,12 @@ class DListCodeExporter : public BaseExporter {
 };
 #endif
 
+namespace DeferredVtx {
+    void BeginDefer();
+    bool IsDeferred();
+    void FlushDeferred(const std::string& baseName);
+}
+
 class DListFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;

@@ -24,8 +24,8 @@ struct PendingVtx {
     uint32_t count;
 };
 
-static bool sDeferred = false;
-static std::vector<PendingVtx> sPendingList;
+bool sDeferred = false;
+std::vector<PendingVtx> sPendingList;
 
 void BeginDefer() {
     sDeferred = true;
