@@ -18,8 +18,7 @@ tools/
 modding/*
 .cache
 
-# Generated YAML asset definitions
-soh/assets/yml/
+# Generated YAML asset definitions (per-version dirs are gitignored via soh/assets/yml/.gitignore)
 
 # Doxygen output
 docs/html
