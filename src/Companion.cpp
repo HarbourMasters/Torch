@@ -1602,7 +1602,13 @@ uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
             auto relOffset = addr - vramBase;
 
             // Find the segment number that maps to this phys_start to produce a segmented address.
-            // This keeps the patched address in the same form as YAML-declared offsets (e.g. 0x6001980).
+            // This keeps the patched address in the same form as YAML-declared offsets (e.g. 0x80000980).
+            // Prefer segment 0x80 (the virtual/primary segment) when multiple segments map to the
+            // same physical address (overlays alias segments 8-13 to the same ROM data).
+            if (Torch::contains(this->gConfig.segment.local, (uint32_t)0x80) &&
+                this->gConfig.segment.local[0x80] == physStart) {
+                return (0x80 << 24) | relOffset;
+            }
             for (auto& [seg, segOffset] : this->gConfig.segment.local) {
                 if (segOffset == physStart) {
                     return (seg << 24) | relOffset;
