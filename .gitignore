@@ -2,7 +2,9 @@
 build-*/
 cmake-build-*/
 *.otr
+*.o2r
 *.log
+torch.hash.yml
 .DS_Store
 debug/
 !src/factories/debug/
