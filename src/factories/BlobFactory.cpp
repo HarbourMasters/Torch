@@ -51,11 +51,15 @@ ExportResult BlobBinaryExporter::Export(std::ostream& write, std::shared_ptr<IPa
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
+    if (data.empty()) {
+        // OTRExporter writes a 0-byte file for empty blobs (e.g. LimbTable).
+        // Write nothing so the hash matches.
+        return std::nullopt;
+    }
+
     WriteHeader(writer, Torch::ResourceType::Blob, 0);
     writer.Write((uint32_t)data.size());
-    if (!data.empty()) {
-        writer.Write((char*)data.data(), data.size());
-    }
+    writer.Write((char*)data.data(), data.size());
     writer.Finish(write);
     return std::nullopt;
 }

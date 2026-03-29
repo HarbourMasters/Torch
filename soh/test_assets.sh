@@ -4,6 +4,14 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 resolve_paths
 
+# Auto-log: tee all output to a timestamped log file
+LOG_DIR="$SOH_DIR/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/test_$(date +%Y%m%d_%H%M%S).log"
+exec > >(tee "$LOG_FILE") 2>&1
+echo "Log: $LOG_FILE"
+echo ""
+
 usage() {
     cat <<'EOF'
 Usage: test_assets.sh <rom> [options]
