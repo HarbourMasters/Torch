@@ -829,7 +829,16 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
                 stream.clear();
                 exporter->get()->Export(stream, data, result.name, result.node, &result.name);
                 auto data = stream.str();
-                this->gCurrentWrapper->AddFile(result.name, std::vector(data.begin(), data.end()));
+                auto dataVec = std::vector(data.begin(), data.end());
+                this->gCurrentWrapper->AddFile(result.name, dataVec);
+
+                // Write any pending aliases (duplicate files with identical content)
+                if (Torch::contains(this->gPendingAliases, result.name)) {
+                    for (auto& alias : this->gPendingAliases[result.name]) {
+                        this->gCurrentWrapper->AddFile(alias, dataVec);
+                    }
+                    this->gPendingAliases.erase(result.name);
+                }
 
                 for (auto& entry : this->gCompanionFiles) {
                     auto output = (this->gCurrentDirectory / entry.first).string();
@@ -1835,6 +1844,10 @@ void Companion::SetProcess(bool shouldProcess) {
 void Companion::RegisterCompanionFile(const std::string path, std::vector<char> data) {
     this->gCompanionFiles[path] = data;
     SPDLOG_TRACE("Registered companion file {}", path);
+}
+
+void Companion::RegisterAssetAlias(const std::string& primaryPath, const std::string& aliasPath) {
+    this->gPendingAliases[primaryPath].push_back(aliasPath);
 }
 
 std::string Companion::NormalizeAsset(const std::string& name) const {

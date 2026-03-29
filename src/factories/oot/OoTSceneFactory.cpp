@@ -75,6 +75,25 @@ static std::string GetSceneFolder(const std::string& currentDir) {
     return currentDir;
 }
 
+// Forward declaration
+static std::string ResolveGfxPointer(uint32_t ptr, const std::string& symbol, std::vector<uint8_t>& buffer);
+
+// Resolve a DList pointer and register an alias if the existing entry has a different name.
+// Used by alternate headers so their DLists get Set_-prefixed copies in the O2R.
+static std::string ResolveGfxWithAlias(uint32_t ptr, const std::string& symbol,
+                                       std::vector<uint8_t>& buffer, const std::string& currentDir) {
+    std::string path = ResolveGfxPointer(ptr, symbol, buffer);
+    if (path.empty()) return "";
+    // If the resolved path differs from what this header expects, register an alias
+    // so a duplicate file gets created under the Set_-prefixed name.
+    // Return the primary path for the command binary (matching OTRExporter).
+    std::string expectedPath = currentDir + "/" + symbol;
+    if (path != expectedPath) {
+        Companion::Instance->RegisterAssetAlias(path, expectedPath);
+    }
+    return path;
+}
+
 // Resolve a DList pointer, creating the GFX asset via AddAsset when not found.
 static std::string ResolveGfxPointer(uint32_t ptr, const std::string& symbol, std::vector<uint8_t>& buffer) {
     if (ptr == 0) return "";
@@ -477,8 +496,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     std::string opaPath;
                     if (opaAddr != 0) {
                         uint32_t opaOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(opaAddr));
-                        std::string opaSymbol = MakeAssetName(baseName, "DL", opaOffset);
-                        opaPath = ResolveGfxPointer(opaAddr, opaSymbol, buffer);
+                        std::string opaSymbol = MakeAssetName(entryName, "DL", opaOffset);
+                        opaPath = ResolveGfxWithAlias(opaAddr, opaSymbol, buffer, currentDir);
                     }
                     cmdWriter.Write(opaPath.empty() ? std::string("") : opaPath);
 
@@ -486,8 +505,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     std::string xluPath;
                     if (xluAddr != 0) {
                         uint32_t xluOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(xluAddr));
-                        std::string xluSymbol = MakeAssetName(baseName, "DL", xluOffset);
-                        xluPath = ResolveGfxPointer(xluAddr, xluSymbol, buffer);
+                        std::string xluSymbol = MakeAssetName(entryName, "DL", xluOffset);
+                        xluPath = ResolveGfxWithAlias(xluAddr, xluSymbol, buffer, currentDir);
                     }
                     cmdWriter.Write(xluPath.empty() ? std::string("") : xluPath);
                 }
@@ -507,13 +526,13 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 std::string opaPath, xluPath;
                 if (opaAddr != 0) {
                     uint32_t opaOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(opaAddr));
-                    std::string opaSymbol = MakeAssetName(baseName, "DL", opaOffset);
-                    opaPath = ResolveGfxPointer(opaAddr, opaSymbol, buffer);
+                    std::string opaSymbol = MakeAssetName(entryName, "DL", opaOffset);
+                    opaPath = ResolveGfxWithAlias(opaAddr, opaSymbol, buffer, currentDir);
                 }
                 if (xluAddr != 0) {
                     uint32_t xluOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(xluAddr));
-                    std::string xluSymbol = MakeAssetName(baseName, "DL", xluOffset);
-                    xluPath = ResolveGfxPointer(xluAddr, xluSymbol, buffer);
+                    std::string xluSymbol = MakeAssetName(entryName, "DL", xluOffset);
+                    xluPath = ResolveGfxWithAlias(xluAddr, xluSymbol, buffer, currentDir);
                 }
                 cmdWriter.Write(opaPath.empty() ? std::string("") : opaPath);
                 cmdWriter.Write(xluPath.empty() ? std::string("") : xluPath);
