@@ -121,6 +121,12 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
 
     auto entryName = GetSafeNode<std::string>(node, "symbol");
     auto currentDir = Companion::Instance->GetCurrentDirectory();
+    auto assetType = GetSafeNode<std::string>(node, "type");
+
+    // Alternate headers are deferred until after all primary commands (incl. SetMesh)
+    // so that primary DLists are registered first and alt headers reuse their names.
+    struct PendingAltHeader { uint32_t seg; std::string symbol; };
+    std::vector<PendingAltHeader> pendingAltHeaders;
 
     // Collect all known data addresses from commands for neighbor-based size inference.
     // This mimics ZAPD's GetDeclarationSizeFromNeighbor(): the size of a variable-length
@@ -780,12 +786,16 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 if (seg == 0) {
                     cmdWriter.Write(std::string(""));
                 } else {
-                    // Resolve to a Set_ asset name
                     uint32_t offset = SEGMENT_OFFSET(seg);
-                    std::string setSymbol = entryName + "Set_" +
-                        ([offset]{ std::ostringstream s; s << std::uppercase << std::hex << std::setfill('0') << std::setw(6) << offset; return s.str(); })();
+                    std::string setSymbol = MakeAssetName(entryName, "Set", offset);
                     std::string setPath = currentDir + "/" + setSymbol;
                     cmdWriter.Write(setPath);
+
+                    // Defer alternate header creation until after all primary commands
+                    // are processed (especially SetMesh, which registers DLists).
+                    // This prevents alt headers from creating DLists with Set_ names
+                    // before the primary DLists are registered.
+                    pendingAltHeaders.push_back({seg, setSymbol});
                 }
             }
             break;
@@ -801,6 +811,32 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
         std::string cmdStr = cmdSS.str();
         cmd.data = std::vector<uint8_t>(cmdStr.begin(), cmdStr.end());
         scene->commands.push_back(cmd);
+    }
+
+    // Process deferred alternate headers now that primary DLists are registered.
+    // Save/restore DeferredVtx state so child processing doesn't corrupt ours.
+    for (auto& alt : pendingAltHeaders) {
+        auto existing = Companion::Instance->GetNodeByAddr(alt.seg);
+        if (!existing.has_value()) {
+            auto savedVtx = DeferredVtx::IsDeferred()
+                ? DeferredVtx::SaveAndClearPending()
+                : std::vector<DeferredVtx::PendingVtx>{};
+            bool wasDeferred = DeferredVtx::IsDeferred();
+
+            YAML::Node altNode;
+            altNode["type"] = assetType;
+            altNode["offset"] = alt.seg;
+            altNode["symbol"] = alt.symbol;
+            try {
+                Companion::Instance->AddAsset(altNode);
+            } catch (const std::exception& e) {
+                SPDLOG_WARN("Scene: Failed to create alternate header {}: {}", alt.symbol, e.what());
+            }
+
+            if (wasDeferred) {
+                DeferredVtx::RestorePending(savedVtx);
+            }
+        }
     }
 
     return scene;
