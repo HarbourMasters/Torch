@@ -19,6 +19,11 @@
 // We collect VTX during each DList parse call and flush at the end of that parse.
 namespace DeferredVtx {
 
+struct PendingVtx {
+    uint32_t addr;
+    uint32_t count;
+};
+
 static bool sDeferred = false;
 static std::vector<PendingVtx> sPendingList;
 

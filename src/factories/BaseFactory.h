@@ -24,6 +24,7 @@ namespace fs = std::filesystem;
 #define SEGMENT_NUMBER(x) (((uint32_t)(x) >> 24) & 0xFF)
 // I would love to use 0x01000000, but the stupid compiler takes it as 0x01
 #define IS_SEGMENTED(x) ((SEGMENT_NUMBER(x) > 0) && (SEGMENT_NUMBER(x) < 0x20))
+#define IS_VIRTUAL_SEGMENT(x) (SEGMENT_NUMBER(x) >= 0x80)
 #define ASSET_PTR(x) (IS_SEGMENTED(x) ? SEGMENT_OFFSET(x) : (x))
 
 #define tab_t "\t"

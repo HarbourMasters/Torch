@@ -9,6 +9,7 @@ extern "C" {
 #include <libmio0/mio0.h>
 #include <libyay0/yay0.h>
 #include <libyay0/yay1.h>
+#include <libyaz0/yaz0.h>
 #include <libmio0/tkmk00.h>
 }
 
@@ -52,6 +53,17 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 
             if (!decompressed) {
                 throw std::runtime_error("Failed to decode YAY1");
+            }
+
+            gCachedChunks[offset] = new DataChunk{ decompressed, size };
+            return gCachedChunks[offset];
+        }
+        case CompressionType::YAZ0: {
+            uint32_t size = 0;
+            uint8_t* decompressed = yaz0_decode(in_buf, &size);
+
+            if (!decompressed) {
+                throw std::runtime_error("Failed to decode YAZ0");
             }
 
             gCachedChunks[offset] = new DataChunk{ decompressed, size };
@@ -176,9 +188,30 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
             return { .root = decoded, .segment = { decoded->data + offset, size } };
         }
-        case CompressionType::YAZ0:
-            throw std::runtime_error(
-                "Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
+        case CompressionType::YAZ0: {
+            offset = ASSET_PTR(offset);
+
+            auto decoded = Decode(buffer, fileOffset, type);
+            auto availableSize = decoded->size - offset;
+            size_t size;
+
+            if (node["size"]) {
+                size = node["size"].as<size_t>();
+            } else if (manualSize.has_value()) {
+                size = manualSize.value();
+            } else {
+                size = availableSize;
+            }
+
+            if (size > availableSize) {
+                SPDLOG_WARN("Requested size 0x{:X} exceeds decoded asset size 0x{:X} at offset 0x{:X}. Reducing to "
+                            "available size.",
+                            size, availableSize, fileOffset);
+                size = availableSize;
+            }
+
+            return { .root = decoded, .segment = { decoded->data + offset, size } };
+        }
         case CompressionType::None: // The data does not have compression
         {
             fileOffset = TranslateAddr(offset, false);
