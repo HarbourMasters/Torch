@@ -284,6 +284,13 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 cmdWriter.Write(sub.ReadInt16());  // rotZ
                 cmdWriter.Write(sub.ReadInt16());  // params
             }
+
+            // Create 0-byte ActorEntry companion file (matches OTRExporter behavior).
+            if (cmdID == SetActorList && cmdArg2 != 0 && count > 0) {
+                uint32_t actorOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(cmdArg2));
+                std::string actorSymbol = MakeAssetName(baseName, "ActorEntry", actorOffset);
+                Companion::Instance->RegisterCompanionFile(actorSymbol, std::vector<char>{});
+            }
             break;
         }
         case SetTransitionActorList: {
