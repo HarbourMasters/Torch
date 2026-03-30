@@ -598,6 +598,15 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
         // Track last-valid values to replicate this behavior for invalid instruments.
         uint8_t lastLoaded = crossFontLoaded, lastNormalRangeLo = crossFontRangeLo;
         uint8_t lastNormalRangeHi = crossFontRangeHi, lastReleaseRate = crossFontRelease;
+        // Seed from last drum (DrumEntry→InstrumentEntry stack mapping).
+        // See docs/oot-audio-font-residue-analysis.md
+        if (!drums.empty()) {
+            auto& [rr, pan, loaded_d, tuning_d, env_d, ref_d] = drums.back();
+            lastLoaded = pan;            // drum.pan (offset 1) → inst.loaded (offset 1)
+            lastNormalRangeLo = loaded_d; // drum.loaded (offset 2) → inst.normalRangeLo (offset 2)
+            lastNormalRangeHi = 0;        // padding (offset 3)
+            lastReleaseRate = 0;          // drum.offset=0 (offset 4)
+        }
         for (int i = 0; i < numInstruments; i++) {
             if (ptr + 8 + (i + 1) * 4 > audioBank.size()) break;
             uint32_t instPtr = readBE32(audioBank, ptr + 8 + i * 4);
