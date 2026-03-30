@@ -805,7 +805,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     uint32_t entryCount = csCmdWord2;
                     uint32_t entrySize;
                     switch (csCmdId) {
-                        case 0x09: case 0x12: case 0x8D:
+                        case 0x09: case 0x13: case 0x8C:
                             entrySize = 0x0C; break;
                         default:
                             entrySize = 0x30; break;
@@ -870,16 +870,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 uint32_t cid = csReader.ReadUInt32();
                 if (cid == 0xFFFFFFFF) break;
 
-                // Remap ROM command IDs to OTR output IDs
-                uint32_t writeCid = cid;
-                switch (cid) {
-                    case 0x12: writeCid = 0x13; break; // TEXT → TEXTBOX
-                    case 0x8D: writeCid = 0x8C; break; // TIME → SETTIME
-                    case 0x59: writeCid = 0x56; break; // START_SEQ → PLAYBGM
-                    case 0x5A: writeCid = 0x57; break; // STOP_SEQ → STOPBGM
-                    default: break;
-                }
-                csFileWriter.Write(writeCid);
+                csFileWriter.Write(cid);
 
                 if (cid == 1 || cid == 2 || cid == 5 || cid == 6) {
                     // Camera spline: 3-word header + variable points
@@ -936,8 +927,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                             csFileWriter.Write(CS_CMD_HH(base, startF));
                             csFileWriter.Write(CS_CMD_HBB(endF, srcStr, dur));
                             csFileWriter.Write(CS_CMD_BBH(decRate, unk09, unk0A));
-                        } else if (cid == 0x12) {
-                            // Textbox: 0x0C bytes (ROM ID 0x12, OTR output 0x13)
+                        } else if (cid == 0x13) {
+                            // Textbox: 0x0C bytes
                             uint16_t base = csReader.ReadUInt16();
                             uint16_t startF = csReader.ReadUInt16();
                             uint16_t endF = csReader.ReadUInt16();
@@ -947,8 +938,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                             csFileWriter.Write(CS_CMD_HH(base, startF));
                             csFileWriter.Write(CS_CMD_HH(endF, type));
                             csFileWriter.Write(CS_CMD_HH(textId1, textId2));
-                        } else if (cid == 0x8D) {
-                            // SetTime: 0x0C bytes (ROM ID 0x8D, OTR output 0x8C)
+                        } else if (cid == 0x8C) {
+                            // SetTime: 0x0C bytes
                             uint16_t base = csReader.ReadUInt16();
                             uint16_t startF = csReader.ReadUInt16();
                             uint16_t endF = csReader.ReadUInt16();
@@ -971,9 +962,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                             // Actor cues (0x0A-0x27, 0x2E-0x55, 0x58-0x7B, 0x7D-0x8B, 0x8D+)
                             // have rotY/rotZ as word 2, then 6 int32 + 3 float.
                             // Misc (0x03), Lighting (0x04), BGM (0x56,0x57,0x7C) have 10 raw uint32s.
-                            // ROM IDs: MISC=0x03, LIGHTING=0x04, START_SEQ=0x59, STOP_SEQ=0x5A, FADE_SEQ=0x7C
                             bool isActorCue = (cid != 0x03 && cid != 0x04 &&
-                                               cid != 0x59 && cid != 0x5A && cid != 0x7C);
+                                               cid != 0x56 && cid != 0x57 && cid != 0x7C);
 
                             if (isActorCue) {
                                 // Word 2: CMD_HH(rotY, rotZ)
