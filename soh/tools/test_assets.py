@@ -210,7 +210,7 @@ def run_torch(scratch_dir, rom, work_dir):
     log_path = os.path.join(work_dir, "torch.log")
     with open(log_path, "w") as log_f:
         result = subprocess.run(
-            [TORCH, "o2r", "-s", scratch_dir, "-d", o2r_out, rom],
+            [TORCH, "o2r", "-s", scratch_dir, "-d", o2r_out, "-u", "9.2.0", rom],
             stdout=log_f, stderr=subprocess.STDOUT
         )
 

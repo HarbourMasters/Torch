@@ -1904,6 +1904,7 @@ std::vector<char> Companion::ParseVersionString(const std::string& version) {
 
     auto wv = LUS::BinaryWriter();
     wv.SetEndianness(Torch::Endianness::Big);
+    wv.Write(static_cast<uint8_t>(Torch::Endianness::Big)); // endianness flag
     wv.Write(major);
     wv.Write(minor);
     wv.Write(patch);
