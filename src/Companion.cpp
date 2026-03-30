@@ -277,6 +277,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
     this->RegisterFactory("OOT:SCENE", std::make_shared<OoT::OoTSceneFactory>());
     this->RegisterFactory("OOT:ROOM", std::make_shared<OoT::OoTSceneFactory>());
     this->RegisterFactory("OOT:CUTSCENE", std::make_shared<OoT::OoTCutsceneFactory>());
+    this->RegisterFactory("OOT:PATH", std::make_shared<OoT::OoTPathFactory>());
 #endif
 
 #ifndef __EMSCRIPTEN__ // We call this manually
