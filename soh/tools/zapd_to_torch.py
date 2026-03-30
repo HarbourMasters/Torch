@@ -579,9 +579,16 @@ def process_xml(xml_path, xml_rel_path, dma_table, out_dir, allowed_types, xml_d
         yaml_path = os.path.join(out_dir, category, f"{out_name}.yml")
         virtual = (hex_val(base_address), phys_start) if base_address else None
 
+        # Directory overrides for assets that need custom output paths.
+        directory = None
+
+        # Audio: YAML goes to audio.yml (not audio/audio.yml) so the asset
+        # path audio/audio matches the YAML-derived path (dirname=audio, symbol=audio).
+        if has_audio:
+            yaml_path = os.path.join(out_dir, f"{out_name}.yml")
+
         # For scene files, room YAMLs need a directory override so their assets
         # output under the scene's directory (e.g. scenes/nonmq/bdan_scene).
-        directory = None
         if xml_rel_path.startswith("scenes/"):
             scene_dir = get_scene_directory(xml_rel_path)
             # Room files need the override; scene files get the right path from filename

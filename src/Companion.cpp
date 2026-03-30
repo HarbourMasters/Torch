@@ -105,6 +105,7 @@
 #include "factories/oot/OoTCollisionFactory.h"
 #include "factories/oot/OoTTextFactory.h"
 #include "factories/oot/OoTSceneFactory.h"
+#include "factories/oot/OoTAudioFactory.h"
 #endif
 
 #ifdef NAUDIO_SUPPORT
@@ -278,6 +279,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
     this->RegisterFactory("OOT:ROOM", std::make_shared<OoT::OoTSceneFactory>());
     this->RegisterFactory("OOT:CUTSCENE", std::make_shared<OoT::OoTCutsceneFactory>());
     this->RegisterFactory("OOT:PATH", std::make_shared<OoT::OoTPathFactory>());
+    this->RegisterFactory("OOT:AUDIO", std::make_shared<OoT::OoTAudioFactory>());
 #endif
 
 #ifndef __EMSCRIPTEN__ // We call this manually
