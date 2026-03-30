@@ -133,7 +133,16 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     // Step 3: Extract sequences
     for (uint32_t i = 0; i < seqTable.size(); i++) {
         auto& entry = seqTable[i];
-        if (entry.size == 0) continue;
+        // When size==0, ptr is an index to another sequence (alias/indirection)
+        uint32_t seqIdx = i;
+        if (entry.size == 0) {
+            seqIdx = entry.ptr;
+            if (seqIdx >= seqTable.size()) {
+                SPDLOG_WARN("OoTAudioFactory: sequence {} alias index {} out of range", i, seqIdx);
+                continue;
+            }
+        }
+        auto& srcEntry = seqTable[seqIdx];
 
         // Sequence name
         std::string seqName;
@@ -145,9 +154,9 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
             seqName = ss.str();
         }
 
-        // Read raw sequence data from Audioseq
-        uint32_t seqDataOff = audioseqOff + entry.ptr;
-        if (seqDataOff + entry.size > buffer.size()) {
+        // Read raw sequence data from Audioseq (using srcEntry for aliased sequences)
+        uint32_t seqDataOff = audioseqOff + srcEntry.ptr;
+        if (seqDataOff + srcEntry.size > buffer.size()) {
             SPDLOG_WARN("OoTAudioFactory: sequence {} out of bounds", seqName);
             continue;
         }
@@ -156,9 +165,9 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
         LUS::BinaryWriter w;
         BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudioSequence, 2);
 
-        // Sequence data
-        w.Write(static_cast<uint32_t>(entry.size));
-        w.Write((char*)(buffer.data() + seqDataOff), entry.size);
+        // Sequence data (from srcEntry for aliased sequences)
+        w.Write(static_cast<uint32_t>(srcEntry.size));
+        w.Write((char*)(buffer.data() + seqDataOff), srcEntry.size);
 
         // Metadata
         w.Write(static_cast<uint8_t>(i));           // sequence index
