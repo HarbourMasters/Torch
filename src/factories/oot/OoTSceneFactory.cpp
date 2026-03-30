@@ -700,13 +700,19 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             }
             if (pathways.empty()) pathways.push_back({0, 0}); // fallback
 
-            // OTRExporter has a bug where pathways are doubled when a ZPath XML resource
-            // exists at the same offset as the SetPathways command. This happens for all
-            // scenes with >1 pathway. We must match this behavior for binary compatibility.
-            // Note: spot04 alt header (Set_00D590) has a unique pathway list that OTRExporter
-            // incorrectly limits to 1 entry (ZPath defaults to numPaths=1). This edge case
-            // would require tracking ZPath resource existence to fix.
-            bool doubled = (pathways.size() > 1);
+            // OTRExporter's pathway behavior depends on whether a ZPath XML resource
+            // exists at the SetPathways address. We mirror this by checking if the
+            // address was declared in our YAML (via ResolvePointer).
+            // - If declared: use scanned count, double if >1 (matches ZPath with numPaths from XML)
+            // - If NOT declared AND alt header: limit to 1 (matches ZPath default numPaths=1)
+            bool isAltHeader = node["base_name"].IsDefined();
+            auto existingPath = ResolvePointer(cmdArg2);
+            bool hasPreExistingResource = !existingPath.empty();
+
+            if (!hasPreExistingResource && isAltHeader && pathways.size() > 1) {
+                pathways.erase(pathways.begin() + 1, pathways.end());
+            }
+            bool doubled = hasPreExistingResource && (pathways.size() > 1);
             uint32_t writeCount = doubled ? pathways.size() * 2 : pathways.size();
 
             cmdWriter.Write(static_cast<uint32_t>(writeCount));
