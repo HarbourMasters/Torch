@@ -169,6 +169,40 @@ def convert_array(elem):
     return entry
 
 
+def convert_audio(elem):
+    """Convert an Audio XML element with full metadata extraction."""
+    entry = {
+        "type": "OOT:AUDIO",
+        "offset": hex_val(elem.get("Offset")),
+        "symbol": elem.get("Name"),
+        "sound_font_table_offset": hex_val(elem.get("SoundFontTableOffset")),
+        "sequence_table_offset": hex_val(elem.get("SequenceTableOffset")),
+        "sample_bank_table_offset": hex_val(elem.get("SampleBankTableOffset")),
+        "sequence_font_table_offset": hex_val(elem.get("SequenceFontTableOffset")),
+    }
+
+    # Extract sequence names
+    seqs_elem = elem.find("Sequences")
+    if seqs_elem is not None:
+        entry["sequences"] = [s.get("Name") for s in seqs_elem.findall("Sequence")]
+
+    # Extract sample names per bank
+    samples_by_bank = []
+    for samples_elem in elem.findall("Samples"):
+        bank = int(samples_elem.get("Bank", "0"))
+        bank_samples = []
+        for sample in samples_elem.findall("Sample"):
+            s = {"name": sample.get("Name"), "offset": hex_val(sample.get("Offset"))}
+            if sample.get("SampleRate"):
+                s["sample_rate"] = int(sample.get("SampleRate"))
+            bank_samples.append(s)
+        samples_by_bank.append({"bank": bank, "entries": bank_samples})
+    if samples_by_bank:
+        entry["samples"] = samples_by_bank
+
+    return entry
+
+
 def convert_generic(elem):
     """Generic converter for OoT-specific types (Phase 2+)."""
     torch_type = TYPE_MAP.get(elem.tag)
@@ -220,6 +254,7 @@ CONVERTERS = {
     "Mtx": convert_mtx,
     "Array": convert_array,
     "LimbTable": convert_limb_table,
+    "Audio": convert_audio,
 }
 
 
@@ -263,7 +298,32 @@ def _format_asset(asset):
         asset["symbol"] = name
     lines = [f"{name}:\n"]
     for k, v in asset.items():
-        lines.append(f"  {k}: {yaml_value(v)}\n")
+        if isinstance(v, list):
+            lines.append(f"  {k}:\n")
+            for item in v:
+                if isinstance(item, dict):
+                    # Nested dict in list (e.g., sample bank entries)
+                    first = True
+                    for dk, dv in item.items():
+                        prefix = "    - " if first else "      "
+                        first = False
+                        if isinstance(dv, list):
+                            lines.append(f"{prefix}{dk}:\n")
+                            for sub in dv:
+                                if isinstance(sub, dict):
+                                    sfirst = True
+                                    for sk, sv in sub.items():
+                                        sp = "        - " if sfirst else "          "
+                                        sfirst = False
+                                        lines.append(f"{sp}{sk}: {yaml_value(sv)}\n")
+                                else:
+                                    lines.append(f"        - {yaml_value(sub)}\n")
+                        else:
+                            lines.append(f"{prefix}{dk}: {yaml_value(dv)}\n")
+                else:
+                    lines.append(f"    - {yaml_value(item)}\n")
+        else:
+            lines.append(f"  {k}: {yaml_value(v)}\n")
     lines.append("\n")
     return "".join(lines)
 
@@ -477,6 +537,14 @@ def process_xml(xml_path, xml_rel_path, dma_table, out_dir, allowed_types, xml_d
             for extra_seg in range(8, 14):
                 if not any(seg == extra_seg for seg, _ in file_extra_segments):
                     file_extra_segments.append((extra_seg, phys_start))
+
+        # Auto-add audio segments when an Audio element is present
+        has_audio = any(elem.tag == "Audio" for elem in file_elem)
+        if has_audio:
+            for seg_name, seg_id in [("Audiobank", 1), ("Audioseq", 2), ("Audiotable", 3)]:
+                if seg_name in dma_table:
+                    if not any(seg == seg_id for seg, _ in file_extra_segments):
+                        file_extra_segments.append((seg_id, dma_table[seg_name]["phys_start"]))
 
         is_room_file = xml_rel_path.startswith("scenes/") and "_room_" in out_name
 
