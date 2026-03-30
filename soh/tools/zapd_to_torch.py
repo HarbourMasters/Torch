@@ -295,9 +295,19 @@ def _parse_existing_yaml(path):
     return config_text, assets_text, existing_assets
 
 
+def _asset_sort_key(asset):
+    """Sort key: OOT:SCENE/OOT:ROOM first, then everything else.
+    This ensures scene factory processes rooms before GFX DLists,
+    preventing VTX auto-discovery conflicts."""
+    t = asset.get("type", "")
+    if t in ("OOT:SCENE", "OOT:ROOM"):
+        return (0, asset.get("symbol", ""))
+    return (1, asset.get("symbol", ""))
+
 def write_yaml(path, segment, phys_start, assets, extra_segments=None, external_files=None, virtual=None, directory=None):
     """Write a Torch YAML file, merging with existing content if the file exists."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    assets = sorted(assets, key=_asset_sort_key)
 
     new_config = _format_config(segment, phys_start, extra_segments, external_files, virtual, directory=directory)
 
@@ -475,13 +485,15 @@ def process_xml(xml_path, xml_rel_path, dma_table, out_dir, allowed_types, xml_d
             if elem.tag in SKIP_ELEMENTS:
                 continue
 
-            # Skip DList entries in room files — the scene factory auto-discovers
-            # room mesh DLists with room-prefixed names that match OTRExporter.
-            # Scene-level DLists (gXxxDL_*) are at different offsets but still cause
-            # conflicts because they get registered in gAddrMap and interfere with
-            # the scene factory's auto-discovery of other assets at nearby offsets.
+            # Skip room-prefixed DList entries in room files — the scene factory
+            # auto-discovers these with room-prefixed names matching OTRExporter.
+            # Keep g-prefixed scene-level DLists (different offsets, separate assets).
+            # These MUST be ordered after OOT:ROOM in the YAML (see write_yaml sorting)
+            # to avoid VTX auto-discovery conflicts.
             if is_room_file and elem.tag == "DList":
-                continue
+                dlist_name = elem.get("Name", "")
+                if not dlist_name or dlist_name.startswith(out_name):
+                    continue
 
             if allowed_types and elem.tag not in allowed_types:
                 continue
