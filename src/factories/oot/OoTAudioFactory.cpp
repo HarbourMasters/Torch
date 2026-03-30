@@ -307,10 +307,9 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
             }
         }
 
-        // Resolve name from YAML
-        int sampleRelOff = (int32_t)readBE32(audioBank, sampleAddr + 4);
-        if (sampleNames.count(bankIndex) && sampleNames[bankIndex].count(sampleRelOff)) {
-            s.name = sampleNames[bankIndex][sampleRelOff];
+        // Resolve name from YAML (use absolute offset as key, matching ZAPDTR behavior)
+        if (sampleNames.count(bankIndex) && sampleNames[bankIndex].count((int)sampleDataOffset)) {
+            s.name = sampleNames[bankIndex][(int)sampleDataOffset];
         } else {
             std::ostringstream ss;
             ss << "sample_" << bankIndex << "_" << std::setfill('0') << std::setw(8)

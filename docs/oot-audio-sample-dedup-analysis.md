@@ -1,81 +1,74 @@
-# Audio Sample Dedup/Naming Analysis
+# Audio Sample Dedup/Naming Analysis (Verified)
 
 ## Problem
-3 samples fail: "Tom Drum" (banks 1,5,6), "Drum Sidestick" (banks 1,3), "Windchimes" (banks 1,6). These names appear in multiple banks in the XML/YAML with different per-bank offsets.
+Generated O2R has 441 samples (all named), reference has 449 (430 named + 19 fallback).
+3 named samples have wrong data due to cross-bank collisions: "Tom Drum" (banks 1,5,6),
+"Drum Sidestick" (banks 1,3), "Windchimes" (banks 1,6). 8 total entries lost to overwrites.
 
-## Root Cause
+## Root Cause (verified against ZAPDTR source)
 
-### How dedup works
-- Samples are deduplicated by **absolute Audiotable offset** (`dataRelPtr + sampleBankTable[bankId].ptr`)
-- If two banks reference the same sample data at the same absolute offset, only one entry is created
-- If two banks reference the same-named sample at DIFFERENT absolute offsets, BOTH entries are created
+### How ZAPDTR handles sample naming
 
-### How naming works
-- Name resolution: `sampleNames[bankId][relativeOffset]` → sample name from YAML
-- Registration: `RegisterCompanionFile("samples/" + name + "_META", data)`
-- When two entries get the same name, the second **overwrites** the first
-
-### The collision
-1. Font using bank 1 discovers "Tom Drum" at absolute offset A → writes `samples/Tom Drum_META`
-2. Font using bank 5 discovers "Tom Drum" at absolute offset B (A ≠ B) → overwrites with different data
-3. Reference expects the bank 1 version; we end up with the bank 5 version (or vice versa)
-
-## How ZAPDTR handles this
-
-In `ZAudio.cpp ParseSampleEntry` (line ~128):
+**XML parsing** (`ZAudio.cpp:54-56`):
 ```cpp
-if (samples.find(sampleDataOffset) == samples.end()) {
-    // Only create if this absolute offset hasn't been seen
-    sample->fileName = sampleOffsets[bankIndex][sampleDataOffset];
-    samples[sampleDataOffset] = sample;
-}
+uint32_t atOffset = sampChild->UnsignedAttribute("Offset");
+sampleOffsets[bankId][atOffset] = sampChild->Attribute("Name");
 ```
+Stores the raw XML Offset attribute (relative within bank) as the map key.
 
-The `sampleOffsets` map is populated from XML:
-```cpp
-sampleOffsets[bankId][atOffset] = name;
-```
-
-where `atOffset` is the XML Offset attribute value.
-
-**Key question**: Is the XML offset the relative offset (within bank) or the absolute Audiotable offset? From the XML:
-- Bank 1 Tom Drum: Offset="0x335740" — this is very large, looks like absolute Audiotable offset
-- Bank 5 Tom Drum: Offset="0x7B70" — small, looks like relative within bank
-
-If bank 1's offset is already absolute and matches the `sampleDataOffset`, the name lookup succeeds directly. If bank 5's offset is relative, `sampleDataOffset` = 0x7B70 + sampleBankTable[5].ptr, which might equal a different absolute offset.
-
-**Critical**: In ZAPDTR's `ParseSampleEntry`, the name lookup is:
+**Sample name lookup** (`ZAudio.cpp:174`):
 ```cpp
 sample->fileName = sampleOffsets[bankIndex][sampleDataOffset];
 ```
+where `sampleDataOffset = relPtr + audioSampleBankEntry.ptr` (absolute Audiotable offset).
 
-The key `sampleDataOffset` is the ABSOLUTE offset. But the XML stores a different kind of offset per bank. This means:
-- For bank 1: XML offset 0x335740 is used as the key. If `sampleDataOffset` also = 0x335740, name resolves
-- For bank 5: XML offset 0x7B70. If `sampleDataOffset` = 0x7B70 + bankBase, name won't resolve (different value)
+**Key mismatch**: The stored key is a relative offset, but the lookup key is an absolute offset.
+- Bank 1 (base=0): absolute == relative → lookup succeeds → named path
+- Banks 2/3/5/6 (base≠0): absolute ≠ relative → lookup fails → empty string
 
-So ZAPDTR likely ONLY resolves names for bank 1 (where XML offsets = absolute offsets), and bank 5/6 samples either:
-1. Get fallback names (`sample_5_XXXXX`)
-2. Or their absolute offsets happen to match bank 1's (meaning they share physical data)
-
-## Possible Fixes for Torch
-
-### Option A: Precompute absolute offsets for name resolution
-Convert all YAML per-bank relative offsets to absolute offsets before name lookup:
-```python
-absoluteOffset = yamlOffset + sampleBankTable[bank].ptr
+**OTRExporter fallback** (`AudioExporter.cpp:67-73`):
+```cpp
+if (sampleOffsets[bankId].contains(sampleDataOffset) &&
+    sampleOffsets[bankId][sampleDataOffset] != "") {
+    path = "audio/samples/" + name + "_META";
+} else {
+    path = "audio/samples/sample_" + bankId + "_" + hex(sampleDataOffset) + "_META";
+}
 ```
-Then key the name map by absolute offset.
 
-### Option B: First-bank-wins dedup on name
-If a companion file with the same name was already registered, skip it.
-Track registered names in a set and check before `RegisterCompanionFile`.
+Result: 430 named (bank 1 only) + 19 fallback (banks 2/3/5/6) = 449 total.
 
-### Option C: Check if sample data is identical
-If two banks reference different absolute offsets but the sample data is byte-identical,
-only write one entry (the first discovered). This handles the case where banks share
-physical data at different offsets.
+### How Torch handles it (bug)
 
-## Next Steps
-1. Check the reference O2R — does it have ONE "Tom Drum_META" or multiple?
-2. If one, which bank's version is it?
-3. Implement the appropriate dedup strategy
+Name lookup (`OoTAudioFactory.cpp:311-312`):
+```cpp
+int sampleRelOff = (int32_t)readBE32(audioBank, sampleAddr + 4);
+if (sampleNames.count(bankIndex) && sampleNames[bankIndex].count(sampleRelOff)) {
+```
+Uses **relative** offset as lookup key → matches YAML relative offset for ALL banks.
+
+All 449 samples get named paths. Cross-bank duplicates (same name, different absolute offset)
+overwrite each other in RegisterCompanionFile. Result: 441 named + 0 fallback.
+
+## Fix
+Change name lookup to use `sampleDataOffset` (absolute) instead of `sampleRelOff` (relative).
+This matches ZAPDTR's accidental-but-correct behavior where only base-0 banks get named paths.
+
+### Specific change (OoTAudioFactory.cpp lines 310-318):
+```cpp
+// Use absolute offset for name lookup (matches ZAPDTR behavior)
+if (sampleNames.count(bankIndex) && sampleNames[bankIndex].count((int)sampleDataOffset)) {
+    s.name = sampleNames[bankIndex][(int)sampleDataOffset];
+} else {
+    // Fallback: sample_BANKID_ABSOFFSET (matches OTRExporter format)
+    std::ostringstream ss;
+    ss << "sample_" << bankIndex << "_" << std::setfill('0') << std::setw(8)
+       << std::hex << std::uppercase << sampleDataOffset;
+    s.name = ss.str();
+}
+```
+
+## Verification
+- Reference: 430 named + 19 fallback = 449
+- After fix: should match exactly
+- The 19 fallback samples are in banks 2 (1), 3 (5), 5 (6), 6 (7)
