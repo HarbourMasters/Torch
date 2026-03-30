@@ -200,6 +200,14 @@ def convert_audio(elem):
     if samples_by_bank:
         entry["samples"] = samples_by_bank
 
+    # Extract font (soundfont) names
+    fonts = []
+    for child in elem:
+        if child.tag == "Soundfont":
+            fonts.append({"name": child.get("Name"), "index": int(child.get("Index", 0))})
+    if fonts:
+        entry["fonts"] = sorted(fonts, key=lambda f: f["index"])
+
     return entry
 
 
