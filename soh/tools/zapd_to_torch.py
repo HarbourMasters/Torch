@@ -477,8 +477,9 @@ def process_xml(xml_path, xml_rel_path, dma_table, out_dir, allowed_types, xml_d
 
             # Skip DList entries in room files — the scene factory auto-discovers
             # room mesh DLists with room-prefixed names that match OTRExporter.
-            # Scene-level DLists (gXxxDL_*) declared in room files are also skipped
-            # here to avoid conflicts; they need to be handled separately.
+            # Scene-level DLists (gXxxDL_*) are at different offsets but still cause
+            # conflicts because they get registered in gAddrMap and interfere with
+            # the scene factory's auto-discovery of other assets at nearby offsets.
             if is_room_file and elem.tag == "DList":
                 continue
 
