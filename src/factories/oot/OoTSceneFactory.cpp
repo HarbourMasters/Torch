@@ -701,9 +701,11 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             if (pathways.empty()) pathways.push_back({0, 0}); // fallback
 
             // OTRExporter has a bug where pathways are doubled when a ZPath XML resource
-            // OTRExporter has a bug where pathways are doubled when a ZPath XML resource
             // exists at the same offset as the SetPathways command. This happens for all
             // scenes with >1 pathway. We must match this behavior for binary compatibility.
+            // Note: spot04 alt header (Set_00D590) has a unique pathway list that OTRExporter
+            // incorrectly limits to 1 entry (ZPath defaults to numPaths=1). This edge case
+            // would require tracking ZPath resource existence to fix.
             bool doubled = (pathways.size() > 1);
             uint32_t writeCount = doubled ? pathways.size() * 2 : pathways.size();
 
