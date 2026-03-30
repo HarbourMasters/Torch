@@ -485,15 +485,14 @@ def process_xml(xml_path, xml_rel_path, dma_table, out_dir, allowed_types, xml_d
             if elem.tag in SKIP_ELEMENTS:
                 continue
 
-            # Skip room-prefixed DList entries in room files — the scene factory
-            # auto-discovers these with room-prefixed names matching OTRExporter.
-            # Keep g-prefixed scene-level DLists (different offsets, separate assets).
-            # These MUST be ordered after OOT:ROOM in the YAML (see write_yaml sorting)
-            # to avoid VTX auto-discovery conflicts.
-            if is_room_file and elem.tag == "DList":
-                dlist_name = elem.get("Name", "")
-                if not dlist_name or dlist_name.startswith(out_name):
-                    continue
+            # Skip DList entries in room files that will be auto-discovered by the
+            # scene factory's SetMesh processing. Keep others (child DLists, scene-level).
+            # All DLists MUST be ordered after OOT:ROOM in the YAML (see write_yaml
+            # sorting) to avoid VTX auto-discovery conflicts.
+            # We can't tell which DLists are mesh vs child from XML alone, so we keep
+            # all of them. The scene factory's AddAsset deduplicates: if it already
+            # auto-discovered a DList at the same offset, the YAML entry is a no-op.
+            # DLists at new offsets (child DLists, scene-level) get created normally.
 
             if allowed_types and elem.tag not in allowed_types:
                 continue
