@@ -620,6 +620,23 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                         cmdWriter.Write(siz);
                         cmdWriter.Write(mode0);
                         cmdWriter.Write(tlutCount);
+
+                        // Create background companion file: header + u32 size + raw JPEG data
+                        if (source != 0) {
+                            uint32_t bgDataSize = 320 * 240 * 2; // OoT screen buffer size
+                            auto bgDataReader = ReadSubArray(buffer, source, bgDataSize);
+                            LUS::BinaryWriter bgWriter;
+                            BaseExporter::WriteHeader(bgWriter, Torch::ResourceType::OoTBackground, 0);
+                            bgWriter.Write(static_cast<uint32_t>(bgDataSize));
+                            for (uint32_t b = 0; b < bgDataSize; b++) {
+                                bgWriter.Write(bgDataReader.ReadUByte());
+                            }
+                            std::stringstream bgSS;
+                            bgWriter.Finish(bgSS);
+                            std::string bgStr = bgSS.str();
+                            Companion::Instance->RegisterCompanionFile(
+                                bgSymbol, std::vector<char>(bgStr.begin(), bgStr.end()));
+                        }
                     }
                 } else {
                     // Single background (format 1): data is inline at meshHeader+0x08
@@ -657,6 +674,23 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     cmdWriter.Write(siz);
                     cmdWriter.Write(mode0);
                     cmdWriter.Write(tlutCount);
+
+                    // Create background companion file
+                    if (source != 0) {
+                        uint32_t bgDataSize = 320 * 240 * 2;
+                        auto bgDataReader = ReadSubArray(buffer, source, bgDataSize);
+                        LUS::BinaryWriter bgWriter;
+                        BaseExporter::WriteHeader(bgWriter, Torch::ResourceType::OoTBackground, 0);
+                        bgWriter.Write(static_cast<uint32_t>(bgDataSize));
+                        for (uint32_t b = 0; b < bgDataSize; b++) {
+                            bgWriter.Write(bgDataReader.ReadUByte());
+                        }
+                        std::stringstream bgSS;
+                        bgWriter.Finish(bgSS);
+                        std::string bgStr = bgSS.str();
+                        Companion::Instance->RegisterCompanionFile(
+                            bgSymbol, std::vector<char>(bgStr.begin(), bgStr.end()));
+                    }
                 }
 
                 // Trailing WritePolyDList (matches OTRExporter: if poly->dlist != 0)
