@@ -72,6 +72,30 @@ static std::string ResolvePointer(uint32_t ptr) {
 // Forward declaration — defined at end of file
 std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAddr);
 
+// Serialize pathway data into OoTPath binary format.
+static std::vector<char> SerializePathways(std::vector<uint8_t>& buffer,
+                                           const std::vector<std::pair<uint8_t, uint32_t>>& pathways,
+                                           uint32_t writeCount, uint32_t repeats) {
+    LUS::BinaryWriter w;
+    BaseExporter::WriteHeader(w, Torch::ResourceType::OoTPath, 0);
+    w.Write(static_cast<uint32_t>(writeCount));
+    for (uint32_t r = 0; r < repeats; r++) {
+        for (auto& [np, ptsAddr] : pathways) {
+            w.Write(static_cast<uint32_t>(np));
+            auto ptReader = ReadSubArray(buffer, ptsAddr, np * 6);
+            for (uint8_t k = 0; k < np; k++) {
+                w.Write(ptReader.ReadInt16());
+                w.Write(ptReader.ReadInt16());
+                w.Write(ptReader.ReadInt16());
+            }
+        }
+    }
+    std::stringstream ss;
+    w.Finish(ss);
+    std::string str = ss.str();
+    return std::vector<char>(str.begin(), str.end());
+}
+
 // Helper: build a scene-relative asset name from offset
 static std::string MakeAssetName(const std::string& baseName, const std::string& suffix, uint32_t offset) {
     std::ostringstream ss;
@@ -737,30 +761,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 auto [np, ptsAddr] = pathways[i];
                 uint32_t pointOffset = SEGMENT_OFFSET(ptsAddr);
                 std::string pathSymbol = MakeAssetName(baseName, "PathwayList", pointOffset);
-
-                // Build Path companion file: header + u32 numPathways + per-pathway data
-                // Companion files also reflect the doubled count to match OTRExporter.
-                LUS::BinaryWriter pathFileWriter;
-                BaseExporter::WriteHeader(pathFileWriter, Torch::ResourceType::OoTPath, 0);
-                pathFileWriter.Write(static_cast<uint32_t>(writeCount));
-
-                for (uint32_t r2 = 0; r2 < repeats; r2++) {
-                    for (uint32_t j = 0; j < pathways.size(); j++) {
-                        auto [numPts, ptAddr] = pathways[j];
-                        pathFileWriter.Write(static_cast<uint32_t>(numPts));
-                        auto ptReader = ReadSubArray(buffer, ptAddr, numPts * 6);
-                        for (uint8_t k = 0; k < numPts; k++) {
-                            pathFileWriter.Write(ptReader.ReadInt16()); // x
-                            pathFileWriter.Write(ptReader.ReadInt16()); // y
-                            pathFileWriter.Write(ptReader.ReadInt16()); // z
-                        }
-                    }
-                }
-
-                std::stringstream pathSS;
-                pathFileWriter.Finish(pathSS);
-                std::string pathStr = pathSS.str();
-                std::vector<char> pathData(pathStr.begin(), pathStr.end());
+                auto pathData = SerializePathways(buffer, pathways, writeCount, repeats);
                 Companion::Instance->RegisterCompanionFile(pathSymbol, pathData);
             }
             break;
@@ -906,29 +907,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTPathFactory::parse(std::vector<ui
 
     // Standalone OOT:PATH assets are not doubled — the doubling only occurs in
     // SetPathways command handler when a separate ZPath resource exists at the same offset.
-    uint32_t writeCount = pathways.size();
-    uint32_t repeats = 1;
-
-    LUS::BinaryWriter w;
-    BaseExporter::WriteHeader(w, Torch::ResourceType::OoTPath, 0);
-    w.Write(static_cast<uint32_t>(writeCount));
-
-    for (uint32_t r = 0; r < repeats; r++) {
-        for (auto& [np, ptsAddr] : pathways) {
-            w.Write(static_cast<uint32_t>(np));
-            auto ptReader = ReadSubArray(buffer, ptsAddr, np * 6);
-            for (uint8_t k = 0; k < np; k++) {
-                w.Write(ptReader.ReadInt16());
-                w.Write(ptReader.ReadInt16());
-                w.Write(ptReader.ReadInt16());
-            }
-        }
-    }
-
-    std::stringstream ss;
-    w.Finish(ss);
-    std::string str = ss.str();
-    return std::make_shared<OoTPathData>(std::vector<char>(str.begin(), str.end()));
+    auto data = SerializePathways(buffer, pathways, pathways.size(), 1);
+    return std::make_shared<OoTPathData>(std::move(data));
 }
 
 ExportResult OoTPathBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
