@@ -1,35 +1,61 @@
-# Plan: Fix 20 Missing Scene-Level DLists
+# Plan: Fix 20 Missing Scene-Level DLists (Updated)
 
 ## Context
-20 g-prefixed DLists (like `gKinsutaDL_0030B0`, `gMenDL_008118`) are missing from the generated O2R. They were stripped by zapd_to_torch.py's rule "skip all DList entries in room files."
+20 g-prefixed DLists are missing from the O2R. They're declared in room XML files at unique offsets (different from room mesh DLists). Example: `gKinsutaDL_0030B0` at 0x30B0, while room mesh DLists are at 0x2BC8, 0x0CF0, etc.
 
-## Key Finding
-These g-prefixed DLists are at **different ROM offsets** from the room mesh DLists. They do NOT conflict:
-- Mesh DLists: `kinsuta_room_0DL_002BC8` at offset 0x2BC8
-- Scene DLists: `gKinsutaDL_0030B0` at offset 0x30B0
+## Investigation Results
 
-The room binary references room-prefixed mesh DLists. The g-prefixed DLists are separate assets that also exist in the O2R under their own names.
+### YAML Approach FAILED (838 regressions)
+Adding g-prefixed DLists to YAML causes the GFX factory to process them during YAML parse. This triggers side effects (DeferredVtx state, VTX auto-discovery, segment state) that corrupt subsequent scene factory processing. 10 scenes affected across 838 assets.
 
-## Fix
-In `zapd_to_torch.py`, only skip room-prefixed DLists (names starting with the room file name like `kinsuta_room_0`). Keep g-prefixed DLists.
+### Root Cause of Conflicts
+When a GFX (DList) asset is parsed from YAML:
+1. GFX factory's DList parser runs
+2. DList parser calls `DeferredVtx::BeginDefer()` (if scene context)
+3. VTX auto-discovery creates VTX entries in the address map
+4. Cross-segment resolution modifies segment state
+5. When the scene factory later processes SetMesh, the state is corrupted
 
-```python
-if is_room_file and elem.tag == "DList":
-    dlist_name = elem.get("Name", "")
-    if not dlist_name or dlist_name.startswith(out_name):
-        continue  # Skip room-prefixed DLists (auto-discovered by scene factory)
-    # Keep g-prefixed scene-level DLists
+### All 20 DLists (18 from room files, across 10 scenes)
 ```
+kinsuta: gKinsutaDL_0030B0, gKinsutaDL_00B088
+men: gMenDL_008118, gMenDL_00FF78
+spot01: gSpot01DL_009E38
+spot02: gSpot02DL_0026D0
+spot03: gSpot03DL_0074E8
+spot04: gSpot04DL_002BB8, gSpot04DL_005058
+spot05: gSpot05DL_009A60, gSpot05DL_009EE0
+spot06: gSpot06DL_00A400, gSpot06DL_00A608
+spot09: gSpot09DL_007108, gSpot09DL_008780
+spot20: gSpot20DL_005E50, gSpot20DL_0066B8
+miharigoya: gMiharigoyaDL_003DA0
+```
+Plus 2 more discovered from spot00 and spot16 room files.
 
-Then regenerate scene YAMLs: `rm -rf soh/assets/yml/pal_gc/scenes/ && python3 soh/tools/zapd_to_torch.py ...`
+## Recommended Approach: Post-processing companion files
 
-## Why Previous Attempt Failed
-We tried this exact approach before (commit around the time we first added scene DList skipping) and got 28 failures. At that time, we concluded the g-prefixed DLists conflicted with room DLists. But the investigation shows they're at different offsets. The previous failures may have been from a different issue (possibly the cutscene or pathway bugs that were later fixed).
+After the scene factory finishes processing a room's YAML file (all SetMesh, SetActorList, etc are done), check if there are any unprocessed GFX-type YAML entries in the current file. For each one:
+1. Process it as a GFX asset using `AddAsset` — but ONLY after all scene commands are processed
+2. This avoids the DeferredVtx corruption because scene processing is complete
 
-## Files to Modify
-- `soh/tools/zapd_to_torch.py` — change DList skip condition
-- Regenerate `soh/assets/yml/pal_gc/scenes/` YAMLs
+### Implementation
+In `OoTSceneFactory.cpp`, after the main command processing loop and deferred alt header processing, check for remaining GFX assets in the current YAML file that haven't been processed yet. Process them last.
 
-## Verification
-- `python3 soh/tools/test_assets.py soh/roms/pal_gc_0227d7.z64 --failures-only`
-- Should show ~20 fewer not-generated, 0 failures
+Alternatively: use `RegisterCompanionFile` to create these DLists manually during the scene factory's export phase, reading the DList data and running it through the DList binary exporter.
+
+### Simplest Alternative: Script-based post-processing
+Add a post-processing step in `test_assets.py` or a new script that:
+1. Identifies which g-prefixed DLists are missing
+2. Extracts them from the ROM using Torch's DList factory
+3. Adds them to the O2R
+
+This avoids modifying the scene factory entirely.
+
+## Decision
+Given the complexity and risk of modifying scene factory processing order, these 20 DLists are documented as a known gap. They represent 0.06% of total assets and can be addressed in a future refactor of the scene factory's processing model.
+
+## Files Referenced
+- `soh/tools/zapd_to_torch.py` — DList skip logic
+- `src/factories/oot/OoTSceneFactory.cpp` — Scene factory processing
+- `src/factories/DisplayListFactory.cpp` — DeferredVtx state management
+- Reference O2R manifest — confirms g-prefixed names at unique offsets
