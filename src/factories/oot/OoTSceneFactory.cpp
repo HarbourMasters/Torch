@@ -863,13 +863,63 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             // CS_BEGIN: numCommands, endFrame
             uint32_t csNumCmds = csReader.ReadUInt32();
             uint32_t csEndFrame = csReader.ReadUInt32();
+            // Placeholder for numCommands (may differ from ROM if unhandled cmds are skipped)
+            uint32_t csNumCmdsPos = csFileWriter.GetStream()->GetLength();
             csFileWriter.Write(csNumCmds);
             csFileWriter.Write(csEndFrame);
 
+            uint32_t csWrittenCmds = 0;
             for (uint32_t ci = 0; ci < csNumCmds && csReader.GetBaseAddress() + 8 <= totalCsBytes; ci++) {
                 uint32_t cid = csReader.ReadUInt32();
                 if (cid == 0xFFFFFFFF) break;
 
+                // OTRExporter drops unimplemented commands (its default case prints
+                // a warning but writes nothing). We must skip them too.
+                // Check by seeing if the command falls into any known handler.
+                bool isHandled = (cid >= 0x01 && cid <= 0x0A) || // cam + rumble + player cue
+                                 cid == 0x03 || cid == 0x04 ||   // misc, lighting
+                                 cid == 0x13 ||                    // text
+                                 cid == 0x2D ||                    // transition
+                                 cid == 0x56 || cid == 0x57 || cid == 0x7C || // BGM
+                                 cid == 0x8C ||                    // time
+                                 cid == 0x3E8;                     // destination
+
+                // Actor cues: specific ranges handled by OTRExporter
+                if (!isHandled && cid >= 0x0E && cid <= 0x90) {
+                    // Check against known actor cue IDs (all in the enum)
+                    // Most IDs 0x0E-0x90 are actor cues EXCEPT the UNIMPLEMENTED ones
+                    static const std::set<uint32_t> unimplemented = {
+                        0x0B, 0x0C, 0x0D, 0x14, 0x15, 0x16, 0x1A, 0x1B, 0x1C,
+                        0x20, 0x21, 0x38, 0x3B, 0x3D, 0x47, 0x49, 0x5B, 0x5C,
+                        0x5F, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
+                        0x68, 0x6D, 0x70, 0x71, 0x7A
+                    };
+                    isHandled = !unimplemented.count(cid);
+                }
+
+                if (!isHandled) {
+                    // Skip: advance reader past entry data but don't write
+                    if (cid == 0x07 || cid == 0x08) {
+                        // CAM_EYE/CAM_AT: camera-like, skip header + points
+                        csReader.ReadUInt32(); // header word
+                        csReader.ReadUInt32(); // header word
+                        while (csReader.GetBaseAddress() + 0x10 <= totalCsBytes) {
+                            uint8_t cf = csReader.ReadUByte();
+                            csReader.Seek(csReader.GetBaseAddress() + 0x0F, LUS::SeekOffsetType::Start);
+                            if (cf == 0xFF) break;
+                        }
+                    } else {
+                        // Generic: skip entry count + entries (0x30 bytes each)
+                        uint32_t skipCount = csReader.ReadUInt32();
+                        uint32_t skipSize = skipCount * 0x30;
+                        if (csReader.GetBaseAddress() + skipSize <= totalCsBytes) {
+                            csReader.Seek(csReader.GetBaseAddress() + skipSize, LUS::SeekOffsetType::Start);
+                        }
+                    }
+                    continue;
+                }
+
+                csWrittenCmds++;
                 csFileWriter.Write(cid);
 
                 if (cid == 1 || cid == 2 || cid == 5 || cid == 6) {
@@ -989,11 +1039,13 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             csFileWriter.Write(static_cast<uint32_t>(0xFFFFFFFF));
             csFileWriter.Write(static_cast<uint32_t>(0));
 
-            // Fill in word count
+            // Fill in word count and corrected numCommands
             uint32_t csEndPos = csFileWriter.GetStream()->GetLength();
             uint32_t csWordCount = (csEndPos - csStartPos) / 4;
             csFileWriter.Seek(csSizePos, LUS::SeekOffsetType::Start);
             csFileWriter.Write(csWordCount);
+            // NOTE: OTRExporter writes cs->numCommands (ROM value) even when some
+            // commands are skipped. We do the same — the header stays as ROM value.
             csFileWriter.Seek(csEndPos, LUS::SeekOffsetType::Start);
 
             std::stringstream csSS;
