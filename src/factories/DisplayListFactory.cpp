@@ -14,134 +14,14 @@
 #define C0(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
 #define ALIGN16(val) (((val) + 0xF) & ~0xF)
 
-// Deferred VTX consolidation state (ZAPD-style MergeConnectingVertexLists).
-// ZAPD merges VTX per-DList (each DList has its own vertices map and merge pass).
-// We collect VTX during each DList parse call and flush at the end of that parse.
-namespace DeferredVtx {
-
-bool sDeferred = false;
-std::vector<PendingVtx> sPendingList;
-
-void BeginDefer() {
-    sDeferred = true;
-    sPendingList.clear();
-}
-
-bool IsDeferred() {
-    return sDeferred;
-}
-
-std::vector<PendingVtx> SaveAndClearPending() {
-    auto saved = std::move(sPendingList);
-    sPendingList.clear();
-    return saved;
-}
-
-void RestorePending(std::vector<PendingVtx>& saved) {
-    // Prepend saved items to current pending list (in case anything was added during the save)
-    saved.insert(saved.end(), sPendingList.begin(), sPendingList.end());
-    sPendingList = std::move(saved);
-}
-
-void AddPending(uint32_t addr, uint32_t count) {
-    sPendingList.push_back({addr, count});
-}
-
-// Flush pending VTX for a single DList: merge adjacent arrays and register assets.
-// Called at the end of each DList parse() to match ZAPD's per-DList merge scope.
-void FlushDeferred(const std::string& baseName) {
-    // Don't clear sDeferred here — it stays active for the entire room.
-    // Each DList parse flushes its own collected VTX.
-    auto pending = std::move(sPendingList);
-    sPendingList.clear();
-
-    if (pending.empty()) {
-        return;
-    }
-
-    SPDLOG_INFO("VTX FlushDeferred: {} pending VTX for {}", pending.size(), baseName);
-
-    // Sort by segment offset
-    std::sort(pending.begin(), pending.end(),
-        [](const PendingVtx& a, const PendingVtx& b) {
-            return SEGMENT_OFFSET(a.addr) < SEGMENT_OFFSET(b.addr);
-        });
-
-    // Merge adjacent/overlapping VTX arrays (ZAPD's MergeConnectingVertexLists algorithm).
-    // Two arrays merge if the first array's end >= the second's start.
-    struct MergedVtx {
-        uint32_t addr;      // segment address of start
-        uint32_t endOff;    // segment offset of end (exclusive)
-    };
-    std::vector<MergedVtx> merged;
-
-    for (auto& pv : pending) {
-        uint32_t startOff = SEGMENT_OFFSET(pv.addr);
-        uint32_t endOff = startOff + pv.count * sizeof(N64Vtx_t);
-
-        if (merged.empty() || startOff > merged.back().endOff) {
-            // New group
-            merged.push_back({pv.addr, endOff});
-        } else {
-            // Extend existing group
-            if (endOff > merged.back().endOff) {
-                merged.back().endOff = endOff;
-            }
-        }
-    }
-
-    // Register each merged VTX group as an asset
-    for (auto& mg : merged) {
-        uint32_t startOff = SEGMENT_OFFSET(mg.addr);
-        uint32_t totalBytes = mg.endOff - startOff;
-        uint32_t totalCount = totalBytes / sizeof(N64Vtx_t);
-
-        // Build proper symbol: baseName + "Vtx_" + 6-digit hex offset
-        std::ostringstream ss;
-        ss << baseName << "Vtx_" << std::uppercase << std::hex
-           << std::setfill('0') << std::setw(6) << startOff;
-        std::string symbol = ss.str();
-
-        // Use OOT:ARRAY type to match reference O2R format (ResourceType::Array)
-        YAML::Node vtx;
-        vtx["type"] = "OOT:ARRAY";
-        vtx["offset"] = mg.addr;
-        vtx["count"] = totalCount;
-        vtx["symbol"] = symbol;
-        vtx["array_type"] = "VTX";
-
-        SPDLOG_INFO("VTX consolidation: {} at 0x{:X} count={}", symbol, mg.addr, totalCount);
-        Companion::Instance->AddAsset(vtx);
-
-        // Register overlap mappings for all pending addresses within this group.
-        // Use the symbol (not the full path) to match existing SearchVtx-based overlaps,
-        // since the export path applies RelativePath() which prepends the directory.
-        auto registeredNode = Companion::Instance->GetNodeByAddr(mg.addr);
-        if (registeredNode.has_value()) {
-            auto [fullPath, vtxNode] = registeredNode.value();
-            auto overlapTuple = std::make_tuple(symbol, vtxNode);
-            for (auto& pv : pending) {
-                uint32_t pvOff = SEGMENT_OFFSET(pv.addr);
-                if (pvOff > startOff && pvOff < mg.endOff) {
-                    GFXDOverride::RegisterVTXOverlap(pv.addr, overlapTuple);
-                }
-            }
-        }
-    }
-}
-
-void EndDefer() {
-    sDeferred = false;
-    sPendingList.clear();
-}
-
-} // namespace DeferredVtx
-
 // Try to remap a segmented address to a segment where the asset can be found.
 // OoT uses segment 8 to reference textures in the same file (loaded at segment 6).
 // When segments share the same ROM offset, remap the address to the primary segment.
 // If expectedType is provided, only return a match if the asset has that type.
 static uint32_t RemapSegmentedAddr(uint32_t addr, const std::string& expectedType = "") {
+    // Only needed for OoT where overlay segments alias the same ROM data
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return addr;
+
     uint8_t seg = SEGMENT_NUMBER(addr);
     uint32_t offset = SEGMENT_OFFSET(addr);
     auto segBase = Companion::Instance->GetFileOffsetFromSegmentedAddr(seg);
@@ -353,8 +233,11 @@ void DebugDisplayList(uint32_t w0, uint32_t w1) {
 #endif
 
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
-    // Search both VTX and OOT:ARRAY types for vertex data
-    std::vector<std::string> vtxTypes = {"VTX", "OOT:ARRAY"};
+    // Search VTX type, plus OOT:ARRAY when running with OoT minor version
+    std::vector<std::string> vtxTypes = {"VTX"};
+    if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT) {
+        vtxTypes.push_back("OOT:ARRAY");
+    }
 
     // Translate ptr to absolute ROM address for cross-segment comparison.
     // Use GetFileOffsetFromSegmentedAddr to avoid error logging from TranslateAddr.
@@ -977,13 +860,17 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                 // Save/restore pending VTX around AddAsset: it may trigger immediate
                 // parsing of the child DList, whose FlushDeferred would consume the
                 // parent's pending VTX. Each DList should have its own VTX scope.
+#ifdef OOT_SUPPORT
                 auto savedDL = DeferredVtx::IsDeferred()
                     ? DeferredVtx::SaveAndClearPending()
                     : std::vector<DeferredVtx::PendingVtx>{};
+#endif
                 Companion::Instance->AddAsset(gfx);
+#ifdef OOT_SUPPORT
                 if (DeferredVtx::IsDeferred()) {
                     DeferredVtx::RestorePending(savedDL);
                 }
+#endif
             }
         }
 
@@ -1062,16 +949,21 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                         // Save parent's pending VTX before AddAsset: AddAsset triggers
                         // immediate parsing of the branch target DList, whose FlushDeferred
                         // would consume/clear the parent's pending VTX.
+#ifdef OOT_SUPPORT
                         auto savedPending = DeferredVtx::IsDeferred()
                             ? DeferredVtx::SaveAndClearPending()
                             : std::vector<DeferredVtx::PendingVtx>{};
+#endif
                         Companion::Instance->AddAsset(gfx);
+#ifdef OOT_SUPPORT
                         if (DeferredVtx::IsDeferred()) {
                             DeferredVtx::RestorePending(savedPending);
                         }
+#endif
                     }
                 }
 
+#ifdef OOT_SUPPORT
                 // Scan branch target DList for G_VTX to include in parent's deferred VTX set
                 if (DeferredVtx::IsDeferred()) {
                     YAML::Node branchNode;
@@ -1105,6 +997,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                         }
                     }
                 }
+#endif
             }
         }
 
@@ -1196,9 +1089,12 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     }
 
                     if (!skipVtx) {
+#ifdef OOT_SUPPORT
                         if (DeferredVtx::IsDeferred()) {
                             DeferredVtx::AddPending(adjPtr, nvtx);
-                        } else {
+                        } else
+#endif
+                        {
                             YAML::Node vtx;
                             vtx["type"] = "VTX";
                             vtx["offset"] = adjPtr;
@@ -1220,6 +1116,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         gfxs.push_back(w1);
     }
 
+#ifdef OOT_SUPPORT
     // Flush per-DList VTX: merge adjacent arrays discovered during this parse.
     // ZAPD merges VTX per-DList (each DList has its own vertices map).
     if (DeferredVtx::IsDeferred()) {
@@ -1229,6 +1126,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         std::string baseName = (dlPos != std::string::npos) ? symbol.substr(0, dlPos) : symbol;
         DeferredVtx::FlushDeferred(baseName);
     }
+#endif
 
     return std::make_shared<DListData>(gfxs);
 }

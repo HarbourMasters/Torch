@@ -1617,21 +1617,21 @@ uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
 
             auto relOffset = addr - vramBase;
 
-            // Find the segment number that maps to this phys_start to produce a segmented address.
-            // This keeps the patched address in the same form as YAML-declared offsets (e.g. 0x80000980).
-            // Prefer segment 0x80 (the virtual/primary segment) when multiple segments map to the
-            // same physical address (overlays alias segments 8-13 to the same ROM data).
-            if (Torch::contains(this->gConfig.segment.local, (uint32_t)0x80) &&
-                this->gConfig.segment.local[0x80] == physStart) {
-                return (0x80 << 24) | relOffset;
-            }
-            for (auto& [seg, segOffset] : this->gConfig.segment.local) {
-                if (segOffset == physStart) {
-                    return (seg << 24) | relOffset;
+            // OoT: convert to segmented address, preferring segment 0x80 (the virtual/primary
+            // segment) when multiple segments alias the same ROM data (overlays use 8-13).
+            if (this->gConfig.gbi.subversion == GBIMinorVersion::OoT) {
+                if (Torch::contains(this->gConfig.segment.local, (uint32_t)0x80) &&
+                    this->gConfig.segment.local[0x80] == physStart) {
+                    return (0x80 << 24) | relOffset;
+                }
+                for (auto& [seg, segOffset] : this->gConfig.segment.local) {
+                    if (segOffset == physStart) {
+                        return (seg << 24) | relOffset;
+                    }
                 }
             }
 
-            // Fallback: return absolute ROM address
+            // Default: return absolute ROM address
             addr = relOffset + physStart;
         }
     }
@@ -1653,8 +1653,9 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
 
     // When multiple segments map to the same ROM data (e.g. segments 6 and 8-13 for overlays),
     // a lookup for 0xD001980 won't match 0x6001980 even though they reference the same data.
-    // Only applies to overlay files that have virtual address mappings.
-    if (IS_SEGMENTED(addr) && Torch::contains(gVirtualAddrMap, gCurrentFile)) {
+    // Only applies to OoT overlay files that have virtual address mappings.
+    if (this->gConfig.gbi.subversion == GBIMinorVersion::OoT &&
+        IS_SEGMENTED(addr) && Torch::contains(gVirtualAddrMap, gCurrentFile)) {
         auto addrSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
         if (addrSeg.has_value()) {
             auto absAddr = addrSeg.value() + SEGMENT_OFFSET(addr);
