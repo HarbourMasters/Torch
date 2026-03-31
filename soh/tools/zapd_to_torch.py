@@ -2,26 +2,24 @@
 """Convert ZAPD/Shipwright XML asset definitions to Torch YAML format.
 
 Reads XML asset definitions, converts them to Torch YAML, and adds VTX entries
-discovered from the reference O2R manifest.
+from a pre-computed VTX JSON file.
 
 Usage:
-    python3 zapd_to_torch.py <xml_dir> <dma_json> <out_dir> <manifest_json> <reference_o2r> [--types TYPE1,TYPE2,...]
+    python3 zapd_to_torch.py --xml-dir <dir> --dma-json <file> --out-dir <dir> [--vtx-json <file>] [--types TYPE1,TYPE2,...]
 
 Example:
     python3 soh/tools/zapd_to_torch.py \
-        ~/code/claude/Shipwright/soh/assets/xml/GC_NMQ_PAL_F \
-        soh/dma/pal_gc.json \
-        soh/assets/yml/pal_gc \
-        soh/manifests/pal_gc.json \
-        soh/o2r/reference.o2r
+        --xml-dir ~/code/Shipwright/soh/assets/xml/GC_NMQ_PAL_F \
+        --dma-json soh/dma/pal_gc.json \
+        --out-dir soh/assets/yml/pal_gc \
+        --vtx-json soh/vtx/pal_gc.json
 
     # Only convert specific types:
     python3 soh/tools/zapd_to_torch.py \
-        ~/code/claude/Shipwright/soh/assets/xml/GC_NMQ_PAL_F \
-        soh/dma/pal_gc.json \
-        soh/assets/yml/pal_gc \
-        soh/manifests/pal_gc.json \
-        soh/o2r/reference.o2r \
+        --xml-dir ~/code/Shipwright/soh/assets/xml/GC_NMQ_PAL_F \
+        --dma-json soh/dma/pal_gc.json \
+        --out-dir soh/assets/yml/pal_gc \
+        --vtx-json soh/vtx/pal_gc.json \
         --types Texture,Blob,DList
 """
 
@@ -29,10 +27,8 @@ import argparse
 import json
 import os
 import re
-import struct
 import sys
 import xml.etree.ElementTree as ET
-import zipfile
 
 
 # Map XML element names to Torch YAML type strings
@@ -633,52 +629,6 @@ def process_xml(xml_path, xml_rel_path, dma_table, out_dir, allowed_types, xml_d
 
 # --- VTX discovery from reference O2R ---
 
-def extract_vtx_entries(manifest, reference_o2r):
-    """Extract VTX entries from manifest and reference O2R.
-
-    Returns dict: {dma_filename: [(asset_name, offset_hex, count), ...]}
-    """
-    vtx_pattern = re.compile(r"^(.+?)/(.+?)/(.*Vtx_([0-9A-Fa-f]+))$")
-
-    vtx_by_file = {}
-    vtx_assets = []
-
-    for asset_path in manifest:
-        m = vtx_pattern.match(asset_path)
-        if not m:
-            continue
-        category, filename, asset_name, offset_hex = m.groups()
-        vtx_assets.append((asset_path, category, filename, asset_name, int(offset_hex, 16)))
-
-    # Extract counts from reference O2R
-    with zipfile.ZipFile(reference_o2r, "r") as zf:
-        for asset_path, category, filename, asset_name, offset in vtx_assets:
-            try:
-                data = zf.read(asset_path)
-            except KeyError:
-                print(f"  SKIP (not in O2R): {asset_path}", file=sys.stderr)
-                continue
-
-            # Parse: 64-byte header, then array_type (u32 LE), count (u32 LE)
-            if len(data) < 72:
-                print(f"  SKIP (too small): {asset_path}", file=sys.stderr)
-                continue
-
-            arr_type = struct.unpack_from("<I", data, 64)[0]
-            count = struct.unpack_from("<I", data, 68)[0]
-
-            if arr_type != 25:  # Not Vertex type
-                print(f"  SKIP (not vertex array, type={arr_type}): {asset_path}", file=sys.stderr)
-                continue
-
-            key = f"{category}/{filename}"
-            if key not in vtx_by_file:
-                vtx_by_file[key] = []
-            vtx_by_file[key].append((asset_name, f"0x{offset:X}", count))
-
-    return vtx_by_file
-
-
 def add_vtx_to_yaml(yaml_path, vtx_entries):
     """Append VTX entries to a YAML file."""
     with open(yaml_path) as f:
@@ -719,21 +669,20 @@ def add_vtx_to_yaml(yaml_path, vtx_entries):
     return len(new_entries)
 
 
-def add_vtx_from_manifest(manifest_json, reference_o2r, yaml_dir):
-    """Add VTX entries to YAML files based on reference O2R manifest."""
-    with open(manifest_json) as f:
-        manifest = json.load(f)
-
-    vtx_by_file = extract_vtx_entries(manifest, reference_o2r)
+def add_vtx_from_json(vtx_json_path, yaml_dir):
+    """Add VTX entries to YAML files from a pre-computed VTX JSON file."""
+    with open(vtx_json_path) as f:
+        vtx_by_file = json.load(f)
 
     total_added = 0
     files_updated = 0
 
-    for file_key, vtx_entries in sorted(vtx_by_file.items()):
+    for file_key, entries in sorted(vtx_by_file.items()):
         yaml_path = os.path.join(yaml_dir, f"{file_key}.yml")
         if not os.path.exists(yaml_path):
             continue
 
+        vtx_entries = [(e["name"], e["offset"], e["count"]) for e in entries]
         added = add_vtx_to_yaml(yaml_path, vtx_entries)
         if added > 0:
             total_added += added
@@ -742,13 +691,13 @@ def add_vtx_from_manifest(manifest_json, reference_o2r, yaml_dir):
     return total_added, files_updated
 
 
+
 def main():
     parser = argparse.ArgumentParser(description="Convert ZAPD/Shipwright XML to Torch YAML")
-    parser.add_argument("xml_dir", help="Path to XML directory (e.g. GC_NMQ_PAL_F)")
-    parser.add_argument("dma_json", help="Path to DMA table JSON")
-    parser.add_argument("out_dir", help="Output YAML directory")
-    parser.add_argument("manifest_json", help="Path to reference manifest JSON")
-    parser.add_argument("reference_o2r", help="Path to reference O2R file")
+    parser.add_argument("--xml-dir", required=True, help="Path to XML directory (e.g. GC_NMQ_PAL_F)")
+    parser.add_argument("--dma-json", required=True, help="Path to DMA table JSON")
+    parser.add_argument("--out-dir", required=True, help="Output YAML directory")
+    parser.add_argument("--vtx-json", help="Path to VTX JSON file for vertex array backfill")
     parser.add_argument("--types", help="Comma-separated list of XML types to convert (default: all)")
     args = parser.parse_args()
 
@@ -785,9 +734,12 @@ def main():
 
     print(f"Wrote {total_files} YAML files with {total_assets} assets")
 
-    # Step 2: Add VTX entries from reference O2R
-    vtx_added, vtx_files = add_vtx_from_manifest(args.manifest_json, args.reference_o2r, args.out_dir)
-    print(f"Added {vtx_added} VTX entries to {vtx_files} YAML files")
+    # Step 2: Add VTX entries from pre-computed JSON
+    if args.vtx_json:
+        vtx_added, vtx_files = add_vtx_from_json(args.vtx_json, args.out_dir)
+        print(f"Added {vtx_added} VTX entries to {vtx_files} YAML files")
+    else:
+        print("Skipping VTX backfill (no --vtx-json provided)")
 
 
 if __name__ == "__main__":
