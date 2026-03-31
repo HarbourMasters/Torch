@@ -98,7 +98,49 @@ type/symbol/offset/count fields. Result: **3x slower** (70s vs 25s) because:
 The gprof percentages were misleading: gprof amplifies frequently-called small functions
 due to its instrumentation overhead. The actual YAML access cost may be lower than 25%.
 
-## Remaining approach to investigate
-- Parallelization (biggest potential win, but complex)
-- Profile with a sampling profiler (perf with proper permissions) for accurate data
-- Targeted caching of specific hot values without changing the core data structure
+## perf sampling profiler results (accurate, unlike gprof)
+gprof was misleading — perf with hardware counters tells the real story:
+
+| % | Location | What |
+|---|----------|------|
+| ~29% | libc (vmovntdq) | Memory zeroing/copying (memset/memcpy) |
+| ~30% | kernel | Page faults, LRU, memory management |
+| 1% | tdefl_compress | ZIP compression |
+| <1% | torch user code | Actual computation |
+
+**~60% of runtime is memory allocation, page faults, and memory operations.**
+The actual computation is fast. The bottleneck is creating/destroying millions of
+YAML::Node objects, strings, vectors, and other heap objects during processing.
+
+This explains why the AssetEntry struct approach failed — it added MORE allocations
+(bigger struct with more string fields) rather than reducing them.
+
+## Root cause: YAML::Node as runtime data structure
+ZAPDTR/OTRExporter is fast (<10s) because ZAPDTR parses XML once into C++ objects
+that live for the entire run. Torch creates and destroys YAML nodes constantly:
+- Every AddAsset creates new YAML nodes for auto-discovered assets
+- Every GetNodesByType returns vectors by value
+- Double YAML load per file (line 758 reloads the file)
+- Factory parse methods receive YAML::Node& and access it repeatedly
+
+## Planned architecture: compiled YAML + struct-based pipeline
+
+### Phase 1: Compiled binary asset format
+- Add `torch compile` subcommand: YAML → binary cache
+- Binary format stores pre-extracted fields (type, offset, count, symbol, etc.)
+- Ports ship compiled binary instead of YAML in releases
+- Torch loads binary directly — no YAML parsing at runtime
+- YAML remains the development/editing format
+- Binary is versioned so Torch detects stale caches
+
+### Phase 2: Struct-based factory pipeline
+- Parse YAML/binary once → populate plain C++ structs
+- Factories receive structs + ROM buffer, not YAML::Node
+- YAML::Node never touches the factory/export pipeline
+- AddAsset creates structs instead of YAML nodes
+- Incremental: add struct overloads to factories, migrate one at a time
+
+### Expected impact
+- Phase 1 alone eliminates YAML parsing (~1s) and allows binary distribution
+- Phase 2 eliminates heap allocation churn during processing (~60% of runtime)
+- Combined target: <10s, competitive with OTRExporter
