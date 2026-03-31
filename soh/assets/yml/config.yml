@@ -2,7 +2,7 @@
   name: Legend of Zelda, The - Ocarina of Time (Europe) (GameCube)
   path: pal_gc
   config:
-    gbi: F3DEX2
+    gbi: F3DEX2_OoT
     sort: OFFSET
     output:
       binary: oot.o2r

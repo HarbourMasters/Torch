@@ -1260,6 +1260,9 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         } else if (key == "F3DEX2_PM64") {
             this->gConfig.gbi.version = GBIVersion::f3dex2;
             this->gConfig.gbi.subversion = GBIMinorVersion::PM64;
+        } else if (key == "F3DEX2_OoT") {
+            this->gConfig.gbi.version = GBIVersion::f3dex2;
+            this->gConfig.gbi.subversion = GBIMinorVersion::OoT;
         } else if (key == "F3DEXB") {
             this->gConfig.gbi.version = GBIVersion::f3dexb;
         } else if (key == "F3DEX_MK64") {

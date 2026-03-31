@@ -435,7 +435,7 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
         // gSunDL VTX override: must run before normal G_VTX handler.
         // OTRExporter's GetDeclarationRanged finds a texture covering this VTX address,
         // using it with a byte offset. Torch auto-discovers a VTX at the exact address instead.
-        if (opcode == GBI(G_VTX) && replacement && replacement->find("gSunDL") != std::string::npos) {
+        if (opcode == GBI(G_VTX) && Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT && replacement && replacement->find("gSunDL") != std::string::npos) {
             auto ptr = w1;
             std::optional<std::pair<std::string, uint32_t>> rangedMatch;
             // Search non-VTX types only: the VTX at this address is auto-discovered by Torch
@@ -761,7 +761,7 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                 // producing a duplicate command. We match that behavior for compatibility.
                 // OTRExporter hack: sShadowMaterialDL (ovl_En_Jsjutan) references a BSS texture.
                 // The actor loads it into segment 0xC at runtime.
-                if (replacement && replacement->find("sShadowMaterialDL") != std::string::npos) {
+                if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT && replacement && replacement->find("sShadowMaterialDL") != std::string::npos) {
                     w1 = 0x0C000001;
                 } else {
                     auto patchedPtr = Companion::Instance->PatchVirtualAddr(ptr);
@@ -775,7 +775,7 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
         // OTRExporter hack: gSunDL textures are I4 but the DList commands use IA16 parameters.
         // Adjust G_SETTILE size and G_LOADBLOCK texel count to match the actual texture format.
         // See OTRExporter DisplayListExporter.cpp G_SETTILE/G_LOADBLOCK cases.
-        if (replacement && replacement->find("gSunDL") != std::string::npos) {
+        if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT && replacement && replacement->find("gSunDL") != std::string::npos) {
             constexpr uint8_t G_SETTILE_OP = 0xF5;
             constexpr uint8_t G_LOADBLOCK_OP = 0xF3;
             constexpr uint8_t G_TX_LOADTILE = 7;
