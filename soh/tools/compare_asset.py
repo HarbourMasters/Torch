@@ -15,7 +15,7 @@ import zipfile
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SOH_DIR = os.path.dirname(SCRIPT_DIR)
-DEFAULT_REF = os.path.join(SOH_DIR, "o2r", "reference.o2r")
+DEFAULT_REF = os.path.join(SOH_DIR, "o2r", "reference", "pal_gc_0227d7.o2r")
 DEFAULT_GEN = os.path.join(SOH_DIR, "o2r", "generated.o2r")
 
 
