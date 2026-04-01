@@ -105,16 +105,31 @@ Run Torch on enriched YAML, compare timing. AddAsset calls should now early-retu
 - Conservative estimate: 1-7s savings depending on how much allocation overhead is in the auto-discovery path vs base asset parsing
 - This is a stepping stone: enriched YAML is the prerequisite for future codegen
 
+## Results
+
+### Objects-only enrichment (implemented, working)
+- 607 object assets pre-declared (GFX from skeleton limbs, MTX)
+- **35,280ms → ~31,100ms (−4s, −11.8%)**
+- 35,386/35,386 pass binary comparison
+
+### Scene enrichment (investigated, blocked)
+- 5,819 scene room DList/MTX assets identified
+- Would save ~5s more (27.3s total with objects+scenes)
+- **Blocked by duplicate-offset issue**: the same ROM offset gets registered
+  under different names depending on which scene header set references it
+  (e.g. `bdan_room_0DL_002CD8` vs `bdan_room_0Set_0000E0DL_002CD8`).
+  Pre-declaring one name causes the CRC64 hash to differ in the parent DList
+  binary output. Fixing this requires changes to how Torch handles scene
+  alternate headers — not a pure YAML enrichment fix.
+
 ## Risks
 
 - Reference O2R is ROM-version-specific. Different ROM versions may produce different auto-discovered assets. Mitigation: generate one reference O2R per supported ROM version (already how VTX JSON works).
-- Symbol naming must match what Torch's AddAsset would generate. If there's a mismatch, AddAsset won't find the pre-declared entry and will try to create a duplicate, hitting the type clash error at line 1932.
-- Some auto-discovered assets have fields that are hard to extract from the O2R binary (e.g. VTX count). Need to parse the resource header format.
+- Scene assets have duplicate-offset naming that depends on runtime processing order. These are skipped for now.
 
 ## Verification
 
-1. Generate reference O2R from current (non-enriched) YAML
-2. Run extract_assets.py on it → assets.json
-3. Enrich YAML with assets.json
-4. Run Torch on enriched YAML → verify 35,386/35,386 + binary match
-5. Compare timing: enriched vs non-enriched
+1. `rm -rf soh/assets/yml/pal_gc/`
+2. `python3 soh/tools/zapd_to_torch.py --xml-dir ... --vtx-json ... --undeclared-json /tmp/undeclared.json`
+3. `python3 soh/tools/test_assets.py soh/roms/pal_gc_0227d7.z64` → 35,386/35,386
+4. Timing: ~31s vs ~35s baseline
