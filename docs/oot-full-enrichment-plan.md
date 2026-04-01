@@ -1,4 +1,4 @@
-# Full YAML Enrichment: Remove Auto-Discovery from Torch
+# Full YAML Enrichment: Remove Auto-Discovery from Torch (OoT PoC)
 
 ## Context
 
@@ -11,6 +11,12 @@ The goal: YAML is the single source of truth for all assets. Torch expects fully
 enriched YAML and errors on undeclared references instead of silently creating them.
 This eliminates auto-discovery overhead, resolves the duplicate-name scene issue,
 and is the foundation for future codegen.
+
+**Scope: OoT proof-of-concept.** AddAsset is called from 19+ factories across
+all supported games (SM64, SF64, F-Zero, NAudio, etc.). AddAsset itself stays
+in Torch for other games. The goal is that OoT processing never reaches AddAsset
+at all — every OoT asset is pre-declared in YAML. If AddAsset is called during
+OoT processing, that's a bug in the enrichment (incomplete YAML).
 
 ## Current auto-discovery call sites (to remove)
 
@@ -43,41 +49,34 @@ The canonical name for each offset should match what ZAPD/OTRExporter uses. The
 reference O2R already contains the correct names — use the first occurrence at each
 offset as the canonical name.
 
-### Phase 2: Make Torch expect enriched YAML
+### Phase 2: Make AddAsset throw
 
-For each auto-discovery site, change from "create if missing" to "error if missing":
+Make AddAsset throw an exception with the undeclared asset's type, offset, and
+the file being processed. This immediately surfaces every gap in enrichment:
 
 ```cpp
-// Before (auto-discovery):
-const auto decl = this->GetNodeByAddr(w1);
-if (!decl.has_value()) {
-    YAML::Node gfx;
-    gfx["type"] = "GFX";
-    gfx["offset"] = w1;
-    Companion::Instance->AddAsset(gfx);
-}
-
-// After (expect enriched):
-const auto decl = this->GetNodeByAddr(w1);
-if (!decl.has_value()) {
-    SPDLOG_ERROR("Undeclared GFX at 0x{:X} — YAML enrichment incomplete", w1);
-    // Continue gracefully (don't crash), but log the gap
+std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
+    auto type = GetTypeNode(asset);
+    auto offset = GetSafeNode<uint32_t>(asset, "offset");
+    throw std::runtime_error(
+        "AddAsset called for " + type + " at " + Torch::to_hex(offset, false) +
+        " in " + this->gCurrentFile + " — YAML enrichment incomplete");
 }
 ```
 
-This can be done incrementally per factory. Each factory migration:
-1. Ensure the enrichment tooling covers all assets that factory discovers
-2. Remove the AddAsset call
-3. Add error logging for undeclared references
-4. Test: 35,386/35,386 + binary match
+Then iteratively:
+1. Run Torch on OoT ROM → hits throw
+2. Identify which asset type/offset is missing from YAML
+3. Fix enrichment tooling to pre-declare it
+4. Repeat until 35,386/35,386 pass with no throws
 
-### Phase 3: Remove AddAsset infrastructure
+### Phase 3: Clean up (after PoC validates)
 
-Once all factories are migrated:
-- Remove `Companion::AddAsset()` entirely (or keep as error-only stub)
-- Remove `autogen` field handling
-- Remove `RegisterAsset()` (only used by AddAsset)
+Once OoT runs clean with AddAsset throwing:
+- Remove the OoT-specific AddAsset call sites from factories (dead code)
+- Remove `autogen` field handling for OoT path
 - Simplify `ProcessFile` — no more recursive AddAsset → RegisterAsset → ParseNode chains
+- Keep AddAsset for other games (restore non-throwing version behind a flag or game check)
 
 ### Phase 4: Scene alternate headers
 
@@ -126,6 +125,51 @@ names when looking up DLists.
 ### Torch core (Phase 3)
 - `src/Companion.h` — remove AddAsset, RegisterAsset signatures
 - `src/Companion.cpp` — remove AddAsset, RegisterAsset implementations
+
+## Known issues (from review)
+
+### Critical
+
+1. **DeferredVtx merges adjacent VTX arrays** — it doesn't just discover VTX, it
+   consolidates adjacent arrays into larger merged groups. The VTX JSON from
+   `extract_vtx.py` already declares the merged groups (it reads them from the
+   reference O2R which has the post-merge result). But if DeferredVtx still runs
+   and tries to merge pre-declared VTX, the behavior may differ. Options:
+   - Keep DeferredVtx running (it will find pre-declared VTX via GetNodeByAddr
+     and skip AddAsset) — check if merge logic still produces correct overlaps
+   - Disable DeferredVtx when YAML is fully enriched (VTX overlaps would need
+     to be pre-declared too)
+
+2. **CRC64 path matching** — binary output hashes the full asset path string.
+   Pre-declared assets must use the exact name/path that auto-discovery would
+   produce. `catalog_undeclared.py` uses names from the reference O2R, which
+   should match. Verify per-type.
+
+3. **OoTSkeletonFactory recursive chains** — calls AddAsset for limbs inside its
+   own parse(), then immediately uses the result (ResolvePointer needs the limb
+   registered). Options:
+   - Pre-declare all limbs in YAML (skeleton factory finds them via GetNodeByAddr)
+   - Refactor skeleton factory to not depend on immediate parsing
+   - Keep skeleton AddAsset calls as-is if limbs are already pre-declared
+     (AddAsset early-returns, no overhead)
+
+### Medium
+
+4. **GetNodesByType skips `autogen` assets** (Companion.cpp:1836). Pre-declared
+   assets won't have `autogen=true`, so they'll appear in GetNodesByType results.
+   Callers: SearchVtx (DisplayListFactory), gSunDL override. Verify these don't
+   break when auto-discovered assets become visible.
+
+### Low
+
+5. **Directory context** — scene room YAMLs set `:config: directory` which controls
+   output paths. Pre-declared assets in the correct YAML file get the right
+   directory. Enrichment tool must place assets in the right file.
+
+6. **First-pass vs RegisterAsset** — first pass populates gAddrMap without parsing.
+   AddAsset triggers immediate parsing via RegisterAsset→ParseNode. With enrichment,
+   parsing happens in the normal second pass. Should be safe since no code depends
+   on immediate mid-factory parsing (except OoTSkeletonFactory, see #3).
 
 ## Verification (per migration step)
 
