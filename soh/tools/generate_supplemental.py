@@ -536,6 +536,20 @@ def main():
             if e["name"] not in existing_names:
                 merged[file_key].append(e)
 
+    # gSunDL VTX: embedded vertex data within gSunDL's ROM range.
+    # OTRExporter handles this via GetDeclarationRanged (byte offset into texture).
+    # Torch needs it declared to avoid AddAsset. Found by walking gSunDL's G_VTX command.
+    gk = "objects/gameplay_keep"
+    if gk in merged:
+        if not any(e.get("name") == "gSunDLVtx_04D348" for e in merged[gk]):
+            merged[gk].append({
+                "name": "gSunDLVtx_04D348",
+                "type": "VTX",
+                "offset": "0x4D348",
+                "symbol": "gSunDLVtx_04D348",
+                "count": 12,
+            })
+
     # Keep unresolved BLOBs (with _skel_name/_limb_count) — zapd_to_torch resolves them
     # Filter out entries missing both offset AND resolution fields
     for key in list(merged.keys()):
