@@ -723,6 +723,10 @@ def add_undeclared_to_yaml(yaml_path, entries):
             lines += f'  size: {entry["size"]}\n'
         if "base_name" in entry:
             lines += f'  base_name: {entry["base_name"]}\n'
+        if "segments" in entry:
+            lines += f'  segments:\n'
+            for seg in entry["segments"]:
+                lines += f'    - [ {seg[0]}, {seg[1]} ]\n'
         new_entries.append(lines)
 
     if not new_entries:
@@ -761,6 +765,112 @@ def add_undeclared_from_json(undeclared_json_path, yaml_dir):
     return total_added, files_updated
 
 
+def _read_yaml_config(yaml_path):
+    """Read :config: section from a YAML file."""
+    config = {"directory": None, "external_files": [], "segments": []}
+    with open(yaml_path) as f:
+        in_config = False
+        in_field = None
+        for line in f:
+            stripped = line.rstrip()
+            if stripped == ":config:":
+                in_config = True
+                continue
+            if not in_config:
+                continue
+            # End of config: non-indented non-empty line that's not a config field
+            if stripped and not stripped.startswith(" ") and not stripped.startswith("-"):
+                break
+            s = stripped.strip()
+            if s.startswith("directory:"):
+                config["directory"] = s.split(":", 1)[1].strip()
+                in_field = None
+            elif s == "external_files:":
+                in_field = "external_files"
+            elif s == "segments:":
+                in_field = "segments"
+            elif s.startswith("- ") and in_field == "external_files":
+                config["external_files"].append(s[2:].strip())
+            elif s.startswith("- ") and in_field == "segments":
+                config["segments"].append(s[2:].strip())
+            elif s and not s.startswith("-"):
+                in_field = None
+    return config
+
+
+def _write_set_yaml(yaml_path, entry, parent_config):
+    """Write a separate YAML file for a Set_ entry with its own :config."""
+    os.makedirs(os.path.dirname(yaml_path), exist_ok=True)
+    with open(yaml_path, "w") as f:
+        f.write(":config:\n")
+        # Write segments from the entry
+        if "segments" in entry:
+            f.write("  segments:\n")
+            for seg in entry["segments"]:
+                f.write(f"    - [ {seg[0]}, {seg[1]} ]\n")
+        # Copy directory and external_files from parent
+        if parent_config["directory"]:
+            f.write(f"  directory: {parent_config['directory']}\n")
+        if parent_config["external_files"]:
+            f.write("  external_files:\n")
+            for ef in parent_config["external_files"]:
+                f.write(f"    - {ef}\n")
+        f.write("\n")
+        # Write the asset entry
+        f.write(f"{entry['name']}:\n")
+        f.write(f"  type: {entry['type']}\n")
+        f.write(f"  offset: {entry['offset']}\n")
+        f.write(f"  symbol: {entry['symbol']}\n")
+        if "base_name" in entry:
+            f.write(f"  base_name: {entry['base_name']}\n")
+
+
+def _append_external_files(yaml_path, new_external_files):
+    """Add external file references to an existing YAML file's :config section."""
+    with open(yaml_path) as f:
+        content = f.read()
+
+    lines = content.split("\n")
+    insert_idx = None
+    in_config = False
+    in_external = False
+    config_end = None
+
+    for i, line in enumerate(lines):
+        if line.strip() == ":config:":
+            in_config = True
+        elif in_config and line.strip() == "external_files:":
+            in_external = True
+        elif in_external and line.strip().startswith("- "):
+            insert_idx = i + 1
+        elif in_external and not line.strip().startswith("- ") and line.strip():
+            if insert_idx is None:
+                insert_idx = i
+            break
+        elif in_config and not in_external and line.strip() and not line.startswith(" "):
+            # End of :config: section — no external_files found
+            config_end = i
+            in_config = False
+
+    if insert_idx is not None:
+        # Append to existing external_files section
+        for ef in new_external_files:
+            lines.insert(insert_idx, f"    - {ef}")
+            insert_idx += 1
+    elif config_end is not None:
+        # No external_files section — add one before end of config
+        new_lines = ["  external_files:"]
+        for ef in new_external_files:
+            new_lines.append(f"    - {ef}")
+        for j, nl in enumerate(new_lines):
+            lines.insert(config_end + j, nl)
+    else:
+        return  # no :config: found
+
+    with open(yaml_path, "w") as f:
+        f.write("\n".join(lines))
+
+
 def add_supplemental_from_json(supplemental_json_path, yaml_dir):
     """Add supplemental assets to YAML files. Keys are YAML-path keys.
 
@@ -778,10 +888,12 @@ def add_supplemental_from_json(supplemental_json_path, yaml_dir):
         if not os.path.exists(yaml_path):
             continue
 
-        # Resolve BLOB entries that need offset from parent skeleton in YAML
-        resolved_entries = []
+        # Separate entries into normal (append to parent) and Set_ (own YAML file)
+        normal_entries = []
+        set_entries = []
         for entry in entries:
             if "_skel_name" in entry:
+                # Resolve BLOB offset from parent skeleton
                 skel_name = entry["_skel_name"]
                 limb_count = entry["_limb_count"]
                 skel_offset = None
@@ -798,18 +910,52 @@ def add_supplemental_from_json(supplemental_json_path, yaml_dir):
                         elif in_skel and stripped and not stripped.startswith(" "):
                             break
                 if skel_offset is not None:
-                    entry = dict(entry)  # copy to avoid mutating JSON data
+                    entry = dict(entry)
                     entry["offset"] = f"0x{skel_offset - (limb_count * 4):X}"
                     del entry["_skel_name"]
                     del entry["_limb_count"]
-                    resolved_entries.append(entry)
+                    normal_entries.append(entry)
+            elif "segments" in entry:
+                set_entries.append(entry)
             elif "offset" in entry:
-                resolved_entries.append(entry)
+                normal_entries.append(entry)
 
-        added = add_undeclared_to_yaml(yaml_path, resolved_entries)
+        # Append normal entries to parent YAML
+        added = add_undeclared_to_yaml(yaml_path, normal_entries)
         if added > 0:
             total_added += added
             files_updated += 1
+
+        # Create separate YAML files for Set_ entries
+        if set_entries:
+            parent_config = _read_yaml_config(yaml_path)
+            parent_dir = os.path.dirname(yaml_path)
+            # If parent has no directory config (scenes), derive from file_key
+            if parent_config["directory"] is None:
+                parent_config["directory"] = file_key
+            # Add parent YAML as external file so Set_ can reference parent's assets
+            # External file paths are relative to the top-level yaml_dir parent
+            # e.g. "pal_gc/scenes/nonmq/bdan_room_11.yml"
+            yaml_dir_parent = os.path.basename(yaml_dir)
+            parent_rel = os.path.relpath(yaml_path, os.path.dirname(yaml_dir))
+            set_config = dict(parent_config)
+            set_config["external_files"] = list(parent_config["external_files"])
+            if parent_rel not in set_config["external_files"]:
+                set_config["external_files"].insert(0, parent_rel)
+            # Track Set_ files to add as external files of the parent
+            set_ext_files = []
+            for entry in set_entries:
+                set_yaml_path = os.path.join(parent_dir, f"{entry['name']}.yml")
+                _write_set_yaml(set_yaml_path, entry, set_config)
+                total_added += 1
+                files_updated += 1
+                # Record for parent external_files update
+                set_rel = os.path.relpath(set_yaml_path, os.path.dirname(yaml_dir))
+                set_ext_files.append(set_rel)
+
+            # Add Set_ files as external files of the parent so GetNodeByAddr can find them
+            if set_ext_files:
+                _append_external_files(yaml_path, set_ext_files)
 
     return total_added, files_updated
 

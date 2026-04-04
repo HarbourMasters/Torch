@@ -365,12 +365,26 @@ def extract_from_rom(rom_data, dma, dma_to_path):
 
                 asset_type = "OOT:ROOM" if "_room_" in dma_name else "OOT:SCENE"
                 set_symbol = f"{dma_name}Set_{ptr_offset:06X}"
+                # Build segment config from DMA table
+                segments = []
+                if "_room_" in dma_name:
+                    # Room: seg 3 = room phys_start, seg 2 = scene phys_start
+                    segments.append([3, f"0x{phys_start:08X}"])
+                    scene_name = re.sub(r"_room_\d+$", "_scene", dma_name)
+                    if scene_name in dma:
+                        scene_phys = int(dma[scene_name]["phys_start"], 16)
+                        segments.append([2, f"0x{scene_phys:08X}"])
+                else:
+                    # Scene: seg 2 = scene phys_start
+                    segments.append([2, f"0x{phys_start:08X}"])
+
                 entry = {
                     "name": set_symbol,
                     "type": asset_type,
                     "offset": f"0x{ptr_offset:X}",
                     "symbol": set_symbol,
                     "base_name": dma_name,
+                    "segments": segments,
                 }
                 if file_key not in assets:
                     assets[file_key] = []
@@ -490,14 +504,20 @@ def main():
     # They continue to be created via AddAsset at runtime.
     print("Extracting from ROM...", file=sys.stderr)
     rom_assets, rom_stats = extract_from_rom(rom_data, dma, dma_to_path)
-    # Remove Set_ entries — pre-declaring them causes segment context issues
-    # (Set_ rooms reference segments not configured during ParseNode).
-    # They continue to be created via AddAsset at runtime.
+    # Filter Set_ entries to only those that exist in the reference O2R.
+    # Some alternate headers point to invalid data and are skipped by Torch's
+    # try/catch at runtime. We exclude them to avoid crashes during pre-declaration.
+    with zipfile.ZipFile(args.reference_o2r, "r") as zf:
+        o2r_names = set(zf.namelist())
+    before_set = sum(1 for entries in rom_assets.values() for e in entries if "Set_" in e.get("name", ""))
     for fk in list(rom_assets.keys()):
-        rom_assets[fk] = [e for e in rom_assets[fk] if "Set_" not in e.get("name", "")]
+        rom_assets[fk] = [e for e in rom_assets[fk]
+                          if "Set_" not in e.get("name", "") or
+                          any(e["name"] in n for n in o2r_names)]
         if not rom_assets[fk]:
             del rom_assets[fk]
-    rom_stats["set_count"] = 0
+    after_set = sum(1 for entries in rom_assets.values() for e in entries if "Set_" in e.get("name", ""))
+    rom_stats["set_filtered"] = before_set - after_set
     print(f"  ROM: {rom_stats['set_count']} Set_ headers, {rom_stats['mtx_count']} MTX, "
           f"{rom_stats['files_scanned']} files scanned", file=sys.stderr)
 
