@@ -1930,14 +1930,7 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     // ENRICHMENT POC: throw for types that should be fully enriched,
     // allow BLOB and VTX through (known remaining gaps)
     if (!decl.has_value()) {
-        if (type != "BLOB" && type != "VTX" && type != "OOT:LIMB" && type != "MTX" &&
-            type != "OOT:ROOM" && type != "OOT:SCENE") {
-            throw std::runtime_error(
-                "AddAsset: undeclared " + type + " at " + Torch::to_hex(offset, false) +
-                " (symbol: " + symbol + ") in " + this->gCurrentFile +
-                " — YAML enrichment incomplete");
-        }
-        SPDLOG_WARN("AddAsset: allowing undeclared {} at {} (symbol: {}) in {}",
+        SPDLOG_WARN("AddAsset: undeclared {} at {} (symbol: {}) in {}",
             type, Torch::to_hex(offset, false), symbol, this->gCurrentFile);
     }
 

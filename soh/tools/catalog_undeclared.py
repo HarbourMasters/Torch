@@ -145,6 +145,173 @@ def extract_asset_metadata(data, type_name, asset_name):
     return entry
 
 
+def catalog_blob_limb_tables(zf, yaml_dir, declared, assets_by_file, stats):
+    """Catalog 0-byte BLOB limb table companion files from O2R.
+
+    These are skeleton limb pointer tables (0 bytes in O2R). The offset is
+    computed as: skeleton_offset - (limbCount * 4).
+    """
+    # Find all *Limbs entries (0-byte, ending in 'Limbs', no 'Limb_' in asset name)
+    limb_table_paths = []
+    for path in sorted(zf.namelist()):
+        parts = path.split("/")
+        if len(parts) < 3:
+            continue
+        asset_name = parts[-1]
+        if not asset_name.endswith("Limbs") or "Limb_" in asset_name:
+            continue
+        data = zf.read(path)
+        if len(data) != 0:
+            continue
+        limb_table_paths.append(path)
+
+    for lt_path in limb_table_paths:
+        parts = lt_path.split("/")
+        asset_name = parts[-1]
+        dir_path = "/".join(parts[:-1])
+
+        # Derive file_key from parse_o2r_path
+        file_key, _ = parse_o2r_path(lt_path)
+        if file_key is None:
+            continue
+
+        if (file_key, asset_name) in declared:
+            continue
+
+        # Find parent skeleton: remove "Limbs" suffix
+        skel_name = asset_name[:-len("Limbs")]
+        skel_path = f"{dir_path}/{skel_name}"
+        skel_data = None
+        try:
+            skel_data = zf.read(skel_path)
+        except KeyError:
+            pass
+
+        if skel_data is None or len(skel_data) < 0x43:
+            stats["skipped_ambiguous"] += 1
+            continue
+
+        # Read limb count from skeleton binary (offset 0x42 after 0x40-byte header)
+        limb_count = skel_data[0x42]
+
+        # Find skeleton offset from YAML
+        skel_offset = None
+        yaml_path = os.path.join(yaml_dir, f"{file_key}.yml")
+        if os.path.exists(yaml_path):
+            with open(yaml_path) as f:
+                in_skel = False
+                for line in f:
+                    stripped = line.rstrip()
+                    if stripped == f"{skel_name}:":
+                        in_skel = True
+                    elif in_skel and stripped.strip().startswith("offset:"):
+                        offset_str = stripped.split(":", 1)[1].strip()
+                        skel_offset = int(offset_str, 16) if offset_str.startswith("0x") else int(offset_str)
+                        break
+                    elif in_skel and stripped and not stripped.startswith(" "):
+                        break  # next top-level key
+
+        if skel_offset is None:
+            stats["skipped_ambiguous"] += 1
+            continue
+
+        blob_offset = skel_offset - (limb_count * 4)
+
+        entry = {
+            "name": asset_name,
+            "type": "BLOB",
+            "offset": f"0x{blob_offset:X}",
+            "symbol": asset_name,
+            "size": 0,
+        }
+
+        if file_key not in assets_by_file:
+            assets_by_file[file_key] = []
+        assets_by_file[file_key].append(entry)
+        stats["extracted"] += 1
+        stats.setdefault("blob_count", 0)
+        stats["blob_count"] += 1
+
+
+def catalog_mtx_from_dlists(zf, yaml_dir, declared, assets_by_file, stats):
+    """Catalog MTX assets by scanning parent DList binaries for G_MTX opcodes.
+
+    MTX names like '{parentDL}Mtx_000000' encode the parent DList but not
+    the real offset (which is the G_MTX w1 operand). We walk each parent
+    DList's GBI commands to extract w1.
+    """
+    G_MTX_F3DEX2 = 0x01  # G_MTX opcode for F3DEX2
+
+    # Find all MTX entries in O2R
+    mtx_pattern = re.compile(r"^(.+)Mtx_000000$")
+    for path in sorted(zf.namelist()):
+        file_key, asset_name = parse_o2r_path(path)
+        if file_key is None:
+            continue
+
+        data = zf.read(path)
+        if len(data) < 8:
+            continue
+        rt = struct.unpack_from("<I", data, 4)[0]
+        if rt != 0x4F4D5458:  # MTX
+            continue
+
+        if (file_key, asset_name) in declared:
+            continue
+
+        m = mtx_pattern.match(asset_name)
+        if not m:
+            continue
+
+        parent_dl_name = m.group(1)
+        # Find parent DList in O2R
+        parent_dir = "/".join(path.split("/")[:-1])
+        parent_dl_path = f"{parent_dir}/{parent_dl_name}"
+        try:
+            dl_data = zf.read(parent_dl_path)
+        except KeyError:
+            stats["skipped_ambiguous"] += 1
+            continue
+
+        if len(dl_data) < 0x48:
+            stats["skipped_ambiguous"] += 1
+            continue
+
+        # Walk DList GBI commands to find G_MTX opcode
+        # DList binary: 0x40 header, then 8-byte GBI commands
+        mtx_w1 = None
+        pos = 0x40
+        while pos + 8 <= len(dl_data):
+            w0 = struct.unpack_from(">I", dl_data, pos)[0]
+            w1 = struct.unpack_from(">I", dl_data, pos + 4)[0]
+            opcode = (w0 >> 24) & 0xFF
+            if opcode == G_MTX_F3DEX2:
+                mtx_w1 = w1
+                break
+            pos += 8
+
+        if mtx_w1 is None:
+            stats["skipped_ambiguous"] += 1
+            continue
+
+        # Convert segmented address to file-relative offset
+        offset = mtx_w1 & 0x00FFFFFF  # strip segment
+
+        entry = {
+            "name": asset_name,
+            "type": "MTX",
+            "offset": f"0x{offset:X}",
+            "symbol": asset_name,
+        }
+
+        if file_key not in assets_by_file:
+            assets_by_file[file_key] = []
+        assets_by_file[file_key].append(entry)
+        stats["extracted"] += 1
+        stats.setdefault("mtx_count", 0)
+        stats["mtx_count"] += 1
+
+
 def main():
     parser = argparse.ArgumentParser(description="Catalog undeclared assets from reference O2R")
     parser.add_argument("reference_o2r", help="Path to reference O2R file")
@@ -228,6 +395,10 @@ def main():
             assets_by_file[file_key].append(entry)
             stats["extracted"] += 1
             by_type[type_name] = by_type.get(type_name, 0) + 1
+
+    # Catalog BLOB limb tables (0-byte companion files)
+    with zipfile.ZipFile(args.reference_o2r, "r") as zf:
+        catalog_blob_limb_tables(zf, args.yaml_dir, declared, assets_by_file, stats)
 
     # Sort entries within each file by offset
     for key in assets_by_file:

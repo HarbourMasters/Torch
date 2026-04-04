@@ -719,6 +719,8 @@ def add_undeclared_to_yaml(yaml_path, entries):
             lines += f'  array_type: {entry["array_type"]}\n'
         if "limb_type" in entry:
             lines += f'  limb_type: {entry["limb_type"]}\n'
+        if "size" in entry:
+            lines += f'  size: {entry["size"]}\n'
         new_entries.append(lines)
 
     if not new_entries:
