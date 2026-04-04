@@ -500,15 +500,16 @@ def main():
             if e["name"] not in existing_names:
                 merged[file_key].append(e)
 
-    # Filter out unresolved entries (BLOBs without offset)
+    # Keep unresolved BLOBs (with _skel_name/_limb_count) — zapd_to_torch resolves them
+    # Filter out entries missing both offset AND resolution fields
     for key in list(merged.keys()):
-        merged[key] = [e for e in merged[key] if "offset" in e]
+        merged[key] = [e for e in merged[key] if "offset" in e or "_skel_name" in e]
         if not merged[key]:
             del merged[key]
 
-    # Sort entries within each file
+    # Sort entries within each file (entries without offset go at end)
     for key in merged:
-        merged[key].sort(key=lambda e: int(e["offset"], 16))
+        merged[key].sort(key=lambda e: int(e["offset"], 16) if "offset" in e else 0xFFFFFFFF)
 
     # Summary
     from collections import Counter

@@ -761,43 +761,14 @@ def add_undeclared_from_json(undeclared_json_path, yaml_dir):
     return total_added, files_updated
 
 
-def build_dma_to_yaml_map(yaml_dir):
-    """Build a mapping from DMA names to YAML file paths by scanning the output directory."""
-    dma_to_yaml = {}
-    for root, dirs, files in os.walk(yaml_dir):
-        for fname in files:
-            if not (fname.endswith(".yml") or fname.endswith(".yaml")):
-                continue
-            fpath = os.path.join(root, fname)
-            # The DMA name is the filename without extension
-            dma_name = os.path.splitext(fname)[0]
-            # Map DMA name → YAML path relative to yaml_dir
-            rel = os.path.relpath(fpath, yaml_dir)
-            file_key = os.path.splitext(rel)[0]
-            dma_to_yaml[dma_name] = file_key
-    return dma_to_yaml
-
-
 def add_supplemental_from_json(supplemental_json_path, yaml_dir):
-    """Add supplemental assets to YAML files. Keys in JSON are DMA names."""
+    """Add supplemental assets to YAML files. Keys are YAML-path keys.
+
+    Handles BLOB entries with _skel_name/_limb_count that need offset resolved
+    from the parent skeleton's offset in the same YAML file.
+    """
     with open(supplemental_json_path) as f:
-        assets_by_dma = json.load(f)
-
-    # Build DMA name → YAML path mapping
-    dma_map = build_dma_to_yaml_map(yaml_dir)
-
-    # Convert DMA-keyed JSON to YAML-path-keyed JSON
-    assets_by_file = {}
-    unmapped = set()
-    for dma_name, entries in assets_by_dma.items():
-        file_key = dma_map.get(dma_name)
-        if file_key is None:
-            unmapped.add(dma_name)
-            continue
-        assets_by_file[file_key] = entries
-
-    if unmapped:
-        print(f"  Warning: {len(unmapped)} DMA names not mapped to YAML files", file=sys.stderr)
+        assets_by_file = json.load(f)
 
     total_added = 0
     files_updated = 0
@@ -813,7 +784,6 @@ def add_supplemental_from_json(supplemental_json_path, yaml_dir):
             if "_skel_name" in entry:
                 skel_name = entry["_skel_name"]
                 limb_count = entry["_limb_count"]
-                # Find skeleton offset in the YAML file
                 skel_offset = None
                 with open(yaml_path) as yf:
                     in_skel = False
@@ -828,6 +798,7 @@ def add_supplemental_from_json(supplemental_json_path, yaml_dir):
                         elif in_skel and stripped and not stripped.startswith(" "):
                             break
                 if skel_offset is not None:
+                    entry = dict(entry)  # copy to avoid mutating JSON data
                     entry["offset"] = f"0x{skel_offset - (limb_count * 4):X}"
                     del entry["_skel_name"]
                     del entry["_limb_count"]
@@ -911,7 +882,7 @@ def main():
 
     # Step 5: Add supplemental assets (consolidated JSON with YAML-path keys)
     if args.supplemental_json:
-        supp_added, supp_files = add_undeclared_from_json(args.supplemental_json, args.out_dir)
+        supp_added, supp_files = add_supplemental_from_json(args.supplemental_json, args.out_dir)
         print(f"Added {supp_added} supplemental assets to {supp_files} YAML files")
     else:
         print("Skipping supplemental injection (no --supplemental-json provided)")
