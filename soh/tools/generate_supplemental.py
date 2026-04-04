@@ -490,7 +490,9 @@ def main():
     # They continue to be created via AddAsset at runtime.
     print("Extracting from ROM...", file=sys.stderr)
     rom_assets, rom_stats = extract_from_rom(rom_data, dma, dma_to_path)
-    # Remove Set_ entries for now
+    # Remove Set_ entries — pre-declaring them causes segment context issues
+    # (Set_ rooms reference segments not configured during ParseNode).
+    # They continue to be created via AddAsset at runtime.
     for fk in list(rom_assets.keys()):
         rom_assets[fk] = [e for e in rom_assets[fk] if "Set_" not in e.get("name", "")]
         if not rom_assets[fk]:
