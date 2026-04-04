@@ -204,6 +204,7 @@ public:
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
     std::string GetCurrentDirectory() const { return gCurrentDirectory.string(); }
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
+    std::optional<ParseResultData> ParseNode(YAML::Node& node, std::string& name);
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
@@ -260,5 +261,4 @@ private:
     void ExtractNode(YAML::Node& node, std::string& name, BinaryWrapper* binary);
     void ProcessTables(YAML::Node& rom);
     void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
-    std::optional<ParseResultData> ParseNode(YAML::Node& node, std::string& name);
 };

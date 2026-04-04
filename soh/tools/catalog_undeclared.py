@@ -65,9 +65,8 @@ def parse_o2r_path(path):
         mq_status = parts[1]
         asset_name = parts[3]
 
-        # Skip Set_ variants (alternate scene headers referencing same DList)
-        if SET_PATTERN.search(asset_name):
-            return None, None
+        # Note: Set_ filtering moved to main loop (after reading resource type).
+        # Set_ rooms/scenes need to be kept; only Set_ GFX/MTX/Array are skipped.
 
         # Extract room/scene name from asset name
         m = ROOM_PATTERN.match(asset_name)
@@ -169,10 +168,7 @@ def main():
         for path in sorted(zf.namelist()):
             file_key, asset_name = parse_o2r_path(path)
             if file_key is None:
-                # Count skipped scenes separately
-                if path.startswith("scenes/") and SET_PATTERN.search(path):
-                    stats["skipped_set"] += 1
-                elif path.startswith("scenes/"):
+                if path.startswith("scenes/"):
                     stats["skipped_ambiguous"] += 1
                 continue
 
@@ -188,6 +184,14 @@ def main():
                 continue
 
             stats["total_scanned"] += 1
+
+            # Skip Set_ variants for alias types (GFX, MTX, OOT:ARRAY) —
+            # these are byte-identical copies created at runtime via ResolveGfxWithAlias.
+            # Keep Set_ OOT:ROOM/OOT:SCENE — they have unique offsets and need processing.
+            if SET_PATTERN.search(asset_name):
+                if type_name in ("GFX", "MTX", "OOT:ARRAY"):
+                    stats["skipped_set"] += 1
+                    continue
 
             # Check if already declared in YAML
             if (file_key, asset_name) in declared:
