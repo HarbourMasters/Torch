@@ -859,13 +859,12 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
     // Save/restore DeferredVtx state so child processing doesn't corrupt ours.
     for (auto& alt : pendingAltHeaders) {
         auto existing = Companion::Instance->GetNodeByAddr(alt.seg);
-
-        auto savedVtx = DeferredVtx::IsDeferred()
-            ? DeferredVtx::SaveAndClearPending()
-            : std::vector<DeferredVtx::PendingVtx>{};
-        bool wasDeferred = DeferredVtx::IsDeferred();
-
         if (!existing.has_value()) {
+            auto savedVtx = DeferredVtx::IsDeferred()
+                ? DeferredVtx::SaveAndClearPending()
+                : std::vector<DeferredVtx::PendingVtx>{};
+            bool wasDeferred = DeferredVtx::IsDeferred();
+
             YAML::Node altNode;
             altNode["type"] = assetType;
             altNode["offset"] = alt.seg;
@@ -876,17 +875,10 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             } catch (const std::exception& e) {
                 SPDLOG_WARN("Scene: Failed to create alternate header {}: {}", alt.symbol, e.what());
             }
-        } else {
-            // Asset pre-declared in YAML — still need to parse it so
-            // DList aliases and companion files (ActorEntry, PathwayList) get created.
-            auto node = std::get<1>(existing.value());
-            node["base_name"] = entryName;
-            std::string output = currentDir + "/" + alt.symbol;
-            Companion::Instance->ParseNode(node, output);
-        }
 
-        if (wasDeferred) {
-            DeferredVtx::RestorePending(savedVtx);
+            if (wasDeferred) {
+                DeferredVtx::RestorePending(savedVtx);
+            }
         }
     }
 

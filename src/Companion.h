@@ -204,8 +204,8 @@ public:
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
     std::string GetCurrentDirectory() const { return gCurrentDirectory.string(); }
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
-    std::optional<ParseResultData> ParseNode(YAML::Node& node, std::string& name);
 private:
+    std::optional<ParseResultData> ParseNode(YAML::Node& node, std::string& name);
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
     fs::path gSourceDirectory;
