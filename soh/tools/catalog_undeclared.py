@@ -25,23 +25,25 @@ import zipfile
 
 # Resource type IDs from ResourceType.h (little-endian uint32 at offset 0x04)
 RESOURCE_TYPES = {
-    0x4F444C54: "GFX",         # DisplayList
-    0x4F4D5458: "MTX",         # Matrix
-    0x46669697: "LIGHTS",      # Lights
+    0x4F444C54: "GFX",              # DisplayList
+    0x4F4D5458: "MTX",              # Matrix
+    0x4F415252: "OOT:ARRAY",        # Array (VTX arrays, generic arrays)
+    0x4F424C42: "BLOB",             # Blob (limb tables)
+    0x4F534C42: "OOT:LIMB",         # OoTSkeletonLimb
+    0x4F434F4C: "OOT:COLLISION",    # OoTCollisionHeader
+    0x4F524F4D: "OOT:ROOM",         # OoTRoom
+    0x4F565458: "VTX",              # Vertex (rare, most are OOT:ARRAY)
+    0x46669697: "LIGHTS",           # Lights
 }
 
-# Patterns for asset names that indicate auto-discovered assets.
-# These match the naming convention used by Torch's AddAsset:
-#   DL_HEXOFFSET, Mtx_HEXOFFSET, Lights_HEXOFFSET
-ASSET_PATTERNS = {
-    "GFX": re.compile(r".*DL_([0-9A-Fa-f]{6})$"),
-    "MTX": re.compile(r".*Mtx_([0-9A-Fa-f]{6})$"),
-    "LIGHTS": re.compile(r".*Lights_([0-9A-Fa-f]+)$"),
-}
+# Patterns to extract room/scene name from asset names.
+# E.g. "Bmori1_room_0DL_001CB0" → room="Bmori1_room_0"
+#      "Bmori1_sceneCollisionHeader_014054" → scene="Bmori1_scene"
+ROOM_PATTERN = re.compile(r"^(.+?(?:_room_\d+|_scene))(.*)")
 
-# Patterns to extract room/scene name from auto-discovered asset names.
-# E.g. "Bmori1_room_0DL_001CB0" → room="Bmori1_room_0", suffix="DL_001CB0"
-ROOM_PATTERN = re.compile(r"^(.+?(?:_room_\d+|_scene))(.*)$")
+# Skip Set_ variants — these are alternate scene header references to the same
+# DList at the same offset. We only want the canonical (non-Set) name.
+SET_PATTERN = re.compile(r"Set_[0-9A-Fa-f]+")
 
 
 def parse_o2r_path(path):
@@ -59,14 +61,24 @@ def parse_o2r_path(path):
     if len(parts) < 3:
         return None, None
 
-    if parts[0] == "scenes":
-        # Scene assets are tightly coupled with runtime segment context.
-        # Pre-declaring them changes how rooms get processed, causing binary mismatches.
-        # Skip all scene assets; Torch's auto-discovery handles them correctly.
-        return None, None
+    if parts[0] == "scenes" and len(parts) == 4:
+        mq_status = parts[1]
+        asset_name = parts[3]
+
+        # Skip Set_ variants (alternate scene headers referencing same DList)
+        if SET_PATTERN.search(asset_name):
+            return None, None
+
+        # Extract room/scene name from asset name
+        m = ROOM_PATTERN.match(asset_name)
+        if m:
+            room_name = m.group(1)
+            file_key = f"scenes/{mq_status}/{room_name}"
+        else:
+            # Ambiguous name (e.g. "gMenDL_008118") — can't determine room
+            return None, None
+        return file_key, asset_name
     else:
-        # objects/gameplay_keep/assetDL_001234
-        # First two parts are the file key, rest is asset name
         file_key = f"{parts[0]}/{parts[1]}"
         asset_name = "/".join(parts[2:])
         return file_key, asset_name
@@ -94,8 +106,46 @@ def load_yaml_assets(yaml_dir):
     return declared
 
 
+LIMB_TYPE_MAP = {
+    1: "Standard",
+    2: "LOD",
+    3: "Skin",
+    4: "Curve",
+    5: "Legacy",
+}
+
+
+def extract_asset_metadata(data, type_name, asset_name):
+    """Extract type-specific metadata from the binary resource data."""
+    entry = {
+        "name": asset_name,
+        "type": type_name,
+        "symbol": asset_name,
+    }
+
+    if type_name == "OOT:ARRAY":
+        # Array header at offset 0x40: array_type (uint32), count (uint32)
+        if len(data) >= 72:
+            arr_type = struct.unpack_from("<I", data, 64)[0]
+            count = struct.unpack_from("<I", data, 68)[0]
+            entry["count"] = count
+            # array_type 25 = VTX
+            if arr_type == 25:
+                entry["array_type"] = "VTX"
+
+    elif type_name == "OOT:LIMB":
+        # Limb header at offset 0x40: limb_type in lower byte of uint32
+        if len(data) >= 68:
+            limb_type_val = struct.unpack_from("<I", data, 64)[0] & 0xFF
+            limb_type_str = LIMB_TYPE_MAP.get(limb_type_val)
+            if limb_type_str:
+                entry["limb_type"] = limb_type_str
+
+    return entry
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Extract auto-discovered asset metadata from reference O2R")
+    parser = argparse.ArgumentParser(description="Catalog undeclared assets from reference O2R")
     parser.add_argument("reference_o2r", help="Path to reference O2R file")
     parser.add_argument("yaml_dir", help="Path to YAML directory (to identify already-declared assets)")
     parser.add_argument("output_json", help="Path to output JSON file")
@@ -106,12 +156,24 @@ def main():
     print(f"Found {len(declared)} declared assets in YAML", file=sys.stderr)
 
     assets_by_file = {}
-    stats = {"total_scanned": 0, "already_declared": 0, "extracted": 0, "skipped_no_match": 0}
+    # Track offsets already seen per file to deduplicate
+    seen_offsets = {}  # file_key → set of (type, offset)
+    stats = {
+        "total_scanned": 0, "already_declared": 0, "extracted": 0,
+        "skipped_type": 0, "skipped_set": 0, "skipped_ambiguous": 0,
+        "skipped_dup": 0,
+    }
+    by_type = {}
 
     with zipfile.ZipFile(args.reference_o2r, "r") as zf:
         for path in sorted(zf.namelist()):
             file_key, asset_name = parse_o2r_path(path)
             if file_key is None:
+                # Count skipped scenes separately
+                if path.startswith("scenes/") and SET_PATTERN.search(path):
+                    stats["skipped_set"] += 1
+                elif path.startswith("scenes/"):
+                    stats["skipped_ambiguous"] += 1
                 continue
 
             # Read resource header to get type
@@ -122,50 +184,67 @@ def main():
             res_type = struct.unpack_from("<I", data, 4)[0]
             type_name = RESOURCE_TYPES.get(res_type)
             if type_name is None:
+                stats["skipped_type"] += 1
                 continue
 
             stats["total_scanned"] += 1
-
-            # Check if this asset matches an auto-discovery pattern
-            pattern = ASSET_PATTERNS.get(type_name)
-            if pattern is None:
-                stats["skipped_no_match"] += 1
-                continue
-
-            match = pattern.match(asset_name)
-            if not match:
-                stats["skipped_no_match"] += 1
-                continue
 
             # Check if already declared in YAML
             if (file_key, asset_name) in declared:
                 stats["already_declared"] += 1
                 continue
 
-            offset_hex = match.group(1)
+            # Extract offset from asset name (last hex segment after DL_, Mtx_, Vtx_, etc.)
+            # Or from known patterns in the name
+            offset_match = re.search(r"_([0-9A-Fa-f]{4,8})$", asset_name)
+            if not offset_match:
+                # For assets like "Bmori1_room_0" (OoTRoom) — offset is typically 0x0
+                # For collision headers — offset is in the name
+                offset_match = re.search(r"(?:Header|Blob)_([0-9A-Fa-f]+)$", asset_name)
 
-            entry = {
-                "name": asset_name,
-                "type": type_name,
-                "offset": f"0x{offset_hex.upper()}",
-                "symbol": asset_name,
-            }
+            if not offset_match:
+                # OoTRoom assets have no offset suffix — they're at offset 0x0
+                if type_name == "OOT:ROOM":
+                    offset_hex = "0"
+                else:
+                    continue
+            else:
+                offset_hex = offset_match.group(1)
+
+            # Deduplicate: skip if we already have this exact asset in this file
+            dedup_key = (type_name, asset_name)
+            if file_key not in seen_offsets:
+                seen_offsets[file_key] = set()
+            if dedup_key in seen_offsets[file_key]:
+                stats["skipped_dup"] += 1
+                continue
+            seen_offsets[file_key].add(dedup_key)
+
+            entry = extract_asset_metadata(data, type_name, asset_name)
+            entry["offset"] = f"0x{offset_hex.upper()}"
 
             if file_key not in assets_by_file:
                 assets_by_file[file_key] = []
             assets_by_file[file_key].append(entry)
             stats["extracted"] += 1
+            by_type[type_name] = by_type.get(type_name, 0) + 1
 
     # Sort entries within each file by offset
     for key in assets_by_file:
         assets_by_file[key].sort(key=lambda e: int(e["offset"], 16))
 
     print(f"\nResults:", file=sys.stderr)
-    print(f"  Total matching assets scanned: {stats['total_scanned']}", file=sys.stderr)
-    print(f"  Already declared in YAML: {stats['already_declared']}", file=sys.stderr)
-    print(f"  Extracted (auto-discovered): {stats['extracted']}", file=sys.stderr)
-    print(f"  Skipped (no pattern match): {stats['skipped_no_match']}", file=sys.stderr)
+    print(f"  Total scanned: {stats['total_scanned']}", file=sys.stderr)
+    print(f"  Already declared: {stats['already_declared']}", file=sys.stderr)
+    print(f"  Extracted: {stats['extracted']}", file=sys.stderr)
+    print(f"  Skipped (unknown type): {stats['skipped_type']}", file=sys.stderr)
+    print(f"  Skipped (Set_ variant): {stats['skipped_set']}", file=sys.stderr)
+    print(f"  Skipped (ambiguous scene): {stats['skipped_ambiguous']}", file=sys.stderr)
+    print(f"  Skipped (duplicate offset): {stats['skipped_dup']}", file=sys.stderr)
     print(f"  Output files: {len(assets_by_file)}", file=sys.stderr)
+    print(f"\n  By type:", file=sys.stderr)
+    for t, c in sorted(by_type.items(), key=lambda x: -x[1]):
+        print(f"    {t}: {c}", file=sys.stderr)
 
     with open(args.output_json, "w") as f:
         json.dump(assets_by_file, f, indent=2)

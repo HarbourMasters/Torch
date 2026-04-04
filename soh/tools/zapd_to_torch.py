@@ -712,6 +712,13 @@ def add_undeclared_to_yaml(yaml_path, entries):
         lines += f'  type: {entry["type"]}\n'
         lines += f'  offset: {entry["offset"]}\n'
         lines += f'  symbol: {entry["symbol"]}\n'
+        # Type-specific fields
+        if "count" in entry:
+            lines += f'  count: {entry["count"]}\n'
+        if "array_type" in entry:
+            lines += f'  array_type: {entry["array_type"]}\n'
+        if "limb_type" in entry:
+            lines += f'  limb_type: {entry["limb_type"]}\n'
         new_entries.append(lines)
 
     if not new_entries:
