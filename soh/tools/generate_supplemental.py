@@ -411,32 +411,46 @@ def extract_from_rom(rom_data, dma, dma_to_path):
                         if dl_seg != seg_num:
                             continue
 
-                        # Walk DList for G_MTX
-                        pos = dl_offset
-                        while pos + 8 <= len(file_data):
-                            dw0 = struct.unpack_from(">I", file_data, pos)[0]
-                            dw1 = struct.unpack_from(">I", file_data, pos + 4)[0]
-                            op = (dw0 >> 24) & 0xFF
-                            if op == G_ENDDL:
-                                break
-                            if op == G_MTX_F3DEX2 and dw1 != 0:
-                                mtx_seg = (dw1 >> 24) & 0xFF
-                                mtx_offset = dw1 & 0x00FFFFFF
-                                if mtx_seg == seg_num:
-                                    dl_symbol = f"{dma_name}DL_{dl_offset:06X}"
-                                    mtx_symbol = f"{dl_symbol}Mtx_000000"
-                                    entry = {
-                                        "name": mtx_symbol,
-                                        "type": "MTX",
-                                        "offset": f"0x{mtx_offset:X}",
-                                        "symbol": mtx_symbol,
-                                    }
-                                    if file_key not in assets:
-                                        assets[file_key] = []
-                                    if not any(e["name"] == mtx_symbol for e in assets[file_key]):
-                                        assets[file_key].append(entry)
-                                        stats["mtx_count"] += 1
-                            pos += 8
+                        # Walk DList + child DLists for G_MTX
+                        dl_queue = [(dl_offset, f"{dma_name}DL_{dl_offset:06X}")]
+                        visited = set()
+                        while dl_queue:
+                            cur_offset, cur_symbol = dl_queue.pop(0)
+                            if cur_offset in visited:
+                                continue
+                            visited.add(cur_offset)
+                            pos = cur_offset
+                            while pos + 8 <= len(file_data):
+                                dw0 = struct.unpack_from(">I", file_data, pos)[0]
+                                dw1 = struct.unpack_from(">I", file_data, pos + 4)[0]
+                                op = (dw0 >> 24) & 0xFF
+                                if op == G_ENDDL:
+                                    break
+                                if op == G_MTX_F3DEX2 and dw1 != 0:
+                                    mtx_seg = (dw1 >> 24) & 0xFF
+                                    mtx_offset = dw1 & 0x00FFFFFF
+                                    if mtx_seg == seg_num:
+                                        mtx_symbol = f"{cur_symbol}Mtx_000000"
+                                        entry = {
+                                            "name": mtx_symbol,
+                                            "type": "MTX",
+                                            "offset": f"0x{mtx_offset:X}",
+                                            "symbol": mtx_symbol,
+                                        }
+                                        if file_key not in assets:
+                                            assets[file_key] = []
+                                        if not any(e["name"] == mtx_symbol for e in assets[file_key]):
+                                            assets[file_key].append(entry)
+                                            stats["mtx_count"] += 1
+                                # Follow G_DL child display lists
+                                G_DL_F3DEX2 = 0xDE
+                                if op == G_DL_F3DEX2 and dw1 != 0:
+                                    child_seg = (dw1 >> 24) & 0xFF
+                                    child_offset = dw1 & 0x00FFFFFF
+                                    if child_seg == seg_num:
+                                        child_symbol = f"{dma_name}DL_{child_offset:06X}"
+                                        dl_queue.append((child_offset, child_symbol))
+                                pos += 8
             break
 
     return assets, stats
