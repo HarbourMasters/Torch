@@ -721,6 +721,8 @@ def add_undeclared_to_yaml(yaml_path, entries):
             lines += f'  limb_type: {entry["limb_type"]}\n'
         if "size" in entry:
             lines += f'  size: {entry["size"]}\n'
+        if "base_name" in entry:
+            lines += f'  base_name: {entry["base_name"]}\n'
         new_entries.append(lines)
 
     if not new_entries:
@@ -766,6 +768,7 @@ def main():
     parser.add_argument("--out-dir", required=True, help="Output YAML directory")
     parser.add_argument("--vtx-json", help="Path to VTX JSON file for vertex array backfill")
     parser.add_argument("--undeclared-json", help="Path to undeclared assets JSON from catalog_undeclared.py")
+    parser.add_argument("--rom-assets-json", help="Path to ROM-extracted assets JSON from extract_rom_assets.py")
     parser.add_argument("--types", help="Comma-separated list of XML types to convert (default: all)")
     args = parser.parse_args()
 
@@ -809,7 +812,14 @@ def main():
     else:
         print("Skipping VTX backfill (no --vtx-json provided)")
 
-    # Step 3: Add undeclared assets from catalog_undeclared.py output
+    # Step 3: Add ROM-extracted assets (MTX, Set_ headers)
+    if args.rom_assets_json:
+        ra_added, ra_files = add_undeclared_from_json(args.rom_assets_json, args.out_dir)
+        print(f"Added {ra_added} ROM-extracted assets to {ra_files} YAML files")
+    else:
+        print("Skipping ROM asset injection (no --rom-assets-json provided)")
+
+    # Step 4: Add undeclared assets from catalog_undeclared.py output
     if args.undeclared_json:
         ud_added, ud_files = add_undeclared_from_json(args.undeclared_json, args.out_dir)
         print(f"Added {ud_added} undeclared assets to {ud_files} YAML files")
