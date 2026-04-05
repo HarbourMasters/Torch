@@ -51,9 +51,8 @@ ExportResult BlobBinaryExporter::Export(std::ostream& write, std::shared_ptr<IPa
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
-    if (data.empty()) {
-        // OTRExporter writes a 0-byte file for empty blobs (e.g. LimbTable).
-        // Write nothing so the hash matches.
+    if (data.empty() && node["size"] && node["size"].as<uint32_t>() == 0) {
+        // YAML explicitly declares size: 0 — write a 0-byte file with no header.
         return std::nullopt;
     }
 
