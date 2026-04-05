@@ -103,6 +103,8 @@
 #include "factories/oot/OoTSkeletonFactory.h"
 #include "factories/oot/OoTLimbFactory.h"
 #include "factories/oot/OoTAnimationFactory.h"
+#include "factories/oot/OoTCurveAnimationFactory.h"
+#include "factories/oot/OoTPlayerAnimationFactory.h"
 #include "factories/oot/OoTCollisionFactory.h"
 #include "factories/oot/OoTTextFactory.h"
 #include "factories/oot/OoTSceneFactory.h"
