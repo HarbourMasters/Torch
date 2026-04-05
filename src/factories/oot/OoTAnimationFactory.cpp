@@ -18,6 +18,10 @@ std::optional<std::shared_ptr<IParsedData>> OoTAnimationFactory::parse(std::vect
         return anim;
     }
 
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0x10);
+    LUS::BinaryReader reader(segment.data, segment.size);
+    reader.SetEndianness(Torch::Endianness::Big);
+
     // ROM layout: AnimationHeader (16 bytes)
     // +0x00: int16 frameCount
     // +0x02: int16 padding
@@ -25,24 +29,18 @@ std::optional<std::shared_ptr<IParsedData>> OoTAnimationFactory::parse(std::vect
     // +0x08: segptr rotationIndices
     // +0x0C: int16 limit
     // +0x0E: int16 padding
-    auto [_, segment] = Decompressor::AutoDecode(node, buffer, 0x10);
-    LUS::BinaryReader reader(segment.data, segment.size);
-    reader.SetEndianness(Torch::Endianness::Big);
-
-    auto anim = std::make_shared<OoTNormalAnimationData>();
-    anim->frameCount = reader.ReadInt16();
+    int16_t frameCount = reader.ReadInt16();
     reader.ReadInt16(); // padding
     uint32_t rawRotValues = reader.ReadUInt32();
     uint32_t rawRotIndices = reader.ReadUInt32();
-    SPDLOG_WARN("Animation raw pointers: rotValues=0x{:08X} rotIndices=0x{:08X}", rawRotValues, rawRotIndices);
-    // Log segment map
-    for (auto& [seg, off] : Companion::Instance->GetConfig().segment.local) {
-        SPDLOG_WARN("  segment[{}] = 0x{:X}", seg, off);
-    }
+    int16_t limit = reader.ReadInt16();
+
     uint32_t rotValuesAddr = Companion::Instance->PatchVirtualAddr(rawRotValues);
     uint32_t rotIndicesAddr = Companion::Instance->PatchVirtualAddr(rawRotIndices);
-    SPDLOG_WARN("Animation patched: rotValues=0x{:08X} rotIndices=0x{:08X}", rotValuesAddr, rotIndicesAddr);
-    anim->limit = reader.ReadInt16();
+
+    auto anim = std::make_shared<OoTNormalAnimationData>();
+    anim->frameCount = frameCount;
+    anim->limit = limit;
 
     // Translate segmented addresses to file offsets
     uint32_t rotValuesOffset = Decompressor::TranslateAddr(rotValuesAddr);
