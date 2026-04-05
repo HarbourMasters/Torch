@@ -1934,11 +1934,13 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
     const auto decl = this->GetNodeByAddr(offset);
 
-    // ENRICHMENT POC: throw for types that should be fully enriched,
-    // allow BLOB and VTX through (known remaining gaps)
-    if (!decl.has_value()) {
-        SPDLOG_WARN("AddAsset: undeclared {} at {} (symbol: {}) in {}",
-            type, Torch::to_hex(offset, false), symbol, this->gCurrentFile);
+    // For OoT, all assets should be pre-declared in enriched YAML.
+    // Throw if an undeclared asset is encountered to catch enrichment gaps.
+    if (!decl.has_value() && this->gConfig.gbi.subversion == GBIMinorVersion::OoT) {
+        throw std::runtime_error(
+            "AddAsset: undeclared " + type + " at " + Torch::to_hex(offset, false) +
+            " (symbol: " + symbol + ") in " + this->gCurrentFile +
+            " — YAML enrichment incomplete");
     }
 
     if (decl.has_value()) {
