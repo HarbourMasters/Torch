@@ -111,27 +111,28 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
 
     // Process deferred alternate headers now that primary DLists are registered.
     for (auto& alt : pendingAltHeaders) {
-        auto existing = Companion::Instance->GetNodeByAddr(alt.seg);
-        if (!existing.has_value()) {
-            auto savedVtx = DeferredVtx::IsDeferred()
-                ? DeferredVtx::SaveAndClearPending()
-                : std::vector<DeferredVtx::PendingVtx>{};
-            bool wasDeferred = DeferredVtx::IsDeferred();
+        if (Companion::Instance->GetNodeByAddr(alt.seg).has_value()) {
+            continue;
+        }
 
-            YAML::Node altNode;
-            altNode["type"] = assetType;
-            altNode["offset"] = alt.seg;
-            altNode["symbol"] = alt.symbol;
-            altNode["base_name"] = entryName;
-            try {
-                Companion::Instance->AddAsset(altNode);
-            } catch (const std::exception& e) {
-                SPDLOG_WARN("Scene: Failed to create alternate header {}: {}", alt.symbol, e.what());
-            }
+        std::vector<DeferredVtx::PendingVtx> savedVtx;
+        if (DeferredVtx::IsDeferred()) {
+            savedVtx = DeferredVtx::SaveAndClearPending();
+        }
 
-            if (wasDeferred) {
-                DeferredVtx::RestorePending(savedVtx);
-            }
+        YAML::Node altNode;
+        altNode["type"] = assetType;
+        altNode["offset"] = alt.seg;
+        altNode["symbol"] = alt.symbol;
+        altNode["base_name"] = entryName;
+        try {
+            Companion::Instance->AddAsset(altNode);
+        } catch (const std::exception& e) {
+            SPDLOG_WARN("Scene: Failed to create alternate header {}: {}", alt.symbol, e.what());
+        }
+
+        if (DeferredVtx::IsDeferred()) {
+            DeferredVtx::RestorePending(savedVtx);
         }
     }
 
