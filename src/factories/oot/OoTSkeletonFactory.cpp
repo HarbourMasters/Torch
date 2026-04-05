@@ -7,8 +7,6 @@
 #include "Companion.h"
 #include "utils/Decompressor.h"
 
-#include <sstream>
-#include <iomanip>
 
 namespace OoT {
 
@@ -41,35 +39,7 @@ std::string ResolveGfxPointer(uint32_t ptr, const std::string& limbSymbol,
         return result.value();
     }
 
-    if (!autoDiscover) {
-        SPDLOG_WARN("Could not resolve GFX pointer 0x{:08X}", ptr);
-        return "";
-    }
-
-    uint32_t offset = SEGMENT_OFFSET(ptr);
-    std::ostringstream symStream;
-    symStream << limbSymbol << suffix << "_" << std::uppercase << std::hex
-              << std::setfill('0') << std::setw(6) << offset;
-    std::string gfxSymbol = symStream.str();
-
-    YAML::Node gfxNode;
-    gfxNode["type"] = "GFX";
-    gfxNode["offset"] = ptr;
-    gfxNode["symbol"] = gfxSymbol;
-    try {
-        auto addResult = Companion::Instance->AddAsset(gfxNode);
-        if (addResult.has_value()) {
-            auto resolved = Companion::Instance->GetStringByAddr(ptr);
-            if (resolved.has_value()) {
-                return resolved.value();
-            }
-        }
-    } catch (const std::exception& e) {
-        SPDLOG_WARN("Failed to auto-discover GFX at 0x{:08X}: {}", ptr, e.what());
-        return "";
-    }
-
-    SPDLOG_WARN("Could not resolve or auto-discover GFX at 0x{:08X}", ptr);
+    SPDLOG_WARN("Could not resolve GFX pointer 0x{:08X} — YAML enrichment incomplete", ptr);
     return "";
 }
 
@@ -110,46 +80,16 @@ std::optional<std::shared_ptr<IParsedData>> OoTSkeletonFactory::parse(std::vecto
             limbAddr = Companion::Instance->PatchVirtualAddr(limbAddr);
             std::string limbPath = ResolvePointer(limbAddr);
             if (limbPath.empty() && limbAddr != 0) {
-                uint32_t limbOffset = SEGMENT_OFFSET(limbAddr);
-                std::ostringstream limbSymbolStream;
-                limbSymbolStream << symbol << "LimbsLimb_" << std::uppercase << std::hex
-                                 << std::setfill('0') << std::setw(6) << limbOffset;
-                std::string limbSymbol = limbSymbolStream.str();
-
-                YAML::Node limbNode;
-                limbNode["type"] = "OOT:LIMB";
-                limbNode["offset"] = limbAddr;
-                limbNode["symbol"] = limbSymbol;
-                limbNode["limb_type"] = limbTypeStr;
-                limbNode["auto_discovered"] = true;
-                try {
-                    auto result = Companion::Instance->AddAsset(limbNode);
-                    if (result.has_value()) {
-                        limbPath = ResolvePointer(limbAddr);
-                    }
-                } catch (const std::exception& e) {
-                    SPDLOG_WARN("Skeleton: Failed to create limb {} at 0x{:08X}: {}", i, limbAddr, e.what());
-                }
-
-                if (limbPath.empty()) {
-                    SPDLOG_WARN("Skeleton: Could not create limb {} at 0x{:08X}", i, limbAddr);
-                }
+                SPDLOG_WARN("Undeclared limb at 0x{:08X} — YAML enrichment incomplete", limbAddr);
             }
             limbPaths.push_back(limbPath);
         }
     }
 
     if (limbsArrayAddr != 0) {
-        std::string limbTableSymbol = symbol + "Limbs";
-        YAML::Node limbTableNode;
-        limbTableNode["type"] = "BLOB";
-        limbTableNode["offset"] = limbsArrayAddr;
-        limbTableNode["size"] = 0;
-        limbTableNode["symbol"] = limbTableSymbol;
-        try {
-            Companion::Instance->AddAsset(limbTableNode);
-        } catch (const std::exception& e) {
-            SPDLOG_WARN("Skeleton: Failed to create limb table {}: {}", limbTableSymbol, e.what());
+        auto limbTablePath = ResolvePointer(limbsArrayAddr);
+        if (limbTablePath.empty()) {
+            SPDLOG_WARN("Undeclared limb table at 0x{:08X} — YAML enrichment incomplete", limbsArrayAddr);
         }
     }
 

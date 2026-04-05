@@ -95,7 +95,7 @@ public:
 OoTLimbType ParseLimbType(const std::string& str);
 OoTSkeletonType ParseSkeletonType(const std::string& str);
 std::string ResolveGfxPointer(uint32_t ptr, const std::string& limbSymbol,
-                              const std::string& suffix, bool autoDiscover = true);
+                              const std::string& suffix, bool autoDiscover = false);
 
 } // namespace OoT
 

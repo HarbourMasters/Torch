@@ -98,23 +98,7 @@ static std::string ResolveGfxPointer(uint32_t ptr, const std::string& symbol, st
     auto result = Companion::Instance->GetStringByAddr(ptr);
     if (result.has_value()) return result.value();
 
-    // Auto-discover DList
-    if (IS_SEGMENTED(ptr)) {
-        auto seg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(ptr));
-        if (seg.has_value()) {
-            YAML::Node gfxNode;
-            gfxNode["type"] = "GFX";
-            gfxNode["offset"] = ptr;
-            gfxNode["symbol"] = symbol;
-            try {
-                Companion::Instance->AddAsset(gfxNode);
-                auto resolved = Companion::Instance->GetStringByAddr(ptr);
-                if (resolved.has_value()) return resolved.value();
-            } catch (...) {
-                SPDLOG_WARN("Scene: Failed to create GFX asset {} at 0x{:08X}", symbol, ptr);
-            }
-        }
-    }
+    SPDLOG_WARN("Scene: Could not resolve GFX pointer 0x{:08X} ({}) — YAML enrichment incomplete", ptr, symbol);
     return "";
 }
 
@@ -422,21 +406,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             uint32_t colAddr = Companion::Instance->PatchVirtualAddr(cmdArg2);
             auto resolved = ResolvePointer(cmdArg2);
             if (resolved.empty()) {
-                // Auto-discover collision
-                uint32_t offset = SEGMENT_OFFSET(colAddr);
-                std::string colSymbol = entryName + "CollisionHeader_" +
-                    ([offset]{ std::ostringstream s; s << std::uppercase << std::hex << std::setfill('0') << std::setw(6) << offset; return s.str(); })();
-
-                YAML::Node colNode;
-                colNode["type"] = "OOT:COLLISION";
-                colNode["offset"] = colAddr;
-                colNode["symbol"] = colSymbol;
-                try {
-                    Companion::Instance->AddAsset(colNode);
-                    resolved = ResolvePointer(cmdArg2);
-                } catch (const std::exception& e) {
-                    SPDLOG_WARN("Scene: Failed to create collision at 0x{:08X}: {}", colAddr, e.what());
-                }
+                SPDLOG_WARN("Undeclared collision at 0x{:08X} — YAML enrichment incomplete", colAddr);
             }
             cmdWriter.Write(resolved);
             break;

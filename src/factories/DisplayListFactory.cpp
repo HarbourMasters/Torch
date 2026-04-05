@@ -862,20 +862,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     gfx["symbol"] = ss.str();
                 }
 
-                // Save/restore pending VTX around AddAsset: it may trigger immediate
-                // parsing of the child DList, whose FlushDeferred would consume the
-                // parent's pending VTX. Each DList should have its own VTX scope.
-#ifdef OOT_SUPPORT
-                auto savedDL = DeferredVtx::IsDeferred()
-                    ? DeferredVtx::SaveAndClearPending()
-                    : std::vector<DeferredVtx::PendingVtx>{};
-#endif
-                Companion::Instance->AddAsset(gfx);
-#ifdef OOT_SUPPORT
-                if (DeferredVtx::IsDeferred()) {
-                    DeferredVtx::RestorePending(savedDL);
+                // OoT has all DLists pre-declared in YAML; only auto-discover for other games.
+                if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
+                    Companion::Instance->AddAsset(gfx);
                 }
-#endif
             }
         }
 
@@ -919,7 +909,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     throw std::runtime_error("Unsupported GBI version");
             }
 
-            if (light) {
+            if (light && Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
                 YAML::Node lnode;
                 lnode["type"] = "LIGHTS";
                 lnode["offset"] = w1;
@@ -951,20 +941,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                            << std::setfill('0') << std::setw(6) << childOffset;
                         gfx["symbol"] = ss.str();
 
-                        // Save parent's pending VTX before AddAsset: AddAsset triggers
-                        // immediate parsing of the branch target DList, whose FlushDeferred
-                        // would consume/clear the parent's pending VTX.
-#ifdef OOT_SUPPORT
-                        auto savedPending = DeferredVtx::IsDeferred()
-                            ? DeferredVtx::SaveAndClearPending()
-                            : std::vector<DeferredVtx::PendingVtx>{};
-#endif
-                        Companion::Instance->AddAsset(gfx);
-#ifdef OOT_SUPPORT
-                        if (DeferredVtx::IsDeferred()) {
-                            DeferredVtx::RestorePending(savedPending);
+                        // OoT has all DLists pre-declared in YAML; only auto-discover for other games.
+                        if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
+                            Companion::Instance->AddAsset(gfx);
                         }
-#endif
                     }
                 }
 
@@ -1013,13 +993,17 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             if (IS_SEGMENTED(w1) && SEGMENT_NUMBER(w1) == SEGMENT_NUMBER(node["offset"].as<uint32_t>())) {
                 const auto decl = Companion::Instance->GetNodeByAddr(w1);
                 if (!decl.has_value()) {
-                    auto parentSymbol = GetSafeNode<std::string>(node, "symbol", "");
+                    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
+                        auto parentSymbol = GetSafeNode<std::string>(node, "symbol", "");
 
-                    YAML::Node mtxNode;
-                    mtxNode["type"] = (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT) ? "OOT:MTX" : "MTX";
-                    mtxNode["offset"] = w1;
-                    mtxNode["symbol"] = parentSymbol + "Mtx_000000";
-                    Companion::Instance->AddAsset(mtxNode);
+                        YAML::Node mtxNode;
+                        mtxNode["type"] = "MTX";
+                        mtxNode["offset"] = w1;
+                        mtxNode["symbol"] = parentSymbol + "Mtx_000000";
+                        Companion::Instance->AddAsset(mtxNode);
+                    } else {
+                        SPDLOG_WARN("Undeclared MTX at 0x{:08X} — YAML enrichment incomplete", w1);
+                    }
                 }
             }
         }
@@ -1099,12 +1083,14 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                             DeferredVtx::AddPending(adjPtr, nvtx);
                         } else
 #endif
-                        {
+                        if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
                             YAML::Node vtx;
                             vtx["type"] = "VTX";
                             vtx["offset"] = adjPtr;
                             vtx["count"] = nvtx;
                             Companion::Instance->AddAsset(vtx);
+                        } else {
+                            SPDLOG_WARN("Undeclared VTX at 0x{:08X} — YAML enrichment incomplete", adjPtr);
                         }
                     }
                 }
