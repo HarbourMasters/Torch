@@ -2,6 +2,7 @@
 
 #include "OoTSceneFactory.h"
 #include "OoTSceneUtils.h"
+#include "AliasManager.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include "utils/Decompressor.h"
@@ -86,7 +87,7 @@ static std::string ResolveGfxWithAlias(uint32_t ptr, const std::string& symbol,
     // Return the primary path for the command binary (matching OTRExporter).
     std::string expectedPath = currentDir + "/" + symbol;
     if (path != expectedPath) {
-        Companion::Instance->RegisterAssetAlias(path, expectedPath);
+        AliasManager::Instance->Register(path, expectedPath);
     }
     return path;
 }

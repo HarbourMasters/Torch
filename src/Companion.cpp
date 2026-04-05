@@ -1,4 +1,5 @@
 #include "Companion.h"
+#include "AliasManager.h"
 
 #include "utils/Decompressor.h"
 #include "utils/StringHelper.h"
@@ -843,13 +844,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
                 auto dataVec = std::vector(data.begin(), data.end());
                 this->gCurrentWrapper->AddFile(result.name, dataVec);
 
-                // Write any pending aliases (duplicate files with identical content)
-                if (Torch::contains(this->gPendingAliases, result.name)) {
-                    for (auto& alias : this->gPendingAliases[result.name]) {
-                        this->gCurrentWrapper->AddFile(alias, dataVec);
-                    }
-                    this->gPendingAliases.erase(result.name);
-                }
+                AliasManager::Instance->WriteAliases(result.name, this->gCurrentWrapper, dataVec);
 
                 for (auto& entry : this->gCompanionFiles) {
                     auto output = (this->gCurrentDirectory / entry.first).string();
@@ -1861,9 +1856,6 @@ void Companion::RegisterCompanionFile(const std::string path, std::vector<char> 
     SPDLOG_TRACE("Registered companion file {}", path);
 }
 
-void Companion::RegisterAssetAlias(const std::string& primaryPath, const std::string& aliasPath) {
-    this->gPendingAliases[primaryPath].push_back(aliasPath);
-}
 
 std::string Companion::NormalizeAsset(const std::string& name) const {
     auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;

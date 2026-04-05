@@ -192,7 +192,6 @@ public:
     std::string RelativePathToSrcDir(const std::string& path) const;
     std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
-    void RegisterAssetAlias(const std::string& primaryPath, const std::string& aliasPath);
     void SetAdditionalFiles(const std::vector<std::string>& files) { this->gAdditionalFiles = files; }
     void SetVersion(const std::string& version) { this->gVersion = version; }
 
@@ -241,7 +240,6 @@ private:
     std::unordered_set<std::string> gProcessedFiles;
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
-    std::unordered_map<std::string, std::vector<std::string>> gPendingAliases;
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
     std::vector<std::string> gAdditionalFiles;
 
