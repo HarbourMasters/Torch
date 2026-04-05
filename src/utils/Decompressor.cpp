@@ -227,13 +227,11 @@ DecompressedData Decompressor::AutoDecode(uint32_t offset, std::optional<size_t>
 }
 
 uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress) {
-    // Check both standard segments (0x01–0x1F) and high segments (>= 0x80, used by OoT code sections).
-    auto segNum = SEGMENT_NUMBER(addr);
-    if (IS_SEGMENTED(addr) || (segNum >= 0x80 && Companion::Instance->GetFileOffsetFromSegmentedAddr(segNum).has_value())) {
-        const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(segNum);
+    if (IS_SEGMENTED(addr) || IS_VIRTUAL_SEGMENT(addr)) {
+        const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
         if (!segment.has_value()) {
             SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}",
-                         segNum);
+                         SEGMENT_NUMBER(addr));
             return 0;
         }
 
