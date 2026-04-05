@@ -98,21 +98,15 @@ void FlushDeferred(const std::string& baseName) {
            << std::setfill('0') << std::setw(6) << startOff;
         std::string symbol = ss.str();
 
-        // Use OOT:ARRAY type to match reference O2R format (ResourceType::Array)
-        YAML::Node vtx;
-        vtx["type"] = "OOT:ARRAY";
-        vtx["offset"] = mg.addr;
-        vtx["count"] = totalCount;
-        vtx["symbol"] = symbol;
-        vtx["array_type"] = "VTX";
-
         SPDLOG_INFO("VTX consolidation: {} at 0x{:X} count={}", symbol, mg.addr, totalCount);
-        Companion::Instance->AddAsset(vtx);
+
+        // Look up the pre-declared VTX in YAML (should exist with enrichment)
+        auto registeredNode = Companion::Instance->GetNodeByAddr(mg.addr);
+        if (!registeredNode.has_value()) {
+            SPDLOG_WARN("Undeclared VTX at 0x{:X} — YAML enrichment incomplete", mg.addr);
+        }
 
         // Register overlap mappings for all pending addresses within this group.
-        // Use the symbol (not the full path) to match existing SearchVtx-based overlaps,
-        // since the export path applies RelativePath() which prepends the directory.
-        auto registeredNode = Companion::Instance->GetNodeByAddr(mg.addr);
         if (registeredNode.has_value()) {
             auto [fullPath, vtxNode] = registeredNode.value();
             auto overlapTuple = std::make_tuple(symbol, vtxNode);
