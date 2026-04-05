@@ -20,6 +20,7 @@ option(BUILD_FZERO "Build with F-Zero X support" ON)
 option(BUILD_MARIO_ARTIST "Build with Mario Artist support" ON)
 option(BUILD_NAUDIO "Build with NAudio support" ON)
 option(BUILD_OOT "Build with Ocarina of Time support" ON)
+option(PORT_VERSION_ENDIANNESS "Include endianness byte in portVersion file" OFF)
 
 if(EMSCRIPTEN)
     set(BUILD_SM64 OFF) # TODO: This is broken for some reason
@@ -114,6 +115,10 @@ if(BUILD_NAUDIO)
     add_definitions(-DNAUDIO_SUPPORT)
 else()
     list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/naudio/*")
+endif()
+
+if(PORT_VERSION_ENDIANNESS)
+    add_definitions(-DPORT_VERSION_ENDIANNESS)
 endif()
 
 if(BUILD_OOT)

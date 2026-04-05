@@ -1298,6 +1298,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         this->gConfig.segment.primaryVirtual = cfg["primary_virtual_segment"].as<uint32_t>();
     }
 
+
     if (auto sort = cfg["sort"]) {
         if (sort.IsSequence()) {
             this->gWriteOrder = sort.as<std::vector<std::string>>();
@@ -1999,7 +2000,9 @@ std::vector<char> Companion::ParseVersionString(const std::string& version) {
 
     auto wv = LUS::BinaryWriter();
     wv.SetEndianness(Torch::Endianness::Big);
-    wv.Write(static_cast<uint8_t>(Torch::Endianness::Big)); // endianness flag
+#ifdef PORT_VERSION_ENDIANNESS
+    wv.Write(static_cast<uint8_t>(Torch::Endianness::Big));
+#endif
     wv.Write(major);
     wv.Write(minor);
     wv.Write(patch);
