@@ -252,6 +252,9 @@ private:
 
     void ProcessFile(YAML::Node root);
     void ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount);
+    void PreparseConfig(YAML::Node& root);
+    void PopulateAddrMap(YAML::Node& root);
+    void ResetTemporalState();
     void ParseEnums(std::string& file);
     void ParseHash();
     void ParseModdingConfig();

@@ -483,6 +483,10 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
         }
     }
 
+    if (node["directory"]) {
+        this->gCurrentDirectory = node["directory"].as<std::string>();
+    }
+
     if (node["manual_segments"]) {
         auto manualSegments = node["manual_segments"];
         if (manualSegments.IsSequence() && manualSegments.size()) {
@@ -706,9 +710,7 @@ void Companion::ProcessFile(YAML::Node root) {
     ProcessFile(root, assetCount);
 }
 
-void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
-    assetCount++;
-    // Set compressed file offsets and compression type
+void Companion::PreparseConfig(YAML::Node& root) {
     if (auto segments = root[":config"]["segments"]) {
         if (segments.IsSequence() && segments.size() > 0) {
             if (segments[0].IsSequence() && segments[0].size() == 2) {
@@ -726,12 +728,12 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
         }
     }
 
-    // Allow YAML files to override their output directory.
-    // Used by scene room files that need assets output under the scene's directory.
     if (auto directory = root[":config"]["directory"]) {
         this->gCurrentDirectory = directory.as<std::string>();
     }
+}
 
+void Companion::PopulateAddrMap(YAML::Node& root) {
     for (auto asset = root.begin(); asset != root.end(); ++asset) {
         auto node = asset->second;
         auto entryName = asset->first.as<std::string>();
@@ -761,9 +763,9 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
 
         this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
     }
+}
 
-    // Stupid hack because the iteration broke the assets
-    root = YAML::LoadFile(this->gCurrentFile);
+void Companion::ResetTemporalState() {
     this->gConfig.segment.local.clear();
     this->gFileHeader.clear();
     this->gCurrentPad = 0;
@@ -772,10 +774,22 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     this->gCurrentSegmentNumber = 0;
     this->gCurrentCompressionType = CompressionType::None;
     this->gCurrentFileOffset = 0;
+    this->gCurrentDirectory = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
     this->gTables.clear();
     this->gCurrentExternalFiles.clear();
     this->gManualSegments.clear();
     GFXDOverride::ClearVtx();
+}
+
+void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
+    assetCount++;
+    ResetTemporalState();
+    PreparseConfig(root);
+    PopulateAddrMap(root);
+
+    // Reload YAML because iteration invalidates yaml-cpp nodes
+    root = YAML::LoadFile(this->gCurrentFile);
+    ResetTemporalState();
 
     if (root[":config"]) {
         this->ParseCurrentFileConfig(root[":config"], assetCount);
@@ -1414,7 +1428,6 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         }
 
         YAML::Node root = YAML::LoadFile(yamlPath);
-        this->gCurrentDirectory = relative(entry.path(), this->gAssetPath).replace_extension("");
         this->gCurrentFile = yamlPath;
 
         if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
