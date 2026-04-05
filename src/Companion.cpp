@@ -1294,6 +1294,10 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         }
     }
 
+    if (cfg["primary_virtual_segment"]) {
+        this->gConfig.segment.primaryVirtual = cfg["primary_virtual_segment"].as<uint32_t>();
+    }
+
     if (auto sort = cfg["sort"]) {
         if (sort.IsSequence()) {
             this->gWriteOrder = sort.as<std::vector<std::string>>();
@@ -1618,40 +1622,126 @@ std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uin
     return std::nullopt;
 }
 
-uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
-    if (addr & 0x80000000) {
-        if (Torch::contains(gVirtualAddrMap, gCurrentFile)) {
-            auto vramBase = std::get<0>(gVirtualAddrMap[gCurrentFile]);
-            auto physStart = std::get<1>(gVirtualAddrMap[gCurrentFile]);
+// Convert a VRAM address (0x80XXXXXX) to a segmented address that Torch can look up.
+//
+// N64 overlays store pointers as VRAM addresses (e.g. 0x80B65CC4). Torch needs
+// segmented addresses (e.g. 0x06000CC4) to find assets in gAddrMap. This function
+// translates between the two using the file's virtual address mapping.
+//
+// Not all 0x80XXXXXX addresses are VRAM pointers — segment 0x80 addresses also have
+// bit 31 set. We distinguish them by checking if the address falls within the current
+// file's VRAM range.
+ResolvedAddr Companion::ResolveVirtualAddr(uint32_t addr) {
+    // Addresses below 0x80000000 aren't virtual.
+    if (!(addr & 0x80000000)) {
+        return { addr, IS_SEGMENTED(addr) ? ResolvedAddr::Segmented : ResolvedAddr::FileRelative };
+    }
 
-            // Only treat as VRAM if addr is actually within the virtual range.
-            // Segment-0x80 addresses (e.g. 0x800035A0) have bit 31 set but are NOT VRAM.
-            if (addr < vramBase) {
-                return addr;
-            }
+    // If the current file doesn't have a virtual address mapping, we can't
+    // determine if this is a segment-0x80 address or VRAM for another file.
+    if (!Torch::contains(gVirtualAddrMap, gCurrentFile)) {
+        return { addr, ResolvedAddr::Unknown };
+    }
 
-            auto relOffset = addr - vramBase;
+    // vramBase: where this file's data is loaded in VRAM at runtime (e.g. 0x80B65000)
+    // physStart: where this file's data lives in the ROM (e.g. 0x00D24FC0)
+    auto vramBase = std::get<0>(gVirtualAddrMap[gCurrentFile]);
+    auto physStart = std::get<1>(gVirtualAddrMap[gCurrentFile]);
 
-            // OoT: convert to segmented address, preferring segment 0x80 (the virtual/primary
-            // segment) when multiple segments alias the same ROM data (overlays use 8-13).
-            if (this->gConfig.gbi.subversion == GBIMinorVersion::OoT) {
-                if (Torch::contains(this->gConfig.segment.local, (uint32_t)0x80) &&
-                    this->gConfig.segment.local[0x80] == physStart) {
-                    return (0x80 << 24) | relOffset;
-                }
-                for (auto& [seg, segOffset] : this->gConfig.segment.local) {
-                    if (segOffset == physStart) {
-                        return (seg << 24) | relOffset;
-                    }
-                }
-            }
+    // If addr is below vramBase, it's not pointing into this file's VRAM range.
+    // It's a segmented address using segment 0x80+.
+    if (addr < vramBase) {
+        return { addr, ResolvedAddr::Segmented };
+    }
 
-            // Default: return absolute ROM address
-            addr = relOffset + physStart;
+    // addr is within this file's VRAM range. Compute how far into the file it points.
+    auto relOffset = addr - vramBase;
+
+    // No segments configured — return absolute ROM address.
+    if (this->gConfig.segment.local.empty()) {
+        return { relOffset + physStart, ResolvedAddr::Absolute };
+    }
+
+    // Convert the relative offset to a segmented address by finding which segment
+    // maps to this file's ROM data. When multiple segments alias the same ROM data,
+    // prefer the configured primary virtual segment for consistency.
+    if (this->gConfig.segment.primaryVirtual.has_value()) {
+        auto primarySeg = this->gConfig.segment.primaryVirtual.value();
+        if (Torch::contains(this->gConfig.segment.local, primarySeg) &&
+            this->gConfig.segment.local[primarySeg] == physStart) {
+            return { (primarySeg << 24) | relOffset, ResolvedAddr::Segmented };
+        }
+    }
+    for (auto& [seg, segOffset] : this->gConfig.segment.local) {
+        if (segOffset == physStart) {
+            return { (seg << 24) | relOffset, ResolvedAddr::Segmented };
         }
     }
 
-    return addr;
+    // No matching segment found — return absolute ROM address as fallback.
+    return { relOffset + physStart, ResolvedAddr::Absolute };
+}
+
+uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
+    return ResolveVirtualAddr(addr).addr;
+}
+
+// Look up an asset by converting a segmented address to an absolute ROM address,
+// then scanning all entries in the file for one that resolves to the same address.
+// Used when multiple segments map to the same ROM data, so the same asset may be
+// registered under a different segment number than the one being looked up.
+std::optional<std::tuple<std::string, YAML::Node>> Companion::FindNodeInOverlaySegments(
+        uint32_t addr, const std::string& file) {
+    // Only applies to files with virtual address mappings (overlays).
+    if (!Torch::contains(gVirtualAddrMap, file)) {
+        return std::nullopt;
+    }
+
+    // Convert the segmented address to an absolute ROM address.
+    auto addrSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
+    if (!addrSeg.has_value()) {
+        return std::nullopt;
+    }
+    auto absAddr = addrSeg.value() + SEGMENT_OFFSET(addr);
+
+    // Scan all entries in the file for one whose absolute ROM address matches.
+    for (auto& [storedAddr, entry] : this->gAddrMap[file]) {
+        if (storedAddr == addr || !IS_SEGMENTED(storedAddr)) {
+            continue;
+        }
+        auto storedSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(storedAddr));
+        if (storedSeg.has_value() && storedSeg.value() + SEGMENT_OFFSET(storedAddr) == absAddr) {
+            return entry;
+        }
+    }
+    return std::nullopt;
+}
+
+// Check if this address is a VRAM pointer belonging to the given external file.
+// If it falls within the file's VRAM range, convert to a virtual segment address
+// and look it up in the file's gAddrMap.
+std::optional<std::tuple<std::string, YAML::Node>> Companion::FindInExternalByVRAM(
+        uint32_t addr, const std::string& file) {
+    // Can't resolve if the external file doesn't have a virtual address mapping.
+    if (!Torch::contains(gVirtualAddrMap, file)) {
+        return std::nullopt;
+    }
+
+    // Address doesn't belong to this file if it's below the file's VRAM base.
+    auto vramBase = std::get<0>(gVirtualAddrMap[file]);
+    if (addr < vramBase) {
+        return std::nullopt;
+    }
+
+    // Convert VRAM address to virtual segment address:
+    // relative offset within the file, with 0x80 as the segment number.
+    uint32_t virtualSegmentAddr = 0x80000000 | (addr - vramBase);
+    if (Torch::contains(this->gAddrMap[file], virtualSegmentAddr)) {
+        return this->gAddrMap[file][virtualSegmentAddr];
+    }
+
+    // Address doesn't belong to this external file.
+    return std::nullopt;
 }
 
 std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint32_t addr) {
@@ -1659,57 +1749,46 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
         return std::nullopt;
     }
 
-    // HACK: Adjust address to rom address if virtual address
-    addr = PatchVirtualAddr(addr);
+    auto resolved = ResolveVirtualAddr(addr);
 
-    if (Torch::contains(this->gAddrMap[this->gCurrentFile], addr)) {
-        return this->gAddrMap[this->gCurrentFile][addr];
+    // Direct lookup by resolved address. This works because ResolveVirtualAddr
+    // produces addresses in the same format that PopulateAddrMap uses to register
+    // assets (segmented offset for files with segments, plain offset otherwise).
+    if (Torch::contains(this->gAddrMap[this->gCurrentFile], resolved.addr)) {
+        return this->gAddrMap[this->gCurrentFile][resolved.addr];
     }
 
-    // When multiple segments map to the same ROM data (e.g. segments 6 and 8-13 for overlays),
-    // a lookup for 0xD001980 won't match 0x6001980 even though they reference the same data.
-    // Only applies to OoT overlay files that have virtual address mappings.
-    if (this->gConfig.gbi.subversion == GBIMinorVersion::OoT &&
-        IS_SEGMENTED(addr) && Torch::contains(gVirtualAddrMap, gCurrentFile)) {
-        auto addrSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
-        if (addrSeg.has_value()) {
-            auto absAddr = addrSeg.value() + SEGMENT_OFFSET(addr);
-            for (auto& [storedAddr, entry] : this->gAddrMap[this->gCurrentFile]) {
-                if (storedAddr != addr && IS_SEGMENTED(storedAddr)) {
-                    auto storedSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(storedAddr));
-                    if (storedSeg.has_value() && storedSeg.value() + SEGMENT_OFFSET(storedAddr) == absAddr) {
-                        return entry;
-                    }
-                }
-            }
+    // For overlay files, the same data may be registered under a different segment
+    // number (e.g. looking up segment 8 when the asset was registered under segment 6).
+    if (resolved.kind == ResolvedAddr::Segmented) {
+        auto match = FindNodeInOverlaySegments(resolved.addr, this->gCurrentFile);
+        if (match.has_value()) {
+            return match;
         }
     }
 
+    // Search external files
     for (auto& file : this->gCurrentExternalFiles) {
         if (!Torch::contains(this->gAddrMap, file)) {
             SPDLOG_WARN("GetNodeByAddr: External File {} Not Found.", file);
             continue;
         }
 
-        if (Torch::contains(this->gAddrMap[file], addr)) {
-            return this->gAddrMap[file][addr];
+        // Direct lookup in external file by resolved address.
+        if (Torch::contains(this->gAddrMap[file], resolved.addr)) {
+            return this->gAddrMap[file][resolved.addr];
         }
 
-        // VRAM address resolution: if the address is a virtual address (0x80XXXXXX)
-        // and the external file has a virtual addr map, compute the file-relative
-        // offset and look up the segmented address in that file's addr map.
-        // Example: addr=0x800FBC20, vramBase=0x80010F00 → relOffset=0xEAD20
-        //          segmented addr = (0x80 << 24) | 0xEAD20 = 0x800EAD20
-        if ((addr & 0x80000000) && Torch::contains(gVirtualAddrMap, file)) {
-            auto vramBase = std::get<0>(gVirtualAddrMap[file]);
-            if (addr >= vramBase) {
-                uint32_t patchedAddr = 0x80000000 | (addr - vramBase);
-                if (Torch::contains(this->gAddrMap[file], patchedAddr)) {
-                    return this->gAddrMap[file][patchedAddr];
-                }
+        // If we couldn't determine the address type, it may be a VRAM address
+        // belonging to this external file's virtual address space.
+        if (resolved.kind == ResolvedAddr::Unknown) {
+            auto vramMatch = FindInExternalByVRAM(resolved.addr, file);
+            if (vramMatch.has_value()) {
+                return vramMatch;
             }
         }
     }
+
     return std::nullopt;
 }
 
