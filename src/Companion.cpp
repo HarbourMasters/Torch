@@ -105,6 +105,8 @@
 #include "factories/oot/OoTCollisionFactory.h"
 #include "factories/oot/OoTTextFactory.h"
 #include "factories/oot/OoTSceneFactory.h"
+#include "factories/oot/OoTPathFactory.h"
+#include "factories/oot/OoTCutsceneFactory.h"
 #include "factories/oot/OoTAudioFactory.h"
 #endif
 
