@@ -13,42 +13,9 @@
 
 namespace OoT {
 
-// Scene command IDs (matching OoT's RoomCommand enum)
-enum SceneCmdID : uint32_t {
-    SetStartPositionList = 0x00,
-    SetActorList = 0x01,
-    SetCsCamera = 0x02,
-    SetCollisionHeader = 0x03,
-    SetRoomList = 0x04,
-    SetWind = 0x05,
-    SetEntranceList = 0x06,
-    SetSpecialObjects = 0x07,
-    SetRoomBehavior = 0x08,
-    // 0x09 = Unused
-    SetMesh = 0x0A,
-    SetObjectList = 0x0B,
-    SetLightList = 0x0C,
-    SetPathways = 0x0D,
-    SetTransitionActorList = 0x0E,
-    SetLightingSettings = 0x0F,
-    SetTimeSettings = 0x10,
-    SetSkyboxSettings = 0x11,
-    SetSkyboxModifier = 0x12,
-    SetExitList = 0x13,
-    EndMarker = 0x14,
-    SetSoundSettings = 0x15,
-    SetEchoSettings = 0x16,
-    SetCutscenes = 0x17,
-    SetAlternateHeaders = 0x18,
-    SetCameraSettings = 0x19,
-};
-
-// ReadSubArray, ResolvePointer, MakeAssetName, SerializePathways, CS_CMD_*
-// are in OoTSceneUtils.h
-
 // Create a background companion file from ROM JPEG data.
-static void CreateBackgroundCompanion(std::vector<uint8_t>& buffer, uint32_t source,
-                                      const std::string& bgSymbol) {
+void OoTSceneFactory::CreateBackgroundCompanion(std::vector<uint8_t>& buffer, uint32_t source,
+                                                const std::string& bgSymbol) {
     if (source == 0) return;
     uint32_t bgDataSize = 320 * 240 * 2; // OoT screen buffer size
     auto bgDataReader = ReadSubArray(buffer, source, bgDataSize);
@@ -66,34 +33,7 @@ static void CreateBackgroundCompanion(std::vector<uint8_t>& buffer, uint32_t sou
 }
 
 
-// Determine scene prefix for DList paths (matching OTRExporter GetParentFolderName).
-// For rooms, the parent folder is the scene name, e.g. bdan_room_0 → bdan_scene.
-static std::string GetSceneFolder(const std::string& currentDir) {
-    // currentDir is like "scenes/nonmq/bdan_scene" or already correct
-    return currentDir;
-}
-
-// Forward declaration
-static std::string ResolveGfxPointer(uint32_t ptr, const std::string& symbol, std::vector<uint8_t>& buffer);
-
-// Resolve a DList pointer and register an alias if the existing entry has a different name.
-// Used by alternate headers so their DLists get Set_-prefixed copies in the O2R.
-static std::string ResolveGfxWithAlias(uint32_t ptr, const std::string& symbol,
-                                       std::vector<uint8_t>& buffer, const std::string& currentDir) {
-    std::string path = ResolveGfxPointer(ptr, symbol, buffer);
-    if (path.empty()) return "";
-    // If the resolved path differs from what this header expects, register an alias
-    // so a duplicate file gets created under the Set_-prefixed name.
-    // Return the primary path for the command binary (matching OTRExporter).
-    std::string expectedPath = currentDir + "/" + symbol;
-    if (path != expectedPath) {
-        AliasManager::Instance->Register(path, expectedPath);
-    }
-    return path;
-}
-
-// Resolve a DList pointer, creating the GFX asset via AddAsset when not found.
-static std::string ResolveGfxPointer(uint32_t ptr, const std::string& symbol, std::vector<uint8_t>& buffer) {
+std::string OoTSceneFactory::ResolveGfxPointer(uint32_t ptr, const std::string& symbol) {
     if (ptr == 0) return "";
     ptr = Companion::Instance->PatchVirtualAddr(ptr);
     auto result = Companion::Instance->GetStringByAddr(ptr);
@@ -101,6 +41,85 @@ static std::string ResolveGfxPointer(uint32_t ptr, const std::string& symbol, st
 
     SPDLOG_WARN("Scene: Could not resolve GFX pointer 0x{:08X} ({}) — YAML enrichment incomplete", ptr, symbol);
     return "";
+}
+
+// Resolve a DList pointer and register an alias if the existing entry has a different name.
+// Used by alternate headers so their DLists get Set_-prefixed copies in the O2R.
+std::string OoTSceneFactory::ResolveGfxWithAlias(uint32_t ptr, const std::string& symbol,
+                                                 const std::string& currentDir) {
+    std::string path = ResolveGfxPointer(ptr, symbol);
+    if (path.empty()) return "";
+    std::string expectedPath = currentDir + "/" + symbol;
+    if (path != expectedPath) {
+        AliasManager::Instance->Register(path, expectedPath);
+    }
+    return path;
+}
+
+// Collect all known data offsets from scene commands for neighbor-based size inference.
+// Mimics ZAPD's GetDeclarationSizeFromNeighbor(): the size of a variable-length
+// list is determined by the distance to the next known data structure.
+std::set<uint32_t> OoTSceneFactory::CollectKnownAddresses(const std::vector<std::pair<uint32_t, uint32_t>>& rawCmds,
+                                                          std::vector<uint8_t>& buffer) {
+    std::set<uint32_t> addrs;
+    for (auto& [w0, w1] : rawCmds) {
+        uint8_t id = (w0 >> 24) & 0xFF;
+        uint8_t arg1 = (w0 >> 16) & 0xFF;
+        uint32_t addr = w1;
+        if (addr == 0 || !IS_SEGMENTED(addr)) continue;
+
+        // Skip inline commands (data is in the command word itself, not a pointer)
+        if (id == SetWind || id == SetTimeSettings || id == SetSkyboxModifier ||
+            id == SetEchoSettings || id == SetSoundSettings || id == SetSkyboxSettings ||
+            id == SetRoomBehavior || id == SetCameraSettings || id == SetSpecialObjects ||
+            id == EndMarker) {
+            continue;
+        }
+
+        uint32_t off = SEGMENT_OFFSET(addr);
+        uint8_t seg = (addr >> 24) & 0xFF;
+        addrs.insert(off);
+
+        // For fixed-count commands, also add end address (start + count * entrySize)
+        switch (id) {
+            case SetStartPositionList: addrs.insert(off + arg1 * 16); break;
+            case SetActorList:         addrs.insert(off + arg1 * 16); break;
+            case SetTransitionActorList: addrs.insert(off + arg1 * 16); break;
+            case SetObjectList:        addrs.insert(off + arg1 * 2); break;
+            case SetLightList:         addrs.insert(off + arg1 * 14); break;
+            case SetLightingSettings:  addrs.insert(off + arg1 * 22); break;
+            case SetRoomList:          addrs.insert(off + arg1 * 8); break;
+            default: break;
+        }
+
+        // For SetPathways, pre-scan the pathway entries to add their point data addresses.
+        if (id == SetPathways) {
+            auto pathPeek = ReadSubArray(buffer, addr, 256 * 8);
+            for (uint32_t i = 0; i < 256; i++) {
+                uint8_t np = pathPeek.ReadUByte();
+                pathPeek.ReadUByte(); pathPeek.ReadUByte(); pathPeek.ReadUByte();
+                uint32_t ptsAddr = pathPeek.ReadUInt32();
+                if (ptsAddr == 0 || !IS_SEGMENTED(ptsAddr) || ((ptsAddr >> 24) & 0xFF) != seg) {
+                    addrs.insert(off + i * 8);
+                    break;
+                }
+                addrs.insert(SEGMENT_OFFSET(ptsAddr));
+                addrs.insert(SEGMENT_OFFSET(ptsAddr) + np * 6);
+            }
+        }
+    }
+    addrs.insert(rawCmds.size() * 8);
+    return addrs;
+}
+
+// Infer list element count from distance to next known address.
+uint32_t OoTSceneFactory::GetNeighborSize(const std::set<uint32_t>& knownAddrs, uint32_t segAddr, uint32_t entrySize) {
+    uint32_t addr = SEGMENT_OFFSET(segAddr);
+    auto it = knownAddrs.upper_bound(addr);
+    if (it != knownAddrs.end()) {
+        return (*it - addr) / entrySize;
+    }
+    return 0;
 }
 
 std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
@@ -130,77 +149,9 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
 
     // Alternate headers are deferred until after all primary commands (incl. SetMesh)
     // so that primary DLists are registered first and alt headers reuse their names.
-    struct PendingAltHeader { uint32_t seg; std::string symbol; };
     std::vector<PendingAltHeader> pendingAltHeaders;
 
-    // Collect all known data addresses from commands for neighbor-based size inference.
-    // This mimics ZAPD's GetDeclarationSizeFromNeighbor(): the size of a variable-length
-    // list is determined by the distance to the next known data structure.
-    // For commands with known counts (from cmdArg1), we add BOTH start and end addresses
-    // to create tight boundaries around all data arrays.
-    std::set<uint32_t> knownAddrs;
-    for (auto& [w0, w1] : rawCmds) {
-        uint8_t id = (w0 >> 24) & 0xFF;
-        uint8_t arg1 = (w0 >> 16) & 0xFF;
-        uint32_t addr = w1;
-        if (addr == 0 || !IS_SEGMENTED(addr)) continue;
-
-        // Skip inline commands (data is in the command word itself, not a pointer)
-        if (id == SetWind || id == SetTimeSettings || id == SetSkyboxModifier ||
-            id == SetEchoSettings || id == SetSoundSettings || id == SetSkyboxSettings ||
-            id == SetRoomBehavior || id == SetCameraSettings || id == SetSpecialObjects ||
-            id == EndMarker) {
-            continue;
-        }
-
-        uint32_t off = SEGMENT_OFFSET(addr);
-        uint8_t seg = (addr >> 24) & 0xFF;
-        knownAddrs.insert(off);
-
-        // For fixed-count commands, also add end address (start + count * entrySize)
-        switch (id) {
-            case SetStartPositionList: knownAddrs.insert(off + arg1 * 16); break;
-            case SetActorList:         knownAddrs.insert(off + arg1 * 16); break;
-            case SetTransitionActorList: knownAddrs.insert(off + arg1 * 16); break;
-            case SetObjectList:        knownAddrs.insert(off + arg1 * 2); break;
-            case SetLightList:         knownAddrs.insert(off + arg1 * 14); break;
-            case SetLightingSettings:  knownAddrs.insert(off + arg1 * 22); break;
-            case SetRoomList:          knownAddrs.insert(off + arg1 * 8); break;
-            default: break;
-        }
-
-        // For SetPathways, pre-scan the pathway entries to add their point data addresses.
-        // Only add entries with valid segment pointers (same segment as the list itself).
-        // Stop at the first entry whose pointer is not a valid same-segment address.
-        if (id == SetPathways) {
-            auto pathPeek = ReadSubArray(buffer, addr, 256 * 8);
-            for (uint32_t i = 0; i < 256; i++) {
-                uint8_t np = pathPeek.ReadUByte();
-                pathPeek.ReadUByte(); pathPeek.ReadUByte(); pathPeek.ReadUByte();
-                uint32_t ptsAddr = pathPeek.ReadUInt32();
-                if (ptsAddr == 0 || !IS_SEGMENTED(ptsAddr) || ((ptsAddr >> 24) & 0xFF) != seg) {
-                    // End of valid pathway entries — mark the boundary at the first invalid entry
-                    knownAddrs.insert(off + i * 8);
-                    break;
-                }
-                knownAddrs.insert(SEGMENT_OFFSET(ptsAddr));
-                // Also add the end of the point data
-                knownAddrs.insert(SEGMENT_OFFSET(ptsAddr) + np * 6);
-            }
-        }
-    }
-    // Also add the end of the scene command table itself
-    knownAddrs.insert(rawCmds.size() * 8);
-
-    // Helper to infer list size from neighbor distance
-    auto getNeighborSize = [&knownAddrs](uint32_t segAddr, uint32_t entrySize) -> uint32_t {
-        uint32_t addr = SEGMENT_OFFSET(segAddr);
-        auto it = knownAddrs.upper_bound(addr);
-        if (it != knownAddrs.end()) {
-            return (*it - addr) / entrySize;
-        }
-        return 0;
-    };
+    auto knownAddrs = CollectKnownAddresses(rawCmds, buffer);
 
     // Second pass: serialize each command's data matching RoomExporter.cpp format
     for (auto& [w0, w1] : rawCmds) {
@@ -314,7 +265,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
         }
         case SetEntranceList: {
             // ZAPD infers count from neighbor distance (GetDeclarationSizeFromNeighbor / 2)
-            uint32_t count = getNeighborSize(cmdArg2, 2);
+            uint32_t count = GetNeighborSize(knownAddrs,cmdArg2, 2);
             if (count == 0) count = 1; // fallback
             auto sub = ReadSubArray(buffer, cmdArg2, count * 2);
             cmdWriter.Write(static_cast<uint32_t>(count));
@@ -366,7 +317,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
         }
         case SetExitList: {
             // ZAPD infers count from neighbor distance (GetDeclarationSizeFromNeighbor / 2)
-            uint32_t count = getNeighborSize(cmdArg2, 2);
+            uint32_t count = GetNeighborSize(knownAddrs,cmdArg2, 2);
             if (count == 0) count = 1; // fallback
             auto sub = ReadSubArray(buffer, cmdArg2, count * 2);
             cmdWriter.Write(static_cast<uint32_t>(count));
@@ -465,7 +416,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     if (opaAddr != 0) {
                         uint32_t opaOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(opaAddr));
                         std::string opaSymbol = MakeAssetName(entryName, "DL", opaOffset);
-                        opaPath = ResolveGfxWithAlias(opaAddr, opaSymbol, buffer, currentDir);
+                        opaPath = ResolveGfxWithAlias(opaAddr, opaSymbol, currentDir);
                     }
                     cmdWriter.Write(opaPath.empty() ? std::string("") : opaPath);
 
@@ -474,7 +425,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                     if (xluAddr != 0) {
                         uint32_t xluOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(xluAddr));
                         std::string xluSymbol = MakeAssetName(entryName, "DL", xluOffset);
-                        xluPath = ResolveGfxWithAlias(xluAddr, xluSymbol, buffer, currentDir);
+                        xluPath = ResolveGfxWithAlias(xluAddr, xluSymbol, currentDir);
                     }
                     cmdWriter.Write(xluPath.empty() ? std::string("") : xluPath);
                 }
@@ -495,12 +446,12 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
                 if (opaAddr != 0) {
                     uint32_t opaOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(opaAddr));
                     std::string opaSymbol = MakeAssetName(entryName, "DL", opaOffset);
-                    opaPath = ResolveGfxWithAlias(opaAddr, opaSymbol, buffer, currentDir);
+                    opaPath = ResolveGfxWithAlias(opaAddr, opaSymbol, currentDir);
                 }
                 if (xluAddr != 0) {
                     uint32_t xluOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(xluAddr));
                     std::string xluSymbol = MakeAssetName(entryName, "DL", xluOffset);
-                    xluPath = ResolveGfxWithAlias(xluAddr, xluSymbol, buffer, currentDir);
+                    xluPath = ResolveGfxWithAlias(xluAddr, xluSymbol, currentDir);
                 }
                 cmdWriter.Write(opaPath.empty() ? std::string("") : opaPath);
                 cmdWriter.Write(xluPath.empty() ? std::string("") : xluPath);
@@ -648,7 +599,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
             // Read pathway list entries until zero terminator (listAddr == 0).
             // Each entry is 8 bytes: u8 numPoints, pad[3], u32 pointsSegPtr.
             uint8_t pathSeg = (cmdArg2 >> 24) & 0xFF;
-            uint32_t maxPaths = getNeighborSize(cmdArg2, 8);
+            uint32_t maxPaths = GetNeighborSize(knownAddrs,cmdArg2, 8);
             if (maxPaths == 0) maxPaths = 256;
             auto pathReader = ReadSubArray(buffer, cmdArg2, maxPaths * 8);
             std::vector<std::pair<uint8_t, uint32_t>> pathways; // numPoints, pointsAddr
@@ -727,7 +678,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
         }
         case SetAlternateHeaders: {
             // ZAPD infers count from neighbor distance (GetDeclarationSizeFromNeighbor / 4)
-            uint32_t maxHeaders = getNeighborSize(cmdArg2, 4);
+            uint32_t maxHeaders = GetNeighborSize(knownAddrs,cmdArg2, 4);
             if (maxHeaders == 0) maxHeaders = 16; // fallback
             auto hdrReader = ReadSubArray(buffer, cmdArg2, maxHeaders * 4);
             std::vector<uint32_t> headers;
