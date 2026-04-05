@@ -101,6 +101,7 @@
 #ifdef OOT_SUPPORT
 #include "factories/oot/OoTArrayFactory.h"
 #include "factories/oot/OoTSkeletonFactory.h"
+#include "factories/oot/OoTLimbFactory.h"
 #include "factories/oot/OoTAnimationFactory.h"
 #include "factories/oot/OoTCollisionFactory.h"
 #include "factories/oot/OoTTextFactory.h"
