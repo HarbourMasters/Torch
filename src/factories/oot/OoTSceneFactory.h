@@ -73,14 +73,8 @@ public:
     }
 
 private:
-    void CreateBackgroundCompanion(std::vector<uint8_t>& buffer, uint32_t source,
-                                   const std::string& bgSymbol);
-    std::string ResolveGfxPointer(uint32_t ptr, const std::string& symbol);
-    std::string ResolveGfxWithAlias(uint32_t ptr, const std::string& symbol,
-                                    const std::string& currentDir);
     std::set<uint32_t> CollectKnownAddresses(const std::vector<std::pair<uint32_t, uint32_t>>& rawCmds,
                                               std::vector<uint8_t>& buffer);
-    uint32_t GetNeighborSize(const std::set<uint32_t>& knownAddrs, uint32_t segAddr, uint32_t entrySize);
 };
 
 } // namespace OoT
