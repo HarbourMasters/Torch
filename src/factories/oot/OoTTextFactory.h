@@ -4,7 +4,6 @@
 
 namespace OoT {
 
-// TODO: Reimplement — source was lost in filesystem damage.
 // Handles OOT:TEXT type (OTXT 0x4F545854), message tables + per-language data.
 // Reference: Shipwright's TextFactory.cpp for binary format.
 

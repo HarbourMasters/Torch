@@ -9,48 +9,18 @@ struct OoTTextData : public IParsedData {
     std::vector<char> mBinary;
 };
 
-std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto codePhysStart = GetSafeNode<uint32_t>(node, "code_phys_start");
-    auto codeOffset = GetSafeNode<uint32_t>(node, "code_offset");
-    uint32_t langOffset = 0;
-    bool isPalLang = false;
-    if (node["lang_offset"]) {
-        langOffset = node["lang_offset"].as<uint32_t>();
-        if (langOffset != 0 && langOffset != codeOffset) {
-            isPalLang = true;
-        }
-    }
+struct MessageEntry {
+    uint16_t id;
+    uint8_t textboxType;
+    uint8_t textboxYPos;
+    std::string msg;
+};
 
-    // Decompress code segment
-    auto* codeChunk = Decompressor::Decode(buffer, codePhysStart, CompressionType::YAZ0);
-    if (!codeChunk || !codeChunk->data) {
-        SPDLOG_ERROR("OoTTextFactory: failed to decompress code segment");
-        return std::nullopt;
-    }
-    const uint8_t* codeData = codeChunk->data;
-    size_t codeSize = codeChunk->size;
-
-    // Get message data segment (uncompressed)
-    auto msgSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(128);
-    if (!msgSeg.has_value()) {
-        SPDLOG_ERROR("OoTTextFactory: message data segment 128 not found");
-        return std::nullopt;
-    }
-    uint32_t msgBase = msgSeg.value();
-    const uint8_t* rawData = buffer.data() + msgBase;
-    size_t rawSize = buffer.size() - msgBase;
-
-    // Parse message entries
-    struct MessageEntry {
-        uint16_t id;
-        uint8_t textboxType;
-        uint8_t textboxYPos;
-        std::string msg;
-    };
+static std::vector<MessageEntry> parseMessages(const uint8_t* codeData, size_t codeSize, uint32_t codeOffset,
+                                               uint32_t langPtr, bool isPalLang,
+                                               const uint8_t* rawData, size_t rawSize) {
     std::vector<MessageEntry> messages;
-
     uint32_t currentPtr = codeOffset;
-    uint32_t langPtr = isPalLang ? langOffset : codeOffset;
 
     while (true) {
         if (currentPtr + 8 > codeSize) break;
@@ -109,6 +79,44 @@ std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<ui
         currentPtr += 8;
         langPtr += isPalLang ? 4 : 8;
     }
+
+    return messages;
+}
+
+std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto codePhysStart = GetSafeNode<uint32_t>(node, "code_phys_start");
+    auto codeOffset = GetSafeNode<uint32_t>(node, "code_offset");
+    uint32_t langOffset = 0;
+    bool isPalLang = false;
+    if (node["lang_offset"]) {
+        langOffset = node["lang_offset"].as<uint32_t>();
+        if (langOffset != 0 && langOffset != codeOffset) {
+            isPalLang = true;
+        }
+    }
+
+    // Decompress code segment
+    auto* codeChunk = Decompressor::Decode(buffer, codePhysStart, CompressionType::YAZ0);
+    if (!codeChunk || !codeChunk->data) {
+        SPDLOG_ERROR("OoTTextFactory: failed to decompress code segment");
+        return std::nullopt;
+    }
+    const uint8_t* codeData = codeChunk->data;
+    size_t codeSize = codeChunk->size;
+
+    // Get message data segment (uncompressed)
+    auto msgSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(128);
+    if (!msgSeg.has_value()) {
+        SPDLOG_ERROR("OoTTextFactory: message data segment 128 not found");
+        return std::nullopt;
+    }
+    uint32_t msgBase = msgSeg.value();
+    const uint8_t* rawData = buffer.data() + msgBase;
+    size_t rawSize = buffer.size() - msgBase;
+
+    // Parse message entries
+    uint32_t langPtr = isPalLang ? langOffset : codeOffset;
+    auto messages = parseMessages(codeData, codeSize, codeOffset, langPtr, isPalLang, rawData, rawSize);
 
     SPDLOG_INFO("OoTTextFactory: parsed {} messages", messages.size());
 
