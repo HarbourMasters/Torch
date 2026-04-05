@@ -9,27 +9,37 @@
 
 namespace OoT {
 
-// Safe BE read helpers using BinaryReader (no raw pointer arithmetic)
-static uint32_t readBE32(const std::vector<uint8_t>& data, uint32_t offset) {
-    if (offset + 4 > data.size()) return 0;
-    LUS::BinaryReader r((char*)data.data() + offset, 4);
-    r.SetEndianness(Torch::Endianness::Big);
-    return r.ReadUInt32();
-}
+// Safe big-endian random-access reader over audio bank data.
+// Bounds-checks each read and returns 0 on out-of-range (avoids raw pointer arithmetic).
+class SafeAudioBankReader {
+public:
+    SafeAudioBankReader(const std::vector<uint8_t>& data)
+        : mData(data), mReader((char*)data.data(), data.size()) {
+        mReader.SetEndianness(Torch::Endianness::Big);
+    }
 
-static int16_t readBE16(const std::vector<uint8_t>& data, uint32_t offset) {
-    if (offset + 2 > data.size()) return 0;
-    LUS::BinaryReader r((char*)data.data() + offset, 2);
-    r.SetEndianness(Torch::Endianness::Big);
-    return r.ReadInt16();
-}
+    uint32_t ReadU32(uint32_t offset) {
+        if (offset + 4 > mData.size()) return 0;
+        mReader.Seek(offset, LUS::SeekOffsetType::Start);
+        return mReader.ReadUInt32();
+    }
 
-static float readBEFloat(const std::vector<uint8_t>& data, uint32_t offset) {
-    if (offset + 4 > data.size()) return 0.0f;
-    LUS::BinaryReader r((char*)data.data() + offset, 4);
-    r.SetEndianness(Torch::Endianness::Big);
-    return r.ReadFloat();
-}
+    int16_t ReadS16(uint32_t offset) {
+        if (offset + 2 > mData.size()) return 0;
+        mReader.Seek(offset, LUS::SeekOffsetType::Start);
+        return mReader.ReadInt16();
+    }
+
+    float ReadFloat(uint32_t offset) {
+        if (offset + 4 > mData.size()) return 0.0f;
+        mReader.Seek(offset, LUS::SeekOffsetType::Start);
+        return mReader.ReadFloat();
+    }
+
+private:
+    const std::vector<uint8_t>& mData;
+    LUS::BinaryReader mReader;
+};
 
 // Audio table entry (16 bytes each in ROM)
 struct AudioTableEntry {
@@ -232,7 +242,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     uint32_t bankSize = std::min((uint32_t)0x40000, (uint32_t)(buffer.size() - bankOff));
     uint32_t tableSize = std::min((uint32_t)0x500000, (uint32_t)(buffer.size() - tableOff));
 
-    std::vector<uint8_t> audioBank(buffer.begin() + bankOff, buffer.begin() + bankOff + bankSize);
+    std::vector<uint8_t> audioBankData(buffer.begin() + bankOff, buffer.begin() + bankOff + bankSize);
+    SafeAudioBankReader audioBank(audioBankData);
     std::vector<uint8_t> audioTable(buffer.begin() + tableOff, buffer.begin() + tableOff + tableSize);
 
     // Build sample name map from YAML
@@ -266,14 +277,14 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
 
     // Parse a sample entry at sampleAddr in audioBank
     auto parseSample = [&](int bankIndex, uint32_t sampleAddr, uint32_t baseOffset) {
-        if (sampleAddr + 16 > audioBank.size()) return;
+        if (sampleAddr + 16 > audioBankData.size()) return;
 
-        uint32_t dataRelPtr = readBE32(audioBank, sampleAddr + 4);
+        uint32_t dataRelPtr = audioBank.ReadU32(sampleAddr + 4);
         uint32_t sampleDataOffset = dataRelPtr + sampleBankTable[bankIndex].ptr;
         if (sampleMap.count(sampleDataOffset)) return;
 
         SampleInfo s;
-        uint32_t origField = readBE32(audioBank, sampleAddr);
+        uint32_t origField = audioBank.ReadU32(sampleAddr);
         s.codec = (origField >> 28) & 0x0F;
         s.medium = (origField >> 24) & 0x03;
         s.unk_bit26 = (origField >> 22) & 0x01;
@@ -281,28 +292,28 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
         s.dataSize = origField & 0x00FFFFFF;
         s.dataOffset = sampleDataOffset;
 
-        uint32_t loopAddr = readBE32(audioBank, sampleAddr + 8) + baseOffset;
-        uint32_t bookAddr = readBE32(audioBank, sampleAddr + 12) + baseOffset;
+        uint32_t loopAddr = audioBank.ReadU32(sampleAddr + 8) + baseOffset;
+        uint32_t bookAddr = audioBank.ReadU32(sampleAddr + 12) + baseOffset;
 
-        if (loopAddr + 12 <= audioBank.size()) {
-            s.loopStart = (int32_t)readBE32(audioBank, loopAddr);
-            s.loopEnd = (int32_t)readBE32(audioBank, loopAddr + 4);
-            s.loopCount = (int32_t)readBE32(audioBank, loopAddr + 8);
+        if (loopAddr + 12 <= audioBankData.size()) {
+            s.loopStart = (int32_t)audioBank.ReadU32(loopAddr);
+            s.loopEnd = (int32_t)audioBank.ReadU32(loopAddr + 4);
+            s.loopCount = (int32_t)audioBank.ReadU32(loopAddr + 8);
 
-            if (s.loopCount != 0 && loopAddr + 48 <= audioBank.size()) {
+            if (s.loopCount != 0 && loopAddr + 48 <= audioBankData.size()) {
                 for (int i = 0; i < 16; i++) {
-                    s.loopStates.push_back(readBE16(audioBank, loopAddr + 16 + i * 2));
+                    s.loopStates.push_back(audioBank.ReadS16(loopAddr + 16 + i * 2));
                 }
             }
         }
 
-        if (bookAddr + 8 <= audioBank.size()) {
-            s.bookOrder = (int32_t)readBE32(audioBank, bookAddr);
-            s.bookNpredictors = (int32_t)readBE32(audioBank, bookAddr + 4);
+        if (bookAddr + 8 <= audioBankData.size()) {
+            s.bookOrder = (int32_t)audioBank.ReadU32(bookAddr);
+            s.bookNpredictors = (int32_t)audioBank.ReadU32(bookAddr + 4);
             int numBooks = s.bookOrder * s.bookNpredictors * 8;
-            if (bookAddr + 8 + numBooks * 2 <= audioBank.size()) {
+            if (bookAddr + 8 + numBooks * 2 <= audioBankData.size()) {
                 for (int i = 0; i < numBooks; i++) {
-                    s.books.push_back(readBE16(audioBank, bookAddr + 8 + i * 2));
+                    s.books.push_back(audioBank.ReadS16(bookAddr + 8 + i * 2));
                 }
             }
         }
@@ -322,8 +333,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
 
     // Parse sample from a SoundFontEntry (pointer at soundFontAddr)
     auto parseSFESample = [&](int bankIndex, uint32_t sfeAddr, uint32_t baseOffset) {
-        if (sfeAddr + 4 > audioBank.size()) return;
-        uint32_t samplePtr = readBE32(audioBank, sfeAddr);
+        if (sfeAddr + 4 > audioBankData.size()) return;
+        uint32_t samplePtr = audioBank.ReadU32(sfeAddr);
         if (samplePtr != 0) {
             uint32_t sampleAddr = samplePtr + baseOffset;
             parseSample(bankIndex, sampleAddr, baseOffset);
@@ -339,37 +350,37 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
         int numDrums = fe.data2 & 0xFF;
         int numSfx = fe.data3;
 
-        if (ptr + 8 > audioBank.size()) continue;
+        if (ptr + 8 > audioBankData.size()) continue;
 
         // Drums
-        uint32_t drumListAddr = readBE32(audioBank, ptr) + ptr;
+        uint32_t drumListAddr = audioBank.ReadU32(ptr) + ptr;
         for (int i = 0; i < numDrums; i++) {
-            if (drumListAddr + (i + 1) * 4 > audioBank.size()) break;
-            uint32_t drumPtr = readBE32(audioBank, drumListAddr + i * 4);
+            if (drumListAddr + (i + 1) * 4 > audioBankData.size()) break;
+            uint32_t drumPtr = audioBank.ReadU32(drumListAddr + i * 4);
             if (drumPtr != 0) {
                 drumPtr += ptr;
-                if (drumPtr + 8 > audioBank.size()) continue;
+                if (drumPtr + 8 > audioBankData.size()) continue;
                 // Drum struct: byte0=releaseRate, byte1=pan, byte2=loaded, byte3=pad
                 // bytes 4-7 = pointer to sample entry (relative to ptr)
-                uint32_t sampleEntryPtr = readBE32(audioBank, drumPtr + 4) + ptr;
+                uint32_t sampleEntryPtr = audioBank.ReadU32(drumPtr + 4) + ptr;
                 parseSample(sampleBankId, sampleEntryPtr, ptr);
             }
         }
 
         // SFX
-        uint32_t sfxListAddr = readBE32(audioBank, ptr + 4) + ptr;
+        uint32_t sfxListAddr = audioBank.ReadU32(ptr + 4) + ptr;
         for (int i = 0; i < numSfx; i++) {
-            if (sfxListAddr + (i + 1) * 8 > audioBank.size()) break;
+            if (sfxListAddr + (i + 1) * 8 > audioBankData.size()) break;
             parseSFESample(sampleBankId, sfxListAddr + i * 8, ptr);
         }
 
         // Instruments
         for (int i = 0; i < numInstruments; i++) {
-            if (ptr + 8 + (i + 1) * 4 > audioBank.size()) break;
-            uint32_t instPtr = readBE32(audioBank, ptr + 8 + i * 4);
+            if (ptr + 8 + (i + 1) * 4 > audioBankData.size()) break;
+            uint32_t instPtr = audioBank.ReadU32(ptr + 8 + i * 4);
             if (instPtr != 0) {
                 instPtr += ptr;
-                if (instPtr + 28 > audioBank.size()) continue;
+                if (instPtr + 28 > audioBankData.size()) continue;
                 // Instrument: bytes 0-7 = metadata, then 3 SoundFontEntries at +8, +16, +24
                 parseSFESample(sampleBankId, instPtr + 8, ptr);
                 parseSFESample(sampleBankId, instPtr + 16, ptr);
@@ -427,12 +438,12 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
 
     // Helper: resolve sample reference path (matches OTRExporter GetSampleEntryReference)
     auto getSampleRef = [&](int bankIndex, uint32_t sampleAddr, uint32_t baseOffset) -> std::string {
-        if (sampleAddr + 16 > audioBank.size()) return "";
-        uint32_t samplePtr = readBE32(audioBank, sampleAddr);
+        if (sampleAddr + 16 > audioBankData.size()) return "";
+        uint32_t samplePtr = audioBank.ReadU32(sampleAddr);
         if (samplePtr == 0) return "";
         samplePtr += baseOffset;
-        if (samplePtr + 4 > audioBank.size()) return "";
-        uint32_t dataRelPtr = readBE32(audioBank, samplePtr + 4);
+        if (samplePtr + 4 > audioBankData.size()) return "";
+        uint32_t dataRelPtr = audioBank.ReadU32(samplePtr + 4);
         uint32_t absOffset = dataRelPtr + sampleBankTable[bankIndex].ptr;
         if (sampleMap.count(absOffset)) {
             return "audio/samples/" + sampleMap[absOffset].name + "_META";
@@ -443,9 +454,9 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     // Helper: parse envelope data (ZAudio.cpp:74-93)
     auto parseEnvelope = [&](uint32_t envOffset) -> std::vector<std::pair<int16_t, int16_t>> {
         std::vector<std::pair<int16_t, int16_t>> envs;
-        while (envOffset + 4 <= audioBank.size()) {
-            int16_t delay = readBE16(audioBank, envOffset);
-            int16_t arg = readBE16(audioBank, envOffset + 2);
+        while (envOffset + 4 <= audioBankData.size()) {
+            int16_t delay = audioBank.ReadS16(envOffset);
+            int16_t arg = audioBank.ReadS16(envOffset + 2);
             envs.push_back({delay, arg});
             envOffset += 4;
             if (delay < 0) break;
@@ -465,11 +476,11 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     // Helper: write SoundFontEntry (AudioExporter.cpp:140-151)
     auto writeSFE = [&](LUS::BinaryWriter& w, uint32_t sfeOffset, uint32_t baseOffset,
                          int bankIndex) {
-        if (sfeOffset + 8 > audioBank.size()) {
+        if (sfeOffset + 8 > audioBankData.size()) {
             w.Write(static_cast<uint8_t>(0)); // exists = false
             return;
         }
-        uint32_t samplePtr = readBE32(audioBank, sfeOffset);
+        uint32_t samplePtr = audioBank.ReadU32(sfeOffset);
         if (samplePtr == 0) {
             w.Write(static_cast<uint8_t>(0)); // exists = false
             return;
@@ -479,8 +490,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
 
         // Resolve sample reference
         samplePtr += baseOffset;
-        if (samplePtr + 4 <= audioBank.size()) {
-            uint32_t dataRelPtr = readBE32(audioBank, samplePtr + 4);
+        if (samplePtr + 4 <= audioBankData.size()) {
+            uint32_t dataRelPtr = audioBank.ReadU32(samplePtr + 4);
             uint32_t absOffset = dataRelPtr + sampleBankTable[bankIndex].ptr;
             if (sampleMap.count(absOffset)) {
                 w.Write(std::string("audio/samples/" + sampleMap[absOffset].name + "_META"));
@@ -490,7 +501,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
         } else {
             w.Write(std::string(""));
         }
-        w.Write(readBEFloat(audioBank, sfeOffset + 4)); // tuning
+        w.Write(audioBank.ReadFloat(sfeOffset + 4)); // tuning
     };
 
     // Cross-font stack residue: ZAPDTR's ParseSoundFont is called per font,
@@ -522,25 +533,25 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
         std::vector<std::tuple<uint8_t, uint8_t, uint8_t, float,
                                std::vector<std::pair<int16_t, int16_t>>,
                                std::string>> drums;
-        if (ptr + 4 <= audioBank.size()) {
-            uint32_t drumListAddr = readBE32(audioBank, ptr) + ptr;
+        if (ptr + 4 <= audioBankData.size()) {
+            uint32_t drumListAddr = audioBank.ReadU32(ptr) + ptr;
             for (int i = 0; i < numDrums; i++) {
-                if (drumListAddr + (i + 1) * 4 > audioBank.size()) break;
-                uint32_t drumPtr = readBE32(audioBank, drumListAddr + i * 4);
+                if (drumListAddr + (i + 1) * 4 > audioBankData.size()) break;
+                uint32_t drumPtr = audioBank.ReadU32(drumListAddr + i * 4);
                 if (drumPtr != 0) {
                     drumPtr += ptr;
-                    if (drumPtr + 16 <= audioBank.size()) {
-                        uint8_t releaseRate = audioBank[drumPtr];
-                        uint8_t pan = audioBank[drumPtr + 1];
-                        uint8_t loaded = audioBank[drumPtr + 2];
-                        float tuning = readBEFloat(audioBank, drumPtr + 8);
-                        auto env = parseEnvelope(readBE32(audioBank, drumPtr + 12) + ptr);
+                    if (drumPtr + 16 <= audioBankData.size()) {
+                        uint8_t releaseRate = audioBankData[drumPtr];
+                        uint8_t pan = audioBankData[drumPtr + 1];
+                        uint8_t loaded = audioBankData[drumPtr + 2];
+                        float tuning = audioBank.ReadFloat(drumPtr + 8);
+                        auto env = parseEnvelope(audioBank.ReadU32(drumPtr + 12) + ptr);
 
                         // Resolve sample
-                        uint32_t sampleEntryPtr = readBE32(audioBank, drumPtr + 4) + ptr;
+                        uint32_t sampleEntryPtr = audioBank.ReadU32(drumPtr + 4) + ptr;
                         std::string sampleRef;
-                        if (sampleEntryPtr + 4 <= audioBank.size()) {
-                            uint32_t dataRelPtr = readBE32(audioBank, sampleEntryPtr + 4);
+                        if (sampleEntryPtr + 4 <= audioBankData.size()) {
+                            uint32_t dataRelPtr = audioBank.ReadU32(sampleEntryPtr + 4);
                             uint32_t absOffset = dataRelPtr + sampleBankTable[sampleBankId].ptr;
                             if (sampleMap.count(absOffset)) {
                                 sampleRef = "audio/samples/" + sampleMap[absOffset].name + "_META";
@@ -562,24 +573,24 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
             float tuning;
         };
         std::vector<SFXEntry> sfxEntries;
-        if (ptr + 8 <= audioBank.size()) {
-            uint32_t sfxListAddr = readBE32(audioBank, ptr + 4) + ptr;
+        if (ptr + 8 <= audioBankData.size()) {
+            uint32_t sfxListAddr = audioBank.ReadU32(ptr + 4) + ptr;
             for (int i = 0; i < numSfx; i++) {
                 uint32_t sfeAddr = sfxListAddr + i * 8;
-                if (sfeAddr + 8 > audioBank.size()) break;
-                uint32_t sp = readBE32(audioBank, sfeAddr);
+                if (sfeAddr + 8 > audioBankData.size()) break;
+                uint32_t sp = audioBank.ReadU32(sfeAddr);
                 if (sp != 0) {
                     sp += ptr;
                     std::string ref;
-                    if (sp + 4 <= audioBank.size()) {
-                        uint32_t relPtr = readBE32(audioBank, sp + 4);
+                    if (sp + 4 <= audioBankData.size()) {
+                        uint32_t relPtr = audioBank.ReadU32(sp + 4);
                         uint32_t absOff = relPtr + sampleBankTable[sampleBankId].ptr;
                         if (sampleMap.count(absOff))
                             ref = "audio/samples/" + sampleMap[absOff].name + "_META";
                     }
-                    sfxEntries.push_back({true, ref, readBEFloat(audioBank, sfeAddr + 4)});
+                    sfxEntries.push_back({true, ref, audioBank.ReadFloat(sfeAddr + 4)});
                 } else {
-                    sfxEntries.push_back({false, "", readBEFloat(audioBank, sfeAddr + 4)});
+                    sfxEntries.push_back({false, "", audioBank.ReadFloat(sfeAddr + 4)});
                 }
             }
         }
@@ -608,8 +619,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
             lastReleaseRate = 0;          // drum.offset=0 (offset 4)
         }
         for (int i = 0; i < numInstruments; i++) {
-            if (ptr + 8 + (i + 1) * 4 > audioBank.size()) break;
-            uint32_t instPtr = readBE32(audioBank, ptr + 8 + i * 4);
+            if (ptr + 8 + (i + 1) * 4 > audioBankData.size()) break;
+            uint32_t instPtr = audioBank.ReadU32(ptr + 8 + i * 4);
             InstEntry inst = {};
             inst.isValid = (instPtr != 0);
             // For invalid instruments, carry forward last valid's field values (stack residue)
@@ -619,12 +630,12 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
             inst.releaseRate = lastReleaseRate;
             if (instPtr != 0) {
                 instPtr += ptr;
-                if (instPtr + 28 <= audioBank.size()) {
-                    inst.loaded = audioBank[instPtr];
-                    inst.normalRangeLo = audioBank[instPtr + 1];
-                    inst.normalRangeHi = audioBank[instPtr + 2];
-                    inst.releaseRate = audioBank[instPtr + 3];
-                    inst.env = parseEnvelope(readBE32(audioBank, instPtr + 4) + ptr);
+                if (instPtr + 28 <= audioBankData.size()) {
+                    inst.loaded = audioBankData[instPtr];
+                    inst.normalRangeLo = audioBankData[instPtr + 1];
+                    inst.normalRangeHi = audioBankData[instPtr + 2];
+                    inst.releaseRate = audioBankData[instPtr + 3];
+                    inst.env = parseEnvelope(audioBank.ReadU32(instPtr + 4) + ptr);
                     inst.lowAddr = instPtr + 8;
                     inst.normalAddr = instPtr + 16;
                     inst.highAddr = instPtr + 24;
@@ -670,19 +681,19 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
 
             if (inst.isValid) {
                 // Low notes
-                if (readBE32(audioBank, inst.lowAddr) != 0) {
+                if (audioBank.ReadU32(inst.lowAddr) != 0) {
                     writeSFE(w, inst.lowAddr, ptr, sampleBankId);
                 } else {
                     w.Write(static_cast<uint8_t>(0));
                 }
                 // Normal notes
-                if (readBE32(audioBank, inst.normalAddr) != 0) {
+                if (audioBank.ReadU32(inst.normalAddr) != 0) {
                     writeSFE(w, inst.normalAddr, ptr, sampleBankId);
                 } else {
                     w.Write(static_cast<uint8_t>(0));
                 }
                 // High notes (ZAudio.cpp:296-297: only if ptr!=0 AND normalRangeHi!=0x7F)
-                if (readBE32(audioBank, inst.highAddr) != 0 && inst.normalRangeHi != 0x7F) {
+                if (audioBank.ReadU32(inst.highAddr) != 0 && inst.normalRangeHi != 0x7F) {
                     writeSFE(w, inst.highAddr, ptr, sampleBankId);
                 } else {
                     w.Write(static_cast<uint8_t>(0));
