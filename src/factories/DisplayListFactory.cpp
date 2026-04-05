@@ -687,11 +687,16 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
 
         if (opcode == GBI(G_MTX)) {
             auto ptr = w1;
-            auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
+            auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "OOT:MTX");
             if (!dec.has_value()) {
-                auto remapped = RemapSegmentedAddr(ptr, "MTX");
+                dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
+            }
+            if (!dec.has_value()) {
+                auto remapped = RemapSegmentedAddr(ptr, "OOT:MTX");
+                if (remapped == ptr) remapped = RemapSegmentedAddr(ptr, "MTX");
                 if (remapped != ptr) {
-                    dec = Companion::Instance->GetSafeStringByAddr(remapped, "MTX");
+                    dec = Companion::Instance->GetSafeStringByAddr(remapped, "OOT:MTX");
+                    if (!dec.has_value()) dec = Companion::Instance->GetSafeStringByAddr(remapped, "MTX");
                     if (dec.has_value()) ptr = remapped;
                 }
             }
@@ -1011,7 +1016,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     auto parentSymbol = GetSafeNode<std::string>(node, "symbol", "");
 
                     YAML::Node mtxNode;
-                    mtxNode["type"] = "MTX";
+                    mtxNode["type"] = (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT) ? "OOT:MTX" : "MTX";
                     mtxNode["offset"] = w1;
                     mtxNode["symbol"] = parentSymbol + "Mtx_000000";
                     Companion::Instance->AddAsset(mtxNode);

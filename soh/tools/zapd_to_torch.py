@@ -37,7 +37,7 @@ TYPE_MAP = {
     "Texture": "TEXTURE",
     "DList": "GFX",
     "Vtx": "VTX",
-    "Mtx": "MTX",
+    "Mtx": "OOT:MTX",
     "Array": "ARRAY",
     # OoT-specific types (Phase 2+)
     "Skeleton": "OOT:SKELETON",
@@ -137,7 +137,7 @@ def convert_vtx(elem):
 def convert_mtx(elem):
     """Convert a Mtx XML element to YAML dict."""
     return {
-        "type": "MTX",
+        "type": TYPE_MAP["Mtx"],
         "offset": hex_val(elem.get("Offset")),
         "symbol": elem.get("Name"),
     }

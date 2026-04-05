@@ -102,6 +102,7 @@
 #include "factories/oot/OoTArrayFactory.h"
 #include "factories/oot/OoTSkeletonFactory.h"
 #include "factories/oot/OoTLimbFactory.h"
+#include "factories/oot/OoTMtxFactory.h"
 #include "factories/oot/OoTAnimationFactory.h"
 #include "factories/oot/OoTCurveAnimationFactory.h"
 #include "factories/oot/OoTPlayerAnimationFactory.h"
@@ -272,6 +273,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
 #endif
 #ifdef OOT_SUPPORT
     this->RegisterFactory("OOT:ARRAY", std::make_shared<OoT::OoTArrayFactory>());
+    this->RegisterFactory("OOT:MTX", std::make_shared<OoT::OoTMtxFactory>());
     this->RegisterFactory("OOT:SKELETON", std::make_shared<OoT::OoTSkeletonFactory>());
     this->RegisterFactory("OOT:LIMB", std::make_shared<OoT::OoTLimbFactory>());
     this->RegisterFactory("OOT:ANIMATION", std::make_shared<OoT::OoTAnimationFactory>());

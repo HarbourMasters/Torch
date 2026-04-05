@@ -25,7 +25,7 @@ import zipfile
 
 RESOURCE_TYPES = {
     0x4F444C54: "GFX",
-    0x4F4D5458: "MTX",
+    0x4F4D5458: "OOT:MTX",
     0x4F415252: "OOT:ARRAY",
     0x4F424C42: "BLOB",
     0x4F534C42: "OOT:LIMB",
@@ -175,7 +175,7 @@ def extract_from_o2r(zf):
 
         # Skip MTX from O2R — their name-derived offsets are wrong (Mtx_000000
         # is a naming convention, not the real offset). MTX offsets come from ROM.
-        if type_name == "MTX":
+        if type_name == "OOT:MTX":
             continue
 
         # Extract offset from asset name
@@ -447,7 +447,7 @@ def extract_from_rom(rom_data, dma, dma_to_path):
                                         mtx_symbol = f"{cur_symbol}Mtx_000000"
                                         entry = {
                                             "name": mtx_symbol,
-                                            "type": "MTX",
+                                            "type": "OOT:MTX",
                                             "offset": f"0x{mtx_offset:X}",
                                             "symbol": mtx_symbol,
                                         }
