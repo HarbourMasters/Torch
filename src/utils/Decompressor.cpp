@@ -164,30 +164,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     switch (type) {
         case CompressionType::YAY0:
         case CompressionType::YAY1:
-        case CompressionType::MIO0: {
-            offset = ASSET_PTR(offset);
-
-            auto decoded = Decode(buffer, fileOffset, type);
-            auto availableSize = decoded->size - offset;
-            size_t size;
-
-            if (node["size"]) {
-                size = node["size"].as<size_t>();
-            } else if (manualSize.has_value()) {
-                size = manualSize.value();
-            } else {
-                size = availableSize;
-            }
-
-            if (size > availableSize) {
-                SPDLOG_WARN("Requested size 0x{:X} exceeds decoded asset size 0x{:X} at offset 0x{:X}. Reducing to "
-                            "available size.",
-                            size, availableSize, fileOffset);
-                size = availableSize;
-            }
-
-            return { .root = decoded, .segment = { decoded->data + offset, size } };
-        }
+        case CompressionType::MIO0:
         case CompressionType::YAZ0: {
             offset = ASSET_PTR(offset);
 
