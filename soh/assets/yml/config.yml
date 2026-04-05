@@ -4,5 +4,6 @@
   config:
     gbi: F3DEX2_OoT
     sort: OFFSET
+    primary_virtual_segment: 0x80
     output:
       binary: oot.o2r
