@@ -41,19 +41,8 @@ private:
     LUS::BinaryReader mReader;
 };
 
-// Audio table entry (16 bytes each in ROM)
-struct AudioTableEntry {
-    uint32_t ptr;
-    uint32_t size;
-    uint8_t medium;
-    uint8_t cachePolicy;
-    int16_t data1;
-    int16_t data2;
-    int16_t data3;
-};
-
 // Parse an audio table header from decompressed code segment
-static std::vector<AudioTableEntry> ParseAudioTable(const uint8_t* codeData, uint32_t tableOffset) {
+std::vector<AudioTableEntry> OoTAudioFactory::ParseAudioTable(const uint8_t* codeData, uint32_t tableOffset) {
     LUS::BinaryReader reader((char*)(codeData + tableOffset), 0x10000);
     reader.SetEndianness(Torch::Endianness::Big);
 
@@ -80,7 +69,7 @@ static std::vector<AudioTableEntry> ParseAudioTable(const uint8_t* codeData, uin
 }
 
 // Parse sequence-to-font mapping table from decompressed code segment
-static std::vector<std::vector<uint8_t>> ParseSequenceFontTable(
+std::vector<std::vector<uint8_t>> OoTAudioFactory::ParseSequenceFontTable(
     const uint8_t* codeData, uint32_t tableOffset, uint32_t numSequences) {
     std::vector<std::vector<uint8_t>> result;
     result.reserve(numSequences);
@@ -110,39 +99,30 @@ static std::vector<std::vector<uint8_t>> ParseSequenceFontTable(
     return result;
 }
 
+std::vector<char> OoTAudioFactory::BuildMainAudioHeader() {
+    LUS::BinaryWriter w;
+    BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudio, 2);
+    std::stringstream ss;
+    w.Finish(ss);
+    std::string str = ss.str();
+    return std::vector<char>(str.begin(), str.end());
+}
+
 std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto data = std::make_shared<OoTAudioData>();
-
-    // Build the main audio entry: just a 64-byte OAUD header with version 2
-    {
-        LUS::BinaryWriter w;
-        BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudio, 2);
-        std::stringstream ss;
-        w.Finish(ss);
-        std::string str = ss.str();
-        data->mMainEntry = std::vector<char>(str.begin(), str.end());
-    }
-
-    // Read table offsets from YAML
-    auto soundFontTableOff = GetSafeNode<uint32_t>(node, "sound_font_table_offset");
-    auto sequenceTableOff = GetSafeNode<uint32_t>(node, "sequence_table_offset");
-    auto sampleBankTableOff = GetSafeNode<uint32_t>(node, "sample_bank_table_offset");
-    auto seqFontTableOff = GetSafeNode<uint32_t>(node, "sequence_font_table_offset");
+    data->mMainEntry = BuildMainAudioHeader();
 
     // Decompress the code segment (segment 128)
-    YAML::Node codeNode;
-    codeNode["offset"] = node["offset"].as<uint32_t>();
-    auto codeDecoded = Decompressor::AutoDecode(codeNode, buffer, 0x200000);
-    const uint8_t* codeData = codeDecoded.segment.data;
-    size_t codeSize = codeDecoded.segment.size;
+    auto codeDecoded = Decompressor::AutoDecode(
+        node["offset"].as<uint32_t>(),
+        0x200000, // max code segment size
+        buffer);
 
-    SPDLOG_INFO("OoTAudioFactory: code segment {} bytes", codeSize);
-
-    // Parse audio tables from code segment
-    auto seqTable = ParseAudioTable(codeData, sequenceTableOff);
-    auto fontTable = ParseAudioTable(codeData, soundFontTableOff);
-    auto sampleBankTable = ParseAudioTable(codeData, sampleBankTableOff);
-    auto seqFontMap = ParseSequenceFontTable(codeData, seqFontTableOff, seqTable.size());
+    // Parse audio tables from code segment at YAML-specified offsets
+    auto seqTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sequence_table_offset"));
+    auto fontTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sound_font_table_offset"));
+    auto sampleBankTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sample_bank_table_offset"));
+    auto seqFontMap = ParseSequenceFontTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sequence_font_table_offset"), seqTable.size());
 
     SPDLOG_INFO("OoTAudioFactory: {} sequences, {} fonts, {} sample banks",
                 seqTable.size(), fontTable.size(), sampleBankTable.size());

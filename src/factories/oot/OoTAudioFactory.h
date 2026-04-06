@@ -17,6 +17,17 @@ class OoTAudioBinaryExporter : public BaseExporter {
                         YAML::Node& node, std::string* replacement) override;
 };
 
+// Audio table entry (16 bytes each in ROM)
+struct AudioTableEntry {
+    uint32_t ptr;
+    uint32_t size;
+    uint8_t medium;
+    uint8_t cachePolicy;
+    int16_t data1;
+    int16_t data2;
+    int16_t data3;
+};
+
 class OoTAudioFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -25,6 +36,12 @@ public:
             REGISTER(Binary, OoTAudioBinaryExporter)
         };
     }
+
+private:
+    std::vector<char> BuildMainAudioHeader();
+    std::vector<AudioTableEntry> ParseAudioTable(const uint8_t* codeData, uint32_t tableOffset);
+    std::vector<std::vector<uint8_t>> ParseSequenceFontTable(const uint8_t* codeData,
+                                                              uint32_t tableOffset, uint32_t numSequences);
 };
 
 } // namespace OoT
