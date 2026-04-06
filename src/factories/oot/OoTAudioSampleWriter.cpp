@@ -90,29 +90,43 @@ void AudioSampleWriter::ParseSFESample(int bankIndex, uint32_t sfeAddr, uint32_t
     }
 }
 
-bool AudioSampleWriter::Extract(std::vector<uint8_t>& buffer, YAML::Node& node,
-                                SafeAudioBankReader& audioBank,
-                                const std::vector<AudioTableEntry>& fontTable,
-                                const std::vector<AudioTableEntry>& sampleBankTable,
-                                std::map<uint32_t, SampleInfo>& sampleMap) {
-    // Load Audiotable segment (only needed for sample data extraction)
-    auto audiotableSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(3);
-    if (!audiotableSeg.has_value()) {
-        SPDLOG_ERROR("OoTAudioFactory: Audiotable segment not found");
-        return false;
+void AudioSampleWriter::WriteCompanionFiles(const std::map<uint32_t, SampleInfo>& sampleMap,
+                                             const std::vector<uint8_t>& audioTable) {
+    for (auto& [offset, s] : sampleMap) {
+        LUS::BinaryWriter w;
+        BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudioSample, 2);
+
+        w.Write(s.codec);
+        w.Write(s.medium);
+        w.Write(s.unk_bit26);
+        w.Write(s.unk_bit25);
+        w.Write(static_cast<uint32_t>(s.dataSize));
+        if (s.dataOffset + s.dataSize <= audioTable.size()) {
+            w.Write((char*)(audioTable.data() + s.dataOffset), s.dataSize);
+        }
+
+        w.Write(static_cast<uint32_t>(s.loopStart));
+        w.Write(static_cast<uint32_t>(s.loopEnd));
+        w.Write(static_cast<uint32_t>(s.loopCount));
+        w.Write(static_cast<uint32_t>(s.loopStates.size()));
+        for (auto ls : s.loopStates) w.Write(ls);
+
+        w.Write(static_cast<uint32_t>(s.bookOrder));
+        w.Write(static_cast<uint32_t>(s.bookNpredictors));
+        w.Write(static_cast<uint32_t>(s.books.size()));
+        for (auto b : s.books) w.Write(b);
+
+        std::stringstream ss;
+        w.Finish(ss);
+        std::string str = ss.str();
+        Companion::Instance->RegisterCompanionFile(
+            "samples/" + s.name + "_META", std::vector<char>(str.begin(), str.end()));
     }
-    uint32_t tableOff = audiotableSeg.value();
-    uint32_t tableSize = std::min((uint32_t)0x500000, (uint32_t)(buffer.size() - tableOff));
-    std::vector<uint8_t> audioTable(buffer.begin() + tableOff, buffer.begin() + tableOff + tableSize);
 
-    AudioParseContext ctx {
-        .audioBank = audioBank,
-        .sampleBankTable = sampleBankTable,
-        .sampleNames = ParseSampleNames(node),
-        .sampleMap = sampleMap,
-    };
+    SPDLOG_INFO("OoTAudioFactory: wrote {} sample companion files", sampleMap.size());
+}
 
-    // Iterate all fonts to discover samples
+void AudioSampleWriter::DiscoverSamples(const std::vector<AudioTableEntry>& fontTable, AudioParseContext& ctx) {
     for (uint32_t fi = 0; fi < fontTable.size(); fi++) {
         auto& fe = fontTable[fi];
         uint32_t ptr = fe.ptr;
@@ -156,42 +170,35 @@ bool AudioSampleWriter::Extract(std::vector<uint8_t>& buffer, YAML::Node& node,
             }
         }
     }
+}
+
+bool AudioSampleWriter::Extract(std::vector<uint8_t>& buffer, YAML::Node& node,
+                                SafeAudioBankReader& audioBank,
+                                const std::vector<AudioTableEntry>& fontTable,
+                                const std::vector<AudioTableEntry>& sampleBankTable,
+                                std::map<uint32_t, SampleInfo>& sampleMap) {
+    // Load Audiotable segment (only needed for sample data extraction)
+    auto audiotableSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(3);
+    if (!audiotableSeg.has_value()) {
+        SPDLOG_ERROR("OoTAudioFactory: Audiotable segment not found");
+        return false;
+    }
+    uint32_t tableOff = audiotableSeg.value();
+    uint32_t tableSize = std::min((uint32_t)0x500000, (uint32_t)(buffer.size() - tableOff));
+    std::vector<uint8_t> audioTable(buffer.begin() + tableOff, buffer.begin() + tableOff + tableSize);
+
+    AudioParseContext ctx {
+        .audioBank = audioBank,
+        .sampleBankTable = sampleBankTable,
+        .sampleNames = ParseSampleNames(node),
+        .sampleMap = sampleMap,
+    };
+
+    DiscoverSamples(fontTable, ctx);
 
     SPDLOG_INFO("OoTAudioFactory: discovered {} unique samples", sampleMap.size());
 
-    // Write sample companion files
-    for (auto& [offset, s] : sampleMap) {
-        LUS::BinaryWriter w;
-        BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudioSample, 2);
-
-        w.Write(s.codec);
-        w.Write(s.medium);
-        w.Write(s.unk_bit26);
-        w.Write(s.unk_bit25);
-        w.Write(static_cast<uint32_t>(s.dataSize));
-        if (s.dataOffset + s.dataSize <= audioTable.size()) {
-            w.Write((char*)(audioTable.data() + s.dataOffset), s.dataSize);
-        }
-
-        w.Write(static_cast<uint32_t>(s.loopStart));
-        w.Write(static_cast<uint32_t>(s.loopEnd));
-        w.Write(static_cast<uint32_t>(s.loopCount));
-        w.Write(static_cast<uint32_t>(s.loopStates.size()));
-        for (auto ls : s.loopStates) w.Write(ls);
-
-        w.Write(static_cast<uint32_t>(s.bookOrder));
-        w.Write(static_cast<uint32_t>(s.bookNpredictors));
-        w.Write(static_cast<uint32_t>(s.books.size()));
-        for (auto b : s.books) w.Write(b);
-
-        std::stringstream ss;
-        w.Finish(ss);
-        std::string str = ss.str();
-        Companion::Instance->RegisterCompanionFile(
-            "samples/" + s.name + "_META", std::vector<char>(str.begin(), str.end()));
-    }
-
-    SPDLOG_INFO("OoTAudioFactory: wrote {} sample companion files", sampleMap.size());
+    WriteCompanionFiles(sampleMap, audioTable);
     return true;
 }
 
