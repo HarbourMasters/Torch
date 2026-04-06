@@ -200,6 +200,68 @@ std::vector<DrumEntry> AudioFontWriter::ParseDrums(int numDrums, uint32_t ptr, i
     return drums;
 }
 
+void AudioFontWriter::WriteDrums(LUS::BinaryWriter& w, const std::vector<DrumEntry>& drums) {
+    for (auto& d : drums) {
+        w.Write(d.releaseRate);
+        w.Write(d.pan);
+        w.Write(d.loaded);
+        WriteEnvData(w, d.env);
+        w.Write(static_cast<uint8_t>(d.sampleRef.empty() ? 0 : 1));
+        w.Write(d.sampleRef);
+        w.Write(d.tuning);
+    }
+}
+
+void AudioFontWriter::WriteInstruments(LUS::BinaryWriter& w, const std::vector<InstEntry>& instruments,
+                                       uint32_t ptr, int sampleBankId,
+                                       SafeAudioBankReader& audioBank,
+                                       const std::vector<AudioTableEntry>& sampleBankTable,
+                                       std::map<uint32_t, SampleInfo>& sampleMap) {
+    for (auto& inst : instruments) {
+        w.Write(static_cast<uint8_t>(inst.isValid ? 1 : 0));
+        w.Write(inst.loaded);
+        w.Write(inst.normalRangeLo);
+        w.Write(inst.normalRangeHi);
+        w.Write(inst.releaseRate);
+        WriteEnvData(w, inst.env);
+
+        if (inst.isValid) {
+            if (audioBank.ReadU32(inst.lowAddr) != 0) {
+                WriteSFE(w, inst.lowAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
+            } else {
+                w.Write(static_cast<uint8_t>(0));
+            }
+            if (audioBank.ReadU32(inst.normalAddr) != 0) {
+                WriteSFE(w, inst.normalAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
+            } else {
+                w.Write(static_cast<uint8_t>(0));
+            }
+            if (audioBank.ReadU32(inst.highAddr) != 0 && inst.normalRangeHi != 0x7F) {
+                WriteSFE(w, inst.highAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
+            } else {
+                w.Write(static_cast<uint8_t>(0));
+            }
+        } else {
+            w.Write(static_cast<uint8_t>(0));
+            w.Write(static_cast<uint8_t>(0));
+            w.Write(static_cast<uint8_t>(0));
+        }
+    }
+}
+
+void AudioFontWriter::WriteSFXEntries(LUS::BinaryWriter& w, const std::vector<SFXEntry>& sfxEntries) {
+    for (auto& sfx : sfxEntries) {
+        if (sfx.exists) {
+            w.Write(static_cast<uint8_t>(1));
+            w.Write(static_cast<uint8_t>(1));
+            w.Write(sfx.sampleRef);
+            w.Write(sfx.tuning);
+        } else {
+            w.Write(static_cast<uint8_t>(0));
+        }
+    }
+}
+
 void AudioFontWriter::Extract(YAML::Node& node,
                               SafeAudioBankReader& audioBank,
                               const std::vector<AudioTableEntry>& fontTable,
@@ -243,65 +305,13 @@ void AudioFontWriter::Extract(YAML::Node& node,
 
         auto instruments = ParseInstruments(numInstruments, ptr, audioBank);
 
-        // Write counts
         w.Write(static_cast<uint32_t>(drums.size()));
         w.Write(static_cast<uint32_t>(instruments.size()));
         w.Write(static_cast<uint32_t>(sfxEntries.size()));
 
-        // Write drums
-        for (auto& d : drums) {
-            w.Write(d.releaseRate);
-            w.Write(d.pan);
-            w.Write(d.loaded);
-            WriteEnvData(w, d.env);
-            w.Write(static_cast<uint8_t>(d.sampleRef.empty() ? 0 : 1));
-            w.Write(d.sampleRef);
-            w.Write(d.tuning);
-        }
-
-        // Write instruments
-        for (auto& inst : instruments) {
-            w.Write(static_cast<uint8_t>(inst.isValid ? 1 : 0));
-            w.Write(inst.loaded);
-            w.Write(inst.normalRangeLo);
-            w.Write(inst.normalRangeHi);
-            w.Write(inst.releaseRate);
-            WriteEnvData(w, inst.env);
-
-            if (inst.isValid) {
-                if (audioBank.ReadU32(inst.lowAddr) != 0) {
-                    WriteSFE(w, inst.lowAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
-                } else {
-                    w.Write(static_cast<uint8_t>(0));
-                }
-                if (audioBank.ReadU32(inst.normalAddr) != 0) {
-                    WriteSFE(w, inst.normalAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
-                } else {
-                    w.Write(static_cast<uint8_t>(0));
-                }
-                if (audioBank.ReadU32(inst.highAddr) != 0 && inst.normalRangeHi != 0x7F) {
-                    WriteSFE(w, inst.highAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
-                } else {
-                    w.Write(static_cast<uint8_t>(0));
-                }
-            } else {
-                w.Write(static_cast<uint8_t>(0));
-                w.Write(static_cast<uint8_t>(0));
-                w.Write(static_cast<uint8_t>(0));
-            }
-        }
-
-        // Write SFX
-        for (auto& sfx : sfxEntries) {
-            if (sfx.exists) {
-                w.Write(static_cast<uint8_t>(1));
-                w.Write(static_cast<uint8_t>(1));
-                w.Write(sfx.sampleRef);
-                w.Write(sfx.tuning);
-            } else {
-                w.Write(static_cast<uint8_t>(0));
-            }
-        }
+        WriteDrums(w, drums);
+        WriteInstruments(w, instruments, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
+        WriteSFXEntries(w, sfxEntries);
 
         // Register companion file
         std::string fontName;

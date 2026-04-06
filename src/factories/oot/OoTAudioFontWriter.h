@@ -57,6 +57,13 @@ private:
                   int bankIndex, SafeAudioBankReader& audioBank,
                   const std::vector<AudioTableEntry>& sampleBankTable,
                   std::map<uint32_t, SampleInfo>& sampleMap);
+    void WriteDrums(LUS::BinaryWriter& w, const std::vector<DrumEntry>& drums);
+    void WriteInstruments(LUS::BinaryWriter& w, const std::vector<InstEntry>& instruments,
+                          uint32_t ptr, int sampleBankId,
+                          SafeAudioBankReader& audioBank,
+                          const std::vector<AudioTableEntry>& sampleBankTable,
+                          std::map<uint32_t, SampleInfo>& sampleMap);
+    void WriteSFXEntries(LUS::BinaryWriter& w, const std::vector<SFXEntry>& sfxEntries);
     void WriteEnvData(LUS::BinaryWriter& w, const std::vector<std::pair<int16_t, int16_t>>& envs);
     std::vector<InstEntry> ParseInstruments(int numInstruments, uint32_t ptr,
                                           SafeAudioBankReader& audioBank);
