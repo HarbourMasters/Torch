@@ -27,7 +27,7 @@ static bool IsSingleEntryCmd(uint32_t id) {
 // Cutscene serialization — shared with OoTSceneFactory's SetCutscenes handler.
 // Walk through cutscene commands to determine total byte size.
 // Returns 0 if the data is corrupt or too small.
-static uint32_t CalculateCutsceneSize(std::vector<uint8_t>& buffer, uint32_t segAddr) {
+uint32_t CutsceneSerializer::CalculateSize(std::vector<uint8_t>& buffer, uint32_t segAddr) {
     auto reader = ReadSubArray(buffer, segAddr, 0x10000);
     uint32_t endOffset = reader.GetLength();
 
@@ -88,12 +88,20 @@ static uint32_t CalculateCutsceneSize(std::vector<uint8_t>& buffer, uint32_t seg
     return reader.GetBaseAddress();
 }
 
-std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAddr) {
-    uint32_t calculatedSize = CalculateCutsceneSize(buffer, segAddr);
-    if (calculatedSize == 0) return {};
+std::vector<char> CutsceneSerializer::Serialize(std::vector<uint8_t>& buffer, uint32_t segAddr) {
+    auto size = CalculateSize(buffer, segAddr);
 
-    auto csReader = ReadSubArray(buffer, segAddr, calculatedSize);
-    uint32_t csSize = csReader.GetLength();
+    // Size of 0 means corrupt or empty cutscene data
+    if (size == 0) return {};
+
+    return Write(buffer, segAddr, size);
+}
+
+std::vector<char> CutsceneSerializer::Write(std::vector<uint8_t>& buffer, uint32_t segAddr, uint32_t size) {
+    auto csReader = ReadSubArray(buffer, segAddr, size);
+
+    // Use the actual bytes available (ReadSubArray may return less than requested)
+    size = csReader.GetLength();
     LUS::BinaryWriter w;
     BaseExporter::WriteHeader(w, Torch::ResourceType::OoTCutscene, 0);
     uint32_t sizePos = w.GetStream()->GetLength();
@@ -110,7 +118,7 @@ std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAd
         0x6D,0x70,0x71,0x7A
     };
 
-    for (uint32_t ci = 0; ci < csNumCmds && csReader.GetBaseAddress() + 8 <= csSize; ci++) {
+    for (uint32_t ci = 0; ci < csNumCmds && csReader.GetBaseAddress() + 8 <= size; ci++) {
         uint32_t cid = csReader.ReadUInt32();
         if (cid == 0xFFFFFFFF) break;
 
@@ -123,7 +131,7 @@ std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAd
         if (!isHandled) {
             if (cid == 0x07 || cid == 0x08) {
                 csReader.ReadUInt32(); csReader.ReadUInt32();
-                while (csReader.GetBaseAddress() + 0x10 <= csSize) {
+                while (csReader.GetBaseAddress() + 0x10 <= size) {
                     uint8_t cf = csReader.ReadUByte();
                     csReader.Seek(csReader.GetBaseAddress() + 0x0F, LUS::SeekOffsetType::Start);
                     if (cf == 0xFF) break;
@@ -131,7 +139,7 @@ std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAd
             } else {
                 uint32_t sc = csReader.ReadUInt32();
                 uint32_t ss = sc * 0x30;
-                if (csReader.GetBaseAddress() + ss <= csSize)
+                if (csReader.GetBaseAddress() + ss <= size)
                     csReader.Seek(csReader.GetBaseAddress() + ss, LUS::SeekOffsetType::Start);
             }
             continue;
@@ -210,7 +218,7 @@ public:
 };
 
 std::optional<std::shared_ptr<IParsedData>> OoTCutsceneFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto data = SerializeCutscene(buffer, GetSafeNode<uint32_t>(node, "offset"));
+    auto data = CutsceneSerializer::Serialize(buffer, GetSafeNode<uint32_t>(node, "offset"));
     if (data.empty()) {
         SPDLOG_WARN("OoTCutsceneFactory: Failed to serialize cutscene");
         return std::nullopt;

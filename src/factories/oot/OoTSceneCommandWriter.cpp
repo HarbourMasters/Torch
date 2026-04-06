@@ -600,7 +600,7 @@ void SceneCommandWriter::WriteSetCutscenes(LUS::BinaryWriter& w, uint32_t cmdArg
     }
     w.Write(resolved);
 
-    auto csData = SerializeCutscene(ctx.buffer, cmdArg2);
+    auto csData = CutsceneSerializer::Serialize(ctx.buffer, cmdArg2);
     if (csData.empty()) {
         SPDLOG_WARN("Scene: Skipping cutscene {} due to parse failure", csSymbol);
     }

@@ -33,8 +33,13 @@ std::vector<char> SerializePathways(std::vector<uint8_t>& buffer,
                                     const std::vector<std::pair<uint8_t, uint32_t>>& pathways,
                                     uint32_t writeCount, uint32_t repeats);
 
-// Serialize cutscene data into OoTCutscene binary format.
-std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAddr);
+class CutsceneSerializer {
+public:
+    static std::vector<char> Serialize(std::vector<uint8_t>& buffer, uint32_t segAddr);
+private:
+    static uint32_t CalculateSize(std::vector<uint8_t>& buffer, uint32_t segAddr);
+    static std::vector<char> Write(std::vector<uint8_t>& buffer, uint32_t segAddr, uint32_t size);
+};
 
 } // namespace OoT
 
