@@ -12,6 +12,7 @@ namespace OoT {
 class SafeAudioBankReader {
 public:
     SafeAudioBankReader(const std::vector<uint8_t>& data);
+    uint8_t ReadU8(uint32_t offset);
     uint32_t ReadU32(uint32_t offset);
     int16_t ReadS16(uint32_t offset);
     float ReadFloat(uint32_t offset);
@@ -84,7 +85,7 @@ private:
                         const std::vector<AudioTableEntry>& sampleBankTable,
                         std::map<uint32_t, SampleInfo>& sampleMap);
     void ExtractFonts(YAML::Node& node,
-                      std::vector<uint8_t>& audioBankData, SafeAudioBankReader& audioBank,
+                      SafeAudioBankReader& audioBank,
                       const std::vector<AudioTableEntry>& fontTable,
                       const std::vector<AudioTableEntry>& sampleBankTable,
                       std::map<uint32_t, SampleInfo>& sampleMap);

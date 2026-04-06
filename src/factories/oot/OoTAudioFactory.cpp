@@ -14,6 +14,12 @@ SafeAudioBankReader::SafeAudioBankReader(const std::vector<uint8_t>& data)
     mReader.SetEndianness(Torch::Endianness::Big);
 }
 
+uint8_t SafeAudioBankReader::ReadU8(uint32_t offset) {
+    if (offset >= mData.size()) return 0;
+    mReader.Seek(offset, LUS::SeekOffsetType::Start);
+    return mReader.ReadUByte();
+}
+
 uint32_t SafeAudioBankReader::ReadU32(uint32_t offset) {
     if (offset + 4 > mData.size()) return 0;
     mReader.Seek(offset, LUS::SeekOffsetType::Start);
@@ -409,13 +415,13 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     }
 
 
-    ExtractFonts(node, audioBankData, audioBank, fontTable, sampleBankTable, sampleMap);
+    ExtractFonts(node, audioBank, fontTable, sampleBankTable, sampleMap);
 
     return data;
 }
 
 void OoTAudioFactory::ExtractFonts(YAML::Node& node,
-                                   std::vector<uint8_t>& audioBankData, SafeAudioBankReader& audioBank,
+                                   SafeAudioBankReader& audioBank,
                                    const std::vector<AudioTableEntry>& fontTable,
                                    const std::vector<AudioTableEntry>& sampleBankTable,
                                    std::map<uint32_t, SampleInfo>& sampleMap) {
@@ -431,11 +437,11 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
 
     // Helper: resolve sample reference path (matches OTRExporter GetSampleEntryReference)
     auto getSampleRef = [&](int bankIndex, uint32_t sampleAddr, uint32_t baseOffset) -> std::string {
-        if (sampleAddr + 16 > audioBankData.size()) return "";
+        if (sampleAddr + 16 > audioBank.Size()) return "";
         uint32_t samplePtr = audioBank.ReadU32(sampleAddr);
         if (samplePtr == 0) return "";
         samplePtr += baseOffset;
-        if (samplePtr + 4 > audioBankData.size()) return "";
+        if (samplePtr + 4 > audioBank.Size()) return "";
         uint32_t dataRelPtr = audioBank.ReadU32(samplePtr + 4);
         uint32_t absOffset = dataRelPtr + sampleBankTable[bankIndex].ptr;
         if (sampleMap.count(absOffset)) {
@@ -447,7 +453,7 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
     // Helper: parse envelope data (ZAudio.cpp:74-93)
     auto parseEnvelope = [&](uint32_t envOffset) -> std::vector<std::pair<int16_t, int16_t>> {
         std::vector<std::pair<int16_t, int16_t>> envs;
-        while (envOffset + 4 <= audioBankData.size()) {
+        while (envOffset + 4 <= audioBank.Size()) {
             int16_t delay = audioBank.ReadS16(envOffset);
             int16_t arg = audioBank.ReadS16(envOffset + 2);
             envs.push_back({delay, arg});
@@ -469,7 +475,7 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
     // Helper: write SoundFontEntry (AudioExporter.cpp:140-151)
     auto writeSFE = [&](LUS::BinaryWriter& w, uint32_t sfeOffset, uint32_t baseOffset,
                          int bankIndex) {
-        if (sfeOffset + 8 > audioBankData.size()) {
+        if (sfeOffset + 8 > audioBank.Size()) {
             w.Write(static_cast<uint8_t>(0)); // exists = false
             return;
         }
@@ -483,7 +489,7 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
 
         // Resolve sample reference
         samplePtr += baseOffset;
-        if (samplePtr + 4 <= audioBankData.size()) {
+        if (samplePtr + 4 <= audioBank.Size()) {
             uint32_t dataRelPtr = audioBank.ReadU32(samplePtr + 4);
             uint32_t absOffset = dataRelPtr + sampleBankTable[bankIndex].ptr;
             if (sampleMap.count(absOffset)) {
@@ -526,24 +532,24 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
         std::vector<std::tuple<uint8_t, uint8_t, uint8_t, float,
                                std::vector<std::pair<int16_t, int16_t>>,
                                std::string>> drums;
-        if (ptr + 4 <= audioBankData.size()) {
+        if (ptr + 4 <= audioBank.Size()) {
             uint32_t drumListAddr = audioBank.ReadU32(ptr) + ptr;
             for (int i = 0; i < numDrums; i++) {
-                if (drumListAddr + (i + 1) * 4 > audioBankData.size()) break;
+                if (drumListAddr + (i + 1) * 4 > audioBank.Size()) break;
                 uint32_t drumPtr = audioBank.ReadU32(drumListAddr + i * 4);
                 if (drumPtr != 0) {
                     drumPtr += ptr;
-                    if (drumPtr + 16 <= audioBankData.size()) {
-                        uint8_t releaseRate = audioBankData[drumPtr];
-                        uint8_t pan = audioBankData[drumPtr + 1];
-                        uint8_t loaded = audioBankData[drumPtr + 2];
+                    if (drumPtr + 16 <= audioBank.Size()) {
+                        uint8_t releaseRate = audioBank.ReadU8(drumPtr);
+                        uint8_t pan = audioBank.ReadU8(drumPtr + 1);
+                        uint8_t loaded = audioBank.ReadU8(drumPtr + 2);
                         float tuning = audioBank.ReadFloat(drumPtr + 8);
                         auto env = parseEnvelope(audioBank.ReadU32(drumPtr + 12) + ptr);
 
                         // Resolve sample
                         uint32_t sampleEntryPtr = audioBank.ReadU32(drumPtr + 4) + ptr;
                         std::string sampleRef;
-                        if (sampleEntryPtr + 4 <= audioBankData.size()) {
+                        if (sampleEntryPtr + 4 <= audioBank.Size()) {
                             uint32_t dataRelPtr = audioBank.ReadU32(sampleEntryPtr + 4);
                             uint32_t absOffset = dataRelPtr + sampleBankTable[sampleBankId].ptr;
                             if (sampleMap.count(absOffset)) {
@@ -566,16 +572,16 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
             float tuning;
         };
         std::vector<SFXEntry> sfxEntries;
-        if (ptr + 8 <= audioBankData.size()) {
+        if (ptr + 8 <= audioBank.Size()) {
             uint32_t sfxListAddr = audioBank.ReadU32(ptr + 4) + ptr;
             for (int i = 0; i < numSfx; i++) {
                 uint32_t sfeAddr = sfxListAddr + i * 8;
-                if (sfeAddr + 8 > audioBankData.size()) break;
+                if (sfeAddr + 8 > audioBank.Size()) break;
                 uint32_t sp = audioBank.ReadU32(sfeAddr);
                 if (sp != 0) {
                     sp += ptr;
                     std::string ref;
-                    if (sp + 4 <= audioBankData.size()) {
+                    if (sp + 4 <= audioBank.Size()) {
                         uint32_t relPtr = audioBank.ReadU32(sp + 4);
                         uint32_t absOff = relPtr + sampleBankTable[sampleBankId].ptr;
                         if (sampleMap.count(absOff))
@@ -612,7 +618,7 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
             lastReleaseRate = 0;          // drum.offset=0 (offset 4)
         }
         for (int i = 0; i < numInstruments; i++) {
-            if (ptr + 8 + (i + 1) * 4 > audioBankData.size()) break;
+            if (ptr + 8 + (i + 1) * 4 > audioBank.Size()) break;
             uint32_t instPtr = audioBank.ReadU32(ptr + 8 + i * 4);
             InstEntry inst = {};
             inst.isValid = (instPtr != 0);
@@ -623,11 +629,11 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
             inst.releaseRate = lastReleaseRate;
             if (instPtr != 0) {
                 instPtr += ptr;
-                if (instPtr + 28 <= audioBankData.size()) {
-                    inst.loaded = audioBankData[instPtr];
-                    inst.normalRangeLo = audioBankData[instPtr + 1];
-                    inst.normalRangeHi = audioBankData[instPtr + 2];
-                    inst.releaseRate = audioBankData[instPtr + 3];
+                if (instPtr + 28 <= audioBank.Size()) {
+                    inst.loaded = audioBank.ReadU8(instPtr);
+                    inst.normalRangeLo = audioBank.ReadU8(instPtr + 1);
+                    inst.normalRangeHi = audioBank.ReadU8(instPtr + 2);
+                    inst.releaseRate = audioBank.ReadU8(instPtr + 3);
                     inst.env = parseEnvelope(audioBank.ReadU32(instPtr + 4) + ptr);
                     inst.lowAddr = instPtr + 8;
                     inst.normalAddr = instPtr + 16;
