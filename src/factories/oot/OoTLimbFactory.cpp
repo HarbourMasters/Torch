@@ -12,6 +12,15 @@
 
 namespace OoT {
 
+size_t OoTLimbFactory::GetLimbDataSize(OoTLimbType type) {
+    switch (type) {
+        case OoTLimbType::LOD:
+        case OoTLimbType::Skin:    return 0x10;
+        case OoTLimbType::Legacy:  return 0x20;
+        default:                   return 0x0C;
+    }
+}
+
 std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto limbTypeStr = GetSafeNode<std::string>(node, "limb_type");
     auto limbType = ParseLimbType(limbTypeStr);
@@ -19,32 +28,13 @@ std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<ui
         return std::nullopt;
     }
 
-    size_t dataSize;
-    switch (limbType) {
-        case OoTLimbType::Standard:
-        case OoTLimbType::Curve:
-            dataSize = 0x0C;
-            break;
-        case OoTLimbType::LOD:
-        case OoTLimbType::Skin:
-            dataSize = 0x10;
-            break;
-        case OoTLimbType::Legacy:
-            dataSize = 0x20;
-            break;
-        default:
-            dataSize = 0x0C;
-            break;
-    }
-
-    auto [_, segment] = Decompressor::AutoDecode(node, buffer, dataSize);
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer, GetLimbDataSize(limbType));
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
 
     auto limb = std::make_shared<OoTLimbData>();
     limb->limbType = limbType;
     auto symbol = GetSafeNode<std::string>(node, "symbol");
-    bool canAutoDiscoverGfx = true;
 
     if (limbType == OoTLimbType::Curve) {
         limb->childIndex = reader.ReadUByte();
@@ -52,11 +42,11 @@ std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<ui
         reader.ReadUInt16(); // padding
         uint32_t dListAddr = reader.ReadUInt32();
         uint32_t dList2Addr = reader.ReadUInt32();
-        limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "CurveDL", canAutoDiscoverGfx);
-        limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "Curve2DL", canAutoDiscoverGfx);
+        limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "CurveDL");
+        limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "Curve2DL");
     } else if (limbType == OoTLimbType::Legacy) {
         uint32_t dListAddr = reader.ReadUInt32();
-        limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL", canAutoDiscoverGfx);
+        limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
         limb->legTransX = reader.ReadFloat();
         limb->legTransY = reader.ReadFloat();
         limb->legTransZ = reader.ReadFloat();
@@ -78,19 +68,19 @@ std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<ui
 
         if (limbType == OoTLimbType::Standard) {
             uint32_t dListAddr = reader.ReadUInt32();
-            limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL", canAutoDiscoverGfx);
+            limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
         } else if (limbType == OoTLimbType::LOD) {
             uint32_t dListAddr = reader.ReadUInt32();
             uint32_t dList2Addr = reader.ReadUInt32();
-            limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "FarDL", canAutoDiscoverGfx);
-            limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL", canAutoDiscoverGfx);
+            limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "FarDL");
+            limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
         } else if (limbType == OoTLimbType::Skin) {
             limb->skinSegmentType = static_cast<OoTLimbSkinType>(reader.ReadInt32());
             uint32_t skinSegmentAddr = reader.ReadUInt32();
 
             skinSegmentAddr = Companion::Instance->PatchVirtualAddr(skinSegmentAddr);
             if (limb->skinSegmentType == OoTLimbSkinType::SkinType_Normal) {
-                limb->skinDList = ResolveGfxPointer(skinSegmentAddr, symbol, "DL", canAutoDiscoverGfx);
+                limb->skinDList = ResolveGfxPointer(skinSegmentAddr, symbol, "DL");
             } else if (limb->skinSegmentType == OoTLimbSkinType::SkinType_Animated && skinSegmentAddr != 0) {
                 YAML::Node skinNode;
                 skinNode["offset"] = skinSegmentAddr;
@@ -104,7 +94,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<ui
                 uint32_t skinDListAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
 
                 limb->skinVtxCnt = limb->skinAnimData.totalVtxCount;
-                limb->skinAnimData.dlist = ResolveGfxPointer(skinDListAddr, symbol, "SkinLimbDL", canAutoDiscoverGfx);
+                limb->skinAnimData.dlist = ResolveGfxPointer(skinDListAddr, symbol, "SkinLimbDL");
 
                 if (limbModifAddr != 0 && limbModifCount > 0) {
                     YAML::Node modifNode;

@@ -3,6 +3,7 @@
 #ifdef OOT_SUPPORT
 
 #include "factories/BaseFactory.h"
+#include "OoTSkeletonTypes.h"
 
 namespace OoT {
 
@@ -19,6 +20,9 @@ public:
             REGISTER(Binary, OoTLimbBinaryExporter)
         };
     }
+
+private:
+    static size_t GetLimbDataSize(OoTLimbType type);
 };
 
 } // namespace OoT

@@ -25,7 +25,7 @@ OoTSkeletonType ParseSkeletonType(const std::string& str) {
 }
 
 std::string ResolveGfxPointer(uint32_t ptr, const std::string& limbSymbol,
-                              const std::string& suffix, bool autoDiscover) {
+                              const std::string& suffix) {
     if (ptr == 0) return "";
     ptr = Companion::Instance->PatchVirtualAddr(ptr);
     auto result = Companion::Instance->GetStringByAddr(ptr);
