@@ -75,33 +75,43 @@ void AudioFontWriter::WriteSFE(LUS::BinaryWriter& w, uint32_t sfeOffset, uint32_
     w.Write(audioBank.ReadFloat(sfeOffset + 4));
 }
 
+void FontResidue::Reset() {
+    mLoaded = mRangeLo = mRangeHi = mRelease = 0;
+}
+
+// Seed from last drum's stack layout (DrumEntry→InstrumentEntry mapping).
+void FontResidue::SeedFromDrums(const std::vector<DrumEntry>& drums) {
+    if (drums.empty()) return;
+    auto& lastDrum = drums.back();
+    mLoaded = lastDrum.pan;      // drum.pan (offset 1) → inst.loaded (offset 1)
+    mRangeLo = lastDrum.loaded;  // drum.loaded (offset 2) → inst.normalRangeLo (offset 2)
+    mRangeHi = 0;                // padding (offset 3)
+    mRelease = 0;                // drum.offset=0 (offset 4)
+}
+
+void FontResidue::ApplyToInstrument(InstEntry& inst) const {
+    inst.loaded = mLoaded;
+    inst.normalRangeLo = mRangeLo;
+    inst.normalRangeHi = mRangeHi;
+    inst.releaseRate = mRelease;
+}
+
+void FontResidue::UpdateFromInstrument(const InstEntry& inst) {
+    mLoaded = inst.loaded;
+    mRangeLo = inst.normalRangeLo;
+    mRangeHi = inst.normalRangeHi;
+    mRelease = inst.releaseRate;
+}
+
 std::vector<InstEntry> AudioFontWriter::ParseInstruments(int numInstruments, uint32_t ptr,
-                                                        const std::vector<DrumEntry>& drums,
-                                                        SafeAudioBankReader& audioBank,
-                                                        FontResidueState& residue) {
+                                                         SafeAudioBankReader& audioBank) {
     std::vector<InstEntry> instruments;
-    uint8_t lastLoaded = residue.loaded, lastNormalRangeLo = residue.rangeLo;
-    uint8_t lastNormalRangeHi = residue.rangeHi, lastReleaseRate = residue.release;
-
-    // Seed from last drum (DrumEntry→InstrumentEntry stack mapping).
-    // See docs/oot-audio-font-residue-analysis.md
-    if (!drums.empty()) {
-        auto& lastDrum = drums.back();
-        lastLoaded = lastDrum.pan;            // drum.pan (offset 1) → inst.loaded (offset 1)
-        lastNormalRangeLo = lastDrum.loaded;  // drum.loaded (offset 2) → inst.normalRangeLo (offset 2)
-        lastNormalRangeHi = 0;                // padding (offset 3)
-        lastReleaseRate = 0;                  // drum.offset=0 (offset 4)
-    }
-
     for (int i = 0; i < numInstruments; i++) {
         if (ptr + 8 + (i + 1) * 4 > audioBank.Size()) break;
         uint32_t instPtr = audioBank.ReadU32(ptr + 8 + i * 4);
         InstEntry inst = {};
         inst.isValid = (instPtr != 0);
-        inst.loaded = lastLoaded;
-        inst.normalRangeLo = lastNormalRangeLo;
-        inst.normalRangeHi = lastNormalRangeHi;
-        inst.releaseRate = lastReleaseRate;
+        mResidue.ApplyToInstrument(inst);
         if (instPtr != 0) {
             instPtr += ptr;
             if (instPtr + 28 <= audioBank.Size()) {
@@ -113,20 +123,11 @@ std::vector<InstEntry> AudioFontWriter::ParseInstruments(int numInstruments, uin
                 inst.lowAddr = instPtr + 8;
                 inst.normalAddr = instPtr + 16;
                 inst.highAddr = instPtr + 24;
-                lastLoaded = inst.loaded;
-                lastNormalRangeLo = inst.normalRangeLo;
-                lastNormalRangeHi = inst.normalRangeHi;
-                lastReleaseRate = inst.releaseRate;
+                mResidue.UpdateFromInstrument(inst);
             }
         }
         instruments.push_back(inst);
     }
-
-    // Update cross-font residue for next font
-    residue.loaded = lastLoaded;
-    residue.rangeLo = lastNormalRangeLo;
-    residue.rangeHi = lastNormalRangeHi;
-    residue.release = lastReleaseRate;
 
     return instruments;
 }
@@ -195,6 +196,7 @@ std::vector<DrumEntry> AudioFontWriter::ParseDrums(int numDrums, uint32_t ptr, i
         }
         drums.push_back({0, 0, 0, 0.0f, {}, ""});
     }
+    mResidue.SeedFromDrums(drums);
     return drums;
 }
 
@@ -213,7 +215,8 @@ void AudioFontWriter::Extract(YAML::Node& node,
         }
     }
 
-    FontResidueState crossFontResidue;
+
+    mResidue.Reset();
 
     for (uint32_t fi = 0; fi < fontTable.size(); fi++) {
         auto& fe = fontTable[fi];
@@ -238,7 +241,7 @@ void AudioFontWriter::Extract(YAML::Node& node,
 
         auto sfxEntries = ParseSFX(numSfx, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
 
-        auto instruments = ParseInstruments(numInstruments, ptr, drums, audioBank, crossFontResidue);
+        auto instruments = ParseInstruments(numInstruments, ptr, audioBank);
 
         // Write counts
         w.Write(static_cast<uint32_t>(drums.size()));

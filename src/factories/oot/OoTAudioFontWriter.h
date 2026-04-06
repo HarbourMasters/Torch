@@ -20,11 +20,17 @@ struct InstEntry {
     uint32_t lowAddr, normalAddr, highAddr;
 };
 
-// Cross-font stack residue state. ZAPDTR reuses the same stack frame
-// across fonts, so invalid instruments inherit field values from the
-// previous font's last valid instrument.
-struct FontResidueState {
-    uint8_t loaded = 0, rangeLo = 0, rangeHi = 0, release = 0;
+// Cross-font stack residue. ZAPDTR reuses the same stack frame across fonts,
+// so invalid instruments inherit field values from the previous font's last
+// valid instrument. See docs/oot-audio-font-residue-analysis.md
+class FontResidue {
+public:
+    void Reset();
+    void SeedFromDrums(const std::vector<DrumEntry>& drums);
+    void ApplyToInstrument(InstEntry& inst) const;
+    void UpdateFromInstrument(const InstEntry& inst);
+private:
+    uint8_t mLoaded = 0, mRangeLo = 0, mRangeHi = 0, mRelease = 0;
 };
 
 struct SFXEntry {
@@ -53,9 +59,9 @@ private:
                   std::map<uint32_t, SampleInfo>& sampleMap);
     void WriteEnvData(LUS::BinaryWriter& w, const std::vector<std::pair<int16_t, int16_t>>& envs);
     std::vector<InstEntry> ParseInstruments(int numInstruments, uint32_t ptr,
-                                          const std::vector<DrumEntry>& drums,
-                                          SafeAudioBankReader& audioBank,
-                                          FontResidueState& residue);
+                                          SafeAudioBankReader& audioBank);
+
+    FontResidue mResidue;
     std::vector<SFXEntry> ParseSFX(int numSfx, uint32_t ptr, int sampleBankId,
                                     SafeAudioBankReader& audioBank,
                                     const std::vector<AudioTableEntry>& sampleBankTable,
