@@ -8,27 +8,25 @@
 namespace OoT {
 
 std::string AudioFontWriter::GetSampleRef(int bankIndex, uint32_t sampleAddr, uint32_t baseOffset,
-                                          SafeAudioBankReader& audioBank,
-                                          const std::vector<AudioTableEntry>& sampleBankTable,
-                                          std::map<uint32_t, SampleInfo>& sampleMap) {
-    if (sampleAddr + 16 > audioBank.Size()) return "";
-    uint32_t samplePtr = audioBank.ReadU32(sampleAddr);
+                                          FontWriteContext& ctx) {
+    if (sampleAddr + 16 > ctx.audioBank.Size()) return "";
+    uint32_t samplePtr = ctx.audioBank.ReadU32(sampleAddr);
     if (samplePtr == 0) return "";
     samplePtr += baseOffset;
-    if (samplePtr + 4 > audioBank.Size()) return "";
-    uint32_t dataRelPtr = audioBank.ReadU32(samplePtr + 4);
-    uint32_t absOffset = dataRelPtr + sampleBankTable[bankIndex].ptr;
-    if (sampleMap.count(absOffset)) {
-        return "audio/samples/" + sampleMap[absOffset].name + "_META";
+    if (samplePtr + 4 > ctx.audioBank.Size()) return "";
+    uint32_t dataRelPtr = ctx.audioBank.ReadU32(samplePtr + 4);
+    uint32_t absOffset = dataRelPtr + ctx.sampleBankTable[bankIndex].ptr;
+    if (ctx.sampleMap.count(absOffset)) {
+        return "audio/samples/" + ctx.sampleMap[absOffset].name + "_META";
     }
     return "";
 }
 
-std::vector<std::pair<int16_t, int16_t>> AudioFontWriter::ParseEnvelope(uint32_t envOffset, SafeAudioBankReader& audioBank) {
+std::vector<std::pair<int16_t, int16_t>> AudioFontWriter::ParseEnvelope(uint32_t envOffset, FontWriteContext& ctx) {
     std::vector<std::pair<int16_t, int16_t>> envs;
-    while (envOffset + 4 <= audioBank.Size()) {
-        int16_t delay = audioBank.ReadS16(envOffset);
-        int16_t arg = audioBank.ReadS16(envOffset + 2);
+    while (envOffset + 4 <= ctx.audioBank.Size()) {
+        int16_t delay = ctx.audioBank.ReadS16(envOffset);
+        int16_t arg = ctx.audioBank.ReadS16(envOffset + 2);
         envs.push_back({delay, arg});
         envOffset += 4;
         if (delay < 0) break;
@@ -45,14 +43,12 @@ void AudioFontWriter::WriteEnvData(LUS::BinaryWriter& w, const std::vector<std::
 }
 
 void AudioFontWriter::WriteSFE(LUS::BinaryWriter& w, uint32_t sfeOffset, uint32_t baseOffset,
-                               int bankIndex, SafeAudioBankReader& audioBank,
-                               const std::vector<AudioTableEntry>& sampleBankTable,
-                               std::map<uint32_t, SampleInfo>& sampleMap) {
-    if (sfeOffset + 8 > audioBank.Size()) {
+                               int bankIndex, FontWriteContext& ctx) {
+    if (sfeOffset + 8 > ctx.audioBank.Size()) {
         w.Write(static_cast<uint8_t>(0));
         return;
     }
-    uint32_t samplePtr = audioBank.ReadU32(sfeOffset);
+    uint32_t samplePtr = ctx.audioBank.ReadU32(sfeOffset);
     if (samplePtr == 0) {
         w.Write(static_cast<uint8_t>(0));
         return;
@@ -61,18 +57,18 @@ void AudioFontWriter::WriteSFE(LUS::BinaryWriter& w, uint32_t sfeOffset, uint32_
     w.Write(static_cast<uint8_t>(1)); // padding (V2 compat)
 
     samplePtr += baseOffset;
-    if (samplePtr + 4 <= audioBank.Size()) {
-        uint32_t dataRelPtr = audioBank.ReadU32(samplePtr + 4);
-        uint32_t absOffset = dataRelPtr + sampleBankTable[bankIndex].ptr;
-        if (sampleMap.count(absOffset)) {
-            w.Write(std::string("audio/samples/" + sampleMap[absOffset].name + "_META"));
+    if (samplePtr + 4 <= ctx.audioBank.Size()) {
+        uint32_t dataRelPtr = ctx.audioBank.ReadU32(samplePtr + 4);
+        uint32_t absOffset = dataRelPtr + ctx.sampleBankTable[bankIndex].ptr;
+        if (ctx.sampleMap.count(absOffset)) {
+            w.Write(std::string("audio/samples/" + ctx.sampleMap[absOffset].name + "_META"));
         } else {
             w.Write(std::string(""));
         }
     } else {
         w.Write(std::string(""));
     }
-    w.Write(audioBank.ReadFloat(sfeOffset + 4));
+    w.Write(ctx.audioBank.ReadFloat(sfeOffset + 4));
 }
 
 void FontResidue::Reset() {
@@ -104,22 +100,22 @@ void FontResidue::UpdateFromInstrument(const InstEntry& inst) {
 }
 
 std::vector<InstEntry> AudioFontWriter::ParseInstruments(int numInstruments, uint32_t ptr,
-                                                         SafeAudioBankReader& audioBank) {
+                                                         FontWriteContext& ctx) {
     std::vector<InstEntry> instruments;
     for (int i = 0; i < numInstruments; i++) {
-        if (ptr + 8 + (i + 1) * 4 > audioBank.Size()) break;
-        uint32_t instPtr = audioBank.ReadU32(ptr + 8 + i * 4);
+        if (ptr + 8 + (i + 1) * 4 > ctx.audioBank.Size()) break;
+        uint32_t instPtr = ctx.audioBank.ReadU32(ptr + 8 + i * 4);
         InstEntry inst = {};
         inst.isValid = (instPtr != 0);
         mResidue.ApplyToInstrument(inst);
         if (instPtr != 0) {
             instPtr += ptr;
-            if (instPtr + 28 <= audioBank.Size()) {
-                inst.loaded = audioBank.ReadU8(instPtr);
-                inst.normalRangeLo = audioBank.ReadU8(instPtr + 1);
-                inst.normalRangeHi = audioBank.ReadU8(instPtr + 2);
-                inst.releaseRate = audioBank.ReadU8(instPtr + 3);
-                inst.env = ParseEnvelope(audioBank.ReadU32(instPtr + 4) + ptr, audioBank);
+            if (instPtr + 28 <= ctx.audioBank.Size()) {
+                inst.loaded = ctx.audioBank.ReadU8(instPtr);
+                inst.normalRangeLo = ctx.audioBank.ReadU8(instPtr + 1);
+                inst.normalRangeHi = ctx.audioBank.ReadU8(instPtr + 2);
+                inst.releaseRate = ctx.audioBank.ReadU8(instPtr + 3);
+                inst.env = ParseEnvelope(ctx.audioBank.ReadU32(instPtr + 4) + ptr, ctx);
                 inst.lowAddr = instPtr + 8;
                 inst.normalAddr = instPtr + 16;
                 inst.highAddr = instPtr + 24;
@@ -133,61 +129,57 @@ std::vector<InstEntry> AudioFontWriter::ParseInstruments(int numInstruments, uin
 }
 
 std::vector<SFXEntry> AudioFontWriter::ParseSFX(int numSfx, uint32_t ptr, int sampleBankId,
-                                                SafeAudioBankReader& audioBank,
-                                                const std::vector<AudioTableEntry>& sampleBankTable,
-                                                std::map<uint32_t, SampleInfo>& sampleMap) {
+                                                FontWriteContext& ctx) {
     std::vector<SFXEntry> sfxEntries;
-    if (ptr + 8 > audioBank.Size()) return sfxEntries;
+    if (ptr + 8 > ctx.audioBank.Size()) return sfxEntries;
 
-    uint32_t sfxListAddr = audioBank.ReadU32(ptr + 4) + ptr;
+    uint32_t sfxListAddr = ctx.audioBank.ReadU32(ptr + 4) + ptr;
     for (int i = 0; i < numSfx; i++) {
         uint32_t sfeAddr = sfxListAddr + i * 8;
-        if (sfeAddr + 8 > audioBank.Size()) break;
-        uint32_t sp = audioBank.ReadU32(sfeAddr);
+        if (sfeAddr + 8 > ctx.audioBank.Size()) break;
+        uint32_t sp = ctx.audioBank.ReadU32(sfeAddr);
         if (sp != 0) {
             sp += ptr;
             std::string ref;
-            if (sp + 4 <= audioBank.Size()) {
-                uint32_t relPtr = audioBank.ReadU32(sp + 4);
-                uint32_t absOff = relPtr + sampleBankTable[sampleBankId].ptr;
-                if (sampleMap.count(absOff))
-                    ref = "audio/samples/" + sampleMap[absOff].name + "_META";
+            if (sp + 4 <= ctx.audioBank.Size()) {
+                uint32_t relPtr = ctx.audioBank.ReadU32(sp + 4);
+                uint32_t absOff = relPtr + ctx.sampleBankTable[sampleBankId].ptr;
+                if (ctx.sampleMap.count(absOff))
+                    ref = "audio/samples/" + ctx.sampleMap[absOff].name + "_META";
             }
-            sfxEntries.push_back({true, ref, audioBank.ReadFloat(sfeAddr + 4)});
+            sfxEntries.push_back({true, ref, ctx.audioBank.ReadFloat(sfeAddr + 4)});
         } else {
-            sfxEntries.push_back({false, "", audioBank.ReadFloat(sfeAddr + 4)});
+            sfxEntries.push_back({false, "", ctx.audioBank.ReadFloat(sfeAddr + 4)});
         }
     }
     return sfxEntries;
 }
 
 std::vector<DrumEntry> AudioFontWriter::ParseDrums(int numDrums, uint32_t ptr, int sampleBankId,
-                                                   SafeAudioBankReader& audioBank,
-                                                   const std::vector<AudioTableEntry>& sampleBankTable,
-                                                   std::map<uint32_t, SampleInfo>& sampleMap) {
+                                                   FontWriteContext& ctx) {
     std::vector<DrumEntry> drums;
-    if (ptr + 4 > audioBank.Size()) return drums;
+    if (ptr + 4 > ctx.audioBank.Size()) return drums;
 
-    uint32_t drumListAddr = audioBank.ReadU32(ptr) + ptr;
+    uint32_t drumListAddr = ctx.audioBank.ReadU32(ptr) + ptr;
     for (int i = 0; i < numDrums; i++) {
-        if (drumListAddr + (i + 1) * 4 > audioBank.Size()) break;
-        uint32_t drumPtr = audioBank.ReadU32(drumListAddr + i * 4);
+        if (drumListAddr + (i + 1) * 4 > ctx.audioBank.Size()) break;
+        uint32_t drumPtr = ctx.audioBank.ReadU32(drumListAddr + i * 4);
         if (drumPtr != 0) {
             drumPtr += ptr;
-            if (drumPtr + 16 <= audioBank.Size()) {
+            if (drumPtr + 16 <= ctx.audioBank.Size()) {
                 DrumEntry d;
-                d.releaseRate = audioBank.ReadU8(drumPtr);
-                d.pan = audioBank.ReadU8(drumPtr + 1);
-                d.loaded = audioBank.ReadU8(drumPtr + 2);
-                d.tuning = audioBank.ReadFloat(drumPtr + 8);
-                d.env = ParseEnvelope(audioBank.ReadU32(drumPtr + 12) + ptr, audioBank);
+                d.releaseRate = ctx.audioBank.ReadU8(drumPtr);
+                d.pan = ctx.audioBank.ReadU8(drumPtr + 1);
+                d.loaded = ctx.audioBank.ReadU8(drumPtr + 2);
+                d.tuning = ctx.audioBank.ReadFloat(drumPtr + 8);
+                d.env = ParseEnvelope(ctx.audioBank.ReadU32(drumPtr + 12) + ptr, ctx);
 
-                uint32_t sampleEntryPtr = audioBank.ReadU32(drumPtr + 4) + ptr;
-                if (sampleEntryPtr + 4 <= audioBank.Size()) {
-                    uint32_t dataRelPtr = audioBank.ReadU32(sampleEntryPtr + 4);
-                    uint32_t absOffset = dataRelPtr + sampleBankTable[sampleBankId].ptr;
-                    if (sampleMap.count(absOffset)) {
-                        d.sampleRef = "audio/samples/" + sampleMap[absOffset].name + "_META";
+                uint32_t sampleEntryPtr = ctx.audioBank.ReadU32(drumPtr + 4) + ptr;
+                if (sampleEntryPtr + 4 <= ctx.audioBank.Size()) {
+                    uint32_t dataRelPtr = ctx.audioBank.ReadU32(sampleEntryPtr + 4);
+                    uint32_t absOffset = dataRelPtr + ctx.sampleBankTable[sampleBankId].ptr;
+                    if (ctx.sampleMap.count(absOffset)) {
+                        d.sampleRef = "audio/samples/" + ctx.sampleMap[absOffset].name + "_META";
                     }
                 }
                 drums.push_back(d);
@@ -213,10 +205,7 @@ void AudioFontWriter::WriteDrums(LUS::BinaryWriter& w, const std::vector<DrumEnt
 }
 
 void AudioFontWriter::WriteInstruments(LUS::BinaryWriter& w, const std::vector<InstEntry>& instruments,
-                                       uint32_t ptr, int sampleBankId,
-                                       SafeAudioBankReader& audioBank,
-                                       const std::vector<AudioTableEntry>& sampleBankTable,
-                                       std::map<uint32_t, SampleInfo>& sampleMap) {
+                                       uint32_t ptr, int sampleBankId, FontWriteContext& ctx) {
     for (auto& inst : instruments) {
         w.Write(static_cast<uint8_t>(inst.isValid ? 1 : 0));
         w.Write(inst.loaded);
@@ -226,18 +215,18 @@ void AudioFontWriter::WriteInstruments(LUS::BinaryWriter& w, const std::vector<I
         WriteEnvData(w, inst.env);
 
         if (inst.isValid) {
-            if (audioBank.ReadU32(inst.lowAddr) != 0) {
-                WriteSFE(w, inst.lowAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
+            if (ctx.audioBank.ReadU32(inst.lowAddr) != 0) {
+                WriteSFE(w, inst.lowAddr, ptr, sampleBankId, ctx);
             } else {
                 w.Write(static_cast<uint8_t>(0));
             }
-            if (audioBank.ReadU32(inst.normalAddr) != 0) {
-                WriteSFE(w, inst.normalAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
+            if (ctx.audioBank.ReadU32(inst.normalAddr) != 0) {
+                WriteSFE(w, inst.normalAddr, ptr, sampleBankId, ctx);
             } else {
                 w.Write(static_cast<uint8_t>(0));
             }
-            if (audioBank.ReadU32(inst.highAddr) != 0 && inst.normalRangeHi != 0x7F) {
-                WriteSFE(w, inst.highAddr, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
+            if (ctx.audioBank.ReadU32(inst.highAddr) != 0 && inst.normalRangeHi != 0x7F) {
+                WriteSFE(w, inst.highAddr, ptr, sampleBankId, ctx);
             } else {
                 w.Write(static_cast<uint8_t>(0));
             }
@@ -262,6 +251,46 @@ void AudioFontWriter::WriteSFXEntries(LUS::BinaryWriter& w, const std::vector<SF
     }
 }
 
+void AudioFontWriter::WriteFontCompanion(uint32_t fontIndex, const AudioTableEntry& fontEntry,
+                                         const std::vector<DrumEntry>& drums,
+                                         const std::vector<InstEntry>& instruments,
+                                         const std::vector<SFXEntry>& sfxEntries,
+                                         uint32_t ptr, int sampleBankId,
+                                         FontWriteContext& ctx,
+                                         const std::map<int, std::string>& fontNames) {
+    LUS::BinaryWriter w;
+    BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudioSoundFont, 2);
+
+    // Font metadata
+    w.Write(static_cast<uint32_t>(fontIndex));
+    w.Write(fontEntry.medium);
+    w.Write(fontEntry.cachePolicy);
+    w.Write(fontEntry.data1);
+    w.Write(fontEntry.data2);
+    w.Write(fontEntry.data3);
+
+    w.Write(static_cast<uint32_t>(drums.size()));
+    w.Write(static_cast<uint32_t>(instruments.size()));
+    w.Write(static_cast<uint32_t>(sfxEntries.size()));
+
+    WriteDrums(w, drums);
+    WriteInstruments(w, instruments, ptr, sampleBankId, ctx);
+    WriteSFXEntries(w, sfxEntries);
+
+    std::string fontName;
+    if (fontNames.count(fontIndex)) {
+        fontName = fontNames.at(fontIndex);
+    } else {
+        fontName = std::to_string(fontIndex) + "_Font";
+    }
+
+    std::stringstream ss;
+    w.Finish(ss);
+    std::string str = ss.str();
+    Companion::Instance->RegisterCompanionFile(
+        "fonts/" + fontName, std::vector<char>(str.begin(), str.end()));
+}
+
 void AudioFontWriter::Extract(YAML::Node& node,
                               SafeAudioBankReader& audioBank,
                               const std::vector<AudioTableEntry>& fontTable,
@@ -277,6 +306,11 @@ void AudioFontWriter::Extract(YAML::Node& node,
         }
     }
 
+    FontWriteContext ctx {
+        .audioBank = audioBank,
+        .sampleBankTable = sampleBankTable,
+        .sampleMap = sampleMap,
+    };
 
     mResidue.Reset();
 
@@ -288,44 +322,11 @@ void AudioFontWriter::Extract(YAML::Node& node,
         int numDrums = fe.data2 & 0xFF;
         int numSfx = fe.data3;
 
-        LUS::BinaryWriter w;
-        BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudioSoundFont, 2);
+        auto drums = ParseDrums(numDrums, ptr, sampleBankId, ctx);
+        auto sfxEntries = ParseSFX(numSfx, ptr, sampleBankId, ctx);
+        auto instruments = ParseInstruments(numInstruments, ptr, ctx);
 
-        // Font metadata
-        w.Write(static_cast<uint32_t>(fi));
-        w.Write(fe.medium);
-        w.Write(fe.cachePolicy);
-        w.Write(fe.data1);
-        w.Write(fe.data2);
-        w.Write(fe.data3);
-
-        auto drums = ParseDrums(numDrums, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
-
-        auto sfxEntries = ParseSFX(numSfx, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
-
-        auto instruments = ParseInstruments(numInstruments, ptr, audioBank);
-
-        w.Write(static_cast<uint32_t>(drums.size()));
-        w.Write(static_cast<uint32_t>(instruments.size()));
-        w.Write(static_cast<uint32_t>(sfxEntries.size()));
-
-        WriteDrums(w, drums);
-        WriteInstruments(w, instruments, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
-        WriteSFXEntries(w, sfxEntries);
-
-        // Register companion file
-        std::string fontName;
-        if (fontNames.count(fi)) {
-            fontName = fontNames[fi];
-        } else {
-            fontName = std::to_string(fi) + "_Font";
-        }
-
-        std::stringstream ss;
-        w.Finish(ss);
-        std::string str = ss.str();
-        Companion::Instance->RegisterCompanionFile(
-            "fonts/" + fontName, std::vector<char>(str.begin(), str.end()));
+        WriteFontCompanion(fi, fe, drums, instruments, sfxEntries, ptr, sampleBankId, ctx, fontNames);
     }
 
     SPDLOG_INFO("OoTAudioFactory: wrote {} font companion files", fontTable.size());

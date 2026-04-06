@@ -39,6 +39,12 @@ struct SFXEntry {
     float tuning;
 };
 
+struct FontWriteContext {
+    SafeAudioBankReader& audioBank;
+    const std::vector<AudioTableEntry>& sampleBankTable;
+    std::map<uint32_t, SampleInfo>& sampleMap;
+};
+
 class AudioFontWriter {
 public:
     void Extract(YAML::Node& node,
@@ -48,35 +54,27 @@ public:
                  std::map<uint32_t, SampleInfo>& sampleMap);
 
 private:
-    std::string GetSampleRef(int bankIndex, uint32_t sampleAddr, uint32_t baseOffset,
-                             SafeAudioBankReader& audioBank,
-                             const std::vector<AudioTableEntry>& sampleBankTable,
-                             std::map<uint32_t, SampleInfo>& sampleMap);
-    std::vector<std::pair<int16_t, int16_t>> ParseEnvelope(uint32_t envOffset, SafeAudioBankReader& audioBank);
+    std::string GetSampleRef(int bankIndex, uint32_t sampleAddr, uint32_t baseOffset, FontWriteContext& ctx);
+    std::vector<std::pair<int16_t, int16_t>> ParseEnvelope(uint32_t envOffset, FontWriteContext& ctx);
     void WriteSFE(LUS::BinaryWriter& w, uint32_t sfeOffset, uint32_t baseOffset,
-                  int bankIndex, SafeAudioBankReader& audioBank,
-                  const std::vector<AudioTableEntry>& sampleBankTable,
-                  std::map<uint32_t, SampleInfo>& sampleMap);
+                  int bankIndex, FontWriteContext& ctx);
+    void WriteFontCompanion(uint32_t fontIndex, const AudioTableEntry& fontEntry,
+                            const std::vector<DrumEntry>& drums,
+                            const std::vector<InstEntry>& instruments,
+                            const std::vector<SFXEntry>& sfxEntries,
+                            uint32_t ptr, int sampleBankId,
+                            FontWriteContext& ctx,
+                            const std::map<int, std::string>& fontNames);
     void WriteDrums(LUS::BinaryWriter& w, const std::vector<DrumEntry>& drums);
     void WriteInstruments(LUS::BinaryWriter& w, const std::vector<InstEntry>& instruments,
-                          uint32_t ptr, int sampleBankId,
-                          SafeAudioBankReader& audioBank,
-                          const std::vector<AudioTableEntry>& sampleBankTable,
-                          std::map<uint32_t, SampleInfo>& sampleMap);
+                          uint32_t ptr, int sampleBankId, FontWriteContext& ctx);
     void WriteSFXEntries(LUS::BinaryWriter& w, const std::vector<SFXEntry>& sfxEntries);
     void WriteEnvData(LUS::BinaryWriter& w, const std::vector<std::pair<int16_t, int16_t>>& envs);
-    std::vector<InstEntry> ParseInstruments(int numInstruments, uint32_t ptr,
-                                          SafeAudioBankReader& audioBank);
+    std::vector<InstEntry> ParseInstruments(int numInstruments, uint32_t ptr, FontWriteContext& ctx);
+    std::vector<SFXEntry> ParseSFX(int numSfx, uint32_t ptr, int sampleBankId, FontWriteContext& ctx);
+    std::vector<DrumEntry> ParseDrums(int numDrums, uint32_t ptr, int sampleBankId, FontWriteContext& ctx);
 
     FontResidue mResidue;
-    std::vector<SFXEntry> ParseSFX(int numSfx, uint32_t ptr, int sampleBankId,
-                                    SafeAudioBankReader& audioBank,
-                                    const std::vector<AudioTableEntry>& sampleBankTable,
-                                    std::map<uint32_t, SampleInfo>& sampleMap);
-    std::vector<DrumEntry> ParseDrums(int numDrums, uint32_t ptr, int sampleBankId,
-                                      SafeAudioBankReader& audioBank,
-                                      const std::vector<AudioTableEntry>& sampleBankTable,
-                                      std::map<uint32_t, SampleInfo>& sampleMap);
 };
 
 } // namespace OoT
