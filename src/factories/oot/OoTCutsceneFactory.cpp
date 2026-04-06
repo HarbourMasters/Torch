@@ -284,10 +284,11 @@ std::vector<char> CutsceneSerializer::Write(std::vector<uint8_t>& buffer, uint32
         WriteEntryCountCmd(cid, csReader, w);
     }
 
+    // Write end marker
     w.Write(static_cast<uint32_t>(0xFFFFFFFF));
     w.Write(static_cast<uint32_t>(0));
 
-    // Fill in the reserved word count
+    // Fill in the reserved word count now that we know the final size
     uint32_t dataEndPos = w.GetStream()->GetLength();
     w.Seek(wordCountPos, LUS::SeekOffsetType::Start);
     w.Write(static_cast<uint32_t>((dataEndPos - dataStartPos) / 4));
