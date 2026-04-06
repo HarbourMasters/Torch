@@ -108,6 +108,90 @@ std::vector<char> OoTAudioFactory::BuildMainAudioHeader() {
     return std::vector<char>(str.begin(), str.end());
 }
 
+void OoTAudioFactory::WriteSequenceCompanion(const uint8_t* seqData, uint32_t seqSize,
+                                              uint32_t originalIndex, uint8_t medium, uint8_t cachePolicy,
+                                              const std::vector<uint8_t>& fonts, const std::string& seqName) {
+    LUS::BinaryWriter w;
+    BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudioSequence, 2);
+
+    w.Write(seqSize);
+    w.Write((char*)seqData, seqSize);
+
+    w.Write(static_cast<uint8_t>(originalIndex));
+    w.Write(medium);
+    w.Write(cachePolicy);
+
+    w.Write(static_cast<uint32_t>(fonts.size()));
+    for (auto f : fonts) {
+        w.Write(f);
+    }
+
+    std::stringstream ss;
+    w.Finish(ss);
+    std::string str = ss.str();
+    Companion::Instance->RegisterCompanionFile(
+        "sequences/" + seqName, std::vector<char>(str.begin(), str.end()));
+}
+
+bool OoTAudioFactory::ExtractSequences(std::vector<uint8_t>& buffer, YAML::Node& node,
+                                       const std::vector<AudioTableEntry>& seqTable,
+                                       const std::vector<std::vector<uint8_t>>& seqFontMap) {
+    // Get Audioseq ROM data (segment 2, uncompressed)
+    auto audioseqSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(2);
+    if (!audioseqSeg.has_value()) {
+        SPDLOG_ERROR("OoTAudioFactory: Audioseq segment not found");
+        return false;
+    }
+    uint32_t audioseqOff = audioseqSeg.value();
+
+    // Get sequence names from YAML
+    std::vector<std::string> seqNames;
+    if (node["sequences"] && node["sequences"].IsSequence()) {
+        auto seqNode = node["sequences"];
+        for (size_t i = 0; i < seqNode.size(); i++) {
+            seqNames.push_back(seqNode[i].as<std::string>());
+        }
+    }
+
+    for (uint32_t i = 0; i < seqTable.size(); i++) {
+        auto medium = seqTable[i].medium;
+        auto cachePolicy = seqTable[i].cachePolicy;
+        auto& fonts = seqFontMap[i];
+
+        // Resolve alias: size==0 means ptr holds the index of the real sequence
+        bool isAlias = (seqTable[i].size == 0);
+        uint32_t dataIdx = isAlias ? seqTable[i].ptr : i;
+        if (dataIdx >= seqTable.size()) {
+            SPDLOG_WARN("OoTAudioFactory: sequence {} alias index {} out of range", i, dataIdx);
+            continue;
+        }
+        auto& dataEntry = seqTable[dataIdx];
+
+        // Sequence name
+        std::string seqName;
+        if (i < seqNames.size()) {
+            seqName = seqNames[i];
+        } else {
+            std::ostringstream ss;
+            ss << std::setfill('0') << std::setw(3) << i << "_Sequence";
+            seqName = ss.str();
+        }
+
+        // Resolve sequence data location in ROM (using dataEntry for aliased sequences)
+        uint32_t seqDataOff = audioseqOff + dataEntry.ptr;
+        if (seqDataOff + dataEntry.size > buffer.size()) {
+            SPDLOG_WARN("OoTAudioFactory: sequence {} out of bounds", seqName);
+            continue;
+        }
+
+        WriteSequenceCompanion(buffer.data() + seqDataOff, dataEntry.size,
+                               i, medium, cachePolicy, fonts, seqName);
+    }
+
+    SPDLOG_INFO("OoTAudioFactory: wrote {} sequence companion files", seqTable.size());
+    return true;
+}
+
 std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto data = std::make_shared<OoTAudioData>();
     data->mMainEntry = BuildMainAudioHeader();
@@ -127,83 +211,9 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     SPDLOG_INFO("OoTAudioFactory: {} sequences, {} fonts, {} sample banks",
                 seqTable.size(), fontTable.size(), sampleBankTable.size());
 
-    // Get Audioseq ROM data (segment 2, uncompressed)
-    auto audioseqSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(2);
-    if (!audioseqSeg.has_value()) {
-        SPDLOG_ERROR("OoTAudioFactory: Audioseq segment not found");
+    if (!ExtractSequences(buffer, node, seqTable, seqFontMap)) {
         return data;
     }
-    uint32_t audioseqOff = audioseqSeg.value();
-
-    // Get sequence names from YAML
-    std::vector<std::string> seqNames;
-    if (node["sequences"] && node["sequences"].IsSequence()) {
-        auto seqNode = node["sequences"];
-        for (size_t i = 0; i < seqNode.size(); i++) {
-            seqNames.push_back(seqNode[i].as<std::string>());
-        }
-    }
-
-    // Step 3: Extract sequences
-    for (uint32_t i = 0; i < seqTable.size(); i++) {
-        auto& entry = seqTable[i];
-        // When size==0, ptr is an index to another sequence (alias/indirection)
-        uint32_t seqIdx = i;
-        if (entry.size == 0) {
-            seqIdx = entry.ptr;
-            if (seqIdx >= seqTable.size()) {
-                SPDLOG_WARN("OoTAudioFactory: sequence {} alias index {} out of range", i, seqIdx);
-                continue;
-            }
-        }
-        auto& srcEntry = seqTable[seqIdx];
-
-        // Sequence name
-        std::string seqName;
-        if (i < seqNames.size()) {
-            seqName = seqNames[i];
-        } else {
-            std::ostringstream ss;
-            ss << std::setfill('0') << std::setw(3) << i << "_Sequence";
-            seqName = ss.str();
-        }
-
-        // Read raw sequence data from Audioseq (using srcEntry for aliased sequences)
-        uint32_t seqDataOff = audioseqOff + srcEntry.ptr;
-        if (seqDataOff + srcEntry.size > buffer.size()) {
-            SPDLOG_WARN("OoTAudioFactory: sequence {} out of bounds", seqName);
-            continue;
-        }
-
-        // Build OSEQ companion file
-        LUS::BinaryWriter w;
-        BaseExporter::WriteHeader(w, Torch::ResourceType::OoTAudioSequence, 2);
-
-        // Sequence data (from srcEntry for aliased sequences)
-        w.Write(static_cast<uint32_t>(srcEntry.size));
-        w.Write((char*)(buffer.data() + seqDataOff), srcEntry.size);
-
-        // Metadata
-        w.Write(static_cast<uint8_t>(i));           // sequence index
-        w.Write(entry.medium);                       // medium
-        w.Write(entry.cachePolicy);                  // cachePolicy
-
-        // Font indices
-        auto& fonts = (i < seqFontMap.size()) ? seqFontMap[i] : seqFontMap[0];
-        w.Write(static_cast<uint32_t>(fonts.size()));
-        for (auto f : fonts) {
-            w.Write(f);
-        }
-
-        std::stringstream ss;
-        w.Finish(ss);
-        std::string str = ss.str();
-        std::string companionName = "sequences/" + seqName;
-        Companion::Instance->RegisterCompanionFile(
-            companionName, std::vector<char>(str.begin(), str.end()));
-    }
-
-    SPDLOG_INFO("OoTAudioFactory: wrote {} sequence companion files", seqTable.size());
 
     // Step 4: Extract samples
     // Load Audiobank and Audiotable as vectors for safe BinaryReader access

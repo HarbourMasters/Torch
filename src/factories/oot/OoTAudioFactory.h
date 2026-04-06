@@ -39,6 +39,12 @@ public:
 
 private:
     std::vector<char> BuildMainAudioHeader();
+    bool ExtractSequences(std::vector<uint8_t>& buffer, YAML::Node& node,
+                          const std::vector<AudioTableEntry>& seqTable,
+                          const std::vector<std::vector<uint8_t>>& seqFontMap);
+    void WriteSequenceCompanion(const uint8_t* seqData, uint32_t seqSize,
+                                uint32_t originalIndex, uint8_t medium, uint8_t cachePolicy,
+                                const std::vector<uint8_t>& fonts, const std::string& seqName);
     std::vector<AudioTableEntry> ParseAudioTable(const uint8_t* codeData, uint32_t tableOffset);
     std::vector<std::vector<uint8_t>> ParseSequenceFontTable(const uint8_t* codeData,
                                                               uint32_t tableOffset, uint32_t numSequences);
