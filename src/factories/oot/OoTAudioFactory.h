@@ -15,6 +15,7 @@ public:
     uint32_t ReadU32(uint32_t offset);
     int16_t ReadS16(uint32_t offset);
     float ReadFloat(uint32_t offset);
+    size_t Size() const { return mData.size(); }
 
 private:
     const std::vector<uint8_t>& mData;
@@ -54,10 +55,9 @@ struct SampleInfo {
 };
 
 struct AudioParseContext {
-    std::vector<uint8_t>& audioBankData;
     SafeAudioBankReader& audioBank;
     const std::vector<AudioTableEntry>& sampleBankTable;
-    std::map<int, std::map<int, std::string>>& sampleNames;
+    std::map<int, std::map<int, std::string>> sampleNames;
     std::map<uint32_t, SampleInfo>& sampleMap;
 };
 
@@ -75,10 +75,11 @@ private:
     bool ExtractSequences(std::vector<uint8_t>& buffer, YAML::Node& node,
                           const std::vector<AudioTableEntry>& seqTable,
                           const std::vector<std::vector<uint8_t>>& seqFontMap);
+    std::map<int, std::map<int, std::string>> ParseSampleNames(YAML::Node& node);
     void ParseSample(int bankIndex, uint32_t sampleAddr, uint32_t baseOffset, AudioParseContext& ctx);
     void ParseSFESample(int bankIndex, uint32_t sfeAddr, uint32_t baseOffset, AudioParseContext& ctx);
     bool ExtractSamples(std::vector<uint8_t>& buffer, YAML::Node& node,
-                        std::vector<uint8_t>& audioBankData, SafeAudioBankReader& audioBank,
+                        SafeAudioBankReader& audioBank,
                         const std::vector<AudioTableEntry>& fontTable,
                         const std::vector<AudioTableEntry>& sampleBankTable,
                         std::map<uint32_t, SampleInfo>& sampleMap);

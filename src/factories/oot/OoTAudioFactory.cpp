@@ -99,8 +99,27 @@ std::vector<char> OoTAudioFactory::BuildMainAudioHeader() {
     return std::vector<char>(str.begin(), str.end());
 }
 
+std::map<int, std::map<int, std::string>> OoTAudioFactory::ParseSampleNames(YAML::Node& node) {
+    std::map<int, std::map<int, std::string>> sampleNames;
+    if (node["samples"] && node["samples"].IsSequence()) {
+        auto samplesNode = node["samples"];
+        for (size_t i = 0; i < samplesNode.size(); i++) {
+            auto bankNode = samplesNode[i];
+            int bank = bankNode["bank"].as<int>();
+            if (bankNode["entries"] && bankNode["entries"].IsSequence()) {
+                auto entries = bankNode["entries"];
+                for (size_t j = 0; j < entries.size(); j++) {
+                    auto e = entries[j];
+                    sampleNames[bank][e["offset"].as<int>()] = e["name"].as<std::string>();
+                }
+            }
+        }
+    }
+    return sampleNames;
+}
+
 void OoTAudioFactory::ParseSample(int bankIndex, uint32_t sampleAddr, uint32_t baseOffset, AudioParseContext& ctx) {
-    if (sampleAddr + 16 > ctx.audioBankData.size()) return;
+    if (sampleAddr + 16 > ctx.audioBank.Size()) return;
 
     uint32_t dataRelPtr = ctx.audioBank.ReadU32(sampleAddr + 4);
     uint32_t sampleDataOffset = dataRelPtr + ctx.sampleBankTable[bankIndex].ptr;
@@ -118,23 +137,23 @@ void OoTAudioFactory::ParseSample(int bankIndex, uint32_t sampleAddr, uint32_t b
     uint32_t loopAddr = ctx.audioBank.ReadU32(sampleAddr + 8) + baseOffset;
     uint32_t bookAddr = ctx.audioBank.ReadU32(sampleAddr + 12) + baseOffset;
 
-    if (loopAddr + 12 <= ctx.audioBankData.size()) {
+    if (loopAddr + 12 <= ctx.audioBank.Size()) {
         s.loopStart = (int32_t)ctx.audioBank.ReadU32(loopAddr);
         s.loopEnd = (int32_t)ctx.audioBank.ReadU32(loopAddr + 4);
         s.loopCount = (int32_t)ctx.audioBank.ReadU32(loopAddr + 8);
 
-        if (s.loopCount != 0 && loopAddr + 48 <= ctx.audioBankData.size()) {
+        if (s.loopCount != 0 && loopAddr + 48 <= ctx.audioBank.Size()) {
             for (int i = 0; i < 16; i++) {
                 s.loopStates.push_back(ctx.audioBank.ReadS16(loopAddr + 16 + i * 2));
             }
         }
     }
 
-    if (bookAddr + 8 <= ctx.audioBankData.size()) {
+    if (bookAddr + 8 <= ctx.audioBank.Size()) {
         s.bookOrder = (int32_t)ctx.audioBank.ReadU32(bookAddr);
         s.bookNpredictors = (int32_t)ctx.audioBank.ReadU32(bookAddr + 4);
         int numBooks = s.bookOrder * s.bookNpredictors * 8;
-        if (bookAddr + 8 + numBooks * 2 <= ctx.audioBankData.size()) {
+        if (bookAddr + 8 + numBooks * 2 <= ctx.audioBank.Size()) {
             for (int i = 0; i < numBooks; i++) {
                 s.books.push_back(ctx.audioBank.ReadS16(bookAddr + 8 + i * 2));
             }
@@ -155,7 +174,7 @@ void OoTAudioFactory::ParseSample(int bankIndex, uint32_t sampleAddr, uint32_t b
 }
 
 void OoTAudioFactory::ParseSFESample(int bankIndex, uint32_t sfeAddr, uint32_t baseOffset, AudioParseContext& ctx) {
-    if (sfeAddr + 4 > ctx.audioBankData.size()) return;
+    if (sfeAddr + 4 > ctx.audioBank.Size()) return;
     uint32_t samplePtr = ctx.audioBank.ReadU32(sfeAddr);
     if (samplePtr != 0) {
         ParseSample(bankIndex, samplePtr + baseOffset, baseOffset, ctx);
@@ -163,7 +182,7 @@ void OoTAudioFactory::ParseSFESample(int bankIndex, uint32_t sfeAddr, uint32_t b
 }
 
 bool OoTAudioFactory::ExtractSamples(std::vector<uint8_t>& buffer, YAML::Node& node,
-                                     std::vector<uint8_t>& audioBankData, SafeAudioBankReader& audioBank,
+                                     SafeAudioBankReader& audioBank,
                                      const std::vector<AudioTableEntry>& fontTable,
                                      const std::vector<AudioTableEntry>& sampleBankTable,
                                      std::map<uint32_t, SampleInfo>& sampleMap) {
@@ -176,28 +195,10 @@ bool OoTAudioFactory::ExtractSamples(std::vector<uint8_t>& buffer, YAML::Node& n
     uint32_t tableOff = audiotableSeg.value();
     uint32_t tableSize = std::min((uint32_t)0x500000, (uint32_t)(buffer.size() - tableOff));
     std::vector<uint8_t> audioTable(buffer.begin() + tableOff, buffer.begin() + tableOff + tableSize);
-    // Build sample name map from YAML
-    std::map<int, std::map<int, std::string>> sampleNames;
-    if (node["samples"] && node["samples"].IsSequence()) {
-        auto samplesNode = node["samples"];
-        for (size_t i = 0; i < samplesNode.size(); i++) {
-            auto bankNode = samplesNode[i];
-            int bank = bankNode["bank"].as<int>();
-            if (bankNode["entries"] && bankNode["entries"].IsSequence()) {
-                auto entries = bankNode["entries"];
-                for (size_t j = 0; j < entries.size(); j++) {
-                    auto e = entries[j];
-                    sampleNames[bank][e["offset"].as<int>()] = e["name"].as<std::string>();
-                }
-            }
-        }
-    }
-
     AudioParseContext ctx {
-        .audioBankData = audioBankData,
         .audioBank = audioBank,
         .sampleBankTable = sampleBankTable,
-        .sampleNames = sampleNames,
+        .sampleNames = ParseSampleNames(node),
         .sampleMap = sampleMap,
     };
 
@@ -210,16 +211,16 @@ bool OoTAudioFactory::ExtractSamples(std::vector<uint8_t>& buffer, YAML::Node& n
         int numDrums = fe.data2 & 0xFF;
         int numSfx = fe.data3;
 
-        if (ptr + 8 > ctx.audioBankData.size()) continue;
+        if (ptr + 8 > ctx.audioBank.Size()) continue;
 
         // Drums
         uint32_t drumListAddr = ctx.audioBank.ReadU32(ptr) + ptr;
         for (int i = 0; i < numDrums; i++) {
-            if (drumListAddr + (i + 1) * 4 > ctx.audioBankData.size()) break;
+            if (drumListAddr + (i + 1) * 4 > ctx.audioBank.Size()) break;
             uint32_t drumPtr = ctx.audioBank.ReadU32(drumListAddr + i * 4);
             if (drumPtr != 0) {
                 drumPtr += ptr;
-                if (drumPtr + 8 > ctx.audioBankData.size()) continue;
+                if (drumPtr + 8 > ctx.audioBank.Size()) continue;
                 uint32_t sampleEntryPtr = ctx.audioBank.ReadU32(drumPtr + 4) + ptr;
                 ParseSample(sampleBankId, sampleEntryPtr, ptr, ctx);
             }
@@ -228,17 +229,17 @@ bool OoTAudioFactory::ExtractSamples(std::vector<uint8_t>& buffer, YAML::Node& n
         // SFX
         uint32_t sfxListAddr = ctx.audioBank.ReadU32(ptr + 4) + ptr;
         for (int i = 0; i < numSfx; i++) {
-            if (sfxListAddr + (i + 1) * 8 > ctx.audioBankData.size()) break;
+            if (sfxListAddr + (i + 1) * 8 > ctx.audioBank.Size()) break;
             ParseSFESample(sampleBankId, sfxListAddr + i * 8, ptr, ctx);
         }
 
         // Instruments
         for (int i = 0; i < numInstruments; i++) {
-            if (ptr + 8 + (i + 1) * 4 > ctx.audioBankData.size()) break;
+            if (ptr + 8 + (i + 1) * 4 > ctx.audioBank.Size()) break;
             uint32_t instPtr = ctx.audioBank.ReadU32(ptr + 8 + i * 4);
             if (instPtr != 0) {
                 instPtr += ptr;
-                if (instPtr + 28 > ctx.audioBankData.size()) continue;
+                if (instPtr + 28 > ctx.audioBank.Size()) continue;
                 ParseSFESample(sampleBankId, instPtr + 8, ptr, ctx);
                 ParseSFESample(sampleBankId, instPtr + 16, ptr, ctx);
                 ParseSFESample(sampleBankId, instPtr + 24, ptr, ctx);
@@ -403,7 +404,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     SafeAudioBankReader audioBank(audioBankData);
 
     std::map<uint32_t, SampleInfo> sampleMap;
-    if (!ExtractSamples(buffer, node, audioBankData, audioBank, fontTable, sampleBankTable, sampleMap)) {
+    if (!ExtractSamples(buffer, node, audioBank, fontTable, sampleBankTable, sampleMap)) {
         return data;
     }
 
