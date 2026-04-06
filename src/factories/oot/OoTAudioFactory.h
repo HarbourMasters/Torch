@@ -3,8 +3,23 @@
 #ifdef OOT_SUPPORT
 
 #include "factories/BaseFactory.h"
+#include <map>
 
 namespace OoT {
+
+// Safe big-endian random-access reader over audio bank data.
+// Bounds-checks each read and returns 0 on out-of-range (avoids raw pointer arithmetic).
+class SafeAudioBankReader {
+public:
+    SafeAudioBankReader(const std::vector<uint8_t>& data);
+    uint32_t ReadU32(uint32_t offset);
+    int16_t ReadS16(uint32_t offset);
+    float ReadFloat(uint32_t offset);
+
+private:
+    const std::vector<uint8_t>& mData;
+    LUS::BinaryReader mReader;
+};
 
 class OoTAudioData : public IParsedData {
 public:
@@ -28,6 +43,16 @@ struct AudioTableEntry {
     int16_t data3;
 };
 
+struct SampleInfo {
+    uint8_t codec, medium, unk_bit26, unk_bit25;
+    uint32_t dataSize, dataOffset;
+    int32_t loopStart, loopEnd, loopCount;
+    std::vector<int16_t> loopStates;
+    int32_t bookOrder, bookNpredictors;
+    std::vector<int16_t> books;
+    std::string name;
+};
+
 class OoTAudioFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -42,6 +67,11 @@ private:
     bool ExtractSequences(std::vector<uint8_t>& buffer, YAML::Node& node,
                           const std::vector<AudioTableEntry>& seqTable,
                           const std::vector<std::vector<uint8_t>>& seqFontMap);
+    bool ExtractSamples(std::vector<uint8_t>& buffer, YAML::Node& node,
+                        std::vector<uint8_t>& audioBankData, SafeAudioBankReader& audioBank,
+                        const std::vector<AudioTableEntry>& fontTable,
+                        const std::vector<AudioTableEntry>& sampleBankTable,
+                        std::map<uint32_t, SampleInfo>& sampleMap);
     void WriteSequenceCompanion(const uint8_t* seqData, uint32_t seqSize,
                                 uint32_t originalIndex, uint8_t medium, uint8_t cachePolicy,
                                 const std::vector<uint8_t>& fonts, const std::string& seqName);
