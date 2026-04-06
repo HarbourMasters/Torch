@@ -11,7 +11,7 @@ namespace OoT {
 // Bounds-checks each read and returns 0 on out-of-range (avoids raw pointer arithmetic).
 class SafeAudioBankReader {
 public:
-    SafeAudioBankReader(const std::vector<uint8_t>& data);
+    SafeAudioBankReader(std::vector<uint8_t> data);
     uint8_t ReadU8(uint32_t offset);
     uint32_t ReadU32(uint32_t offset);
     int16_t ReadS16(uint32_t offset);
@@ -19,7 +19,7 @@ public:
     size_t Size() const { return mData.size(); }
 
 private:
-    const std::vector<uint8_t>& mData;
+    std::vector<uint8_t> mData;
     LUS::BinaryReader mReader;
 };
 
@@ -73,6 +73,7 @@ public:
 
 private:
     std::vector<char> BuildMainAudioHeader();
+    std::optional<SafeAudioBankReader> LoadAudioBank(std::vector<uint8_t>& buffer);
     bool ExtractSequences(std::vector<uint8_t>& buffer, YAML::Node& node,
                           const std::vector<AudioTableEntry>& seqTable,
                           const std::vector<std::vector<uint8_t>>& seqFontMap);

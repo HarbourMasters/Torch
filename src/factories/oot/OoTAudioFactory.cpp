@@ -9,8 +9,8 @@
 
 namespace OoT {
 
-SafeAudioBankReader::SafeAudioBankReader(const std::vector<uint8_t>& data)
-    : mData(data), mReader((char*)data.data(), data.size()) {
+SafeAudioBankReader::SafeAudioBankReader(std::vector<uint8_t> data)
+    : mData(std::move(data)), mReader((char*)mData.data(), mData.size()) {
     mReader.SetEndianness(Torch::Endianness::Big);
 }
 
@@ -103,6 +103,17 @@ std::vector<char> OoTAudioFactory::BuildMainAudioHeader() {
     w.Finish(ss);
     std::string str = ss.str();
     return std::vector<char>(str.begin(), str.end());
+}
+
+std::optional<SafeAudioBankReader> OoTAudioFactory::LoadAudioBank(std::vector<uint8_t>& buffer) {
+    auto audiobankSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(1);
+    if (!audiobankSeg.has_value()) {
+        SPDLOG_ERROR("OoTAudioFactory: Audiobank segment not found");
+        return std::nullopt;
+    }
+    uint32_t bankOff = audiobankSeg.value();
+    uint32_t bankSize = std::min((uint32_t)0x40000, (uint32_t)(buffer.size() - bankOff));
+    return SafeAudioBankReader(std::vector<uint8_t>(buffer.begin() + bankOff, buffer.begin() + bankOff + bankSize));
 }
 
 std::map<int, std::map<int, std::string>> OoTAudioFactory::ParseSampleNames(YAML::Node& node) {
@@ -373,51 +384,6 @@ bool OoTAudioFactory::ExtractSequences(std::vector<uint8_t>& buffer, YAML::Node&
 
     SPDLOG_INFO("OoTAudioFactory: wrote {} sequence companion files", seqTable.size());
     return true;
-}
-
-std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
-    auto data = std::make_shared<OoTAudioData>();
-    data->mMainEntry = BuildMainAudioHeader();
-
-    // Decompress the code segment (segment 128)
-    auto codeDecoded = Decompressor::AutoDecode(
-        node["offset"].as<uint32_t>(),
-        0x200000, // max code segment size
-        buffer);
-
-    // Parse audio tables from code segment at YAML-specified offsets
-    auto seqTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sequence_table_offset"));
-    auto fontTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sound_font_table_offset"));
-    auto sampleBankTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sample_bank_table_offset"));
-    auto seqFontMap = ParseSequenceFontTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sequence_font_table_offset"), seqTable.size());
-
-    SPDLOG_INFO("OoTAudioFactory: {} sequences, {} fonts, {} sample banks",
-                seqTable.size(), fontTable.size(), sampleBankTable.size());
-
-    if (!ExtractSequences(buffer, node, seqTable, seqFontMap)) {
-        return data;
-    }
-
-    // Load Audiobank segment (shared by samples and fonts)
-    auto audiobankSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(1);
-    if (!audiobankSeg.has_value()) {
-        SPDLOG_ERROR("OoTAudioFactory: Audiobank segment not found");
-        return data;
-    }
-    uint32_t bankOff = audiobankSeg.value();
-    uint32_t bankSize = std::min((uint32_t)0x40000, (uint32_t)(buffer.size() - bankOff));
-    std::vector<uint8_t> audioBankData(buffer.begin() + bankOff, buffer.begin() + bankOff + bankSize);
-    SafeAudioBankReader audioBank(audioBankData);
-
-    std::map<uint32_t, SampleInfo> sampleMap;
-    if (!ExtractSamples(buffer, node, audioBank, fontTable, sampleBankTable, sampleMap)) {
-        return data;
-    }
-
-
-    ExtractFonts(node, audioBank, fontTable, sampleBankTable, sampleMap);
-
-    return data;
 }
 
 void OoTAudioFactory::ExtractFonts(YAML::Node& node,
@@ -733,6 +699,44 @@ void OoTAudioFactory::ExtractFonts(YAML::Node& node,
     }
 
     SPDLOG_INFO("OoTAudioFactory: wrote {} font companion files", fontTable.size());
+}
+
+std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto data = std::make_shared<OoTAudioData>();
+    data->mMainEntry = BuildMainAudioHeader();
+
+    // Decompress the code segment (segment 128)
+    auto codeDecoded = Decompressor::AutoDecode(
+        node["offset"].as<uint32_t>(),
+        0x200000, // max code segment size
+        buffer);
+
+    // Parse audio tables from code segment at YAML-specified offsets
+    auto seqTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sequence_table_offset"));
+    auto fontTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sound_font_table_offset"));
+    auto sampleBankTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sample_bank_table_offset"));
+    auto seqFontMap = ParseSequenceFontTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sequence_font_table_offset"), seqTable.size());
+
+    SPDLOG_INFO("OoTAudioFactory: {} sequences, {} fonts, {} sample banks",
+                seqTable.size(), fontTable.size(), sampleBankTable.size());
+
+    if (!ExtractSequences(buffer, node, seqTable, seqFontMap)) {
+        return data;
+    }
+
+    auto audioBank = LoadAudioBank(buffer);
+    if (!audioBank.has_value()) {
+        return data;
+    }
+
+    std::map<uint32_t, SampleInfo> sampleMap;
+    if (!ExtractSamples(buffer, node, audioBank.value(), fontTable, sampleBankTable, sampleMap)) {
+        return data;
+    }
+
+    ExtractFonts(node, audioBank.value(), fontTable, sampleBankTable, sampleMap);
+
+    return data;
 }
 
 ExportResult OoTAudioBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
