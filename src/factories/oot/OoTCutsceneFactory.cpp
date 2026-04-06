@@ -10,18 +10,41 @@
 namespace OoT {
 
 // Camera commands use variable-length entries terminated by a 0xFF marker byte.
-static bool IsCameraCmd(uint32_t id) {
+bool CutsceneSerializer::IsCameraCmd(uint32_t id) {
     return id == 1 || id == 2 || id == 5 || id == 6;
 }
 
 // These commands use 0x0C-byte entries instead of the standard 0x30.
-static bool IsSmallEntryCmd(uint32_t id) {
+bool CutsceneSerializer::IsSmallEntryCmd(uint32_t id) {
     return id == 0x09 || id == 0x13 || id == 0x8C;
 }
 
 // Single-entry commands (transition: 0x2D, destination: 0x3E8).
-static bool IsSingleEntryCmd(uint32_t id) {
+bool CutsceneSerializer::IsSingleEntryCmd(uint32_t id) {
     return id == 0x2D || id == 0x3E8;
+}
+
+// Commands that are in the valid range (0x0E–0x90) but not implemented.
+const std::set<uint32_t> CutsceneSerializer::sUnimplementedCmds = {
+    0x0B, 0x0C, 0x0D, 0x14, 0x15, 0x16, 0x1A, 0x1B, 0x1C, 0x20, 0x21, 0x38, 0x3B, 0x3D,
+    0x47, 0x49, 0x5B, 0x5C, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68,
+    0x6D, 0x70, 0x71, 0x7A
+};
+
+bool CutsceneSerializer::IsHandledCmd(uint32_t cid) {
+    // Basic commands (camera, misc, rumble)
+    if (cid >= 0x01 && cid <= 0x0A) return true;
+
+    // Transition and destination
+    if (IsSingleEntryCmd(cid)) return true;
+
+    // Text, time, and non-actor-cue commands
+    if (cid == 0x13 || cid == 0x56 || cid == 0x57 || cid == 0x7C || cid == 0x8C) return true;
+
+    // Actor cue commands (0x0E–0x90 range, excluding known unimplemented ones)
+    if (cid >= 0x0E && cid <= 0x90 && !sUnimplementedCmds.count(cid)) return true;
+
+    return false;
 }
 
 // Cutscene serialization — shared with OoTSceneFactory's SetCutscenes handler.
@@ -88,6 +111,115 @@ uint32_t CutsceneSerializer::CalculateSize(std::vector<uint8_t>& buffer, uint32_
     return reader.GetBaseAddress();
 }
 
+void CutsceneSerializer::WriteCameraCmd(LUS::BinaryReader& reader, LUS::BinaryWriter& w) {
+    uint16_t startFrame = reader.ReadUInt16();
+    uint16_t endFrame = reader.ReadUInt16();
+    w.Write(CS_CMD_HH(startFrame, endFrame));
+
+    uint16_t unk1 = reader.ReadUInt16();
+    uint16_t unk2 = reader.ReadUInt16();
+    w.Write(CS_CMD_HH(unk1, unk2));
+
+    while (true) {
+        int8_t marker = reader.ReadInt8();
+        int8_t interpType = reader.ReadInt8();
+        int16_t numPointsForFrame = reader.ReadInt16();
+        float viewAngle = reader.ReadFloat();
+        int16_t posX = reader.ReadInt16();
+        int16_t posY = reader.ReadInt16();
+        int16_t posZ = reader.ReadInt16();
+        int16_t unused = reader.ReadInt16();
+
+        w.Write(CS_CMD_BBH(marker, interpType, numPointsForFrame));
+        w.Write(viewAngle);
+        w.Write(CS_CMD_HH(posX, posY));
+        w.Write(CS_CMD_HH(posZ, unused));
+
+        if ((uint8_t)marker == 0xFF) break;
+    }
+}
+
+void CutsceneSerializer::WriteSingleEntryCmd(LUS::BinaryReader& reader, LUS::BinaryWriter& w) {
+    reader.ReadUInt32(); // skip original count
+    w.Write(static_cast<uint32_t>(1));
+
+    uint16_t startFrame = reader.ReadUInt16();
+    uint16_t endFrame = reader.ReadUInt16();
+    uint16_t type = reader.ReadUInt16();
+    reader.ReadUInt16(); // padding
+
+    w.Write(CS_CMD_HH(startFrame, endFrame));
+    w.Write(CS_CMD_HH(type, type));
+}
+
+// Helper: check if a command uses actor cue format (0x30-byte entries with rotation fields)
+static bool IsActorCueCmd(uint32_t cid) {
+    return cid != 0x03 && cid != 0x04 && cid != 0x56 && cid != 0x57 && cid != 0x7C;
+}
+
+void CutsceneSerializer::WriteEntryCountCmd(uint32_t cid, LUS::BinaryReader& reader, LUS::BinaryWriter& w) {
+    uint32_t entryCount = reader.ReadUInt32();
+    w.Write(entryCount);
+
+    for (uint32_t i = 0; i < entryCount; i++) {
+        // All entry types share a common header
+        uint16_t base = reader.ReadUInt16();
+        uint16_t startFrame = reader.ReadUInt16();
+        uint16_t endFrame = reader.ReadUInt16();
+
+        w.Write(CS_CMD_HH(base, startFrame));
+
+        if (cid == 0x09) {
+            // Rumble (0x0C bytes)
+            uint8_t sourceStrength = reader.ReadUByte();
+            uint8_t duration = reader.ReadUByte();
+            uint8_t decreaseRate = reader.ReadUByte();
+            uint8_t unk = reader.ReadUByte();
+            uint16_t unkA = reader.ReadUInt16();
+
+            w.Write(CS_CMD_HBB(endFrame, sourceStrength, duration));
+            w.Write(CS_CMD_BBH(decreaseRate, unk, unkA));
+            continue;
+        }
+
+        if (cid == 0x13) {
+            // Text (0x0C bytes)
+            uint16_t type = reader.ReadUInt16();
+            uint16_t textId1 = reader.ReadUInt16();
+            uint16_t textId2 = reader.ReadUInt16();
+
+            w.Write(CS_CMD_HH(endFrame, type));
+            w.Write(CS_CMD_HH(textId1, textId2));
+            continue;
+        }
+
+        if (cid == 0x8C) {
+            // Time (0x0C bytes)
+            uint8_t hour = reader.ReadUByte();
+            uint8_t minute = reader.ReadUByte();
+            reader.ReadUInt32(); // padding
+
+            w.Write(CS_CMD_HBB(endFrame, hour, minute));
+            w.Write(static_cast<uint32_t>(0));
+            continue;
+        }
+
+        // Actor cue (0x30 bytes)
+        if (IsActorCueCmd(cid)) {
+            w.Write(CS_CMD_HH(endFrame, reader.ReadUInt16()));
+            uint16_t rotY = reader.ReadUInt16();
+            uint16_t rotZ = reader.ReadUInt16();
+            w.Write(CS_CMD_HH(rotY, rotZ));
+            for (int j = 0; j < 9; j++) w.Write(reader.ReadUInt32());
+            continue;
+        }
+
+        // Non-actor-cue (0x30 bytes, commands 0x03, 0x04, 0x56, 0x57, 0x7C)
+        w.Write(CS_CMD_HH(endFrame, reader.ReadUInt16()));
+        for (int j = 0; j < 10; j++) w.Write(reader.ReadUInt32());
+    }
+}
+
 std::vector<char> CutsceneSerializer::Serialize(std::vector<uint8_t>& buffer, uint32_t segAddr) {
     auto size = CalculateSize(buffer, segAddr);
 
@@ -102,108 +234,64 @@ std::vector<char> CutsceneSerializer::Write(std::vector<uint8_t>& buffer, uint32
 
     // Use the actual bytes available (ReadSubArray may return less than requested)
     size = csReader.GetLength();
+
     LUS::BinaryWriter w;
     BaseExporter::WriteHeader(w, Torch::ResourceType::OoTCutscene, 0);
-    uint32_t sizePos = w.GetStream()->GetLength();
+
+    // Write a placeholder for the cutscene word count.
+    // We don't know the final count until all commands are serialized,
+    // so we'll seek back and fill this in at the end.
+    uint32_t wordCountPos = w.GetStream()->GetLength();
     w.Write(static_cast<uint32_t>(0));
-    uint32_t startPos = w.GetStream()->GetLength();
 
-    uint32_t csNumCmds = csReader.ReadUInt32();
-    uint32_t csEndFrame = csReader.ReadUInt32();
-    w.Write(csNumCmds); w.Write(csEndFrame);
+    // Used to calculate word count at the end
+    uint32_t dataStartPos = w.GetStream()->GetLength();
 
-    static const std::set<uint32_t> unimplemented = {
-        0x0B,0x0C,0x0D,0x14,0x15,0x16,0x1A,0x1B,0x1C,0x20,0x21,0x38,0x3B,0x3D,
-        0x47,0x49,0x5B,0x5C,0x5F,0x60,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,
-        0x6D,0x70,0x71,0x7A
-    };
+    uint32_t numCmds = csReader.ReadUInt32();
+    uint32_t endFrame = csReader.ReadUInt32();
+    w.Write(numCmds);
+    w.Write(endFrame);
 
-    for (uint32_t ci = 0; ci < csNumCmds && csReader.GetBaseAddress() + 8 <= size; ci++) {
+    for (uint32_t ci = 0; ci < numCmds && csReader.GetBaseAddress() + 8 <= size; ci++) {
         uint32_t cid = csReader.ReadUInt32();
+
+        // End marker
         if (cid == 0xFFFFFFFF) break;
 
-        bool isHandled = (cid >= 0x01 && cid <= 0x0A) || cid == 0x03 || cid == 0x04 ||
-                         cid == 0x13 || cid == 0x2D || cid == 0x56 || cid == 0x57 ||
-                         cid == 0x7C || cid == 0x8C || cid == 0x3E8;
-        if (!isHandled && cid >= 0x0E && cid <= 0x90)
-            isHandled = !unimplemented.count(cid);
-
-        if (!isHandled) {
-            if (cid == 0x07 || cid == 0x08) {
-                csReader.ReadUInt32(); csReader.ReadUInt32();
-                while (csReader.GetBaseAddress() + 0x10 <= size) {
-                    uint8_t cf = csReader.ReadUByte();
-                    csReader.Seek(csReader.GetBaseAddress() + 0x0F, LUS::SeekOffsetType::Start);
-                    if (cf == 0xFF) break;
-                }
-            } else {
-                uint32_t sc = csReader.ReadUInt32();
-                uint32_t ss = sc * 0x30;
-                if (csReader.GetBaseAddress() + ss <= size)
-                    csReader.Seek(csReader.GetBaseAddress() + ss, LUS::SeekOffsetType::Start);
-            }
+        // Skip unhandled commands (entryCount * 0x30 bytes)
+        if (!IsHandledCmd(cid)) {
+            uint32_t entryCount = csReader.ReadUInt32();
+            uint32_t dataSize = entryCount * 0x30;
+            if (csReader.GetBaseAddress() + dataSize <= size)
+                csReader.Seek(csReader.GetBaseAddress() + dataSize, LUS::SeekOffsetType::Start);
             continue;
         }
 
+        // Write command ID, then serialize its data
         w.Write(cid);
+
         if (IsCameraCmd(cid)) {
-            uint16_t a=csReader.ReadUInt16(),b=csReader.ReadUInt16();
-            w.Write(CS_CMD_HH(a,b));
-            uint16_t c=csReader.ReadUInt16(),d=csReader.ReadUInt16();
-            w.Write(CS_CMD_HH(c,d));
-            while (true) {
-                int8_t cf=csReader.ReadInt8(),cr=csReader.ReadInt8();
-                int16_t npf=csReader.ReadInt16(); float va=csReader.ReadFloat();
-                int16_t px=csReader.ReadInt16(),py=csReader.ReadInt16();
-                int16_t pz=csReader.ReadInt16(),pu=csReader.ReadInt16();
-                w.Write(CS_CMD_BBH(cf,cr,npf)); w.Write(va);
-                w.Write(CS_CMD_HH(px,py)); w.Write(CS_CMD_HH(pz,pu));
-                if ((uint8_t)cf == 0xFF) break;
-            }
-        } else if (IsSingleEntryCmd(cid)) {
-            csReader.ReadUInt32(); w.Write(static_cast<uint32_t>(1));
-            uint16_t a=csReader.ReadUInt16(),b=csReader.ReadUInt16();
-            uint16_t c=csReader.ReadUInt16(); csReader.ReadUInt16();
-            w.Write(CS_CMD_HH(a,b)); w.Write(CS_CMD_HH(c,c));
-        } else {
-            uint32_t ec = csReader.ReadUInt32(); w.Write(ec);
-            for (uint32_t ei = 0; ei < ec; ei++) {
-                if (cid == 0x09) {
-                    uint16_t base=csReader.ReadUInt16(),sf=csReader.ReadUInt16(),ef=csReader.ReadUInt16();
-                    uint8_t ss2=csReader.ReadUByte(),dur=csReader.ReadUByte();
-                    uint8_t dr=csReader.ReadUByte(),u9=csReader.ReadUByte(); uint16_t ua=csReader.ReadUInt16();
-                    w.Write(CS_CMD_HH(base,sf)); w.Write(CS_CMD_HBB(ef,ss2,dur)); w.Write(CS_CMD_BBH(dr,u9,ua));
-                } else if (cid == 0x13) {
-                    uint16_t base=csReader.ReadUInt16(),sf=csReader.ReadUInt16();
-                    uint16_t ef=csReader.ReadUInt16(),ty=csReader.ReadUInt16();
-                    uint16_t t1=csReader.ReadUInt16(),t2=csReader.ReadUInt16();
-                    w.Write(CS_CMD_HH(base,sf)); w.Write(CS_CMD_HH(ef,ty)); w.Write(CS_CMD_HH(t1,t2));
-                } else if (cid == 0x8C) {
-                    uint16_t base=csReader.ReadUInt16(),sf=csReader.ReadUInt16(),ef=csReader.ReadUInt16();
-                    uint8_t hr=csReader.ReadUByte(),mn=csReader.ReadUByte(); csReader.ReadUInt32();
-                    w.Write(CS_CMD_HH(base,sf)); w.Write(CS_CMD_HBB(ef,hr,mn)); w.Write(static_cast<uint32_t>(0));
-                } else {
-                    uint16_t base=csReader.ReadUInt16(),sf=csReader.ReadUInt16();
-                    uint16_t ef=csReader.ReadUInt16(),f3=csReader.ReadUInt16();
-                    w.Write(CS_CMD_HH(base,sf)); w.Write(CS_CMD_HH(ef,f3));
-                    bool isAC = (cid!=0x03&&cid!=0x04&&cid!=0x56&&cid!=0x57&&cid!=0x7C);
-                    if (isAC) {
-                        uint16_t ry=csReader.ReadUInt16(),rz=csReader.ReadUInt16();
-                        w.Write(CS_CMD_HH(ry,rz));
-                        for (int j=0;j<9;j++) w.Write(csReader.ReadUInt32());
-                    } else {
-                        for (int j=0;j<10;j++) w.Write(csReader.ReadUInt32());
-                    }
-                }
-            }
+            WriteCameraCmd(csReader, w);
+            continue;
         }
+
+        if (IsSingleEntryCmd(cid)) {
+            WriteSingleEntryCmd(csReader, w);
+            continue;
+        }
+
+        // Default: entry-count-based commands
+        WriteEntryCountCmd(cid, csReader, w);
     }
 
-    w.Write(static_cast<uint32_t>(0xFFFFFFFF)); w.Write(static_cast<uint32_t>(0));
-    uint32_t endPos = w.GetStream()->GetLength();
-    w.Seek(sizePos, LUS::SeekOffsetType::Start);
-    w.Write(static_cast<uint32_t>((endPos - startPos) / 4));
-    w.Seek(endPos, LUS::SeekOffsetType::Start);
+    w.Write(static_cast<uint32_t>(0xFFFFFFFF));
+    w.Write(static_cast<uint32_t>(0));
+
+    // Fill in the reserved word count
+    uint32_t dataEndPos = w.GetStream()->GetLength();
+    w.Seek(wordCountPos, LUS::SeekOffsetType::Start);
+    w.Write(static_cast<uint32_t>((dataEndPos - dataStartPos) / 4));
+    w.Seek(dataEndPos, LUS::SeekOffsetType::Start);
 
     std::stringstream ss;
     w.Finish(ss);

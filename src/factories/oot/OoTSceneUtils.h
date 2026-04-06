@@ -7,6 +7,7 @@
 #include "utils/Decompressor.h"
 #include <sstream>
 #include <iomanip>
+#include <set>
 
 namespace OoT {
 
@@ -39,6 +40,14 @@ public:
 private:
     static uint32_t CalculateSize(std::vector<uint8_t>& buffer, uint32_t segAddr);
     static std::vector<char> Write(std::vector<uint8_t>& buffer, uint32_t segAddr, uint32_t size);
+    static void WriteCameraCmd(LUS::BinaryReader& reader, LUS::BinaryWriter& w);
+    static void WriteSingleEntryCmd(LUS::BinaryReader& reader, LUS::BinaryWriter& w);
+    static void WriteEntryCountCmd(uint32_t cid, LUS::BinaryReader& reader, LUS::BinaryWriter& w);
+    static bool IsCameraCmd(uint32_t id);
+    static bool IsSingleEntryCmd(uint32_t id);
+    static bool IsSmallEntryCmd(uint32_t id);
+    static bool IsHandledCmd(uint32_t id);
+    static const std::set<uint32_t> sUnimplementedCmds;
 };
 
 } // namespace OoT
