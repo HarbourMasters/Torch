@@ -53,6 +53,14 @@ struct SampleInfo {
     std::string name;
 };
 
+struct AudioParseContext {
+    std::vector<uint8_t>& audioBankData;
+    SafeAudioBankReader& audioBank;
+    const std::vector<AudioTableEntry>& sampleBankTable;
+    std::map<int, std::map<int, std::string>>& sampleNames;
+    std::map<uint32_t, SampleInfo>& sampleMap;
+};
+
 class OoTAudioFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
@@ -67,6 +75,8 @@ private:
     bool ExtractSequences(std::vector<uint8_t>& buffer, YAML::Node& node,
                           const std::vector<AudioTableEntry>& seqTable,
                           const std::vector<std::vector<uint8_t>>& seqFontMap);
+    void ParseSample(int bankIndex, uint32_t sampleAddr, uint32_t baseOffset, AudioParseContext& ctx);
+    void ParseSFESample(int bankIndex, uint32_t sfeAddr, uint32_t baseOffset, AudioParseContext& ctx);
     bool ExtractSamples(std::vector<uint8_t>& buffer, YAML::Node& node,
                         std::vector<uint8_t>& audioBankData, SafeAudioBankReader& audioBank,
                         const std::vector<AudioTableEntry>& fontTable,
