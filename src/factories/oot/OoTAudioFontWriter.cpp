@@ -75,6 +75,129 @@ void AudioFontWriter::WriteSFE(LUS::BinaryWriter& w, uint32_t sfeOffset, uint32_
     w.Write(audioBank.ReadFloat(sfeOffset + 4));
 }
 
+std::vector<InstEntry> AudioFontWriter::ParseInstruments(int numInstruments, uint32_t ptr,
+                                                        const std::vector<DrumEntry>& drums,
+                                                        SafeAudioBankReader& audioBank,
+                                                        FontResidueState& residue) {
+    std::vector<InstEntry> instruments;
+    uint8_t lastLoaded = residue.loaded, lastNormalRangeLo = residue.rangeLo;
+    uint8_t lastNormalRangeHi = residue.rangeHi, lastReleaseRate = residue.release;
+
+    // Seed from last drum (DrumEntry→InstrumentEntry stack mapping).
+    // See docs/oot-audio-font-residue-analysis.md
+    if (!drums.empty()) {
+        auto& lastDrum = drums.back();
+        lastLoaded = lastDrum.pan;            // drum.pan (offset 1) → inst.loaded (offset 1)
+        lastNormalRangeLo = lastDrum.loaded;  // drum.loaded (offset 2) → inst.normalRangeLo (offset 2)
+        lastNormalRangeHi = 0;                // padding (offset 3)
+        lastReleaseRate = 0;                  // drum.offset=0 (offset 4)
+    }
+
+    for (int i = 0; i < numInstruments; i++) {
+        if (ptr + 8 + (i + 1) * 4 > audioBank.Size()) break;
+        uint32_t instPtr = audioBank.ReadU32(ptr + 8 + i * 4);
+        InstEntry inst = {};
+        inst.isValid = (instPtr != 0);
+        inst.loaded = lastLoaded;
+        inst.normalRangeLo = lastNormalRangeLo;
+        inst.normalRangeHi = lastNormalRangeHi;
+        inst.releaseRate = lastReleaseRate;
+        if (instPtr != 0) {
+            instPtr += ptr;
+            if (instPtr + 28 <= audioBank.Size()) {
+                inst.loaded = audioBank.ReadU8(instPtr);
+                inst.normalRangeLo = audioBank.ReadU8(instPtr + 1);
+                inst.normalRangeHi = audioBank.ReadU8(instPtr + 2);
+                inst.releaseRate = audioBank.ReadU8(instPtr + 3);
+                inst.env = ParseEnvelope(audioBank.ReadU32(instPtr + 4) + ptr, audioBank);
+                inst.lowAddr = instPtr + 8;
+                inst.normalAddr = instPtr + 16;
+                inst.highAddr = instPtr + 24;
+                lastLoaded = inst.loaded;
+                lastNormalRangeLo = inst.normalRangeLo;
+                lastNormalRangeHi = inst.normalRangeHi;
+                lastReleaseRate = inst.releaseRate;
+            }
+        }
+        instruments.push_back(inst);
+    }
+
+    // Update cross-font residue for next font
+    residue.loaded = lastLoaded;
+    residue.rangeLo = lastNormalRangeLo;
+    residue.rangeHi = lastNormalRangeHi;
+    residue.release = lastReleaseRate;
+
+    return instruments;
+}
+
+std::vector<SFXEntry> AudioFontWriter::ParseSFX(int numSfx, uint32_t ptr, int sampleBankId,
+                                                SafeAudioBankReader& audioBank,
+                                                const std::vector<AudioTableEntry>& sampleBankTable,
+                                                std::map<uint32_t, SampleInfo>& sampleMap) {
+    std::vector<SFXEntry> sfxEntries;
+    if (ptr + 8 > audioBank.Size()) return sfxEntries;
+
+    uint32_t sfxListAddr = audioBank.ReadU32(ptr + 4) + ptr;
+    for (int i = 0; i < numSfx; i++) {
+        uint32_t sfeAddr = sfxListAddr + i * 8;
+        if (sfeAddr + 8 > audioBank.Size()) break;
+        uint32_t sp = audioBank.ReadU32(sfeAddr);
+        if (sp != 0) {
+            sp += ptr;
+            std::string ref;
+            if (sp + 4 <= audioBank.Size()) {
+                uint32_t relPtr = audioBank.ReadU32(sp + 4);
+                uint32_t absOff = relPtr + sampleBankTable[sampleBankId].ptr;
+                if (sampleMap.count(absOff))
+                    ref = "audio/samples/" + sampleMap[absOff].name + "_META";
+            }
+            sfxEntries.push_back({true, ref, audioBank.ReadFloat(sfeAddr + 4)});
+        } else {
+            sfxEntries.push_back({false, "", audioBank.ReadFloat(sfeAddr + 4)});
+        }
+    }
+    return sfxEntries;
+}
+
+std::vector<DrumEntry> AudioFontWriter::ParseDrums(int numDrums, uint32_t ptr, int sampleBankId,
+                                                   SafeAudioBankReader& audioBank,
+                                                   const std::vector<AudioTableEntry>& sampleBankTable,
+                                                   std::map<uint32_t, SampleInfo>& sampleMap) {
+    std::vector<DrumEntry> drums;
+    if (ptr + 4 > audioBank.Size()) return drums;
+
+    uint32_t drumListAddr = audioBank.ReadU32(ptr) + ptr;
+    for (int i = 0; i < numDrums; i++) {
+        if (drumListAddr + (i + 1) * 4 > audioBank.Size()) break;
+        uint32_t drumPtr = audioBank.ReadU32(drumListAddr + i * 4);
+        if (drumPtr != 0) {
+            drumPtr += ptr;
+            if (drumPtr + 16 <= audioBank.Size()) {
+                DrumEntry d;
+                d.releaseRate = audioBank.ReadU8(drumPtr);
+                d.pan = audioBank.ReadU8(drumPtr + 1);
+                d.loaded = audioBank.ReadU8(drumPtr + 2);
+                d.tuning = audioBank.ReadFloat(drumPtr + 8);
+                d.env = ParseEnvelope(audioBank.ReadU32(drumPtr + 12) + ptr, audioBank);
+
+                uint32_t sampleEntryPtr = audioBank.ReadU32(drumPtr + 4) + ptr;
+                if (sampleEntryPtr + 4 <= audioBank.Size()) {
+                    uint32_t dataRelPtr = audioBank.ReadU32(sampleEntryPtr + 4);
+                    uint32_t absOffset = dataRelPtr + sampleBankTable[sampleBankId].ptr;
+                    if (sampleMap.count(absOffset)) {
+                        d.sampleRef = "audio/samples/" + sampleMap[absOffset].name + "_META";
+                    }
+                }
+                drums.push_back(d);
+                continue;
+            }
+        }
+        drums.push_back({0, 0, 0, 0.0f, {}, ""});
+    }
+    return drums;
+}
+
 void AudioFontWriter::Extract(YAML::Node& node,
                               SafeAudioBankReader& audioBank,
                               const std::vector<AudioTableEntry>& fontTable,
@@ -90,10 +213,7 @@ void AudioFontWriter::Extract(YAML::Node& node,
         }
     }
 
-    // Cross-font stack residue: ZAPDTR's ParseSoundFont is called per font,
-    // reusing the same stack frame. Invalid instruments before any valid one
-    // inherit residue from the previous font's last valid instrument.
-    uint8_t crossFontLoaded = 0, crossFontRangeLo = 0, crossFontRangeHi = 0, crossFontRelease = 0;
+    FontResidueState crossFontResidue;
 
     for (uint32_t fi = 0; fi < fontTable.size(); fi++) {
         auto& fe = fontTable[fi];
@@ -114,121 +234,11 @@ void AudioFontWriter::Extract(YAML::Node& node,
         w.Write(fe.data2);
         w.Write(fe.data3);
 
-        // Parse drums
-        std::vector<std::tuple<uint8_t, uint8_t, uint8_t, float,
-                               std::vector<std::pair<int16_t, int16_t>>,
-                               std::string>> drums;
-        if (ptr + 4 <= audioBank.Size()) {
-            uint32_t drumListAddr = audioBank.ReadU32(ptr) + ptr;
-            for (int i = 0; i < numDrums; i++) {
-                if (drumListAddr + (i + 1) * 4 > audioBank.Size()) break;
-                uint32_t drumPtr = audioBank.ReadU32(drumListAddr + i * 4);
-                if (drumPtr != 0) {
-                    drumPtr += ptr;
-                    if (drumPtr + 16 <= audioBank.Size()) {
-                        uint8_t releaseRate = audioBank.ReadU8(drumPtr);
-                        uint8_t pan = audioBank.ReadU8(drumPtr + 1);
-                        uint8_t loaded = audioBank.ReadU8(drumPtr + 2);
-                        float tuning = audioBank.ReadFloat(drumPtr + 8);
-                        auto env = ParseEnvelope(audioBank.ReadU32(drumPtr + 12) + ptr, audioBank);
+        auto drums = ParseDrums(numDrums, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
 
-                        uint32_t sampleEntryPtr = audioBank.ReadU32(drumPtr + 4) + ptr;
-                        std::string sampleRef;
-                        if (sampleEntryPtr + 4 <= audioBank.Size()) {
-                            uint32_t dataRelPtr = audioBank.ReadU32(sampleEntryPtr + 4);
-                            uint32_t absOffset = dataRelPtr + sampleBankTable[sampleBankId].ptr;
-                            if (sampleMap.count(absOffset)) {
-                                sampleRef = "audio/samples/" + sampleMap[absOffset].name + "_META";
-                            }
-                        }
-                        drums.push_back({releaseRate, pan, loaded, tuning, env, sampleRef});
-                        continue;
-                    }
-                }
-                drums.push_back({0, 0, 0, 0.0f, {}, ""});
-            }
-        }
+        auto sfxEntries = ParseSFX(numSfx, ptr, sampleBankId, audioBank, sampleBankTable, sampleMap);
 
-        // Parse SFX
-        struct SFXEntry {
-            bool exists;
-            std::string sampleRef;
-            float tuning;
-        };
-        std::vector<SFXEntry> sfxEntries;
-        if (ptr + 8 <= audioBank.Size()) {
-            uint32_t sfxListAddr = audioBank.ReadU32(ptr + 4) + ptr;
-            for (int i = 0; i < numSfx; i++) {
-                uint32_t sfeAddr = sfxListAddr + i * 8;
-                if (sfeAddr + 8 > audioBank.Size()) break;
-                uint32_t sp = audioBank.ReadU32(sfeAddr);
-                if (sp != 0) {
-                    sp += ptr;
-                    std::string ref;
-                    if (sp + 4 <= audioBank.Size()) {
-                        uint32_t relPtr = audioBank.ReadU32(sp + 4);
-                        uint32_t absOff = relPtr + sampleBankTable[sampleBankId].ptr;
-                        if (sampleMap.count(absOff))
-                            ref = "audio/samples/" + sampleMap[absOff].name + "_META";
-                    }
-                    sfxEntries.push_back({true, ref, audioBank.ReadFloat(sfeAddr + 4)});
-                } else {
-                    sfxEntries.push_back({false, "", audioBank.ReadFloat(sfeAddr + 4)});
-                }
-            }
-        }
-
-        // Parse instruments
-        struct InstEntry {
-            bool isValid;
-            uint8_t loaded, normalRangeLo, normalRangeHi, releaseRate;
-            std::vector<std::pair<int16_t, int16_t>> env;
-            uint32_t lowAddr, normalAddr, highAddr;
-        };
-        std::vector<InstEntry> instruments;
-        uint8_t lastLoaded = crossFontLoaded, lastNormalRangeLo = crossFontRangeLo;
-        uint8_t lastNormalRangeHi = crossFontRangeHi, lastReleaseRate = crossFontRelease;
-        // Seed from last drum (DrumEntry→InstrumentEntry stack mapping).
-        // See docs/oot-audio-font-residue-analysis.md
-        if (!drums.empty()) {
-            auto& [rr, pan, loaded_d, tuning_d, env_d, ref_d] = drums.back();
-            lastLoaded = pan;
-            lastNormalRangeLo = loaded_d;
-            lastNormalRangeHi = 0;
-            lastReleaseRate = 0;
-        }
-        for (int i = 0; i < numInstruments; i++) {
-            if (ptr + 8 + (i + 1) * 4 > audioBank.Size()) break;
-            uint32_t instPtr = audioBank.ReadU32(ptr + 8 + i * 4);
-            InstEntry inst = {};
-            inst.isValid = (instPtr != 0);
-            inst.loaded = lastLoaded;
-            inst.normalRangeLo = lastNormalRangeLo;
-            inst.normalRangeHi = lastNormalRangeHi;
-            inst.releaseRate = lastReleaseRate;
-            if (instPtr != 0) {
-                instPtr += ptr;
-                if (instPtr + 28 <= audioBank.Size()) {
-                    inst.loaded = audioBank.ReadU8(instPtr);
-                    inst.normalRangeLo = audioBank.ReadU8(instPtr + 1);
-                    inst.normalRangeHi = audioBank.ReadU8(instPtr + 2);
-                    inst.releaseRate = audioBank.ReadU8(instPtr + 3);
-                    inst.env = ParseEnvelope(audioBank.ReadU32(instPtr + 4) + ptr, audioBank);
-                    inst.lowAddr = instPtr + 8;
-                    inst.normalAddr = instPtr + 16;
-                    inst.highAddr = instPtr + 24;
-                    lastLoaded = inst.loaded;
-                    lastNormalRangeLo = inst.normalRangeLo;
-                    lastNormalRangeHi = inst.normalRangeHi;
-                    lastReleaseRate = inst.releaseRate;
-                }
-            }
-            instruments.push_back(inst);
-        }
-        crossFontLoaded = lastLoaded;
-        crossFontRangeLo = lastNormalRangeLo;
-        crossFontRangeHi = lastNormalRangeHi;
-        crossFontRelease = lastReleaseRate;
+        auto instruments = ParseInstruments(numInstruments, ptr, drums, audioBank, crossFontResidue);
 
         // Write counts
         w.Write(static_cast<uint32_t>(drums.size()));
@@ -236,14 +246,14 @@ void AudioFontWriter::Extract(YAML::Node& node,
         w.Write(static_cast<uint32_t>(sfxEntries.size()));
 
         // Write drums
-        for (auto& [releaseRate, pan, loaded, tuning, env, sampleRef] : drums) {
-            w.Write(releaseRate);
-            w.Write(pan);
-            w.Write(loaded);
-            WriteEnvData(w, env);
-            w.Write(static_cast<uint8_t>(sampleRef.empty() ? 0 : 1));
-            w.Write(sampleRef);
-            w.Write(tuning);
+        for (auto& d : drums) {
+            w.Write(d.releaseRate);
+            w.Write(d.pan);
+            w.Write(d.loaded);
+            WriteEnvData(w, d.env);
+            w.Write(static_cast<uint8_t>(d.sampleRef.empty() ? 0 : 1));
+            w.Write(d.sampleRef);
+            w.Write(d.tuning);
         }
 
         // Write instruments
