@@ -403,7 +403,16 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     }
 
 
-    // Step 5: Extract fonts (OSFT companion files)
+    ExtractFonts(node, audioBankData, audioBank, fontTable, sampleBankTable, sampleMap);
+
+    return data;
+}
+
+void OoTAudioFactory::ExtractFonts(YAML::Node& node,
+                                   std::vector<uint8_t>& audioBankData, SafeAudioBankReader& audioBank,
+                                   const std::vector<AudioTableEntry>& fontTable,
+                                   const std::vector<AudioTableEntry>& sampleBankTable,
+                                   std::map<uint32_t, SampleInfo>& sampleMap) {
     // Build font name map from YAML
     std::map<int, std::string> fontNames;
     if (node["fonts"] && node["fonts"].IsSequence()) {
@@ -712,8 +721,6 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
     }
 
     SPDLOG_INFO("OoTAudioFactory: wrote {} font companion files", fontTable.size());
-
-    return data;
 }
 
 ExportResult OoTAudioBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,

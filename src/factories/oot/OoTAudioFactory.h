@@ -72,6 +72,11 @@ private:
                         const std::vector<AudioTableEntry>& fontTable,
                         const std::vector<AudioTableEntry>& sampleBankTable,
                         std::map<uint32_t, SampleInfo>& sampleMap);
+    void ExtractFonts(YAML::Node& node,
+                      std::vector<uint8_t>& audioBankData, SafeAudioBankReader& audioBank,
+                      const std::vector<AudioTableEntry>& fontTable,
+                      const std::vector<AudioTableEntry>& sampleBankTable,
+                      std::map<uint32_t, SampleInfo>& sampleMap);
     void WriteSequenceCompanion(const uint8_t* seqData, uint32_t seqSize,
                                 uint32_t originalIndex, uint8_t medium, uint8_t cachePolicy,
                                 const std::vector<uint8_t>& fonts, const std::string& seqName);
