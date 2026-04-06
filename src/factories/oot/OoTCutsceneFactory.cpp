@@ -9,47 +9,91 @@
 
 namespace OoT {
 
+// Camera commands use variable-length entries terminated by a 0xFF marker byte.
+static bool IsCameraCmd(uint32_t id) {
+    return id == 1 || id == 2 || id == 5 || id == 6;
+}
+
+// These commands use 0x0C-byte entries instead of the standard 0x30.
+static bool IsSmallEntryCmd(uint32_t id) {
+    return id == 0x09 || id == 0x13 || id == 0x8C;
+}
+
+// Single-entry commands (transition: 0x2D, destination: 0x3E8).
+static bool IsSingleEntryCmd(uint32_t id) {
+    return id == 0x2D || id == 0x3E8;
+}
+
 // Cutscene serialization — shared with OoTSceneFactory's SetCutscenes handler.
-std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAddr) {
-    auto csSizeCalc = ReadSubArray(buffer, segAddr, 0x10000);
-    uint32_t csMaxBytes = csSizeCalc.GetLength();
-    if (csMaxBytes < 8) return {};
+// Walk through cutscene commands to determine total byte size.
+// Returns 0 if the data is corrupt or too small.
+static uint32_t CalculateCutsceneSize(std::vector<uint8_t>& buffer, uint32_t segAddr) {
+    auto reader = ReadSubArray(buffer, segAddr, 0x10000);
+    uint32_t endOffset = reader.GetLength();
 
-    uint32_t numCsCommands = csSizeCalc.ReadUInt32();
-    csSizeCalc.ReadUInt32();
+    // Need at least numCommands + endFrame
+    if (endOffset < 8) return 0;
 
-    bool csParseOk = true;
-    for (uint32_t csCmd = 0; csCmd < numCsCommands && csParseOk; csCmd++) {
-        if (csSizeCalc.GetBaseAddress() + 8 > csMaxBytes) { csParseOk = false; break; }
-        uint32_t csCmdId = csSizeCalc.ReadUInt32();
-        if (csCmdId == 0xFFFFFFFF) break;
-        uint32_t csCmdWord2 = csSizeCalc.ReadUInt32();
-        if (csCmdId == 1 || csCmdId == 2 || csCmdId == 5 || csCmdId == 6) {
-            if (csSizeCalc.GetBaseAddress() + 4 > csMaxBytes) { csParseOk = false; break; }
-            csSizeCalc.ReadUInt32();
+    uint32_t numCommands = reader.ReadUInt32();
+    reader.ReadUInt32(); // endFrame
+
+    for (uint32_t cmd = 0; cmd < numCommands; cmd++) {
+        // Each command is at least 8 bytes (id + entryCount)
+        if (reader.GetBaseAddress() + 8 > endOffset) return 0;
+
+        uint32_t cmdId = reader.ReadUInt32();
+        if (cmdId == 0xFFFFFFFF) break; // end marker
+
+        uint32_t entryCount = reader.ReadUInt32();
+
+        if (IsCameraCmd(cmdId)) {
+            // Camera commands have an extra uint32 before the entry list
+            if (reader.GetBaseAddress() + 4 > endOffset) return 0;
+
+            reader.ReadUInt32();
             for (uint32_t ci = 0; ci < 1000; ci++) {
-                if (csSizeCalc.GetBaseAddress() + 0x10 > csMaxBytes) { csParseOk = false; break; }
-                uint8_t cf = csSizeCalc.ReadUByte();
-                csSizeCalc.Seek(csSizeCalc.GetBaseAddress() + 0x0F, LUS::SeekOffsetType::Start);
-                if (cf == 0xFF) break;
-            }
-        } else if (csCmdId == 0x2D || csCmdId == 0x3E8) {
-            if (csSizeCalc.GetBaseAddress() + 0x08 > csMaxBytes) { csParseOk = false; break; }
-            csSizeCalc.Seek(csSizeCalc.GetBaseAddress() + 0x08, LUS::SeekOffsetType::Start);
-        } else {
-            uint32_t entrySize = (csCmdId == 0x09 || csCmdId == 0x13 || csCmdId == 0x8C) ? 0x0C : 0x30;
-            uint32_t skipBytes = csCmdWord2 * entrySize;
-            if (csSizeCalc.GetBaseAddress() + skipBytes > csMaxBytes) { csParseOk = false; break; }
-            csSizeCalc.Seek(csSizeCalc.GetBaseAddress() + skipBytes, LUS::SeekOffsetType::Start);
-        }
-    }
-    if (!csParseOk || csSizeCalc.GetBaseAddress() + 8 > csMaxBytes) return {};
-    csSizeCalc.ReadUInt32(); csSizeCalc.ReadUInt32();
-    uint32_t totalCsBytes = csSizeCalc.GetBaseAddress();
+                // Each camera entry is 0x10 bytes
+                if (reader.GetBaseAddress() + 0x10 > endOffset) return 0;
 
-    // Re-serialize
-    auto csReader = ReadSubArray(buffer, segAddr, totalCsBytes);
-    totalCsBytes = csReader.GetLength();
+                uint8_t marker = reader.ReadUByte();
+                reader.Seek(reader.GetBaseAddress() + 0x0F, LUS::SeekOffsetType::Start);
+                if (marker == 0xFF) break; // end of camera entries
+            }
+            continue;
+        }
+
+        if (IsSingleEntryCmd(cmdId)) {
+            // Single entry is 0x08 bytes
+            if (reader.GetBaseAddress() + 0x08 > endOffset) return 0;
+
+            reader.Seek(reader.GetBaseAddress() + 0x08, LUS::SeekOffsetType::Start);
+            continue;
+        }
+
+        // Default: fixed-size entries (0x0C for rumble/text/time, 0x30 for everything else)
+        uint32_t entrySize = IsSmallEntryCmd(cmdId) ? 0x0C : 0x30;
+        uint32_t dataSize = entryCount * entrySize;
+
+        // Ensure all entries fit within the cutscene data
+        if (reader.GetBaseAddress() + dataSize > endOffset) return 0;
+
+        reader.Seek(reader.GetBaseAddress() + dataSize, LUS::SeekOffsetType::Start);
+    }
+
+    // Read the end marker (0xFFFFFFFF + 0x00000000) to get final size
+    if (reader.GetBaseAddress() + 8 > endOffset) return 0;
+    reader.ReadUInt32();
+    reader.ReadUInt32();
+
+    return reader.GetBaseAddress();
+}
+
+std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAddr) {
+    uint32_t calculatedSize = CalculateCutsceneSize(buffer, segAddr);
+    if (calculatedSize == 0) return {};
+
+    auto csReader = ReadSubArray(buffer, segAddr, calculatedSize);
+    uint32_t csSize = csReader.GetLength();
     LUS::BinaryWriter w;
     BaseExporter::WriteHeader(w, Torch::ResourceType::OoTCutscene, 0);
     uint32_t sizePos = w.GetStream()->GetLength();
@@ -66,7 +110,7 @@ std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAd
         0x6D,0x70,0x71,0x7A
     };
 
-    for (uint32_t ci = 0; ci < csNumCmds && csReader.GetBaseAddress() + 8 <= totalCsBytes; ci++) {
+    for (uint32_t ci = 0; ci < csNumCmds && csReader.GetBaseAddress() + 8 <= csSize; ci++) {
         uint32_t cid = csReader.ReadUInt32();
         if (cid == 0xFFFFFFFF) break;
 
@@ -79,7 +123,7 @@ std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAd
         if (!isHandled) {
             if (cid == 0x07 || cid == 0x08) {
                 csReader.ReadUInt32(); csReader.ReadUInt32();
-                while (csReader.GetBaseAddress() + 0x10 <= totalCsBytes) {
+                while (csReader.GetBaseAddress() + 0x10 <= csSize) {
                     uint8_t cf = csReader.ReadUByte();
                     csReader.Seek(csReader.GetBaseAddress() + 0x0F, LUS::SeekOffsetType::Start);
                     if (cf == 0xFF) break;
@@ -87,14 +131,14 @@ std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAd
             } else {
                 uint32_t sc = csReader.ReadUInt32();
                 uint32_t ss = sc * 0x30;
-                if (csReader.GetBaseAddress() + ss <= totalCsBytes)
+                if (csReader.GetBaseAddress() + ss <= csSize)
                     csReader.Seek(csReader.GetBaseAddress() + ss, LUS::SeekOffsetType::Start);
             }
             continue;
         }
 
         w.Write(cid);
-        if (cid == 1 || cid == 2 || cid == 5 || cid == 6) {
+        if (IsCameraCmd(cid)) {
             uint16_t a=csReader.ReadUInt16(),b=csReader.ReadUInt16();
             w.Write(CS_CMD_HH(a,b));
             uint16_t c=csReader.ReadUInt16(),d=csReader.ReadUInt16();
@@ -108,7 +152,7 @@ std::vector<char> SerializeCutscene(std::vector<uint8_t>& buffer, uint32_t segAd
                 w.Write(CS_CMD_HH(px,py)); w.Write(CS_CMD_HH(pz,pu));
                 if ((uint8_t)cf == 0xFF) break;
             }
-        } else if (cid == 0x2D || cid == 0x3E8) {
+        } else if (IsSingleEntryCmd(cid)) {
             csReader.ReadUInt32(); w.Write(static_cast<uint32_t>(1));
             uint16_t a=csReader.ReadUInt16(),b=csReader.ReadUInt16();
             uint16_t c=csReader.ReadUInt16(); csReader.ReadUInt16();
