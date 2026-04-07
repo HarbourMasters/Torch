@@ -48,12 +48,12 @@ Legend: [x] reviewed, [~] needs follow-up before PR, [ ] not yet reviewed
 - [x] src/factories/oot/OoTCurveAnimationFactory.h
 - [x] src/factories/oot/OoTCutsceneFactory.cpp
 - [x] src/factories/oot/OoTCutsceneFactory.h
-- [ ] src/factories/oot/OoTLimbFactory.cpp
-- [ ] src/factories/oot/OoTLimbFactory.h
-- [ ] src/factories/oot/OoTMtxFactory.cpp
-- [ ] src/factories/oot/OoTMtxFactory.h
-- [ ] src/factories/oot/OoTPathFactory.cpp
-- [ ] src/factories/oot/OoTPathFactory.h
+- [x] src/factories/oot/OoTLimbFactory.cpp
+- [x] src/factories/oot/OoTLimbFactory.h
+- [x] src/factories/oot/OoTMtxFactory.cpp
+- [x] src/factories/oot/OoTMtxFactory.h
+- [x] src/factories/oot/OoTPathFactory.cpp
+- [x] src/factories/oot/OoTPathFactory.h
 - [ ] src/factories/oot/OoTPlayerAnimationFactory.cpp
 - [ ] src/factories/oot/OoTPlayerAnimationFactory.h
 - [x] src/factories/oot/OoTSceneCommandWriter.cpp
