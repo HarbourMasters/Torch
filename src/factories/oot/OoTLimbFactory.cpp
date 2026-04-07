@@ -21,6 +21,132 @@ size_t OoTLimbFactory::GetLimbDataSize(OoTLimbType type) {
     }
 }
 
+void OoTLimbFactory::ParseStandardLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol) {
+    ParseLimbHeader(reader, limb);
+    uint32_t dListAddr = reader.ReadUInt32();
+    limb.dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
+}
+
+void OoTLimbFactory::ParseLODLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol) {
+    ParseLimbHeader(reader, limb);
+    uint32_t dListAddr = reader.ReadUInt32();
+    uint32_t dList2Addr = reader.ReadUInt32();
+    limb.dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "FarDL");
+    limb.dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
+}
+
+void OoTLimbFactory::ParseSkinLimb(LUS::BinaryReader& reader, std::vector<uint8_t>& buffer,
+                                   OoTLimbData& limb, const std::string& symbol) {
+    ParseLimbHeader(reader, limb);
+    limb.skinSegmentType = static_cast<OoTLimbSkinType>(reader.ReadInt32());
+    uint32_t skinSegmentAddr = reader.ReadUInt32();
+
+    skinSegmentAddr = Companion::Instance->PatchVirtualAddr(skinSegmentAddr);
+    if (limb.skinSegmentType == OoTLimbSkinType::SkinType_Normal) {
+        limb.skinDList = ResolveGfxPointer(skinSegmentAddr, symbol, "DL");
+    } else if (limb.skinSegmentType == OoTLimbSkinType::SkinType_Animated && skinSegmentAddr != 0) {
+        auto skinRaw = Decompressor::AutoDecode(skinSegmentAddr, 0x0C, buffer);
+        LUS::BinaryReader skinReader(skinRaw.segment.data, skinRaw.segment.size);
+        skinReader.SetEndianness(Torch::Endianness::Big);
+
+        limb.skinAnimData.totalVtxCount = skinReader.ReadUInt16();
+        uint16_t limbModifCount = skinReader.ReadUInt16();
+        uint32_t limbModifAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
+        uint32_t skinDListAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
+
+        limb.skinVtxCnt = limb.skinAnimData.totalVtxCount;
+        limb.skinAnimData.dlist = ResolveGfxPointer(skinDListAddr, symbol, "SkinLimbDL");
+
+        if (limbModifAddr != 0 && limbModifCount > 0) {
+            auto modifRaw = Decompressor::AutoDecode(limbModifAddr, limbModifCount * 0x10, buffer);
+            LUS::BinaryReader modifReader(modifRaw.segment.data, modifRaw.segment.size);
+            modifReader.SetEndianness(Torch::Endianness::Big);
+
+            for (uint16_t m = 0; m < limbModifCount; m++) {
+                OoTSkinLimbModif modif;
+                uint16_t vtxCount = modifReader.ReadUInt16();
+                uint16_t transformCount = modifReader.ReadUInt16();
+                modif.unk_4 = modifReader.ReadUInt16();
+                modifReader.ReadUInt16(); // padding
+                uint32_t skinVerticesAddr = Companion::Instance->PatchVirtualAddr(modifReader.ReadUInt32());
+                uint32_t limbTransAddr = Companion::Instance->PatchVirtualAddr(modifReader.ReadUInt32());
+
+                if (skinVerticesAddr != 0 && vtxCount > 0) {
+                    auto vtxRaw = Decompressor::AutoDecode(skinVerticesAddr, vtxCount * 0x0A, buffer);
+                    LUS::BinaryReader vtxReader(vtxRaw.segment.data, vtxRaw.segment.size);
+                    vtxReader.SetEndianness(Torch::Endianness::Big);
+
+                    for (uint16_t v = 0; v < vtxCount; v++) {
+                        OoTSkinVertex sv;
+                        sv.index = vtxReader.ReadUInt16();
+                        sv.s = vtxReader.ReadInt16();
+                        sv.t = vtxReader.ReadInt16();
+                        sv.normX = vtxReader.ReadInt8();
+                        sv.normY = vtxReader.ReadInt8();
+                        sv.normZ = vtxReader.ReadInt8();
+                        sv.alpha = vtxReader.ReadUByte();
+                        modif.skinVertices.push_back(sv);
+                    }
+                }
+
+                if (limbTransAddr != 0 && transformCount > 0) {
+                    auto transRaw = Decompressor::AutoDecode(limbTransAddr, transformCount * 0x0A, buffer);
+                    LUS::BinaryReader transReader(transRaw.segment.data, transRaw.segment.size);
+                    transReader.SetEndianness(Torch::Endianness::Big);
+
+                    for (uint16_t t = 0; t < transformCount; t++) {
+                        OoTSkinTransformation st;
+                        st.limbIndex = transReader.ReadUByte();
+                        transReader.ReadUByte(); // padding
+                        st.x = transReader.ReadInt16();
+                        st.y = transReader.ReadInt16();
+                        st.z = transReader.ReadInt16();
+                        st.scale = transReader.ReadUByte();
+                        transReader.ReadUByte(); // padding
+                        modif.limbTransformations.push_back(st);
+                    }
+                }
+
+                limb.skinAnimData.limbModifications.push_back(modif);
+            }
+        }
+    }
+}
+
+void OoTLimbFactory::ParseLimbHeader(LUS::BinaryReader& reader, OoTLimbData& limb) {
+    limb.transX = reader.ReadInt16();
+    limb.transY = reader.ReadInt16();
+    limb.transZ = reader.ReadInt16();
+    limb.childIndex = reader.ReadUByte();
+    limb.siblingIndex = reader.ReadUByte();
+}
+
+void OoTLimbFactory::ParseCurveLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol) {
+    limb.childIndex = reader.ReadUByte();
+    limb.siblingIndex = reader.ReadUByte();
+    reader.ReadUInt16(); // padding
+    uint32_t dListAddr = reader.ReadUInt32();
+    uint32_t dList2Addr = reader.ReadUInt32();
+    limb.dListPtr = ResolveGfxPointer(dListAddr, symbol, "CurveDL");
+    limb.dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "Curve2DL");
+}
+
+void OoTLimbFactory::ParseLegacyLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol) {
+    uint32_t dListAddr = reader.ReadUInt32();
+    limb.dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
+    limb.legTransX = reader.ReadFloat();
+    limb.legTransY = reader.ReadFloat();
+    limb.legTransZ = reader.ReadFloat();
+    limb.rotX = reader.ReadUInt16();
+    limb.rotY = reader.ReadUInt16();
+    limb.rotZ = reader.ReadUInt16();
+    reader.ReadUInt16(); // padding
+    uint32_t childAddr = reader.ReadUInt32();
+    uint32_t siblingAddr = reader.ReadUInt32();
+    limb.childPtr = ResolvePointer(childAddr);
+    limb.siblingPtr = ResolvePointer(siblingAddr);
+}
+
 std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto limbTypeStr = GetSafeNode<std::string>(node, "limb_type");
     auto limbType = ParseLimbType(limbTypeStr);
@@ -37,129 +163,32 @@ std::optional<std::shared_ptr<IParsedData>> OoTLimbFactory::parse(std::vector<ui
     auto symbol = GetSafeNode<std::string>(node, "symbol");
 
     if (limbType == OoTLimbType::Curve) {
-        limb->childIndex = reader.ReadUByte();
-        limb->siblingIndex = reader.ReadUByte();
-        reader.ReadUInt16(); // padding
-        uint32_t dListAddr = reader.ReadUInt32();
-        uint32_t dList2Addr = reader.ReadUInt32();
-        limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "CurveDL");
-        limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "Curve2DL");
-    } else if (limbType == OoTLimbType::Legacy) {
-        uint32_t dListAddr = reader.ReadUInt32();
-        limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
-        limb->legTransX = reader.ReadFloat();
-        limb->legTransY = reader.ReadFloat();
-        limb->legTransZ = reader.ReadFloat();
-        limb->rotX = reader.ReadUInt16();
-        limb->rotY = reader.ReadUInt16();
-        limb->rotZ = reader.ReadUInt16();
-        reader.ReadUInt16(); // padding
-        uint32_t childAddr = reader.ReadUInt32();
-        uint32_t siblingAddr = reader.ReadUInt32();
-        limb->childPtr = ResolvePointer(childAddr);
-        limb->siblingPtr = ResolvePointer(siblingAddr);
-    } else {
-        // Standard, LOD, Skin
-        limb->transX = reader.ReadInt16();
-        limb->transY = reader.ReadInt16();
-        limb->transZ = reader.ReadInt16();
-        limb->childIndex = reader.ReadUByte();
-        limb->siblingIndex = reader.ReadUByte();
-
-        if (limbType == OoTLimbType::Standard) {
-            uint32_t dListAddr = reader.ReadUInt32();
-            limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
-        } else if (limbType == OoTLimbType::LOD) {
-            uint32_t dListAddr = reader.ReadUInt32();
-            uint32_t dList2Addr = reader.ReadUInt32();
-            limb->dList2Ptr = ResolveGfxPointer(dList2Addr, symbol, "FarDL");
-            limb->dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
-        } else if (limbType == OoTLimbType::Skin) {
-            limb->skinSegmentType = static_cast<OoTLimbSkinType>(reader.ReadInt32());
-            uint32_t skinSegmentAddr = reader.ReadUInt32();
-
-            skinSegmentAddr = Companion::Instance->PatchVirtualAddr(skinSegmentAddr);
-            if (limb->skinSegmentType == OoTLimbSkinType::SkinType_Normal) {
-                limb->skinDList = ResolveGfxPointer(skinSegmentAddr, symbol, "DL");
-            } else if (limb->skinSegmentType == OoTLimbSkinType::SkinType_Animated && skinSegmentAddr != 0) {
-                YAML::Node skinNode;
-                skinNode["offset"] = skinSegmentAddr;
-                auto skinRaw = Decompressor::AutoDecode(skinNode, buffer, 0x0C);
-                LUS::BinaryReader skinReader(skinRaw.segment.data, skinRaw.segment.size);
-                skinReader.SetEndianness(Torch::Endianness::Big);
-
-                limb->skinAnimData.totalVtxCount = skinReader.ReadUInt16();
-                uint16_t limbModifCount = skinReader.ReadUInt16();
-                uint32_t limbModifAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
-                uint32_t skinDListAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
-
-                limb->skinVtxCnt = limb->skinAnimData.totalVtxCount;
-                limb->skinAnimData.dlist = ResolveGfxPointer(skinDListAddr, symbol, "SkinLimbDL");
-
-                if (limbModifAddr != 0 && limbModifCount > 0) {
-                    YAML::Node modifNode;
-                    modifNode["offset"] = limbModifAddr;
-                    auto modifRaw = Decompressor::AutoDecode(modifNode, buffer, limbModifCount * 0x10);
-                    LUS::BinaryReader modifReader(modifRaw.segment.data, modifRaw.segment.size);
-                    modifReader.SetEndianness(Torch::Endianness::Big);
-
-                    for (uint16_t m = 0; m < limbModifCount; m++) {
-                        OoTSkinLimbModif modif;
-                        uint16_t vtxCount = modifReader.ReadUInt16();
-                        uint16_t transformCount = modifReader.ReadUInt16();
-                        modif.unk_4 = modifReader.ReadUInt16();
-                        modifReader.ReadUInt16(); // padding
-                        uint32_t skinVerticesAddr = Companion::Instance->PatchVirtualAddr(modifReader.ReadUInt32());
-                        uint32_t limbTransAddr = Companion::Instance->PatchVirtualAddr(modifReader.ReadUInt32());
-
-                        if (skinVerticesAddr != 0 && vtxCount > 0) {
-                            YAML::Node vtxNode;
-                            vtxNode["offset"] = skinVerticesAddr;
-                            auto vtxRaw = Decompressor::AutoDecode(vtxNode, buffer, vtxCount * 0x0A);
-                            LUS::BinaryReader vtxReader(vtxRaw.segment.data, vtxRaw.segment.size);
-                            vtxReader.SetEndianness(Torch::Endianness::Big);
-
-                            for (uint16_t v = 0; v < vtxCount; v++) {
-                                OoTSkinVertex sv;
-                                sv.index = vtxReader.ReadUInt16();
-                                sv.s = vtxReader.ReadInt16();
-                                sv.t = vtxReader.ReadInt16();
-                                sv.normX = vtxReader.ReadInt8();
-                                sv.normY = vtxReader.ReadInt8();
-                                sv.normZ = vtxReader.ReadInt8();
-                                sv.alpha = vtxReader.ReadUByte();
-                                modif.skinVertices.push_back(sv);
-                            }
-                        }
-
-                        if (limbTransAddr != 0 && transformCount > 0) {
-                            YAML::Node transNode;
-                            transNode["offset"] = limbTransAddr;
-                            auto transRaw = Decompressor::AutoDecode(transNode, buffer, transformCount * 0x0A);
-                            LUS::BinaryReader transReader(transRaw.segment.data, transRaw.segment.size);
-                            transReader.SetEndianness(Torch::Endianness::Big);
-
-                            for (uint16_t t = 0; t < transformCount; t++) {
-                                OoTSkinTransformation st;
-                                st.limbIndex = transReader.ReadUByte();
-                                transReader.ReadUByte(); // padding
-                                st.x = transReader.ReadInt16();
-                                st.y = transReader.ReadInt16();
-                                st.z = transReader.ReadInt16();
-                                st.scale = transReader.ReadUByte();
-                                transReader.ReadUByte(); // padding
-                                modif.limbTransformations.push_back(st);
-                            }
-                        }
-
-                        limb->skinAnimData.limbModifications.push_back(modif);
-                    }
-                }
-            }
-        }
+        ParseCurveLimb(reader, *limb, symbol);
+        return limb;
     }
 
-    return limb;
+    if (limbType == OoTLimbType::Legacy) {
+        ParseLegacyLimb(reader, *limb, symbol);
+        return limb;
+    }
+
+    if (limbType == OoTLimbType::Standard) {
+        ParseStandardLimb(reader, *limb, symbol);
+        return limb;
+    }
+
+    if (limbType == OoTLimbType::LOD) {
+        ParseLODLimb(reader, *limb, symbol);
+        return limb;
+    }
+
+    if (limbType == OoTLimbType::Skin) {
+        ParseSkinLimb(reader, buffer, *limb, symbol);
+        return limb;
+    }
+
+    // Should never reach here — all limb types are handled above
+    return std::nullopt;
 }
 
 ExportResult OoTLimbBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,

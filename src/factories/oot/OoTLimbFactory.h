@@ -23,6 +23,13 @@ public:
 
 private:
     static size_t GetLimbDataSize(OoTLimbType type);
+    void ParseLimbHeader(LUS::BinaryReader& reader, OoTLimbData& limb);
+    void ParseCurveLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol);
+    void ParseLegacyLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol);
+    void ParseStandardLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol);
+    void ParseLODLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol);
+    void ParseSkinLimb(LUS::BinaryReader& reader, std::vector<uint8_t>& buffer,
+                       OoTLimbData& limb, const std::string& symbol);
 };
 
 } // namespace OoT

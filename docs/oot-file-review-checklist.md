@@ -82,6 +82,7 @@ Legend: [x] reviewed, [~] needs follow-up before PR, [ ] not yet reviewed
 
 - [ ] Debug logging cleanup — SPDLOG_WARN used for debug tracing, should be removed or downgraded
 - [ ] Static functions → private methods with declarations in headers
+- [ ] Prefer T& over shared_ptr for methods that don't need ownership
 
 ## PR notes
 
