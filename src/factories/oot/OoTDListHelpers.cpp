@@ -2,6 +2,7 @@
 
 #include "OoTDListHelpers.h"
 #include "Companion.h"
+#include "spdlog/spdlog.h"
 #include "factories/DisplayListOverrides.h"
 #include "n64/gbi-otr.h"
 #include "strhash64/StrHash64.h"
@@ -84,6 +85,113 @@ bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
     writer.Write(value.words.w1);
     writer.Write(static_cast<uint32_t>(hash >> 32));
     writer.Write(static_cast<uint32_t>(hash & 0xFFFFFFFF));
+    return true;
+}
+
+bool HandleExportVtx(uint32_t& w0, uint32_t& w1, uint32_t& ptr,
+                     size_t nvtx, size_t didx,
+                     LUS::BinaryWriter& writer, std::string* replacement) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;
+
+    ptr = Companion::Instance->PatchVirtualAddr(w1);
+
+    // Check if VTX is on an alias segment
+    bool isAliasSegment = false;
+    if (IS_SEGMENTED(w1)) {
+        auto thisSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(w1));
+        if (thisSeg.has_value()) {
+            for (uint8_t s = 0; s < SEGMENT_NUMBER(w1); s++) {
+                auto otherSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(s);
+                if (otherSeg.has_value() && otherSeg.value() == thisSeg.value()) {
+                    isAliasSegment = true;
+                    break;
+                }
+            }
+        } else {
+            isAliasSegment = true;
+        }
+    }
+
+    if (isAliasSegment) {
+        w1 = w1 + 1;
+        SPDLOG_INFO("VTX export: alias segment for 0x{:X}", ptr);
+        return true;
+    }
+
+    // Check overlap with cross-file handling
+    if (auto overlap = GFXDOverride::GetVtxOverlap(ptr); overlap.has_value()) {
+        auto ovnode = std::get<1>(overlap.value());
+        auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
+
+        auto currentDir = (*replacement).substr(0, (*replacement).rfind('/'));
+        auto vtxDir = path.substr(0, path.rfind('/'));
+        if (currentDir != vtxDir) {
+            SPDLOG_WARN("Cross-file VTX overlap at 0x{:X} (from {}), writing null vtxDecl", ptr, path);
+            w0 = G_VTX_OTR_HASH << 24;
+            w1 = 0;
+        } else {
+            uint64_t hash = CRC64(path.c_str());
+            if (hash == 0) {
+                throw std::runtime_error("Vtx hash is 0 for " + std::get<0>(overlap.value()));
+            }
+            SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, path);
+            auto offset = GetSafeNode<uint32_t>(ovnode, "offset");
+            auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
+            N64Gfx value = gsSPVertexOTR(diff, nvtx, didx);
+            w0 = value.words.w0;
+            w1 = value.words.w1;
+            writer.Write(w0);
+            writer.Write(w1);
+            w0 = hash >> 32;
+            w1 = hash & 0xFFFFFFFF;
+        }
+        return true;
+    }
+
+    // Direct lookup with OOT:ARRAY support
+    auto vtxNode = Companion::Instance->GetNodeByAddr(ptr);
+    std::optional<std::string> dec = std::nullopt;
+    if (vtxNode.has_value()) {
+        auto [vpath, vn] = vtxNode.value();
+        auto vtype = GetSafeNode<std::string>(vn, "type");
+        if (vtype == "VTX" || vtype == "OOT:ARRAY") {
+            dec = vpath;
+        }
+    }
+    if (dec.has_value()) {
+        auto currentDir = (*replacement).substr(0, (*replacement).rfind('/'));
+        auto vtxDir = dec.value().substr(0, dec.value().rfind('/'));
+        if (currentDir != vtxDir) {
+            SPDLOG_WARN("Cross-file VTX at 0x{:X} (from {}), writing null vtxDecl", ptr, dec.value());
+            w0 = G_VTX_OTR_HASH << 24;
+            w1 = 0;
+        } else {
+            uint64_t hash = CRC64(dec.value().c_str());
+            if (hash == 0) {
+                throw std::runtime_error("Vtx hash is 0 for " + dec.value());
+            }
+            SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+            N64Gfx value = gsSPVertexOTR(0, nvtx, didx);
+            w0 = value.words.w0;
+            w1 = value.words.w1;
+            writer.Write(w0);
+            writer.Write(w1);
+            w0 = hash >> 32;
+            w1 = hash & 0xFFFFFFFF;
+        }
+        return true;
+    }
+
+    // Virtual segment handling
+    if (IS_VIRTUAL_SEGMENT(w1)) {
+        w0 = G_VTX_OTR_HASH << 24;
+        w1 = 0;
+        return true;
+    }
+
+    // Cross-segment fallback
+    SPDLOG_WARN("VTX export: NOT FOUND vtx at 0x{:X} w1=0x{:X} replacement={}", ptr, w1, *replacement);
+    w1 = (w1 & 0x0FFFFFFF) + 1;
     return true;
 }
 

@@ -20,6 +20,12 @@ bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
 // OoT-specific VTX search: handles OOT:ARRAY type and cross-segment comparison.
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr);
 
+// Handle OoT-specific G_VTX export. Returns true if handled (caller skips main path).
+// Modifies w0/w1 in place for the final write.
+bool HandleExportVtx(uint32_t& w0, uint32_t& w1, uint32_t& ptr,
+                     size_t nvtx, size_t didx,
+                     LUS::BinaryWriter& writer, std::string* replacement);
+
 } // namespace DListHelpers
 } // namespace OoT
 

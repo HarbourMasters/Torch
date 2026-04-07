@@ -272,45 +272,14 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                     break;
             }
 
-            auto ptr = Companion::Instance->PatchVirtualAddr(w1);
+            auto ptr = w1;
 
-            // Check if VTX is on an alias segment (e.g. segment 8 aliasing segment 6).
-            // OTRExporter's HasSegment returns false for alias segments → fallback encoding.
-            bool isAliasSegment = false;
-            if (IS_SEGMENTED(w1)) {
-                auto thisSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(w1));
-                if (thisSeg.has_value()) {
-                    for (uint8_t s = 0; s < SEGMENT_NUMBER(w1); s++) {
-                        auto otherSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(s);
-                        if (otherSeg.has_value() && otherSeg.value() == thisSeg.value()) {
-                            isAliasSegment = true;
-                            break;
-                        }
-                    }
-                } else {
-                    isAliasSegment = true;  // unconfigured segment
-                }
-            }
-
-            if (isAliasSegment) {
-                // OTRExporter fallback: gsSPVertex((addr & 0xFFFFFFFF) + 1, nn, didx)
-                // Preserves segment bits in w1.
-                w1 = w1 + 1;
-                SPDLOG_INFO("VTX export: alias segment for 0x{:X}", ptr);
-            } else if (auto overlap = GFXDOverride::GetVtxOverlap(ptr); overlap.has_value()) {
-                auto ovnode = std::get<1>(overlap.value());
-                auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
-
-                // Check if the VTX is from a different file than the current DList.
-                // OTRExporter's GetDeclarationRanged returns nullptr for cross-file VTX,
-                // writing a "null vtxDecl" format: w0=G_VTX_OTR_HASH<<24, w1=0 (8 bytes).
-                auto currentDir = (*replacement).substr(0, (*replacement).rfind('/'));
-                auto vtxDir = path.substr(0, path.rfind('/'));
-                if (currentDir != vtxDir) {
-                    SPDLOG_WARN("Cross-file VTX overlap at 0x{:X} (from {}), writing null vtxDecl", ptr, path);
-                    w0 = G_VTX_OTR_HASH << 24;
-                    w1 = 0;
-                } else {
+            if (!OoT::DListHelpers::HandleExportVtx(w0, w1, ptr, nvtx, didx, writer, replacement)) {
+                // Original main path
+                auto overlap = GFXDOverride::GetVtxOverlap(ptr);
+                if (overlap.has_value()) {
+                    auto ovnode = std::get<1>(overlap.value());
+                    auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
                     uint64_t hash = CRC64(path.c_str());
 
                     if (hash == 0) {
@@ -335,28 +304,9 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
 
                     w0 = hash >> 32;
                     w1 = hash & 0xFFFFFFFF;
-                }
-            } else {
-                auto vtxNode = Companion::Instance->GetNodeByAddr(ptr);
-                std::optional<std::string> dec = std::nullopt;
-                if (vtxNode.has_value()) {
-                    auto [vpath, vn] = vtxNode.value();
-                    auto vtype = GetSafeNode<std::string>(vn, "type");
-                    if (vtype == "VTX" || vtype == "OOT:ARRAY") {
-                        dec = vpath;
-                    }
-                }
-                if (dec.has_value()) {
-                    // Check if the VTX is from a different file than the current DList.
-                    // OTRExporter's GetDeclarationRanged returns nullptr for cross-file VTX,
-                    // writing a "null vtxDecl" format: w0=G_VTX_OTR_HASH<<24, w1=0 (8 bytes).
-                    auto currentDir = (*replacement).substr(0, (*replacement).rfind('/'));
-                    auto vtxDir = dec.value().substr(0, dec.value().rfind('/'));
-                    if (currentDir != vtxDir) {
-                        SPDLOG_WARN("Cross-file VTX at 0x{:X} (from {}), writing null vtxDecl", ptr, dec.value());
-                        w0 = G_VTX_OTR_HASH << 24;
-                        w1 = 0;
-                    } else {
+                } else {
+                    auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "VTX");
+                    if (dec.has_value()) {
                         uint64_t hash = CRC64(dec.value().c_str());
                         if (hash == 0) {
                             throw std::runtime_error("Vtx hash is 0 for " + dec.value());
@@ -376,21 +326,9 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
 
                         w0 = hash >> 32;
                         w1 = hash & 0xFFFFFFFF;
+                    } else {
+                        SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
                     }
-                } else if (IS_VIRTUAL_SEGMENT(w1)) {
-                    // OTRExporter's HasSegment returns true for segment 0x80 but
-                    // GetDeclarationRanged fails → null vtxDecl encoding.
-                    // This happens when a code-section DList references VTX via
-                    // virtual addresses that don't map to any declared asset
-                    // (e.g. sCircleDList in z_fbdemo_circle).
-                    w0 = G_VTX_OTR_HASH << 24;
-                    w1 = 0;
-                } else {
-                    SPDLOG_WARN("VTX export: NOT FOUND vtx at 0x{:X} w1=0x{:X} replacement={}", ptr, w1, *replacement);
-                    // Cross-segment VTX: modify w1 in place, no explicit write.
-                    // OTRExporter re-encodes via gsSPVertex with (address & 0xFFFFFFFF) + 1.
-                    // The final write handles output (single command, no duplication).
-                    w1 = (w1 & 0x0FFFFFFF) + 1;
                 }
             }
         }
