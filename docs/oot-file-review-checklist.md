@@ -66,17 +66,12 @@ Legend: [x] reviewed, [~] needs follow-up before PR, [ ] not yet reviewed
 - [x] src/factories/oot/OoTSkeletonFactory.h
 - [x] src/factories/oot/OoTSkeletonTypes.cpp
 - [x] src/factories/oot/OoTSkeletonTypes.h
-- [ ] src/factories/oot/OoTTextFactory.cpp
-- [ ] src/factories/oot/OoTTextFactory.h
+- [x] src/factories/oot/OoTTextFactory.cpp
+- [x] src/factories/oot/OoTTextFactory.h
 
 ## New files — SoH tooling / data (not Torch code)
 
-- [ ] soh/assets/yml/config.yml
-- [ ] soh/tools/*.py
-- [ ] soh/dma/*.json
-- [ ] soh/manifests/*.json
-- [ ] soh/vtx/*.json
-- [ ] soh/scripts (check.sh, lib.sh, etc.)
+- [~] Entire soh/ directory will be removed before PR — review deferred
 
 ## Cross-cutting concerns (check across all changed/new files)
 

@@ -1,3 +1,5 @@
+#ifdef OOT_SUPPORT
+
 #include "OoTTextFactory.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -206,3 +208,5 @@ ExportResult OoTTextBinaryExporter::Export(std::ostream& write, std::shared_ptr<
 }
 
 }  // namespace OoT
+
+#endif

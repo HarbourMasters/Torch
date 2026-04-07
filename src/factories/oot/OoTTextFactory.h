@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef OOT_SUPPORT
+
 #include "factories/BaseFactory.h"
 #include "utils/Decompressor.h"
 
@@ -44,3 +46,5 @@ private:
 };
 
 }  // namespace OoT
+
+#endif
