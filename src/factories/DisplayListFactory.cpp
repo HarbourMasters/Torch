@@ -334,37 +334,28 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
         }
 
         if (opcode == GBI(G_DL)) {
-            auto ptr = w1;
-            uint8_t dlSeg = SEGMENT_NUMBER(ptr);
+            if (!OoT::DListHelpers::HandleExportDL(w0, w1, writer, replacement)) {
+                // Original main path
+                N64Gfx value;
+                auto ptr = w1;
+                auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "GFX");
+                auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
-            // Segments 8-13 are runtime-swapped (eye/mouth textures, limb DLists)
-            // and must stay unresolved, matching OTRExporter's !HasSegment behavior.
-            std::optional<std::string> dec = std::nullopt;
-            if (dlSeg < 8 || dlSeg > 13) {
-                dec = Companion::Instance->GetSafeStringByAddr(ptr, "GFX");
-                if (!dec.has_value()) {
-                    auto remapped = OoT::DListHelpers::RemapSegmentedAddr(ptr, "GFX");
-                    if (remapped != ptr) {
-                        dec = Companion::Instance->GetSafeStringByAddr(remapped, "GFX");
-                        if (dec.has_value()) ptr = remapped;
-                    }
-                }
-            }
-            auto branch = (w0 >> 16) & G_DL_NO_PUSH;
-
-            if (dec.has_value()) {
-                uint64_t hash = CRC64(dec.value().c_str());
-                SPDLOG_INFO("Found display list: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
-
-                N64Gfx value = gsSPDisplayListOTRHash(ptr);
+                value = gsSPDisplayListOTRHash(ptr);
                 w0 = value.words.w0;
-                w1 = 0;  // OTRExporter always writes w1=0 for G_DL_OTR_HASH header
+                w1 = value.words.w1;
 
                 writer.Write(w0);
                 writer.Write(w1);
 
-                w0 = hash >> 32;
-                w1 = hash & 0xFFFFFFFF;
+                if (dec.has_value()) {
+                    uint64_t hash = CRC64(dec.value().c_str());
+                    SPDLOG_INFO("Found display list: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+                    w0 = hash >> 32;
+                    w1 = hash & 0xFFFFFFFF;
+                } else {
+                    SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
+                }
 
                 if (branch) {
                     writer.Write(w0);
@@ -374,12 +365,6 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                     w0 = value.words.w0;
                     w1 = value.words.w1;
                 }
-            } else {
-                SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
-                // Cross-segment DL: modify w0/w1 in place, no explicit write.
-                // OTRExporter re-encodes via gsSPDisplayList with (address & 0x0FFFFFFF) + 1.
-                // The final write handles output (single command, no duplication).
-                w1 = (w1 & 0x0FFFFFFF) + 1;
             }
         }
 

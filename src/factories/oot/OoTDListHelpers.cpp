@@ -88,6 +88,56 @@ bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
     return true;
 }
 
+bool HandleExportDL(uint32_t& w0, uint32_t& w1,
+                    LUS::BinaryWriter& writer, std::string* replacement) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;
+
+    auto ptr = w1;
+    uint8_t dlSeg = SEGMENT_NUMBER(ptr);
+
+    // Segments 8-13 are runtime-swapped and must stay unresolved
+    std::optional<std::string> dec = std::nullopt;
+    if (dlSeg < 8 || dlSeg > 13) {
+        dec = Companion::Instance->GetSafeStringByAddr(ptr, "GFX");
+        if (!dec.has_value()) {
+            auto remapped = RemapSegmentedAddr(ptr, "GFX");
+            if (remapped != ptr) {
+                dec = Companion::Instance->GetSafeStringByAddr(remapped, "GFX");
+                if (dec.has_value()) ptr = remapped;
+            }
+        }
+    }
+    auto branch = (w0 >> 16) & 1; // G_DL_NO_PUSH
+
+    if (dec.has_value()) {
+        uint64_t hash = CRC64(dec.value().c_str());
+        SPDLOG_INFO("Found display list: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+
+        N64Gfx value = gsSPDisplayListOTRHash(ptr);
+        w0 = value.words.w0;
+        w1 = 0;
+
+        writer.Write(w0);
+        writer.Write(w1);
+
+        w0 = hash >> 32;
+        w1 = hash & 0xFFFFFFFF;
+
+        if (branch) {
+            writer.Write(w0);
+            writer.Write(w1);
+
+            N64Gfx endValue = gsSPRawOpcode(0xDF); // G_ENDDL for f3dex2
+            w0 = endValue.words.w0;
+            w1 = endValue.words.w1;
+        }
+    } else {
+        SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
+        w1 = (w1 & 0x0FFFFFFF) + 1;
+    }
+    return true;
+}
+
 bool HandleExportVtx(uint32_t& w0, uint32_t& w1, uint32_t& ptr,
                      size_t nvtx, size_t didx,
                      LUS::BinaryWriter& writer, std::string* replacement) {
