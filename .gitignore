@@ -2,9 +2,7 @@
 build-*/
 cmake-build-*/
 *.otr
-*.o2r
 *.log
-torch.hash.yml
 .DS_Store
 debug/
 !src/factories/debug/
@@ -16,11 +14,8 @@ build/
 code/
 .vscode/
 tools/
-!soh/tools/
 modding/*
 .cache
-
-# Generated YAML asset definitions (per-version dirs are gitignored via soh/assets/yml/.gitignore)
 
 # Doxygen output
 docs/html
