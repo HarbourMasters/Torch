@@ -5,6 +5,7 @@
 #include "Companion.h"
 #include <fstream>
 #include <iomanip>
+#include "oot/OoTDListHelpers.h"
 #include "n64/gbi-otr.h"
 
 #ifdef STANDALONE
@@ -13,40 +14,6 @@
 
 #define C0(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
 #define ALIGN16(val) (((val) + 0xF) & ~0xF)
-
-// Try to remap a segmented address to a segment where the asset can be found.
-// OoT uses segment 8 to reference textures in the same file (loaded at segment 6).
-// When segments share the same ROM offset, remap the address to the primary segment.
-// If expectedType is provided, only return a match if the asset has that type.
-static uint32_t RemapSegmentedAddr(uint32_t addr, const std::string& expectedType = "") {
-    // Only needed for OoT where overlay segments alias the same ROM data
-    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return addr;
-
-    uint8_t seg = SEGMENT_NUMBER(addr);
-    uint32_t offset = SEGMENT_OFFSET(addr);
-    auto segBase = Companion::Instance->GetFileOffsetFromSegmentedAddr(seg);
-    if (!segBase.has_value()) return addr;
-
-    // Check all other segments for one that shares the same ROM base
-    // and where the asset is actually registered with the expected type
-    for (uint8_t otherSeg = 1; otherSeg < 0x20; otherSeg++) {
-        if (otherSeg == seg) continue;
-        auto otherBase = Companion::Instance->GetFileOffsetFromSegmentedAddr(otherSeg);
-        if (otherBase.has_value() && otherBase.value() == segBase.value()) {
-            uint32_t remapped = (otherSeg << 24) | offset;
-            auto node = Companion::Instance->GetNodeByAddr(remapped);
-            if (node.has_value()) {
-                if (!expectedType.empty()) {
-                    auto n = std::get<1>(node.value());
-                    auto nType = GetSafeNode<std::string>(n, "type");
-                    if (nType != expectedType) continue;
-                }
-                return remapped;
-            }
-        }
-    }
-    return addr;
-}
 
 std::unordered_map<std::string, uint8_t> gF3DTable = {
     { "G_VTX", 0x04 },     { "G_DL", 0x06 },      { "G_MTX", 0x1 },    { "G_ENDDL", 0xB8 },
@@ -521,7 +488,7 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             if (dlSeg < 8 || dlSeg > 13) {
                 dec = Companion::Instance->GetSafeStringByAddr(ptr, "GFX");
                 if (!dec.has_value()) {
-                    auto remapped = RemapSegmentedAddr(ptr, "GFX");
+                    auto remapped = OoT::DListHelpers::RemapSegmentedAddr(ptr, "GFX");
                     if (remapped != ptr) {
                         dec = Companion::Instance->GetSafeStringByAddr(remapped, "GFX");
                         if (dec.has_value()) ptr = remapped;
@@ -692,8 +659,8 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                 dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
             }
             if (!dec.has_value()) {
-                auto remapped = RemapSegmentedAddr(ptr, "OOT:MTX");
-                if (remapped == ptr) remapped = RemapSegmentedAddr(ptr, "MTX");
+                auto remapped = OoT::DListHelpers::RemapSegmentedAddr(ptr, "OOT:MTX");
+                if (remapped == ptr) remapped = OoT::DListHelpers::RemapSegmentedAddr(ptr, "MTX");
                 if (remapped != ptr) {
                     dec = Companion::Instance->GetSafeStringByAddr(remapped, "OOT:MTX");
                     if (!dec.has_value()) dec = Companion::Instance->GetSafeStringByAddr(remapped, "MTX");
@@ -744,7 +711,7 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             uint32_t dlAddr = (i >= 2) ? cmds[i - 1] : 0;
             auto dec = Companion::Instance->GetSafeStringByAddr(dlAddr, "GFX");
             if (!dec.has_value()) {
-                auto remapped = RemapSegmentedAddr(dlAddr, "GFX");
+                auto remapped = OoT::DListHelpers::RemapSegmentedAddr(dlAddr, "GFX");
                 if (remapped != dlAddr) {
                     dec = Companion::Instance->GetSafeStringByAddr(remapped, "GFX");
                 }
