@@ -454,44 +454,31 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
         OoT::DListHelpers::HandleGSunDLTextureFixup(opcode, w0, w1, replacement);
 
         if (opcode == GBI(G_MTX)) {
-            auto ptr = w1;
-            auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "OOT:MTX");
-            if (!dec.has_value()) {
-                dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
-            }
-            if (!dec.has_value()) {
-                auto remapped = OoT::DListHelpers::RemapSegmentedAddr(ptr, "OOT:MTX");
-                if (remapped == ptr) remapped = OoT::DListHelpers::RemapSegmentedAddr(ptr, "MTX");
-                if (remapped != ptr) {
-                    dec = Companion::Instance->GetSafeStringByAddr(remapped, "OOT:MTX");
-                    if (!dec.has_value()) dec = Companion::Instance->GetSafeStringByAddr(remapped, "MTX");
-                    if (dec.has_value()) ptr = remapped;
-                }
-            }
-
-            if (dec.has_value()) {
-                uint64_t hash = CRC64(dec.value().c_str());
-
-                if (hash == 0) {
-                    throw std::runtime_error("Matrix hash is 0 for " + dec.value());
-                }
-
-                SPDLOG_INFO("Found matrix: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+            if (!OoT::DListHelpers::HandleExportMtx(w0, w1, writer)) {
+                // Original main path
+                auto ptr = w1;
+                auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
 
                 w0 &= 0x00FFFFFF;
                 w0 += G_MTX_OTR << 24;
+                w1 = 0;
 
                 writer.Write(w0);
-                writer.Write(w1);  // Keep original segmented address
+                writer.Write(w1);
 
-                w0 = hash >> 32;
-                w1 = hash & 0xFFFFFFFF;
-            } else {
-                SPDLOG_WARN("Could not find matrix at 0x{:X}", ptr);
-                // Cross-segment matrix: modify w1 in place, no explicit write
-                // OTRExporter re-encodes via gsSPMatrix which preserves w0 and sets
-                // w1 = (address & 0x0FFFFFFF) + 1. The final write handles output.
-                w1 = (w1 & 0x0FFFFFFF) + 1;
+                if (dec.has_value()) {
+                    uint64_t hash = CRC64(dec.value().c_str());
+
+                    if (hash == 0) {
+                        throw std::runtime_error("Matrix hash is 0 for " + dec.value());
+                    }
+
+                    SPDLOG_INFO("Found matrix: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+                    w0 = hash >> 32;
+                    w1 = hash & 0xFFFFFFFF;
+                } else {
+                    SPDLOG_WARN("Could not find matrix at 0x{:X}", ptr);
+                }
             }
         }
 

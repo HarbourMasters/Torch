@@ -28,6 +28,9 @@ bool HandleExportSetTImg(uint8_t opcode, uint32_t& w0, uint32_t& w1,
 void HandleGSunDLTextureFixup(uint8_t opcode, uint32_t& w0, uint32_t& w1,
                               std::string* replacement);
 
+// Handle OoT-specific G_MTX export. Returns true if handled.
+bool HandleExportMtx(uint32_t& w0, uint32_t& w1, LUS::BinaryWriter& writer);
+
 // Handle OoT-specific G_DL export. Returns true if handled.
 bool HandleExportDL(uint32_t& w0, uint32_t& w1,
                     LUS::BinaryWriter& writer, std::string* replacement);

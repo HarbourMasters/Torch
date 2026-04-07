@@ -149,6 +149,46 @@ void HandleGSunDLTextureFixup(uint8_t opcode, uint32_t& w0, uint32_t& w1,
     }
 }
 
+bool HandleExportMtx(uint32_t& w0, uint32_t& w1, LUS::BinaryWriter& writer) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;
+
+    auto ptr = w1;
+    auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "OOT:MTX");
+    if (!dec.has_value()) {
+        dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
+    }
+    if (!dec.has_value()) {
+        auto remapped = RemapSegmentedAddr(ptr, "OOT:MTX");
+        if (remapped == ptr) remapped = RemapSegmentedAddr(ptr, "MTX");
+        if (remapped != ptr) {
+            dec = Companion::Instance->GetSafeStringByAddr(remapped, "OOT:MTX");
+            if (!dec.has_value()) dec = Companion::Instance->GetSafeStringByAddr(remapped, "MTX");
+            if (dec.has_value()) ptr = remapped;
+        }
+    }
+
+    if (dec.has_value()) {
+        uint64_t hash = CRC64(dec.value().c_str());
+        if (hash == 0) {
+            throw std::runtime_error("Matrix hash is 0 for " + dec.value());
+        }
+        SPDLOG_INFO("Found matrix: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+
+        w0 &= 0x00FFFFFF;
+        w0 += G_MTX_OTR << 24;
+
+        writer.Write(w0);
+        writer.Write(w1);
+
+        w0 = hash >> 32;
+        w1 = hash & 0xFFFFFFFF;
+    } else {
+        SPDLOG_WARN("Could not find matrix at 0x{:X}", ptr);
+        w1 = (w1 & 0x0FFFFFFF) + 1;
+    }
+    return true;
+}
+
 bool HandleExportDL(uint32_t& w0, uint32_t& w1,
                     LUS::BinaryWriter& writer, std::string* replacement) {
     if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;
