@@ -35,6 +35,88 @@ void OoTLimbFactory::ParseLODLimb(LUS::BinaryReader& reader, OoTLimbData& limb, 
     limb.dListPtr = ResolveGfxPointer(dListAddr, symbol, "DL");
 }
 
+void OoTLimbFactory::ParseSkinTransformations(std::vector<uint8_t>& buffer, uint32_t addr, uint16_t count,
+                                              std::vector<OoTSkinTransformation>& out) {
+    if (addr == 0 || count == 0) return;
+
+    auto raw = Decompressor::AutoDecode(addr, count * 0x0A, buffer);
+    LUS::BinaryReader reader(raw.segment.data, raw.segment.size);
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    for (uint16_t t = 0; t < count; t++) {
+        OoTSkinTransformation st;
+        st.limbIndex = reader.ReadUByte();
+        reader.ReadUByte(); // padding
+        st.x = reader.ReadInt16();
+        st.y = reader.ReadInt16();
+        st.z = reader.ReadInt16();
+        st.scale = reader.ReadUByte();
+        reader.ReadUByte(); // padding
+        out.push_back(st);
+    }
+}
+
+void OoTLimbFactory::ParseSkinVertices(std::vector<uint8_t>& buffer, uint32_t addr, uint16_t count,
+                                       std::vector<OoTSkinVertex>& out) {
+    if (addr == 0 || count == 0) return;
+
+    auto raw = Decompressor::AutoDecode(addr, count * 0x0A, buffer);
+    LUS::BinaryReader reader(raw.segment.data, raw.segment.size);
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    for (uint16_t v = 0; v < count; v++) {
+        OoTSkinVertex sv;
+        sv.index = reader.ReadUInt16();
+        sv.s = reader.ReadInt16();
+        sv.t = reader.ReadInt16();
+        sv.normX = reader.ReadInt8();
+        sv.normY = reader.ReadInt8();
+        sv.normZ = reader.ReadInt8();
+        sv.alpha = reader.ReadUByte();
+        out.push_back(sv);
+    }
+}
+
+void OoTLimbFactory::ParseAnimatedSkinData(std::vector<uint8_t>& buffer, uint32_t skinSegmentAddr,
+                                           OoTLimbData& limb, const std::string& symbol) {
+    // Null pointer means no animated skin data
+    if (skinSegmentAddr == 0) return;
+
+    auto skinRaw = Decompressor::AutoDecode(skinSegmentAddr, 0x0C, buffer);
+    LUS::BinaryReader skinReader(skinRaw.segment.data, skinRaw.segment.size);
+    skinReader.SetEndianness(Torch::Endianness::Big);
+
+    limb.skinAnimData.totalVtxCount = skinReader.ReadUInt16();
+    uint16_t limbModifCount = skinReader.ReadUInt16();
+    uint32_t limbModifAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
+    uint32_t skinDListAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
+
+    limb.skinVtxCnt = limb.skinAnimData.totalVtxCount;
+    limb.skinAnimData.dlist = ResolveGfxPointer(skinDListAddr, symbol, "SkinLimbDL");
+
+    if (limbModifAddr == 0 || limbModifCount == 0) return;
+
+    auto modifRaw = Decompressor::AutoDecode(limbModifAddr, limbModifCount * 0x10, buffer);
+    LUS::BinaryReader modifReader(modifRaw.segment.data, modifRaw.segment.size);
+    modifReader.SetEndianness(Torch::Endianness::Big);
+
+    for (uint16_t m = 0; m < limbModifCount; m++) {
+        OoTSkinLimbModif modif;
+        uint16_t vtxCount = modifReader.ReadUInt16();
+        uint16_t transformCount = modifReader.ReadUInt16();
+        modif.unk_4 = modifReader.ReadUInt16();
+        modifReader.ReadUInt16(); // padding
+        uint32_t skinVerticesAddr = Companion::Instance->PatchVirtualAddr(modifReader.ReadUInt32());
+        uint32_t limbTransAddr = Companion::Instance->PatchVirtualAddr(modifReader.ReadUInt32());
+
+        ParseSkinVertices(buffer, skinVerticesAddr, vtxCount, modif.skinVertices);
+
+        ParseSkinTransformations(buffer, limbTransAddr, transformCount, modif.limbTransformations);
+
+        limb.skinAnimData.limbModifications.push_back(modif);
+    }
+}
+
 void OoTLimbFactory::ParseSkinLimb(LUS::BinaryReader& reader, std::vector<uint8_t>& buffer,
                                    OoTLimbData& limb, const std::string& symbol) {
     ParseLimbHeader(reader, limb);
@@ -44,72 +126,11 @@ void OoTLimbFactory::ParseSkinLimb(LUS::BinaryReader& reader, std::vector<uint8_
     skinSegmentAddr = Companion::Instance->PatchVirtualAddr(skinSegmentAddr);
     if (limb.skinSegmentType == OoTLimbSkinType::SkinType_Normal) {
         limb.skinDList = ResolveGfxPointer(skinSegmentAddr, symbol, "DL");
-    } else if (limb.skinSegmentType == OoTLimbSkinType::SkinType_Animated && skinSegmentAddr != 0) {
-        auto skinRaw = Decompressor::AutoDecode(skinSegmentAddr, 0x0C, buffer);
-        LUS::BinaryReader skinReader(skinRaw.segment.data, skinRaw.segment.size);
-        skinReader.SetEndianness(Torch::Endianness::Big);
+        return;
+    }
 
-        limb.skinAnimData.totalVtxCount = skinReader.ReadUInt16();
-        uint16_t limbModifCount = skinReader.ReadUInt16();
-        uint32_t limbModifAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
-        uint32_t skinDListAddr = Companion::Instance->PatchVirtualAddr(skinReader.ReadUInt32());
-
-        limb.skinVtxCnt = limb.skinAnimData.totalVtxCount;
-        limb.skinAnimData.dlist = ResolveGfxPointer(skinDListAddr, symbol, "SkinLimbDL");
-
-        if (limbModifAddr != 0 && limbModifCount > 0) {
-            auto modifRaw = Decompressor::AutoDecode(limbModifAddr, limbModifCount * 0x10, buffer);
-            LUS::BinaryReader modifReader(modifRaw.segment.data, modifRaw.segment.size);
-            modifReader.SetEndianness(Torch::Endianness::Big);
-
-            for (uint16_t m = 0; m < limbModifCount; m++) {
-                OoTSkinLimbModif modif;
-                uint16_t vtxCount = modifReader.ReadUInt16();
-                uint16_t transformCount = modifReader.ReadUInt16();
-                modif.unk_4 = modifReader.ReadUInt16();
-                modifReader.ReadUInt16(); // padding
-                uint32_t skinVerticesAddr = Companion::Instance->PatchVirtualAddr(modifReader.ReadUInt32());
-                uint32_t limbTransAddr = Companion::Instance->PatchVirtualAddr(modifReader.ReadUInt32());
-
-                if (skinVerticesAddr != 0 && vtxCount > 0) {
-                    auto vtxRaw = Decompressor::AutoDecode(skinVerticesAddr, vtxCount * 0x0A, buffer);
-                    LUS::BinaryReader vtxReader(vtxRaw.segment.data, vtxRaw.segment.size);
-                    vtxReader.SetEndianness(Torch::Endianness::Big);
-
-                    for (uint16_t v = 0; v < vtxCount; v++) {
-                        OoTSkinVertex sv;
-                        sv.index = vtxReader.ReadUInt16();
-                        sv.s = vtxReader.ReadInt16();
-                        sv.t = vtxReader.ReadInt16();
-                        sv.normX = vtxReader.ReadInt8();
-                        sv.normY = vtxReader.ReadInt8();
-                        sv.normZ = vtxReader.ReadInt8();
-                        sv.alpha = vtxReader.ReadUByte();
-                        modif.skinVertices.push_back(sv);
-                    }
-                }
-
-                if (limbTransAddr != 0 && transformCount > 0) {
-                    auto transRaw = Decompressor::AutoDecode(limbTransAddr, transformCount * 0x0A, buffer);
-                    LUS::BinaryReader transReader(transRaw.segment.data, transRaw.segment.size);
-                    transReader.SetEndianness(Torch::Endianness::Big);
-
-                    for (uint16_t t = 0; t < transformCount; t++) {
-                        OoTSkinTransformation st;
-                        st.limbIndex = transReader.ReadUByte();
-                        transReader.ReadUByte(); // padding
-                        st.x = transReader.ReadInt16();
-                        st.y = transReader.ReadInt16();
-                        st.z = transReader.ReadInt16();
-                        st.scale = transReader.ReadUByte();
-                        transReader.ReadUByte(); // padding
-                        modif.limbTransformations.push_back(st);
-                    }
-                }
-
-                limb.skinAnimData.limbModifications.push_back(modif);
-            }
-        }
+    if (limb.skinSegmentType == OoTLimbSkinType::SkinType_Animated) {
+        ParseAnimatedSkinData(buffer, skinSegmentAddr, limb, symbol);
     }
 }
 

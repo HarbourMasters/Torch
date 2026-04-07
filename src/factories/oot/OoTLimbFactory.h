@@ -30,6 +30,12 @@ private:
     void ParseLODLimb(LUS::BinaryReader& reader, OoTLimbData& limb, const std::string& symbol);
     void ParseSkinLimb(LUS::BinaryReader& reader, std::vector<uint8_t>& buffer,
                        OoTLimbData& limb, const std::string& symbol);
+    void ParseAnimatedSkinData(std::vector<uint8_t>& buffer, uint32_t skinSegmentAddr,
+                               OoTLimbData& limb, const std::string& symbol);
+    void ParseSkinVertices(std::vector<uint8_t>& buffer, uint32_t addr, uint16_t count,
+                           std::vector<OoTSkinVertex>& out);
+    void ParseSkinTransformations(std::vector<uint8_t>& buffer, uint32_t addr, uint16_t count,
+                                  std::vector<OoTSkinTransformation>& out);
 };
 
 } // namespace OoT
