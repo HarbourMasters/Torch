@@ -9,75 +9,139 @@ struct OoTTextData : public IParsedData {
     std::vector<char> mBinary;
 };
 
-struct MessageEntry {
-    uint16_t id;
-    uint8_t textboxType;
-    uint8_t textboxYPos;
-    std::string msg;
-};
+bool OoTTextFactory::IsEndOfMessageCode(uint8_t c) {
+    return c == 0x02 // END
+        || c == 0x07; // FADE2
+}
 
-static std::vector<MessageEntry> parseMessages(const uint8_t* codeData, size_t codeSize, uint32_t codeOffset,
-                                               uint32_t langPtr, bool isPalLang,
-                                               const uint8_t* rawData, size_t rawSize) {
+unsigned int OoTTextFactory::GetTrailingBytes(uint8_t c) {
+    switch (c) {
+        case 0x05: // COLOR
+        case 0x06: // SHIFT
+        case 0x0C: // PERSISTENT
+        case 0x0E: // FADE
+        case 0x13: // ICON
+        case 0x14: // SPEED
+        case 0x1E: // BACKGROUND
+            return 1;
+        case 0x07: // FADE2 (also ends message)
+        case 0x11: // HIGHSCORE
+        case 0x12: // SOUND_EFFECT
+            return 2;
+        case 0x15: // THREE_CHOICE
+            return 3;
+        default:
+            return 0;
+    }
+}
+
+// Read a message string from raw data, handling OoT text control codes.
+// Control codes have 0-3 trailing bytes that must be included in the output.
+std::string OoTTextFactory::ReadMessageText(const uint8_t* rawData, size_t rawSize, uint32_t offset) {
+    std::string msg;
+    uint32_t ptr = offset;
+
+    while (ptr < rawSize) {
+        uint8_t byte = rawData[ptr];
+        if (byte == 0x00) break;
+
+        msg += (char)byte;
+        ptr++;
+
+        // Consume trailing bytes for control codes
+        unsigned int trailing = GetTrailingBytes(byte);
+        for (unsigned int i = 0; i < trailing && ptr < rawSize; i++) {
+            uint8_t trailingByte = rawData[ptr];
+            msg += (char)trailingByte;
+            ptr++;
+        }
+
+        if (IsEndOfMessageCode(byte)) break;
+    }
+
+    return msg;
+}
+
+// NTSC: message offset is at bytes 4-7 of the entry
+uint32_t OoTTextFactory::ReadMessageOffsetNTSC(const uint8_t* codeData, uint32_t entryPtr) {
+    uint32_t raw = (codeData[entryPtr + 4] << 24) |
+                   (codeData[entryPtr + 5] << 16) |
+                   (codeData[entryPtr + 6] << 8) |
+                    codeData[entryPtr + 7];
+
+    // Mask off segment byte to get file-relative offset
+    return raw & 0x00FFFFFF;
+}
+
+// PAL: message offset is a 4-byte entry in a separate language table
+uint32_t OoTTextFactory::ReadMessageOffsetPAL(const uint8_t* codeData, uint32_t langPtr) {
+    uint32_t raw = (codeData[langPtr]     << 24) |
+                   (codeData[langPtr + 1] << 16) |
+                   (codeData[langPtr + 2] << 8) |
+                    codeData[langPtr + 3];
+
+    // Mask off segment byte to get file-relative offset
+    return raw & 0x00FFFFFF;
+}
+
+// Entry layout: [id_hi, id_lo, type_hi_nibble | ypos_lo_nibble, ...]
+MessageEntry OoTTextFactory::ReadMessageMetadata(const uint8_t* codeData, uint32_t ptr) {
+    MessageEntry entry;
+    entry.id = (uint16_t)((codeData[ptr] << 8) | codeData[ptr + 1]);
+    entry.textboxType = (codeData[ptr + 2] >> 4) & 0x0F;
+    entry.textboxYPos = codeData[ptr + 2] & 0x0F;
+    return entry;
+}
+
+std::vector<MessageEntry> OoTTextFactory::ParseMessagesNTSC(const DataChunk& code, uint32_t codeOffset,
+                                                   const uint8_t* rawData, size_t rawSize) {
     std::vector<MessageEntry> messages;
     uint32_t currentPtr = codeOffset;
 
     while (true) {
-        if (currentPtr + 8 > codeSize) break;
+        // Each message table entry is 8 bytes
+        if (currentPtr + 8 > code.size) break;
 
-        MessageEntry entry;
-        entry.id = (uint16_t)((codeData[currentPtr] << 8) | codeData[currentPtr + 1]);
-        entry.textboxType = (codeData[currentPtr + 2] & 0xF0) >> 4;
-        entry.textboxYPos = (codeData[currentPtr + 2] & 0x0F);
+        auto entry = ReadMessageMetadata(code.data, currentPtr);
 
-        // Get message text offset
-        uint32_t msgOffset;
-        if (isPalLang) {
-            uint32_t raw = (codeData[langPtr] << 24) | (codeData[langPtr + 1] << 16) |
-                           (codeData[langPtr + 2] << 8) | codeData[langPtr + 3];
-            msgOffset = raw & 0x00FFFFFF;
-        } else {
-            uint32_t raw = (codeData[langPtr + 4] << 24) | (codeData[langPtr + 5] << 16) |
-                           (codeData[langPtr + 6] << 8) | codeData[langPtr + 7];
-            msgOffset = raw & 0x00FFFFFF;
-        }
+        // NTSC stores the message offset inline at currentPtr + 4
+        uint32_t msgOffset = ReadMessageOffsetNTSC(code.data, currentPtr);
 
-        // Parse message text with control codes
-        uint32_t msgPtr = msgOffset;
-        unsigned int extra = 0;
-        bool stop = false;
-
-        while (msgPtr < rawSize && ((!stop && rawData[msgPtr] != 0x00) || extra > 0)) {
-            uint8_t c = rawData[msgPtr];
-            entry.msg += (char)c;
-            msgPtr++;
-
-            if (extra == 0) {
-                if (c == 0x02) {
-                    stop = true;
-                } else if (c == 0x05 || c == 0x13 || c == 0x0E || c == 0x0C ||
-                           c == 0x1E || c == 0x06 || c == 0x14) {
-                    extra = 1;
-                } else if (c == 0x07) {
-                    extra = 2;
-                    stop = true;
-                } else if (c == 0x12 || c == 0x11) {
-                    extra = 2;
-                } else if (c == 0x15) {
-                    extra = 3;
-                }
-            } else {
-                extra--;
-            }
-        }
-
+        entry.msg = ReadMessageText(rawData, rawSize, msgOffset);
         messages.push_back(entry);
 
-        if (entry.id == 0xFFFC || entry.id == 0xFFFF)
-            break;
+        // End of message table (0xFFFF) or staff credits (0xFFFC)
+        if (entry.id == 0xFFFC || entry.id == 0xFFFF) break;
 
         currentPtr += 8;
-        langPtr += isPalLang ? 4 : 8;
+    }
+
+    return messages;
+}
+
+std::vector<MessageEntry> OoTTextFactory::ParseMessagesPAL(const DataChunk& code, uint32_t codeOffset,
+                                                  uint32_t langPtr,
+                                                  const uint8_t* rawData, size_t rawSize) {
+    std::vector<MessageEntry> messages;
+    uint32_t currentPtr = codeOffset;
+
+    while (true) {
+        // Each message table entry is 8 bytes
+        if (currentPtr + 8 > code.size) break;
+
+        auto entry = ReadMessageMetadata(code.data, currentPtr);
+
+        // PAL stores message offsets in a separate language table (4 bytes each)
+        uint32_t msgOffset = ReadMessageOffsetPAL(code.data, langPtr);
+
+        entry.msg = ReadMessageText(rawData, rawSize, msgOffset);
+        messages.push_back(entry);
+
+        // End of message table (0xFFFF) or staff credits (0xFFFC)
+        if (entry.id == 0xFFFC || entry.id == 0xFFFF) break;
+
+        currentPtr += 8;
+        langPtr += 4;
     }
 
     return messages;
@@ -86,14 +150,8 @@ static std::vector<MessageEntry> parseMessages(const uint8_t* codeData, size_t c
 std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto codePhysStart = GetSafeNode<uint32_t>(node, "code_phys_start");
     auto codeOffset = GetSafeNode<uint32_t>(node, "code_offset");
-    uint32_t langOffset = 0;
-    bool isPalLang = false;
-    if (node["lang_offset"]) {
-        langOffset = node["lang_offset"].as<uint32_t>();
-        if (langOffset != 0 && langOffset != codeOffset) {
-            isPalLang = true;
-        }
-    }
+    uint32_t langOffset = node["lang_offset"] ? node["lang_offset"].as<uint32_t>() : 0;
+    bool isPalLang = (langOffset != 0 && langOffset != codeOffset);
 
     // Decompress code segment
     auto* codeChunk = Decompressor::Decode(buffer, codePhysStart, CompressionType::YAZ0);
@@ -101,8 +159,6 @@ std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<ui
         SPDLOG_ERROR("OoTTextFactory: failed to decompress code segment");
         return std::nullopt;
     }
-    const uint8_t* codeData = codeChunk->data;
-    size_t codeSize = codeChunk->size;
 
     // Get message data segment (uncompressed)
     auto msgSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(128);
@@ -110,13 +166,14 @@ std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<ui
         SPDLOG_ERROR("OoTTextFactory: message data segment 128 not found");
         return std::nullopt;
     }
-    uint32_t msgBase = msgSeg.value();
-    const uint8_t* rawData = buffer.data() + msgBase;
-    size_t rawSize = buffer.size() - msgBase;
+
+    const uint8_t* rawData = buffer.data() + msgSeg.value();
+    size_t rawSize = buffer.size() - msgSeg.value();
 
     // Parse message entries
-    uint32_t langPtr = isPalLang ? langOffset : codeOffset;
-    auto messages = parseMessages(codeData, codeSize, codeOffset, langPtr, isPalLang, rawData, rawSize);
+    auto messages = isPalLang
+        ? ParseMessagesPAL(*codeChunk, codeOffset, langOffset, rawData, rawSize)
+        : ParseMessagesNTSC(*codeChunk, codeOffset, rawData, rawSize);
 
     SPDLOG_INFO("OoTTextFactory: parsed {} messages", messages.size());
 

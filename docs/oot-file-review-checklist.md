@@ -54,8 +54,8 @@ Legend: [x] reviewed, [~] needs follow-up before PR, [ ] not yet reviewed
 - [x] src/factories/oot/OoTMtxFactory.h
 - [x] src/factories/oot/OoTPathFactory.cpp
 - [x] src/factories/oot/OoTPathFactory.h
-- [ ] src/factories/oot/OoTPlayerAnimationFactory.cpp
-- [ ] src/factories/oot/OoTPlayerAnimationFactory.h
+- [x] src/factories/oot/OoTPlayerAnimationFactory.cpp
+- [x] src/factories/oot/OoTPlayerAnimationFactory.h
 - [x] src/factories/oot/OoTSceneCommandWriter.cpp
 - [x] src/factories/oot/OoTSceneCommandWriter.h
 - [x] src/factories/oot/OoTSceneFactory.cpp
@@ -83,6 +83,7 @@ Legend: [x] reviewed, [~] needs follow-up before PR, [ ] not yet reviewed
 - [ ] Debug logging cleanup — SPDLOG_WARN used for debug tracing, should be removed or downgraded
 - [ ] Static functions → private methods with declarations in headers
 - [ ] Prefer T& over shared_ptr for methods that don't need ownership
+- [ ] Missing #ifdef OOT_SUPPORT guards
 
 ## PR notes
 
