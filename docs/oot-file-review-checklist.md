@@ -10,8 +10,8 @@ Legend: [x] reviewed, [~] needs follow-up before PR, [ ] not yet reviewed
 - [x] src/Companion.h
 - [x] src/factories/BaseFactory.h
 - [x] src/factories/BlobFactory.cpp
-- [ ] src/factories/DisplayListFactory.cpp
-- [ ] src/factories/DisplayListFactory.h
+- [~] src/factories/DisplayListFactory.cpp — reviewed, cleanup planned in docs/oot-dlist-cleanup.md
+- [x] src/factories/DisplayListFactory.h
 - [x] src/factories/ResourceType.h
 - [x] src/n64/Cartridge.cpp
 - [x] src/utils/Decompressor.cpp
