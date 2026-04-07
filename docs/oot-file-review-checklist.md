@@ -86,5 +86,4 @@ Legend: [x] reviewed, [~] needs follow-up before PR, [ ] not yet reviewed
 
 ## Docs
 
-- [x] docs/bswap32-investigation.md
-- [ ] docs/ (remaining — evaluate which to keep vs remove before PR)
+- [~] docs/ — all docs are work-in-progress notes, remove before PR (save to gist first)
