@@ -46,6 +46,8 @@ Legend: [x] reviewed, [~] needs follow-up before PR, [ ] not yet reviewed
 - [x] src/factories/oot/OoTCollisionFactory.h
 - [x] src/factories/oot/OoTCurveAnimationFactory.cpp
 - [x] src/factories/oot/OoTCurveAnimationFactory.h
+- [ ] src/factories/oot/OoTDListHelpers.cpp
+- [ ] src/factories/oot/OoTDListHelpers.h
 - [x] src/factories/oot/OoTCutsceneFactory.cpp
 - [x] src/factories/oot/OoTCutsceneFactory.h
 - [x] src/factories/oot/OoTLimbFactory.cpp

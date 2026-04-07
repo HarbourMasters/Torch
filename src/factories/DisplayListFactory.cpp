@@ -4,9 +4,8 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <fstream>
-#include <iomanip>
-#include "oot/OoTDListHelpers.h"
 #include "n64/gbi-otr.h"
+#include "oot/OoTDListHelpers.h"
 
 #ifdef STANDALONE
 #include <gfxd.h>
@@ -18,22 +17,19 @@
 std::unordered_map<std::string, uint8_t> gF3DTable = {
     { "G_VTX", 0x04 },     { "G_DL", 0x06 },      { "G_MTX", 0x1 },    { "G_ENDDL", 0xB8 },
     { "G_SETTIMG", 0xFD }, { "G_MOVEMEM", 0x03 }, { "G_MV_L0", 0x86 }, { "G_MV_L1", 0x88 },
-    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0xB1 },    { "G_QUAD", -1 },
-    { "G_BRANCH_Z", 0xB0 }, { "G_RDPHALF_1", 0xB4 }
+    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0xB1 },    { "G_QUAD", -1 }
 };
 
 std::unordered_map<std::string, uint8_t> gF3DExTable = {
     { "G_VTX", 0x04 },     { "G_DL", 0x06 },      { "G_MTX", 0x1 },    { "G_ENDDL", 0xB8 },
     { "G_SETTIMG", 0xFD }, { "G_MOVEMEM", 0x03 }, { "G_MV_L0", 0x86 }, { "G_MV_L1", 0x88 },
-    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0xB1 },    { "G_QUAD", 0xB5 },
-    { "G_BRANCH_Z", 0xB0 }, { "G_RDPHALF_1", 0xB4 }
+    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0xB1 },    { "G_QUAD", 0xB5 }
 };
 
 std::unordered_map<std::string, uint8_t> gF3DEx2Table = {
     { "G_VTX", 0x01 },     { "G_DL", 0xDE },      { "G_MTX", 0xDA },   { "G_ENDDL", 0xDF },
     { "G_SETTIMG", 0xFD }, { "G_MOVEMEM", 0xDC }, { "G_MV_L0", 0x86 }, { "G_MV_L1", 0x88 },
-    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0x06 },    { "G_QUAD", 0x07 },
-    { "G_BRANCH_Z", 0x04 }, { "G_RDPHALF_1", 0xE1 }
+    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0x06 },    { "G_QUAD", 0x07 }
 };
 
 std::unordered_map<GBIVersion, std::unordered_map<std::string, uint8_t>> gGBITable = {
@@ -226,6 +222,9 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
 
 ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
                                          YAML::Node& node, std::string* replacement) {
+    auto ootResult = OoT::DListHelpers::Export(write, raw, entryName, node, replacement);
+    if (ootResult.has_value()) return ootResult.value();
+
     const auto gbi = Companion::Instance->GetGBIVersion();
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
     auto writer = LUS::BinaryWriter();
@@ -248,10 +247,6 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
         auto w1 = cmds[i + 1];
         uint8_t opcode = w0 >> 24;
 
-        if (opcode == GBI(G_VTX) && OoT::DListHelpers::HandleGSunDLVtx(w0, w1, writer, replacement)) {
-            continue;
-        }
-
         if (opcode == GBI(G_VTX)) {
             size_t nvtx;
             size_t didx;
@@ -273,9 +268,6 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             }
 
             auto ptr = w1;
-
-            // OoT-specific VTX handling (not indented to minimize diff with main)
-            if (!OoT::DListHelpers::HandleExportVtx(w0, w1, ptr, nvtx, didx, writer, replacement)) {
 
             auto overlap = GFXDOverride::GetVtxOverlap(ptr);
             if (overlap.has_value()) {
@@ -331,14 +323,9 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                     SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
                 }
             }
-
-            } // OoT HandleExportVtx
         }
 
         if (opcode == GBI(G_DL)) {
-            // OoT-specific DL handling (not indented to minimize diff with main)
-            if (!OoT::DListHelpers::HandleExportDL(w0, w1, writer, replacement)) {
-
             N64Gfx value;
             auto ptr = w1;
             auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "GFX");
@@ -369,8 +356,6 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                 w0 = value.words.w0;
                 w1 = value.words.w1;
             }
-
-            } // OoT HandleExportDL
         }
 
         // TODO: Fix this opcode
@@ -401,19 +386,23 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             if (!res.has_value()) {
                 res = Companion::Instance->GetStringByAddr(ptr - 0x8);
                 hasOffset = res.has_value();
+
+                if (!hasOffset) {
+                    SPDLOG_INFO("Could not find light {:X}", ptr);
+                    // throw std::runtime_error("Could not find light");
+                }
             }
+
+            w0 &= 0x00FFFFFF;
+            w0 += G_MOVEMEM_OTR_HASH << 24;
+            w1 = _SHIFTL(index, 24, 8) | _SHIFTL(offset, 16, 8) | _SHIFTL((uint8_t)(hasOffset ? 1 : 0), 8, 8);
+
+            writer.Write(w0);
+            writer.Write(w1);
 
             if (res.has_value()) {
                 uint64_t hash = CRC64(res.value().c_str());
                 SPDLOG_INFO("Found movemem: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, res.value());
-
-                w0 &= 0x00FFFFFF;
-                w0 += G_MOVEMEM_OTR_HASH << 24;
-                w1 = _SHIFTL(index, 24, 8) | _SHIFTL(offset, 16, 8) | _SHIFTL((uint8_t)(hasOffset ? 1 : 0), 8, 8);
-
-                writer.Write(w0);
-                writer.Write(w1);
-
                 w0 = hash >> 32;
                 w1 = hash & 0xFFFFFFFF;
             } else {
@@ -422,9 +411,6 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
         }
 
         if (opcode == GBI(G_SETTIMG)) {
-            // OoT-specific SETTIMG handling (not indented to minimize diff with main)
-            if (!OoT::DListHelpers::HandleExportSetTImg(opcode, w0, w1, writer, replacement)) {
-
             auto ptr = w1;
             auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "TEXTURE");
 
@@ -456,17 +442,9 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             } else {
                 SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
             }
-
-            } // OoT HandleExportSetTImg
         }
 
-        // OoT gSunDL texture format fixups
-        OoT::DListHelpers::HandleGSunDLTextureFixup(opcode, w0, w1, replacement);
-
         if (opcode == GBI(G_MTX)) {
-            // OoT-specific MTX handling (not indented to minimize diff with main)
-            if (!OoT::DListHelpers::HandleExportMtx(w0, w1, writer)) {
-
             auto ptr = w1;
             auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
 
@@ -490,12 +468,7 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             } else {
                 SPDLOG_WARN("Could not find matrix at 0x{:X}", ptr);
             }
-
-            } // OoT HandleExportMtx
         }
-
-        // OoT-specific opcode fixups (G_BRANCH_Z, G_SETOTHERMODE_H, G_NOOP, unhandled opcodes)
-        OoT::DListHelpers::HandleExportOpcodeFixups(opcode, w0, w1, i, cmds, writer);
 
         writer.Write(w0);
         writer.Write(w1);
@@ -506,6 +479,9 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
 }
 
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& raw_buffer, YAML::Node& node) {
+    auto ootResult = OoT::DListHelpers::Parse(raw_buffer, node);
+    if (ootResult.has_value()) return ootResult.value();
+
     const auto gbi = Companion::Instance->GetGBIVersion();
 
     auto count = GetSafeNode<int32_t>(node, "count", -1);
@@ -534,16 +510,13 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             }
 
             if (SEGMENT_NUMBER(node["offset"].as<uint32_t>()) == SEGMENT_NUMBER(w1)) {
-                // OoT-specific DL parse (not indented to minimize diff with main)
-                if (!OoT::DListHelpers::HandleParseDL(w1, node)) {
+                std::optional<uint32_t> segment;
 
                 YAML::Node gfx;
                 gfx["type"] = "GFX";
                 gfx["offset"] = w1;
 
                 Companion::Instance->AddAsset(gfx);
-
-                } // OoT HandleParseDL
             }
         }
 
@@ -587,16 +560,13 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     throw std::runtime_error("Unsupported GBI version");
             }
 
-            if (light && !OoT::DListHelpers::ShouldSkipAutoDiscovery()) {
+            if (light) {
                 YAML::Node lnode;
                 lnode["type"] = "LIGHTS";
                 lnode["offset"] = w1;
                 Companion::Instance->AddAsset(lnode);
             }
         }
-
-        // OoT-specific parse handlers for G_RDPHALF_1 and G_MTX
-        OoT::DListHelpers::HandleParseOpcodes(opcode, w0, w1, node, raw_buffer);
 
         if (opcode == GBI(G_VTX)) {
             uint32_t nvtx;
@@ -613,14 +583,11 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     nvtx = (C0(0, 16)) / sizeof(N64Vtx_t);
                     break;
             }
-
-            // OoT-specific VTX parse (not indented to minimize diff with main)
-            if (!OoT::DListHelpers::HandleParseVtx(w1, nvtx, node, raw_buffer)) {
-
             const auto decl = Companion::Instance->GetNodeByAddr(w1);
 
             if (!decl.has_value()) {
-                auto search = SearchVtx(w1);
+                auto adjPtr = Companion::Instance->PatchVirtualAddr(w1);
+                auto search = SearchVtx(adjPtr);
 
                 if (search.has_value()) {
                     auto [path, vtx] = search.value();
@@ -631,22 +598,20 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     auto lCount = GetSafeNode<uint32_t>(vtx, "count");
                     auto lSize = ALIGN16(lCount * sizeof(N64Vtx_t));
 
-                    if (w1 > lOffset && w1 <= lOffset + lSize) {
-                        SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", w1, lOffset);
-                        GFXDOverride::RegisterVTXOverlap(w1, search.value());
+                    if (adjPtr > lOffset && adjPtr <= lOffset + lSize) {
+                        SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", adjPtr, lOffset);
+                        GFXDOverride::RegisterVTXOverlap(adjPtr, search.value());
                     }
                 } else {
                     YAML::Node vtx;
                     vtx["type"] = "VTX";
-                    vtx["offset"] = w1;
+                    vtx["offset"] = adjPtr;
                     vtx["count"] = nvtx;
                     Companion::Instance->AddAsset(vtx);
                 }
             } else {
                 SPDLOG_WARN("Found vtx at 0x{:X}", w1);
             }
-
-            } // OoT HandleParseVtx
         }
 
         if (count != -1 && length++ >= count) {
@@ -656,8 +621,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         gfxs.push_back(w0);
         gfxs.push_back(w1);
     }
-
-    OoT::DListHelpers::FlushParseVtx(node);
 
     return std::make_shared<DListData>(gfxs);
 }

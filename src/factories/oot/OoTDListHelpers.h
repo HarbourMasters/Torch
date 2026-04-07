@@ -7,62 +7,20 @@
 #include <optional>
 #include <tuple>
 #include <vector>
-#include <unordered_set>
 
 namespace OoT {
 namespace DListHelpers {
 
-// Remap a segmented address to an alias segment where the asset is registered.
-uint32_t RemapSegmentedAddr(uint32_t addr, const std::string& expectedType = "");
-
-// Handle gSunDL VTX override in Export. Returns true if handled (caller should continue).
-bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
-                     LUS::BinaryWriter& writer, std::string* replacement);
-
-// OoT-specific VTX search: handles OOT:ARRAY type and cross-segment comparison.
+// OoT replacement for SearchVtx. Returns result if handled, nullopt to fall through to main.
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr);
 
-// Handle OoT-specific post-opcode fixups (G_BRANCH_Z, G_SETOTHERMODE_H, G_NOOP, etc.)
-void HandleExportOpcodeFixups(uint8_t opcode, uint32_t& w0, uint32_t& w1,
-                              size_t cmdIndex, const std::vector<uint32_t>& cmds,
-                              LUS::BinaryWriter& writer);
+// OoT replacement for DListBinaryExporter::Export. Returns result if handled, nullopt to fall through to main.
+std::optional<ExportResult> Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                  std::string& entryName, YAML::Node& node, std::string* replacement);
 
-// Handle OoT-specific G_SETTIMG export. Returns true if handled.
-bool HandleExportSetTImg(uint8_t opcode, uint32_t& w0, uint32_t& w1,
-                         LUS::BinaryWriter& writer, std::string* replacement);
-
-// Handle gSunDL SETTILE/LOADBLOCK texture format fixups.
-void HandleGSunDLTextureFixup(uint8_t opcode, uint32_t& w0, uint32_t& w1,
-                              std::string* replacement);
-
-// Handle OoT-specific G_MTX export. Returns true if handled.
-bool HandleExportMtx(uint32_t& w0, uint32_t& w1, LUS::BinaryWriter& writer);
-
-// Handle OoT-specific G_DL export. Returns true if handled.
-bool HandleExportDL(uint32_t& w0, uint32_t& w1,
-                    LUS::BinaryWriter& writer, std::string* replacement);
-
-// Handle OoT-specific G_VTX export. Returns true if handled (caller skips main path).
-// Modifies w0/w1 in place for the final write.
-bool HandleExportVtx(uint32_t& w0, uint32_t& w1, uint32_t& ptr,
-                     size_t nvtx, size_t didx,
-                     LUS::BinaryWriter& writer, std::string* replacement);
-
-// Returns true if OoT auto-discovery should be skipped (assets are pre-declared).
-bool ShouldSkipAutoDiscovery();
-
-// Handle OoT-specific G_DL parse (symbol derivation + AddAsset skip). Returns true if handled.
-bool HandleParseDL(uint32_t w1, YAML::Node& node);
-
-// Handle OoT-specific parse opcodes (G_RDPHALF_1 + DeferredVtx, G_MTX auto-discovery).
-void HandleParseOpcodes(uint8_t opcode, uint32_t w0, uint32_t w1,
-                        YAML::Node& node, std::vector<uint8_t>& buffer);
-
-// Handle OoT-specific G_VTX parse (cross-segment, skipVtx, DeferredVtx). Returns true if handled.
-bool HandleParseVtx(uint32_t w1, uint32_t nvtx, YAML::Node& node, std::vector<uint8_t>& buffer);
-
-// Flush deferred VTX at end of DList parse.
-void FlushParseVtx(YAML::Node& node);
+// OoT replacement for DListFactory::parse. Returns result if handled, nullopt to fall through to main.
+std::optional<std::optional<std::shared_ptr<IParsedData>>> Parse(
+    std::vector<uint8_t>& raw_buffer, YAML::Node& node);
 
 } // namespace DListHelpers
 } // namespace OoT
