@@ -497,7 +497,6 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
     const auto gbi = Companion::Instance->GetGBIVersion();
 
     auto count = GetSafeNode<int32_t>(node, "count", -1);
-    auto isAutogen = GetSafeNode<bool>(node, "autogen", false);
     auto [_, segment] = Decompressor::AutoDecode(node, raw_buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
@@ -523,26 +522,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             }
 
             if (SEGMENT_NUMBER(node["offset"].as<uint32_t>()) == SEGMENT_NUMBER(w1)) {
-                YAML::Node gfx;
-                gfx["type"] = "GFX";
-                gfx["offset"] = w1;
-
-                // Derive child DList symbol from parent's naming convention.
-                // If parent is "Bmori1_room_0DL_005C98", extract "Bmori1_room_0DL_"
-                // and apply it to the child offset to get "Bmori1_room_0DL_001CB0".
-                auto parentSymbol = GetSafeNode<std::string>(node, "symbol", "");
-                auto dlPos = parentSymbol.rfind("DL_");
-                if (dlPos != std::string::npos) {
-                    auto base = parentSymbol.substr(0, dlPos + 3); // "Bmori1_room_0DL_"
-                    uint32_t childOffset = SEGMENT_OFFSET(w1);
-                    std::ostringstream ss;
-                    ss << base << std::uppercase << std::hex
-                       << std::setfill('0') << std::setw(6) << childOffset;
-                    gfx["symbol"] = ss.str();
-                }
-
-                // OoT has all DLists pre-declared in YAML; only auto-discover for other games.
-                if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
+                if (!OoT::DListHelpers::HandleParseDL(w1, node)) {
+                    YAML::Node gfx;
+                    gfx["type"] = "GFX";
+                    gfx["offset"] = w1;
                     Companion::Instance->AddAsset(gfx);
                 }
             }
@@ -588,7 +571,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     throw std::runtime_error("Unsupported GBI version");
             }
 
-            if (light && Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
+            if (light && !OoT::DListHelpers::ShouldSkipAutoDiscovery()) {
                 YAML::Node lnode;
                 lnode["type"] = "LIGHTS";
                 lnode["offset"] = w1;
@@ -596,96 +579,8 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             }
         }
 
-        // Auto-discover G_BRANCH_Z target DLists.
-        // G_RDPHALF_1 stores the branch target DList address in w1,
-        // followed by G_BRANCH_Z. Register the target as a GFX asset.
-        // Also scan the branch target's VTX commands for consolidation with the parent DList.
-        // In ZAPD, branch target DLists share the parent's vertices map, so adjacent VTX
-        // from parent and branch target get merged. We replicate this by adding the branch
-        // target's VTX to the parent's deferred set before FlushDeferred runs.
-        if (opcode == GBI(G_RDPHALF_1)) {
-            if (IS_SEGMENTED(w1) && SEGMENT_NUMBER(w1) == SEGMENT_NUMBER(node["offset"].as<uint32_t>())) {
-                const auto decl = Companion::Instance->GetNodeByAddr(w1);
-                if (!decl.has_value()) {
-                    auto parentSymbol = GetSafeNode<std::string>(node, "symbol", "");
-                    auto dlPos = parentSymbol.rfind("DL_");
-                    if (dlPos != std::string::npos) {
-                        YAML::Node gfx;
-                        gfx["type"] = "GFX";
-                        gfx["offset"] = w1;
-                        auto base = parentSymbol.substr(0, dlPos + 3);
-                        uint32_t childOffset = SEGMENT_OFFSET(w1);
-                        std::ostringstream ss;
-                        ss << base << std::uppercase << std::hex
-                           << std::setfill('0') << std::setw(6) << childOffset;
-                        gfx["symbol"] = ss.str();
-
-                        // OoT has all DLists pre-declared in YAML; only auto-discover for other games.
-                        if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
-                            Companion::Instance->AddAsset(gfx);
-                        }
-                    }
-                }
-
-#ifdef OOT_SUPPORT
-                // Scan branch target DList for G_VTX to include in parent's deferred VTX set
-                if (DeferredVtx::IsDeferred()) {
-                    YAML::Node branchNode;
-                    branchNode["offset"] = w1;
-                    auto [__, branchSeg] = Decompressor::AutoDecode(branchNode, raw_buffer);
-                    LUS::BinaryReader branchReader(branchSeg.data, branchSeg.size);
-                    branchReader.SetEndianness(Torch::Endianness::Big);
-
-                    while (branchReader.GetBaseAddress() + 8 <= branchSeg.size) {
-                        auto bw0 = branchReader.ReadUInt32();
-                        auto bw1 = branchReader.ReadUInt32();
-                        uint8_t bOpcode = bw0 >> 24;
-
-                        if (bOpcode == GBI(G_ENDDL)) break;
-
-                        if (bOpcode == GBI(G_VTX) && IS_SEGMENTED(bw1)) {
-                            uint32_t bNvtx;
-                            switch (gbi) {
-                                case GBIVersion::f3dex2:
-                                    bNvtx = (bw0 >> 12) & 0xFF;
-                                    break;
-                                case GBIVersion::f3dex:
-                                case GBIVersion::f3dexb:
-                                    bNvtx = (bw0 >> 10) & 0x3F;
-                                    break;
-                                default:
-                                    bNvtx = ((bw0 & 0xFFFF)) / sizeof(N64Vtx_t);
-                                    break;
-                            }
-                            DeferredVtx::AddPending(bw1, bNvtx);
-                        }
-                    }
-                }
-#endif
-            }
-        }
-
-        // Auto-discover matrix assets referenced by G_MTX.
-        // OTRExporter extracts these from the DList and emits them as separate resources.
-        // ZAPD names them "{dlistName}Mtx_000000" (rawDataIndex = 0 relative to the matrix).
-        if (opcode == GBI(G_MTX)) {
-            if (IS_SEGMENTED(w1) && SEGMENT_NUMBER(w1) == SEGMENT_NUMBER(node["offset"].as<uint32_t>())) {
-                const auto decl = Companion::Instance->GetNodeByAddr(w1);
-                if (!decl.has_value()) {
-                    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
-                        auto parentSymbol = GetSafeNode<std::string>(node, "symbol", "");
-
-                        YAML::Node mtxNode;
-                        mtxNode["type"] = "MTX";
-                        mtxNode["offset"] = w1;
-                        mtxNode["symbol"] = parentSymbol + "Mtx_000000";
-                        Companion::Instance->AddAsset(mtxNode);
-                    } else {
-                        SPDLOG_WARN("Undeclared MTX at 0x{:08X} — YAML enrichment incomplete", w1);
-                    }
-                }
-            }
-        }
+        // OoT-specific parse handlers for G_RDPHALF_1 and G_MTX
+        OoT::DListHelpers::HandleParseOpcodes(opcode, w0, w1, node, raw_buffer);
 
         if (opcode == GBI(G_VTX)) {
             uint32_t nvtx;
@@ -702,79 +597,32 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     nvtx = (C0(0, 16)) / sizeof(N64Vtx_t);
                     break;
             }
-            const auto decl = Companion::Instance->GetNodeByAddr(w1);
 
-            if (!decl.has_value()) {
-                auto adjPtr = Companion::Instance->PatchVirtualAddr(w1);
-                auto search = SearchVtx(adjPtr);
-
-                if (search.has_value()) {
-                    auto [path, vtx] = search.value();
-
-                    SPDLOG_INFO("Path: {}", path);
-
-                    auto lOffset = GetSafeNode<uint32_t>(vtx, "offset");
-                    auto lCount = GetSafeNode<uint32_t>(vtx, "count");
-                    auto lSize = ALIGN16(lCount * sizeof(N64Vtx_t));
-
-                    // Compare in absolute ROM address space for cross-segment support
-                    uint32_t absPtr = adjPtr;
-                    uint32_t absOffset = lOffset;
-                    if (IS_SEGMENTED(adjPtr)) {
-                        auto seg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(adjPtr));
-                        if (seg.has_value()) absPtr = seg.value() + SEGMENT_OFFSET(adjPtr);
-                    }
-                    if (IS_SEGMENTED(lOffset)) {
-                        auto seg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(lOffset));
-                        if (seg.has_value()) absOffset = seg.value() + SEGMENT_OFFSET(lOffset);
-                    }
-
-                    if (absPtr > absOffset && absPtr <= absOffset + lSize) {
-                        SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", adjPtr, lOffset);
-                        // Register with the patched address (used by binary exporter lookup)
-                        GFXDOverride::RegisterVTXOverlap(adjPtr, search.value());
+            if (!OoT::DListHelpers::HandleParseVtx(w1, nvtx, node, raw_buffer)) {
+                // Original main path
+                const auto decl = Companion::Instance->GetNodeByAddr(w1);
+                if (!decl.has_value()) {
+                    auto search = SearchVtx(w1);
+                    if (search.has_value()) {
+                        auto [path, vtx] = search.value();
+                        SPDLOG_INFO("Path: {}", path);
+                        auto lOffset = GetSafeNode<uint32_t>(vtx, "offset");
+                        auto lCount = GetSafeNode<uint32_t>(vtx, "count");
+                        auto lSize = ALIGN16(lCount * sizeof(N64Vtx_t));
+                        if (w1 > lOffset && w1 <= lOffset + lSize) {
+                            SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", w1, lOffset);
+                            GFXDOverride::RegisterVTXOverlap(w1, search.value());
+                        }
+                    } else {
+                        YAML::Node vtx;
+                        vtx["type"] = "VTX";
+                        vtx["offset"] = w1;
+                        vtx["count"] = nvtx;
+                        Companion::Instance->AddAsset(vtx);
                     }
                 } else {
-                    // Skip VTX auto-creation for:
-                    // 1. Unresolved virtual addresses (0x80XXXXXX) — no VRAM mapping
-                    // 2. Alias segments (e.g. segment 8 aliasing segment 6) —
-                    //    OTRExporter's HasSegment returns false for alias segments
-                    // 3. Unconfigured segments — AutoDecode would crash
-                    bool skipVtx = !IS_SEGMENTED(adjPtr);
-                    if (!skipVtx) {
-                        auto thisSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(adjPtr));
-                        if (thisSeg.has_value()) {
-                            for (uint8_t s = 0; s < SEGMENT_NUMBER(adjPtr); s++) {
-                                auto otherSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(s);
-                                if (otherSeg.has_value() && otherSeg.value() == thisSeg.value()) {
-                                    skipVtx = true;
-                                    break;
-                                }
-                            }
-                        } else {
-                            skipVtx = true;
-                        }
-                    }
-
-                    if (!skipVtx) {
-#ifdef OOT_SUPPORT
-                        if (DeferredVtx::IsDeferred()) {
-                            DeferredVtx::AddPending(adjPtr, nvtx);
-                        } else
-#endif
-                        if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) {
-                            YAML::Node vtx;
-                            vtx["type"] = "VTX";
-                            vtx["offset"] = adjPtr;
-                            vtx["count"] = nvtx;
-                            Companion::Instance->AddAsset(vtx);
-                        } else {
-                            SPDLOG_WARN("Undeclared VTX at 0x{:08X} — YAML enrichment incomplete", adjPtr);
-                        }
-                    }
+                    SPDLOG_WARN("Found vtx at 0x{:X}", w1);
                 }
-            } else {
-                SPDLOG_WARN("Found vtx at 0x{:X}", w1);
             }
         }
 
@@ -786,17 +634,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
         gfxs.push_back(w1);
     }
 
-#ifdef OOT_SUPPORT
-    // Flush per-DList VTX: merge adjacent arrays discovered during this parse.
-    // ZAPD merges VTX per-DList (each DList has its own vertices map).
-    if (DeferredVtx::IsDeferred()) {
-        auto symbol = GetSafeNode<std::string>(node, "symbol", "");
-        // Extract base name: "Bmori1_room_0DL_005C98" -> "Bmori1_room_0"
-        auto dlPos = symbol.rfind("DL_");
-        std::string baseName = (dlPos != std::string::npos) ? symbol.substr(0, dlPos) : symbol;
-        DeferredVtx::FlushDeferred(baseName);
-    }
-#endif
+    OoT::DListHelpers::FlushParseVtx(node);
 
     return std::make_shared<DListData>(gfxs);
 }

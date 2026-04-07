@@ -4,6 +4,10 @@
 #include "Companion.h"
 #include "spdlog/spdlog.h"
 #include "factories/DisplayListOverrides.h"
+#include "utils/Decompressor.h"
+#include "DeferredVtx.h"
+#include <iomanip>
+#include <sstream>
 #include "n64/gbi-otr.h"
 #include "strhash64/StrHash64.h"
 
@@ -466,6 +470,164 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
     }
 
     return std::nullopt;
+}
+
+bool ShouldSkipAutoDiscovery() {
+    return Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT;
+}
+
+bool HandleParseDL(uint32_t w1, YAML::Node& node) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;
+
+    auto parentSymbol = GetSafeNode<std::string>(node, "symbol", "");
+    auto dlPos = parentSymbol.rfind("DL_");
+    if (dlPos != std::string::npos) {
+        auto base = parentSymbol.substr(0, dlPos + 3);
+        uint32_t childOffset = SEGMENT_OFFSET(w1);
+        std::ostringstream ss;
+        ss << base << std::uppercase << std::hex
+           << std::setfill('0') << std::setw(6) << childOffset;
+        // Symbol derived but not added (OoT pre-declares in YAML)
+    }
+    return true; // Handled (skip AddAsset)
+}
+
+void HandleParseOpcodes(uint8_t opcode, uint32_t w0, uint32_t w1,
+                        YAML::Node& node, std::vector<uint8_t>& buffer) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return;
+
+    // F3DEX2 opcodes for OoT
+    constexpr uint8_t F3DEX2_RDPHALF_1 = 0xE1;
+    constexpr uint8_t F3DEX2_VTX = 0x01;
+    constexpr uint8_t F3DEX2_ENDDL = 0xDF;
+
+    // G_RDPHALF_1: auto-discover branch target DLists + scan for VTX
+    if (opcode == F3DEX2_RDPHALF_1) {
+        if (IS_SEGMENTED(w1) && SEGMENT_NUMBER(w1) == SEGMENT_NUMBER(node["offset"].as<uint32_t>())) {
+            const auto decl = Companion::Instance->GetNodeByAddr(w1);
+            if (!decl.has_value()) {
+                // Symbol derivation (not added for OoT)
+                auto parentSymbol = GetSafeNode<std::string>(node, "symbol", "");
+                auto dlPos = parentSymbol.rfind("DL_");
+                if (dlPos != std::string::npos) {
+                    // DList pre-declared in YAML, skip AddAsset
+                }
+            }
+
+#ifdef OOT_SUPPORT
+            if (DeferredVtx::IsDeferred()) {
+                auto branchData = Decompressor::AutoDecode(w1, std::nullopt, buffer);
+                LUS::BinaryReader branchReader(branchData.segment.data, branchData.segment.size);
+                branchReader.SetEndianness(Torch::Endianness::Big);
+
+                while (branchReader.GetBaseAddress() + 8 <= branchData.segment.size) {
+                    auto bw0 = branchReader.ReadUInt32();
+                    auto bw1 = branchReader.ReadUInt32();
+                    uint8_t bOpcode = bw0 >> 24;
+
+                    if (bOpcode == F3DEX2_ENDDL) break;
+
+                    if (bOpcode == F3DEX2_VTX && IS_SEGMENTED(bw1)) {
+                        uint32_t bNvtx = (bw0 >> 12) & 0xFF; // F3DEX2
+                        DeferredVtx::AddPending(bw1, bNvtx);
+                    }
+                }
+            }
+#endif
+        }
+    }
+
+    // G_MTX auto-discovery (debug logging only for OoT)
+    constexpr uint8_t F3DEX2_MTX = 0xDA;
+    if (opcode == F3DEX2_MTX) {
+        if (IS_SEGMENTED(w1) && SEGMENT_NUMBER(w1) == SEGMENT_NUMBER(node["offset"].as<uint32_t>())) {
+            const auto decl = Companion::Instance->GetNodeByAddr(w1);
+            if (!decl.has_value()) {
+                SPDLOG_WARN("Undeclared MTX at 0x{:08X} — YAML enrichment incomplete", w1);
+            }
+        }
+    }
+}
+
+bool HandleParseVtx(uint32_t w1, uint32_t nvtx, YAML::Node& node, std::vector<uint8_t>& buffer) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;
+
+    const auto decl = Companion::Instance->GetNodeByAddr(w1);
+    if (decl.has_value()) {
+        SPDLOG_WARN("Found vtx at 0x{:X}", w1);
+        return true;
+    }
+
+    auto adjPtr = Companion::Instance->PatchVirtualAddr(w1);
+    auto search = SearchVtx(adjPtr);
+
+    if (search.has_value()) {
+        auto [path, vtx] = search.value();
+        SPDLOG_INFO("Path: {}", path);
+
+        auto lOffset = GetSafeNode<uint32_t>(vtx, "offset");
+        auto lCount = GetSafeNode<uint32_t>(vtx, "count");
+        auto lSize = ((lCount * 16 + 0xF) & ~0xF); // ALIGN16
+
+        // Compare in absolute ROM address space
+        uint32_t absPtr = adjPtr;
+        uint32_t absOffset = lOffset;
+        if (IS_SEGMENTED(adjPtr)) {
+            auto seg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(adjPtr));
+            if (seg.has_value()) absPtr = seg.value() + SEGMENT_OFFSET(adjPtr);
+        }
+        if (IS_SEGMENTED(lOffset)) {
+            auto seg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(lOffset));
+            if (seg.has_value()) absOffset = seg.value() + SEGMENT_OFFSET(lOffset);
+        }
+
+        if (absPtr > absOffset && absPtr <= absOffset + lSize) {
+            SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", adjPtr, lOffset);
+            GFXDOverride::RegisterVTXOverlap(adjPtr, search.value());
+        }
+        return true;
+    }
+
+    // Skip VTX auto-creation for alias segments, virtual addresses, etc.
+    bool skipVtx = !IS_SEGMENTED(adjPtr);
+    if (!skipVtx) {
+        auto thisSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(adjPtr));
+        if (thisSeg.has_value()) {
+            for (uint8_t s = 0; s < SEGMENT_NUMBER(adjPtr); s++) {
+                auto otherSeg = Companion::Instance->GetFileOffsetFromSegmentedAddr(s);
+                if (otherSeg.has_value() && otherSeg.value() == thisSeg.value()) {
+                    skipVtx = true;
+                    break;
+                }
+            }
+        } else {
+            skipVtx = true;
+        }
+    }
+
+    if (!skipVtx) {
+#ifdef OOT_SUPPORT
+        if (DeferredVtx::IsDeferred()) {
+            DeferredVtx::AddPending(adjPtr, nvtx);
+        } else
+#endif
+        {
+            SPDLOG_WARN("Undeclared VTX at 0x{:08X} — YAML enrichment incomplete", adjPtr);
+        }
+    }
+    return true;
+}
+
+void FlushParseVtx(YAML::Node& node) {
+#ifdef OOT_SUPPORT
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return;
+    if (!DeferredVtx::IsDeferred()) return;
+
+    auto symbol = GetSafeNode<std::string>(node, "symbol", "");
+    auto dlPos = symbol.rfind("DL_");
+    std::string baseName = (dlPos != std::string::npos) ? symbol.substr(0, dlPos) : symbol;
+    DeferredVtx::FlushDeferred(baseName);
+#endif
 }
 
 } // namespace DListHelpers

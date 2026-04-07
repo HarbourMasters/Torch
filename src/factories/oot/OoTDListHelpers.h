@@ -48,6 +48,22 @@ bool HandleExportVtx(uint32_t& w0, uint32_t& w1, uint32_t& ptr,
                      size_t nvtx, size_t didx,
                      LUS::BinaryWriter& writer, std::string* replacement);
 
+// Returns true if OoT auto-discovery should be skipped (assets are pre-declared).
+bool ShouldSkipAutoDiscovery();
+
+// Handle OoT-specific G_DL parse (symbol derivation + AddAsset skip). Returns true if handled.
+bool HandleParseDL(uint32_t w1, YAML::Node& node);
+
+// Handle OoT-specific parse opcodes (G_RDPHALF_1 + DeferredVtx, G_MTX auto-discovery).
+void HandleParseOpcodes(uint8_t opcode, uint32_t w0, uint32_t w1,
+                        YAML::Node& node, std::vector<uint8_t>& buffer);
+
+// Handle OoT-specific G_VTX parse (cross-segment, skipVtx, DeferredVtx). Returns true if handled.
+bool HandleParseVtx(uint32_t w1, uint32_t nvtx, YAML::Node& node, std::vector<uint8_t>& buffer);
+
+// Flush deferred VTX at end of DList parse.
+void FlushParseVtx(YAML::Node& node);
+
 } // namespace DListHelpers
 } // namespace OoT
 
