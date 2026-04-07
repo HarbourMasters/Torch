@@ -88,6 +88,82 @@ bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
     return true;
 }
 
+void HandleExportOpcodeFixups(uint8_t opcode, uint32_t& w0, uint32_t& w1,
+                              size_t cmdIndex, const std::vector<uint32_t>& cmds,
+                              LUS::BinaryWriter& writer) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return;
+    auto gbi = Companion::Instance->GetGBIVersion();
+
+    // OoT uses F3DEX2: G_RDPHALF_1 = 0xE1, G_BRANCH_Z = 0x04
+    constexpr uint8_t F3DEX2_RDPHALF_1 = 0xE1;
+    constexpr uint8_t F3DEX2_BRANCH_Z = 0x04;
+
+    if (opcode == F3DEX2_RDPHALF_1 && cmdIndex + 2 < cmds.size()) {
+        uint8_t nextOpcode = cmds[cmdIndex + 2] >> 24;
+        if (nextOpcode == F3DEX2_BRANCH_Z) {
+            w0 = 0;
+            w1 = 0;
+        }
+    }
+
+    if (opcode == F3DEX2_BRANCH_Z) {
+        uint32_t dlAddr = (cmdIndex >= 2) ? cmds[cmdIndex - 1] : 0;
+        auto dec = Companion::Instance->GetSafeStringByAddr(dlAddr, "GFX");
+        if (!dec.has_value()) {
+            auto remapped = RemapSegmentedAddr(dlAddr, "GFX");
+            if (remapped != dlAddr) {
+                dec = Companion::Instance->GetSafeStringByAddr(remapped, "GFX");
+            }
+        }
+
+        if (dec.has_value()) {
+            uint64_t hash = CRC64(dec.value().c_str());
+            uint32_t a = (w0 >> 12) & 0xFFF;
+            uint32_t b = w0 & 0xFFF;
+            uint32_t branchW0 = (G_BRANCH_Z_OTR << 24) | _SHIFTL(a, 12, 12) | _SHIFTL(b, 0, 12);
+            uint32_t branchW1 = w1;
+            writer.Write(branchW0);
+            writer.Write(branchW1);
+            w0 = hash >> 32;
+            w1 = hash & 0xFFFFFFFF;
+        } else {
+            SPDLOG_WARN("Could not find display list for G_BRANCH_Z at 0x{:X}", dlAddr);
+        }
+    }
+
+    // G_SETOTHERMODE_H texture LUT re-encoding
+    if (opcode == 0xE3 && gbi == GBIVersion::f3dex2) {
+        uint8_t ss = (w0 >> 8) & 0xFF;
+        uint8_t nn = w0 & 0xFF;
+        int32_t sft = 32 - (nn + 1) - ss;
+        if (sft == 14) {
+            w1 = w1 >> 14;
+        }
+    }
+
+    // G_NOOP zeroing
+    if (opcode == 0x00) {
+        w0 = 0;
+        w1 = 0;
+    }
+
+    // Unhandled opcode zeroing
+    if (gbi == GBIVersion::f3dex2) {
+        static const std::unordered_set<uint8_t> otrHandledOpcodes = {
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+            0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDE, 0xDF,
+            0xE1, 0xE2, 0xE3, 0xE4,
+            0xE6, 0xE7, 0xE8, 0xE9, 0xEF,
+            0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5,
+            0xFA, 0xFB, 0xFC, 0xFD,
+        };
+        if (otrHandledOpcodes.find(opcode) == otrHandledOpcodes.end()) {
+            w0 = (uint32_t)opcode << 24;
+            w1 = 0;
+        }
+    }
+}
+
 bool HandleExportSetTImg(uint8_t opcode, uint32_t& w0, uint32_t& w1,
                          LUS::BinaryWriter& writer, std::string* replacement) {
     if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;

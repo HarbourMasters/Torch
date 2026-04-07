@@ -482,84 +482,8 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             }
         }
 
-        // G_RDPHALF_1 + G_BRANCH_Z pair: OTRExporter converts G_BRANCH_Z to
-        // G_BRANCH_Z_OTR (16 bytes: header + DL hash) and writes G_NOOP for G_RDPHALF_1.
-        // The DL address is taken from G_RDPHALF_1's w1.
-        if (opcode == GBI(G_RDPHALF_1) && i + 2 < cmds.size()) {
-            uint8_t nextOpcode = cmds[i + 2] >> 24;
-            if (nextOpcode == GBI(G_BRANCH_Z)) {
-                // Write G_NOOP for G_RDPHALF_1 (OTRExporter zeroes this out)
-                w0 = 0;
-                w1 = 0;
-            }
-        }
-
-        if (opcode == GBI(G_BRANCH_Z)) {
-            // Get DL address from previous G_RDPHALF_1 command
-            uint32_t dlAddr = (i >= 2) ? cmds[i - 1] : 0;
-            auto dec = Companion::Instance->GetSafeStringByAddr(dlAddr, "GFX");
-            if (!dec.has_value()) {
-                auto remapped = OoT::DListHelpers::RemapSegmentedAddr(dlAddr, "GFX");
-                if (remapped != dlAddr) {
-                    dec = Companion::Instance->GetSafeStringByAddr(remapped, "GFX");
-                }
-            }
-
-            if (dec.has_value()) {
-                uint64_t hash = CRC64(dec.value().c_str());
-
-                // Write G_BRANCH_Z_OTR header
-                uint32_t a = (w0 >> 12) & 0xFFF;
-                uint32_t b = w0 & 0xFFF;
-                uint32_t branchW0 = (G_BRANCH_Z_OTR << 24) | _SHIFTL(a, 12, 12) | _SHIFTL(b, 0, 12);
-                uint32_t branchW1 = w1; // z-value
-                writer.Write(branchW0);
-                writer.Write(branchW1);
-
-                w0 = hash >> 32;
-                w1 = hash & 0xFFFFFFFF;
-            } else {
-                SPDLOG_WARN("Could not find display list for G_BRANCH_Z at 0x{:X}", dlAddr);
-            }
-        }
-
-        // G_SETOTHERMODE_H texture LUT re-encoding (matches OTRExporter behavior)
-        // In F3DEX2: G_SETOTHERMODE_H = 0xE3
-        // OTRExporter special-cases sft==14 (G_MDSFT_TEXTLUT) by un-shifting the data value
-        if (opcode == 0xE3 && gbi == GBIVersion::f3dex2) {
-            uint8_t ss = (w0 >> 8) & 0xFF;
-            uint8_t nn = w0 & 0xFF;
-            int32_t sft = 32 - (nn + 1) - ss;
-
-            if (sft == 14) {
-                w1 = w1 >> 14;
-            }
-        }
-
-        // OTRExporter re-encodes G_NOOP via gsDPNoOp() which always produces {0, 0}.
-        if (opcode == 0x00) {
-            w0 = 0;
-            w1 = 0;
-        }
-
-        // HACK: OTRExporter's default case for unhandled opcodes writes
-        // opcode<<24, 0 (zeroing lower bits and w1). This matters when junk data
-        // gets parsed as DList commands (e.g. sCircleDList's offset points into VTX data).
-        // Zero out opcodes that OTRExporter doesn't explicitly handle.
-        if (gbi == GBIVersion::f3dex2) {
-            static const std::unordered_set<uint8_t> otrHandledOpcodes = {
-                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, // G_NOOP..G_QUAD
-                0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDE, 0xDF, // G_TEXTURE..G_ENDDL
-                0xE1, 0xE2, 0xE3, 0xE4,                         // G_RDPHALF_1..G_TEXRECT
-                0xE6, 0xE7, 0xE8, 0xE9, 0xEF,                   // syncs + G_RDPSETOTHERMODE
-                0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5,             // G_LOADTLUT..G_SETTILE
-                0xFA, 0xFB, 0xFC, 0xFD,                         // G_SETPRIMCOLOR..G_SETTIMG
-            };
-            if (otrHandledOpcodes.find(opcode) == otrHandledOpcodes.end()) {
-                w0 = (uint32_t)opcode << 24;
-                w1 = 0;
-            }
-        }
+        // OoT-specific opcode fixups (G_BRANCH_Z, G_SETOTHERMODE_H, G_NOOP, unhandled opcodes)
+        OoT::DListHelpers::HandleExportOpcodeFixups(opcode, w0, w1, i, cmds, writer);
 
         writer.Write(w0);
         writer.Write(w1);

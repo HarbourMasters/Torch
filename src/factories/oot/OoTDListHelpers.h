@@ -6,6 +6,8 @@
 #include <string>
 #include <optional>
 #include <tuple>
+#include <vector>
+#include <unordered_set>
 
 namespace OoT {
 namespace DListHelpers {
@@ -19,6 +21,11 @@ bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
 
 // OoT-specific VTX search: handles OOT:ARRAY type and cross-segment comparison.
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr);
+
+// Handle OoT-specific post-opcode fixups (G_BRANCH_Z, G_SETOTHERMODE_H, G_NOOP, etc.)
+void HandleExportOpcodeFixups(uint8_t opcode, uint32_t& w0, uint32_t& w1,
+                              size_t cmdIndex, const std::vector<uint32_t>& cmds,
+                              LUS::BinaryWriter& writer);
 
 // Handle OoT-specific G_SETTIMG export. Returns true if handled.
 bool HandleExportSetTImg(uint8_t opcode, uint32_t& w0, uint32_t& w1,
