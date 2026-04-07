@@ -417,80 +417,41 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
         }
 
         if (opcode == GBI(G_SETTIMG)) {
-            auto ptr = w1;
-            // Do NOT use RemapSegmentedAddr for textures: segments 8-13 are used for
-            // runtime-swapped textures (eyes, mouth) and must stay unresolved.
-            // OTRExporter's HasSegment check returns false for these segments.
-            auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "TEXTURE");
-
-            if (dec.has_value()) {
-                uint64_t hash = CRC64(dec.value().c_str());
-
-                if (hash == 0) {
-                    throw std::runtime_error("Texture hash is 0 for " + dec.value());
-                }
-
-                SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+            if (!OoT::DListHelpers::HandleExportSetTImg(opcode, w0, w1, writer, replacement)) {
+                // Original main path
+                auto ptr = w1;
+                auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "TEXTURE");
 
                 if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::PM64) {
                     uint32_t newW0 = (G_SETTIMG_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
                     writer.Write(newW0);
                     writer.Write(ptr);
                 } else {
-                    uint32_t newW0 = (G_SETTIMG_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
-                    writer.Write(newW0);
-                    writer.Write(static_cast<uint32_t>(0));
+                    N64Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
+                    w0 = value.words.w0;
+                    w1 = value.words.w1;
+                    writer.Write(w0);
+                    writer.Write(w1);
                 }
 
-                w0 = hash >> 32;
-                w1 = hash & 0xFFFFFFFF;
-            } else {
-                SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
-                // Texture not found: write original G_SETTIMG with address+1.
-                // OTRExporter writes this explicitly then falls through to write again,
-                // producing a duplicate command. We match that behavior for compatibility.
-                // OTRExporter hack: sShadowMaterialDL (ovl_En_Jsjutan) references a BSS texture.
-                // The actor loads it into segment 0xC at runtime.
-                if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT && replacement && replacement->find("sShadowMaterialDL") != std::string::npos) {
-                    w1 = 0x0C000001;
+                if (dec.has_value()) {
+                    uint64_t hash = CRC64(dec.value().c_str());
+
+                    if (hash == 0) {
+                        throw std::runtime_error("Texture hash is 0 for " + dec.value());
+                    }
+
+                    SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+                    w0 = hash >> 32;
+                    w1 = hash & 0xFFFFFFFF;
                 } else {
-                    auto patchedPtr = Companion::Instance->PatchVirtualAddr(ptr);
-                    w1 = (patchedPtr & 0x0FFFFFFF) + 1;
+                    SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
                 }
-                writer.Write(w0);
-                writer.Write(w1);
             }
         }
 
-        // OTRExporter hack: gSunDL textures are I4 but the DList commands use IA16 parameters.
-        // Adjust G_SETTILE size and G_LOADBLOCK texel count to match the actual texture format.
-        // See OTRExporter DisplayListExporter.cpp G_SETTILE/G_LOADBLOCK cases.
-        if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT && replacement && replacement->find("gSunDL") != std::string::npos) {
-            constexpr uint8_t G_SETTILE_OP = 0xF5;
-            constexpr uint8_t G_LOADBLOCK_OP = 0xF3;
-            constexpr uint8_t G_TX_LOADTILE = 7;
-            constexpr uint8_t G_IM_SIZ_4b = 0;
-
-            if (opcode == G_SETTILE_OP) {
-                uint8_t tile = (w1 >> 24) & 0x07;
-                if (tile != G_TX_LOADTILE) {
-                    // Force size field (bits 19-20 of w0) to G_IM_SIZ_4b
-                    w0 = (w0 & ~(0x3 << 19)) | (G_IM_SIZ_4b << 19);
-                }
-            }
-
-            if (opcode == G_LOADBLOCK_OP) {
-                // G_LOADBLOCK encoding: w0 = [op:8][uls:12][ult:12], w1 = [tile:4][texels:12][dxt:12]
-                // OTRExporter checks ult (w0 bits 0-11), not the tile index from w1.
-                uint32_t ult = w0 & 0xFFF;
-                uint32_t texels = (w1 >> 12) & 0xFFF;
-                if (ult != G_TX_LOADTILE) {
-                    texels = (texels + 1) / 2 - 1;
-                    w1 = (w1 & ~(0xFFF << 12)) | ((texels & 0xFFF) << 12);
-                }
-            }
-
-        }
+        // OoT gSunDL texture format fixups
+        OoT::DListHelpers::HandleGSunDLTextureFixup(opcode, w0, w1, replacement);
 
         if (opcode == GBI(G_MTX)) {
             auto ptr = w1;

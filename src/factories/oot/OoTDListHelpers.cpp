@@ -88,6 +88,67 @@ bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
     return true;
 }
 
+bool HandleExportSetTImg(uint8_t opcode, uint32_t& w0, uint32_t& w1,
+                         LUS::BinaryWriter& writer, std::string* replacement) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;
+
+    auto ptr = w1;
+    auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "TEXTURE");
+
+    if (dec.has_value()) {
+        uint64_t hash = CRC64(dec.value().c_str());
+        if (hash == 0) {
+            throw std::runtime_error("Texture hash is 0 for " + dec.value());
+        }
+        SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+
+        uint32_t newW0 = (G_SETTIMG_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
+        writer.Write(newW0);
+        writer.Write(static_cast<uint32_t>(0));
+
+        w0 = hash >> 32;
+        w1 = hash & 0xFFFFFFFF;
+    } else {
+        SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
+        if (replacement && replacement->find("sShadowMaterialDL") != std::string::npos) {
+            w1 = 0x0C000001;
+        } else {
+            auto patchedPtr = Companion::Instance->PatchVirtualAddr(ptr);
+            w1 = (patchedPtr & 0x0FFFFFFF) + 1;
+        }
+        writer.Write(w0);
+        writer.Write(w1);
+    }
+    return true;
+}
+
+void HandleGSunDLTextureFixup(uint8_t opcode, uint32_t& w0, uint32_t& w1,
+                              std::string* replacement) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return;
+    if (!replacement || replacement->find("gSunDL") == std::string::npos) return;
+
+    constexpr uint8_t G_SETTILE_OP = 0xF5;
+    constexpr uint8_t G_LOADBLOCK_OP = 0xF3;
+    constexpr uint8_t G_TX_LOADTILE = 7;
+    constexpr uint8_t G_IM_SIZ_4b = 0;
+
+    if (opcode == G_SETTILE_OP) {
+        uint8_t tile = (w1 >> 24) & 0x07;
+        if (tile != G_TX_LOADTILE) {
+            w0 = (w0 & ~(0x3 << 19)) | (G_IM_SIZ_4b << 19);
+        }
+    }
+
+    if (opcode == G_LOADBLOCK_OP) {
+        uint32_t ult = w0 & 0xFFF;
+        uint32_t texels = (w1 >> 12) & 0xFFF;
+        if (ult != G_TX_LOADTILE) {
+            texels = (texels + 1) / 2 - 1;
+            w1 = (w1 & ~(0xFFF << 12)) | ((texels & 0xFFF) << 12);
+        }
+    }
+}
+
 bool HandleExportDL(uint32_t& w0, uint32_t& w1,
                     LUS::BinaryWriter& writer, std::string* replacement) {
     if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;

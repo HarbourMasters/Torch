@@ -20,6 +20,14 @@ bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
 // OoT-specific VTX search: handles OOT:ARRAY type and cross-segment comparison.
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr);
 
+// Handle OoT-specific G_SETTIMG export. Returns true if handled.
+bool HandleExportSetTImg(uint8_t opcode, uint32_t& w0, uint32_t& w1,
+                         LUS::BinaryWriter& writer, std::string* replacement);
+
+// Handle gSunDL SETTILE/LOADBLOCK texture format fixups.
+void HandleGSunDLTextureFixup(uint8_t opcode, uint32_t& w0, uint32_t& w1,
+                              std::string* replacement);
+
 // Handle OoT-specific G_DL export. Returns true if handled.
 bool HandleExportDL(uint32_t& w0, uint32_t& w1,
                     LUS::BinaryWriter& writer, std::string* replacement);
