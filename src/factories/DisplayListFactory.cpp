@@ -274,98 +274,103 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
 
             auto ptr = w1;
 
+            // OoT-specific VTX handling (not indented to minimize diff with main)
             if (!OoT::DListHelpers::HandleExportVtx(w0, w1, ptr, nvtx, didx, writer, replacement)) {
-                // Original main path
-                auto overlap = GFXDOverride::GetVtxOverlap(ptr);
-                if (overlap.has_value()) {
-                    auto ovnode = std::get<1>(overlap.value());
-                    auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
-                    uint64_t hash = CRC64(path.c_str());
 
-                    if (hash == 0) {
-                        throw std::runtime_error("Vtx hash is 0 for " + std::get<0>(overlap.value()));
-                    }
+            auto overlap = GFXDOverride::GetVtxOverlap(ptr);
+            if (overlap.has_value()) {
+                auto ovnode = std::get<1>(overlap.value());
+                auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
+                uint64_t hash = CRC64(path.c_str());
 
-                    SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, path);
-
-                    auto offset = GetSafeNode<uint32_t>(ovnode, "offset");
-                    auto count = GetSafeNode<uint32_t>(ovnode, "count");
-                    auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
-
-                    N64Gfx value = gsSPVertexOTR(diff, nvtx, didx);
-
-                    SPDLOG_INFO("gsSPVertexOTR({}, {}, {})", diff, nvtx, didx);
-
-                    w0 = value.words.w0;
-                    w1 = value.words.w1;
-
-                    writer.Write(w0);
-                    writer.Write(w1);
-
-                    w0 = hash >> 32;
-                    w1 = hash & 0xFFFFFFFF;
-                } else {
-                    auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "VTX");
-                    if (dec.has_value()) {
-                        uint64_t hash = CRC64(dec.value().c_str());
-                        if (hash == 0) {
-                            throw std::runtime_error("Vtx hash is 0 for " + dec.value());
-                        }
-
-                        SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
-
-                        N64Gfx value = gsSPVertexOTR(0, nvtx, didx);
-
-                        SPDLOG_INFO("gsSPVertex({}, {}, 0x{:X})", nvtx, didx, ptr);
-
-                        w0 = value.words.w0;
-                        w1 = value.words.w1;
-
-                        writer.Write(w0);
-                        writer.Write(w1);
-
-                        w0 = hash >> 32;
-                        w1 = hash & 0xFFFFFFFF;
-                    } else {
-                        SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
-                    }
+                if (hash == 0) {
+                    throw std::runtime_error("Vtx hash is 0 for " + std::get<0>(overlap.value()));
                 }
-            }
-        }
 
-        if (opcode == GBI(G_DL)) {
-            if (!OoT::DListHelpers::HandleExportDL(w0, w1, writer, replacement)) {
-                // Original main path
-                N64Gfx value;
-                auto ptr = w1;
-                auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "GFX");
-                auto branch = (w0 >> 16) & G_DL_NO_PUSH;
+                SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, path);
 
-                value = gsSPDisplayListOTRHash(ptr);
+                auto offset = GetSafeNode<uint32_t>(ovnode, "offset");
+                auto count = GetSafeNode<uint32_t>(ovnode, "count");
+                auto diff = ASSET_PTR(ptr) - ASSET_PTR(offset);
+
+                N64Gfx value = gsSPVertexOTR(diff, nvtx, didx);
+
+                SPDLOG_INFO("gsSPVertexOTR({}, {}, {})", diff, nvtx, didx);
+
                 w0 = value.words.w0;
                 w1 = value.words.w1;
 
                 writer.Write(w0);
                 writer.Write(w1);
 
+                w0 = hash >> 32;
+                w1 = hash & 0xFFFFFFFF;
+            } else {
+                auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "VTX");
                 if (dec.has_value()) {
                     uint64_t hash = CRC64(dec.value().c_str());
-                    SPDLOG_INFO("Found display list: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
-                    w0 = hash >> 32;
-                    w1 = hash & 0xFFFFFFFF;
-                } else {
-                    SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
-                }
+                    if (hash == 0) {
+                        throw std::runtime_error("Vtx hash is 0 for " + dec.value());
+                    }
 
-                if (branch) {
+                    SPDLOG_INFO("Found vtx: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+
+                    N64Gfx value = gsSPVertexOTR(0, nvtx, didx);
+
+                    SPDLOG_INFO("gsSPVertex({}, {}, 0x{:X})", nvtx, didx, ptr);
+
+                    w0 = value.words.w0;
+                    w1 = value.words.w1;
+
                     writer.Write(w0);
                     writer.Write(w1);
 
-                    value = gsSPRawOpcode(GBI(G_ENDDL));
-                    w0 = value.words.w0;
-                    w1 = value.words.w1;
+                    w0 = hash >> 32;
+                    w1 = hash & 0xFFFFFFFF;
+                } else {
+                    SPDLOG_WARN("Could not find vtx at 0x{:X}", ptr);
                 }
             }
+
+            } // OoT HandleExportVtx
+        }
+
+        if (opcode == GBI(G_DL)) {
+            // OoT-specific DL handling (not indented to minimize diff with main)
+            if (!OoT::DListHelpers::HandleExportDL(w0, w1, writer, replacement)) {
+
+            N64Gfx value;
+            auto ptr = w1;
+            auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "GFX");
+            auto branch = (w0 >> 16) & G_DL_NO_PUSH;
+
+            // Export displaylist segment addresses as an index into a buffer of gfx
+            value = gsSPDisplayListOTRHash(ptr);
+            w0 = value.words.w0;
+            w1 = value.words.w1;
+
+            writer.Write(w0);
+            writer.Write(w1);
+
+            if (dec.has_value()) {
+                uint64_t hash = CRC64(dec.value().c_str());
+                SPDLOG_INFO("Found display list: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+                w0 = hash >> 32;
+                w1 = hash & 0xFFFFFFFF;
+            } else {
+                SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
+            }
+
+            if (branch) {
+                writer.Write(w0);
+                writer.Write(w1);
+
+                value = gsSPRawOpcode(GBI(G_ENDDL));
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            }
+
+            } // OoT HandleExportDL
         }
 
         // TODO: Fix this opcode
@@ -417,69 +422,76 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
         }
 
         if (opcode == GBI(G_SETTIMG)) {
+            // OoT-specific SETTIMG handling (not indented to minimize diff with main)
             if (!OoT::DListHelpers::HandleExportSetTImg(opcode, w0, w1, writer, replacement)) {
-                // Original main path
-                auto ptr = w1;
-                auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "TEXTURE");
 
-                if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::PM64) {
-                    uint32_t newW0 = (G_SETTIMG_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
-                    writer.Write(newW0);
-                    writer.Write(ptr);
-                } else {
-                    N64Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
-                    w0 = value.words.w0;
-                    w1 = value.words.w1;
-                    writer.Write(w0);
-                    writer.Write(w1);
-                }
+            auto ptr = w1;
+            auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "TEXTURE");
 
-                if (dec.has_value()) {
-                    uint64_t hash = CRC64(dec.value().c_str());
-
-                    if (hash == 0) {
-                        throw std::runtime_error("Texture hash is 0 for " + dec.value());
-                    }
-
-                    SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
-                    w0 = hash >> 32;
-                    w1 = hash & 0xFFFFFFFF;
-                } else {
-                    SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
-                }
+            if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::PM64) {
+                // preserve original w0 bits (fmt/siz/width) exactly, the
+                // ROM already stores width-1.
+                uint32_t newW0 = (G_SETTIMG_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
+                writer.Write(newW0);
+                writer.Write(ptr);
+            } else {
+                // Export texture segment addresses as segmented addresses
+                N64Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+                writer.Write(w0);
+                writer.Write(w1);
             }
+
+            if (dec.has_value()) {
+                uint64_t hash = CRC64(dec.value().c_str());
+
+                if (hash == 0) {
+                    throw std::runtime_error("Texture hash is 0 for " + dec.value());
+                }
+
+                SPDLOG_INFO("Found texture: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+                w0 = hash >> 32;
+                w1 = hash & 0xFFFFFFFF;
+            } else {
+                SPDLOG_WARN("Could not find texture at 0x{:X}", ptr);
+            }
+
+            } // OoT HandleExportSetTImg
         }
 
         // OoT gSunDL texture format fixups
         OoT::DListHelpers::HandleGSunDLTextureFixup(opcode, w0, w1, replacement);
 
         if (opcode == GBI(G_MTX)) {
+            // OoT-specific MTX handling (not indented to minimize diff with main)
             if (!OoT::DListHelpers::HandleExportMtx(w0, w1, writer)) {
-                // Original main path
-                auto ptr = w1;
-                auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
 
-                w0 &= 0x00FFFFFF;
-                w0 += G_MTX_OTR << 24;
-                w1 = 0;
+            auto ptr = w1;
+            auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
 
-                writer.Write(w0);
-                writer.Write(w1);
+            w0 &= 0x00FFFFFF;
+            w0 += G_MTX_OTR << 24;
+            w1 = 0;
 
-                if (dec.has_value()) {
-                    uint64_t hash = CRC64(dec.value().c_str());
+            writer.Write(w0);
+            writer.Write(w1);
 
-                    if (hash == 0) {
-                        throw std::runtime_error("Matrix hash is 0 for " + dec.value());
-                    }
+            if (dec.has_value()) {
+                uint64_t hash = CRC64(dec.value().c_str());
 
-                    SPDLOG_INFO("Found matrix: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
-                    w0 = hash >> 32;
-                    w1 = hash & 0xFFFFFFFF;
-                } else {
-                    SPDLOG_WARN("Could not find matrix at 0x{:X}", ptr);
+                if (hash == 0) {
+                    throw std::runtime_error("Matrix hash is 0 for " + dec.value());
                 }
+
+                SPDLOG_INFO("Found matrix: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, dec.value());
+                w0 = hash >> 32;
+                w1 = hash & 0xFFFFFFFF;
+            } else {
+                SPDLOG_WARN("Could not find matrix at 0x{:X}", ptr);
             }
+
+            } // OoT HandleExportMtx
         }
 
         // OoT-specific opcode fixups (G_BRANCH_Z, G_SETOTHERMODE_H, G_NOOP, unhandled opcodes)
@@ -522,12 +534,16 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
             }
 
             if (SEGMENT_NUMBER(node["offset"].as<uint32_t>()) == SEGMENT_NUMBER(w1)) {
+                // OoT-specific DL parse (not indented to minimize diff with main)
                 if (!OoT::DListHelpers::HandleParseDL(w1, node)) {
-                    YAML::Node gfx;
-                    gfx["type"] = "GFX";
-                    gfx["offset"] = w1;
-                    Companion::Instance->AddAsset(gfx);
-                }
+
+                YAML::Node gfx;
+                gfx["type"] = "GFX";
+                gfx["offset"] = w1;
+
+                Companion::Instance->AddAsset(gfx);
+
+                } // OoT HandleParseDL
             }
         }
 
@@ -598,32 +614,39 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     break;
             }
 
+            // OoT-specific VTX parse (not indented to minimize diff with main)
             if (!OoT::DListHelpers::HandleParseVtx(w1, nvtx, node, raw_buffer)) {
-                // Original main path
-                const auto decl = Companion::Instance->GetNodeByAddr(w1);
-                if (!decl.has_value()) {
-                    auto search = SearchVtx(w1);
-                    if (search.has_value()) {
-                        auto [path, vtx] = search.value();
-                        SPDLOG_INFO("Path: {}", path);
-                        auto lOffset = GetSafeNode<uint32_t>(vtx, "offset");
-                        auto lCount = GetSafeNode<uint32_t>(vtx, "count");
-                        auto lSize = ALIGN16(lCount * sizeof(N64Vtx_t));
-                        if (w1 > lOffset && w1 <= lOffset + lSize) {
-                            SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", w1, lOffset);
-                            GFXDOverride::RegisterVTXOverlap(w1, search.value());
-                        }
-                    } else {
-                        YAML::Node vtx;
-                        vtx["type"] = "VTX";
-                        vtx["offset"] = w1;
-                        vtx["count"] = nvtx;
-                        Companion::Instance->AddAsset(vtx);
+
+            const auto decl = Companion::Instance->GetNodeByAddr(w1);
+
+            if (!decl.has_value()) {
+                auto search = SearchVtx(w1);
+
+                if (search.has_value()) {
+                    auto [path, vtx] = search.value();
+
+                    SPDLOG_INFO("Path: {}", path);
+
+                    auto lOffset = GetSafeNode<uint32_t>(vtx, "offset");
+                    auto lCount = GetSafeNode<uint32_t>(vtx, "count");
+                    auto lSize = ALIGN16(lCount * sizeof(N64Vtx_t));
+
+                    if (w1 > lOffset && w1 <= lOffset + lSize) {
+                        SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", w1, lOffset);
+                        GFXDOverride::RegisterVTXOverlap(w1, search.value());
                     }
                 } else {
-                    SPDLOG_WARN("Found vtx at 0x{:X}", w1);
+                    YAML::Node vtx;
+                    vtx["type"] = "VTX";
+                    vtx["offset"] = w1;
+                    vtx["count"] = nvtx;
+                    Companion::Instance->AddAsset(vtx);
                 }
+            } else {
+                SPDLOG_WARN("Found vtx at 0x{:X}", w1);
             }
+
+            } // OoT HandleParseVtx
         }
 
         if (count != -1 && length++ >= count) {
