@@ -2,6 +2,9 @@
 
 #include "OoTDListHelpers.h"
 #include "Companion.h"
+#include "factories/DisplayListOverrides.h"
+#include "n64/gbi-otr.h"
+#include "strhash64/StrHash64.h"
 
 namespace OoT {
 namespace DListHelpers {
@@ -31,6 +34,57 @@ uint32_t RemapSegmentedAddr(uint32_t addr, const std::string& expectedType) {
         }
     }
     return addr;
+}
+
+bool HandleGSunDLVtx(uint32_t w0, uint32_t w1,
+                     LUS::BinaryWriter& writer, std::string* replacement) {
+    if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return false;
+    if (!replacement || replacement->find("gSunDL") == std::string::npos) return false;
+
+    auto ptr = w1;
+    std::optional<std::pair<std::string, uint32_t>> rangedMatch;
+
+    for (const auto& type : std::vector<std::string>{"TEXTURE", "BLOB"}) {
+        auto decs = Companion::Instance->GetNodesByType(type);
+        if (!decs.has_value()) continue;
+        for (auto& [name, dnode] : decs.value()) {
+            auto doffset = GetSafeNode<uint32_t>(dnode, "offset");
+            uint32_t dsize = 0;
+            if (type == "TEXTURE") {
+                auto fmt = GetSafeNode<std::string>(dnode, "format");
+                auto w = GetSafeNode<uint32_t>(dnode, "width");
+                auto h = GetSafeNode<uint32_t>(dnode, "height");
+                uint32_t bpp = 16;
+                if (fmt == "I4" || fmt == "IA4" || fmt == "CI4") bpp = 4;
+                else if (fmt == "I8" || fmt == "IA8" || fmt == "CI8") bpp = 8;
+                else if (fmt == "RGBA16" || fmt == "IA16") bpp = 16;
+                else if (fmt == "RGBA32") bpp = 32;
+                dsize = (w * h * bpp) / 8;
+            } else if (type == "BLOB") {
+                dsize = GetSafeNode<uint32_t>(dnode, "size");
+            }
+            if (ASSET_PTR(ptr) >= ASSET_PTR(doffset) && ASSET_PTR(ptr) < ASSET_PTR(doffset) + dsize) {
+                auto path = Companion::Instance->GetSafeStringByAddr(doffset, type);
+                uint32_t diff = ASSET_PTR(ptr) - ASSET_PTR(doffset);
+                if (path.has_value() && (!rangedMatch.has_value() || diff < rangedMatch->second)) {
+                    rangedMatch = std::make_pair(path.value(), diff);
+                }
+            }
+        }
+    }
+
+    if (!rangedMatch.has_value()) return false;
+
+    auto& [path, diff] = rangedMatch.value();
+    uint64_t hash = CRC64(path.c_str());
+    size_t nvtx = (w0 >> 12) & 0xFF;  // C0(12, 8) for f3dex2
+    size_t didx = ((w0 >> 1) & 0x7F) - nvtx;  // C0(1, 7) - C0(12, 8)
+    N64Gfx value = gsSPVertexOTR(diff, nvtx, didx);
+    writer.Write(value.words.w0);
+    writer.Write(value.words.w1);
+    writer.Write(static_cast<uint32_t>(hash >> 32));
+    writer.Write(static_cast<uint32_t>(hash & 0xFFFFFFFF));
+    return true;
 }
 
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
