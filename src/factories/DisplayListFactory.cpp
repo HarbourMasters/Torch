@@ -200,58 +200,24 @@ void DebugDisplayList(uint32_t w0, uint32_t w1) {
 #endif
 
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
-    // Search VTX type, plus OOT:ARRAY when running with OoT minor version
-    std::vector<std::string> vtxTypes = {"VTX"};
-    if (Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::OoT) {
-        vtxTypes.push_back("OOT:ARRAY");
+    auto result = OoT::DListHelpers::SearchVtx(ptr);
+    if (result.has_value()) return result;
+
+    auto decs = Companion::Instance->GetNodesByType("VTX");
+
+    if (!decs.has_value()) {
+        return std::nullopt;
     }
 
-    // Translate ptr to absolute ROM address for cross-segment comparison.
-    // Use GetFileOffsetFromSegmentedAddr to avoid error logging from TranslateAddr.
-    uint32_t absPtr = ptr;
-    if (IS_SEGMENTED(ptr)) {
-        auto seg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(ptr));
-        if (!seg.has_value()) {
-            return std::nullopt;
-        }
-        absPtr = seg.value() + SEGMENT_OFFSET(ptr);
-    }
+    for (auto& dec : decs.value()) {
+        auto [name, node] = dec;
 
-    for (const auto& type : vtxTypes) {
-        auto decs = Companion::Instance->GetNodesByType(type);
+        auto offset = GetSafeNode<uint32_t>(node, "offset");
+        auto count = GetSafeNode<uint32_t>(node, "count");
+        auto end = ALIGN16((count * sizeof(N64Vtx_t)));
 
-        if (!decs.has_value()) {
-            continue;
-        }
-
-        for (auto& dec : decs.value()) {
-            auto [name, node] = dec;
-
-            // For OOT:ARRAY, only match VTX array_type
-            if (type == "OOT:ARRAY") {
-                auto arrayType = GetSafeNode<std::string>(node, "array_type", "");
-                if (arrayType != "VTX") {
-                    continue;
-                }
-            }
-
-            auto offset = GetSafeNode<uint32_t>(node, "offset");
-            auto count = GetSafeNode<uint32_t>(node, "count");
-            auto end = ALIGN16((count * sizeof(N64Vtx_t)));
-
-            // Compare in absolute ROM address space to handle cross-segment references
-            uint32_t absOffset = offset;
-            if (IS_SEGMENTED(offset)) {
-                auto seg = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(offset));
-                if (!seg.has_value()) {
-                    continue;
-                }
-                absOffset = seg.value() + SEGMENT_OFFSET(offset);
-            }
-
-            if (absPtr > absOffset && absPtr < absOffset + end) {
-                return std::make_tuple(GetSafeNode<std::string>(node, "symbol", name), node);
-            }
+        if (ptr > offset && ptr < offset + end) {
+            return std::make_tuple(GetSafeNode<std::string>(node, "symbol", name), node);
         }
     }
 
