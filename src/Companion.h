@@ -36,7 +36,8 @@ enum class GBIMinorVersion {
     None,
     Mk64,
     SM64,
-    PM64
+    PM64,
+    OoT
 };
 
 enum class TableMode {
@@ -54,6 +55,7 @@ struct SegmentConfig {
     std::unordered_map<uint32_t, uint32_t> global;
     std::unordered_map<uint32_t, uint32_t> local;
     std::unordered_map<uint32_t, uint32_t> temporal;
+    std::optional<uint32_t> primaryVirtual;
 };
 
 struct Table {
@@ -67,6 +69,17 @@ struct Table {
 struct VRAMEntry {
     uint32_t addr;
     uint32_t offset;
+};
+
+struct ResolvedAddr {
+    uint32_t addr;
+    enum Kind {
+        Segmented,    // addr has a segment number (e.g. 0x06001CC4)
+        Absolute,     // addr is a physical ROM address (e.g. 0x00D269A0)
+        FileRelative, // addr is a plain offset within the file (e.g. 0x00005CC8)
+        Unknown,      // addr has bit 31 set but we can't determine if it's
+                      // segment-0x80 or VRAM for another file
+    } kind;
 };
 
 struct WriteEntry {
@@ -170,6 +183,7 @@ public:
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
     uint32_t PatchVirtualAddr(uint32_t addr);
+    ResolvedAddr ResolveVirtualAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::string> GetStringByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);
@@ -200,6 +214,7 @@ public:
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
+    std::string GetCurrentDirectory() const { return gCurrentDirectory.string(); }
     void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
 private:
     TorchConfig gConfig;
@@ -249,6 +264,11 @@ private:
 
     void ProcessFile(YAML::Node root);
     void ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount);
+    void PreparseConfig(YAML::Node& root);
+    void PopulateAddrMap(YAML::Node& root);
+    void ResetTemporalState();
+    std::optional<std::tuple<std::string, YAML::Node>> FindNodeInOverlaySegments(uint32_t addr, const std::string& file);
+    std::optional<std::tuple<std::string, YAML::Node>> FindInExternalByVRAM(uint32_t addr, const std::string& file);
     void ParseEnums(std::string& file);
     void ParseHash();
     void ParseModdingConfig();

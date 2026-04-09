@@ -1,4 +1,5 @@
 #include "Companion.h"
+#include "AliasManager.h"
 
 #include "utils/Decompressor.h"
 #include "utils/StringHelper.h"
@@ -95,6 +96,22 @@
 
 #ifdef MARIO_ARTIST_SUPPORT
 #include "factories/mario_artist/MA2D1Factory.h"
+#endif
+
+#ifdef OOT_SUPPORT
+#include "factories/oot/OoTArrayFactory.h"
+#include "factories/oot/OoTSkeletonFactory.h"
+#include "factories/oot/OoTLimbFactory.h"
+#include "factories/oot/OoTMtxFactory.h"
+#include "factories/oot/OoTAnimationFactory.h"
+#include "factories/oot/OoTCurveAnimationFactory.h"
+#include "factories/oot/OoTPlayerAnimationFactory.h"
+#include "factories/oot/OoTCollisionFactory.h"
+#include "factories/oot/OoTTextFactory.h"
+#include "factories/oot/OoTSceneFactory.h"
+#include "factories/oot/OoTPathFactory.h"
+#include "factories/oot/OoTCutsceneFactory.h"
+#include "factories/oot/OoTAudioFactory.h"
 #endif
 
 #ifdef NAUDIO_SUPPORT
@@ -253,6 +270,24 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount) {
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 #endif
+#ifdef OOT_SUPPORT
+    this->RegisterFactory("OOT:ARRAY", std::make_shared<OoT::OoTArrayFactory>());
+    this->RegisterFactory("OOT:MTX", std::make_shared<OoT::OoTMtxFactory>());
+    this->RegisterFactory("OOT:SKELETON", std::make_shared<OoT::OoTSkeletonFactory>());
+    this->RegisterFactory("OOT:LIMB", std::make_shared<OoT::OoTLimbFactory>());
+    this->RegisterFactory("OOT:ANIMATION", std::make_shared<OoT::OoTAnimationFactory>());
+    this->RegisterFactory("OOT:CURVE_ANIMATION", std::make_shared<OoT::OoTCurveAnimationFactory>());
+    this->RegisterFactory("OOT:PLAYER_ANIMATION", std::make_shared<OoT::OoTPlayerAnimationHeaderFactory>());
+    this->RegisterFactory("OOT:PLAYER_ANIMATION_DATA", std::make_shared<OoT::OoTPlayerAnimationDataFactory>());
+    this->RegisterFactory("OOT:COLLISION", std::make_shared<OoT::OoTCollisionFactory>());
+    this->RegisterFactory("OOT:TEXT", std::make_shared<OoT::OoTTextFactory>());
+    this->RegisterFactory("OOT:SCENE", std::make_shared<OoT::OoTSceneFactory>());
+    this->RegisterFactory("OOT:ROOM", std::make_shared<OoT::OoTSceneFactory>());
+    this->RegisterFactory("OOT:CUTSCENE", std::make_shared<OoT::OoTCutsceneFactory>());
+    this->RegisterFactory("OOT:PATH", std::make_shared<OoT::OoTPathFactory>());
+    this->RegisterFactory("OOT:AUDIO", std::make_shared<OoT::OoTAudioFactory>());
+#endif
+
 #ifndef __EMSCRIPTEN__ // We call this manually
     this->Process(assetCount);
 #endif
@@ -320,7 +355,12 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
 
     auto factory = this->GetFactory(type);
     if (!factory.has_value()) {
+#ifdef THROW_ON_UNKNOWN_TYPE
         throw std::runtime_error("No factory by the name '" + type + "' found for '" + name + "'");
+#else
+        SPDLOG_WARN("No factory by the name '{}' found for '{}', skipping", type, name);
+        return std::nullopt;
+#endif
     }
 
     auto impl = factory->get();
@@ -439,6 +479,10 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 }
             }
         }
+    }
+
+    if (node["directory"]) {
+        this->gCurrentDirectory = node["directory"].as<std::string>();
     }
 
     if (node["manual_segments"]) {
@@ -664,9 +708,7 @@ void Companion::ProcessFile(YAML::Node root) {
     ProcessFile(root, assetCount);
 }
 
-void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
-    assetCount++;
-    // Set compressed file offsets and compression type
+void Companion::PreparseConfig(YAML::Node& root) {
     if (auto segments = root[":config"]["segments"]) {
         if (segments.IsSequence() && segments.size() > 0) {
             if (segments[0].IsSequence() && segments[0].size() == 2) {
@@ -684,6 +726,12 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
         }
     }
 
+    if (auto directory = root[":config"]["directory"]) {
+        this->gCurrentDirectory = directory.as<std::string>();
+    }
+}
+
+void Companion::PopulateAddrMap(YAML::Node& root) {
     for (auto asset = root.begin(); asset != root.end(); ++asset) {
         auto node = asset->second;
         auto entryName = asset->first.as<std::string>();
@@ -713,9 +761,9 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
 
         this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
     }
+}
 
-    // Stupid hack because the iteration broke the assets
-    root = YAML::LoadFile(this->gCurrentFile);
+void Companion::ResetTemporalState() {
     this->gConfig.segment.local.clear();
     this->gFileHeader.clear();
     this->gCurrentPad = 0;
@@ -724,10 +772,22 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     this->gCurrentSegmentNumber = 0;
     this->gCurrentCompressionType = CompressionType::None;
     this->gCurrentFileOffset = 0;
+    this->gCurrentDirectory = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
     this->gTables.clear();
     this->gCurrentExternalFiles.clear();
     this->gManualSegments.clear();
     GFXDOverride::ClearVtx();
+}
+
+void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
+    assetCount++;
+    ResetTemporalState();
+    PreparseConfig(root);
+    PopulateAddrMap(root);
+
+    // Reload YAML because iteration invalidates yaml-cpp nodes
+    root = YAML::LoadFile(this->gCurrentFile);
+    ResetTemporalState();
 
     if (root[":config"]) {
         this->ParseCurrentFileConfig(root[":config"], assetCount);
@@ -793,7 +853,10 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
                 stream.clear();
                 exporter->get()->Export(stream, data, result.name, result.node, &result.name);
                 auto data = stream.str();
-                this->gCurrentWrapper->AddFile(result.name, std::vector(data.begin(), data.end()));
+                auto dataVec = std::vector(data.begin(), data.end());
+                this->gCurrentWrapper->AddFile(result.name, dataVec);
+
+                AliasManager::Instance->WriteAliases(result.name, this->gCurrentWrapper, dataVec);
 
                 for (auto& entry : this->gCompanionFiles) {
                     auto output = (this->gCurrentDirectory / entry.first).string();
@@ -1211,6 +1274,9 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         } else if (key == "F3DEX2_PM64") {
             this->gConfig.gbi.version = GBIVersion::f3dex2;
             this->gConfig.gbi.subversion = GBIMinorVersion::PM64;
+        } else if (key == "F3DEX2_OoT") {
+            this->gConfig.gbi.version = GBIVersion::f3dex2;
+            this->gConfig.gbi.subversion = GBIMinorVersion::OoT;
         } else if (key == "F3DEXB") {
             this->gConfig.gbi.version = GBIVersion::f3dexb;
         } else if (key == "F3DEX_MK64") {
@@ -1225,6 +1291,11 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             this->gConfig.gbi.useFloats = gbi_floats.as<bool>();
         }
     }
+
+    if (cfg["primary_virtual_segment"]) {
+        this->gConfig.segment.primaryVirtual = cfg["primary_virtual_segment"].as<uint32_t>();
+    }
+
 
     if (auto sort = cfg["sort"]) {
         if (sort.IsSequence()) {
@@ -1360,7 +1431,6 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         }
 
         YAML::Node root = YAML::LoadFile(yamlPath);
-        this->gCurrentDirectory = relative(entry.path(), this->gAssetPath).replace_extension("");
         this->gCurrentFile = yamlPath;
 
         if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
@@ -1551,15 +1621,126 @@ std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uin
     return std::nullopt;
 }
 
-uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
-    if (addr & 0x80000000) {
-        if (Torch::contains(gVirtualAddrMap, gCurrentFile)) {
-            addr -= std::get<0>(gVirtualAddrMap[gCurrentFile]);
-            addr += std::get<1>(gVirtualAddrMap[gCurrentFile]);
+// Convert a VRAM address (0x80XXXXXX) to a segmented address that Torch can look up.
+//
+// N64 overlays store pointers as VRAM addresses (e.g. 0x80B65CC4). Torch needs
+// segmented addresses (e.g. 0x06000CC4) to find assets in gAddrMap. This function
+// translates between the two using the file's virtual address mapping.
+//
+// Not all 0x80XXXXXX addresses are VRAM pointers — segment 0x80 addresses also have
+// bit 31 set. We distinguish them by checking if the address falls within the current
+// file's VRAM range.
+ResolvedAddr Companion::ResolveVirtualAddr(uint32_t addr) {
+    // Addresses below 0x80000000 aren't virtual.
+    if (!(addr & 0x80000000)) {
+        return { addr, IS_SEGMENTED(addr) ? ResolvedAddr::Segmented : ResolvedAddr::FileRelative };
+    }
+
+    // If the current file doesn't have a virtual address mapping, we can't
+    // determine if this is a segment-0x80 address or VRAM for another file.
+    if (!Torch::contains(gVirtualAddrMap, gCurrentFile)) {
+        return { addr, ResolvedAddr::Unknown };
+    }
+
+    // vramBase: where this file's data is loaded in VRAM at runtime (e.g. 0x80B65000)
+    // physStart: where this file's data lives in the ROM (e.g. 0x00D24FC0)
+    auto vramBase = std::get<0>(gVirtualAddrMap[gCurrentFile]);
+    auto physStart = std::get<1>(gVirtualAddrMap[gCurrentFile]);
+
+    // If addr is below vramBase, it's not pointing into this file's VRAM range.
+    // It's a segmented address using segment 0x80+.
+    if (addr < vramBase) {
+        return { addr, ResolvedAddr::Segmented };
+    }
+
+    // addr is within this file's VRAM range. Compute how far into the file it points.
+    auto relOffset = addr - vramBase;
+
+    // No segments configured — return absolute ROM address.
+    if (this->gConfig.segment.local.empty()) {
+        return { relOffset + physStart, ResolvedAddr::Absolute };
+    }
+
+    // Convert the relative offset to a segmented address by finding which segment
+    // maps to this file's ROM data. When multiple segments alias the same ROM data,
+    // prefer the configured primary virtual segment for consistency.
+    if (this->gConfig.segment.primaryVirtual.has_value()) {
+        auto primarySeg = this->gConfig.segment.primaryVirtual.value();
+        if (Torch::contains(this->gConfig.segment.local, primarySeg) &&
+            this->gConfig.segment.local[primarySeg] == physStart) {
+            return { (primarySeg << 24) | relOffset, ResolvedAddr::Segmented };
+        }
+    }
+    for (auto& [seg, segOffset] : this->gConfig.segment.local) {
+        if (segOffset == physStart) {
+            return { (seg << 24) | relOffset, ResolvedAddr::Segmented };
         }
     }
 
-    return addr;
+    // No matching segment found — return absolute ROM address as fallback.
+    return { relOffset + physStart, ResolvedAddr::Absolute };
+}
+
+uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
+    return ResolveVirtualAddr(addr).addr;
+}
+
+// Look up an asset by converting a segmented address to an absolute ROM address,
+// then scanning all entries in the file for one that resolves to the same address.
+// Used when multiple segments map to the same ROM data, so the same asset may be
+// registered under a different segment number than the one being looked up.
+std::optional<std::tuple<std::string, YAML::Node>> Companion::FindNodeInOverlaySegments(
+        uint32_t addr, const std::string& file) {
+    // Only applies to files with virtual address mappings (overlays).
+    if (!Torch::contains(gVirtualAddrMap, file)) {
+        return std::nullopt;
+    }
+
+    // Convert the segmented address to an absolute ROM address.
+    auto addrSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
+    if (!addrSeg.has_value()) {
+        return std::nullopt;
+    }
+    auto absAddr = addrSeg.value() + SEGMENT_OFFSET(addr);
+
+    // Scan all entries in the file for one whose absolute ROM address matches.
+    for (auto& [storedAddr, entry] : this->gAddrMap[file]) {
+        if (storedAddr == addr || !IS_SEGMENTED(storedAddr)) {
+            continue;
+        }
+        auto storedSeg = this->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(storedAddr));
+        if (storedSeg.has_value() && storedSeg.value() + SEGMENT_OFFSET(storedAddr) == absAddr) {
+            return entry;
+        }
+    }
+    return std::nullopt;
+}
+
+// Check if this address is a VRAM pointer belonging to the given external file.
+// If it falls within the file's VRAM range, convert to a virtual segment address
+// and look it up in the file's gAddrMap.
+std::optional<std::tuple<std::string, YAML::Node>> Companion::FindInExternalByVRAM(
+        uint32_t addr, const std::string& file) {
+    // Can't resolve if the external file doesn't have a virtual address mapping.
+    if (!Torch::contains(gVirtualAddrMap, file)) {
+        return std::nullopt;
+    }
+
+    // Address doesn't belong to this file if it's below the file's VRAM base.
+    auto vramBase = std::get<0>(gVirtualAddrMap[file]);
+    if (addr < vramBase) {
+        return std::nullopt;
+    }
+
+    // Convert VRAM address to virtual segment address:
+    // relative offset within the file, with 0x80 as the segment number.
+    uint32_t virtualSegmentAddr = 0x80000000 | (addr - vramBase);
+    if (Torch::contains(this->gAddrMap[file], virtualSegmentAddr)) {
+        return this->gAddrMap[file][virtualSegmentAddr];
+    }
+
+    // Address doesn't belong to this external file.
+    return std::nullopt;
 }
 
 std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint32_t addr) {
@@ -1567,25 +1748,47 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
         return std::nullopt;
     }
 
-    // HACK: Adjust address to rom address if virtual address
-    addr = PatchVirtualAddr(addr);
+    auto resolved = ResolveVirtualAddr(addr);
 
-    if (!Torch::contains(this->gAddrMap[this->gCurrentFile], addr)) {
-        for (auto& file : this->gCurrentExternalFiles) {
-            if (!Torch::contains(this->gAddrMap, file)) {
-                SPDLOG_WARN("GetNodeByAddr: External File {} Not Found.", file);
-                continue;
-            }
-
-            if (!Torch::contains(this->gAddrMap[file], addr)) {
-                continue;
-            }
-            return this->gAddrMap[file][addr];
-        }
-        return std::nullopt;
+    // Direct lookup by resolved address. This works because ResolveVirtualAddr
+    // produces addresses in the same format that PopulateAddrMap uses to register
+    // assets (segmented offset for files with segments, plain offset otherwise).
+    if (Torch::contains(this->gAddrMap[this->gCurrentFile], resolved.addr)) {
+        return this->gAddrMap[this->gCurrentFile][resolved.addr];
     }
 
-    return this->gAddrMap[this->gCurrentFile][addr];
+    // For overlay files, the same data may be registered under a different segment
+    // number (e.g. looking up segment 8 when the asset was registered under segment 6).
+    if (resolved.kind == ResolvedAddr::Segmented) {
+        auto match = FindNodeInOverlaySegments(resolved.addr, this->gCurrentFile);
+        if (match.has_value()) {
+            return match;
+        }
+    }
+
+    // Search external files
+    for (auto& file : this->gCurrentExternalFiles) {
+        if (!Torch::contains(this->gAddrMap, file)) {
+            SPDLOG_WARN("GetNodeByAddr: External File {} Not Found.", file);
+            continue;
+        }
+
+        // Direct lookup in external file by resolved address.
+        if (Torch::contains(this->gAddrMap[file], resolved.addr)) {
+            return this->gAddrMap[file][resolved.addr];
+        }
+
+        // If we couldn't determine the address type, it may be a VRAM address
+        // belonging to this external file's virtual address space.
+        if (resolved.kind == ResolvedAddr::Unknown) {
+            auto vramMatch = FindInExternalByVRAM(resolved.addr, file);
+            if (vramMatch.has_value()) {
+                return vramMatch;
+            }
+        }
+    }
+
+    return std::nullopt;
 }
 
 std::optional<std::string> Companion::GetStringByAddr(const uint32_t addr) {
@@ -1744,6 +1947,7 @@ void Companion::RegisterCompanionFile(const std::string path, std::vector<char> 
     SPDLOG_TRACE("Registered companion file {}", path);
 }
 
+
 std::string Companion::NormalizeAsset(const std::string& name) const {
     auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;
     return path;
@@ -1794,6 +1998,9 @@ std::vector<char> Companion::ParseVersionString(const std::string& version) {
 
     auto wv = LUS::BinaryWriter();
     wv.SetEndianness(Torch::Endianness::Big);
+#ifdef PORT_VERSION_ENDIANNESS
+    wv.Write(static_cast<uint8_t>(Torch::Endianness::Big));
+#endif
     wv.Write(major);
     wv.Write(minor);
     wv.Write(patch);
@@ -1811,6 +2018,15 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     const auto offset = GetSafeNode<uint32_t>(asset, "offset");
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
     const auto decl = this->GetNodeByAddr(offset);
+
+    // For OoT, all assets should be pre-declared in enriched YAML.
+    // Throw if an undeclared asset is encountered to catch enrichment gaps.
+    if (!decl.has_value() && this->gConfig.gbi.subversion == GBIMinorVersion::OoT) {
+        throw std::runtime_error(
+            "AddAsset: undeclared " + type + " at " + Torch::to_hex(offset, false) +
+            " (symbol: " + symbol + ") in " + this->gCurrentFile +
+            " — YAML enrichment incomplete");
+    }
 
     if (decl.has_value()) {
         auto found = std::get<1>(decl.value());

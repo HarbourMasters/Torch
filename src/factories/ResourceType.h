@@ -65,6 +65,23 @@ enum class ResourceType {
     CourseData = 0x58435253,   // XCRS
     GhostRecord = 0x58475244,  // XGRD
 
+    // OoT
+    OoTAnimation = 0x4F414E4D,       // OANM
+    OoTPlayerAnimation = 0x4F50414D, // OPAM
+    OoTRoom = 0x4F524F4D,            // OROM
+    OoTCollisionHeader = 0x4F434F4C, // OCOL
+    OoTSkeleton = 0x4F534B4C,        // OSKL
+    OoTSkeletonLimb = 0x4F534C42,    // OSLB
+    OoTPath = 0x4F505448,            // OPTH
+    OoTCutscene = 0x4F435654,        // OCUT
+    OoTText = 0x4F545854,            // OTXT
+    OoTAudio = 0x4F415544,           // OAUD
+    OoTAudioSample = 0x4F534D50,     // OSMP
+    OoTAudioSoundFont = 0x4F534654,  // OSFT
+    OoTAudioSequence = 0x4F534551,   // OSEQ
+    OoTBackground = 0x4F424749,      // OBGI
+    OoTSceneCommand = 0x4F52434D,    // ORCM
+
     // NAudio v0
     Bank = 0x42414E4B,         // BANK
     Sample = 0x41554643,       // AIFC
