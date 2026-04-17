@@ -1,0 +1,9 @@
+:config:
+  segments:
+    - [ 0x8, 0x1F2200 ]
+  force: true
+
+test_gfx:
+  type: GFX
+  offset: 0x2B68
+  symbol: test_amp_electricity_sub_dl

@@ -1,0 +1,12 @@
+:config:
+  compression:
+    offset: 0x396340
+  segments:
+    - [ 0x7, 0x396340 ]
+  force: true
+
+test_movtex:
+  type: SM64:MOVTEX
+  quad: true
+  offset: 0x79090
+  symbol: test_castle_inside_movtex_data

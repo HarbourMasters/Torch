@@ -1,0 +1,11 @@
+:config:
+  compression:
+    offset: 0x396340
+  segments:
+    - [ 0x7, 0x396340 ]
+  force: true
+
+test_painting:
+  type: SM64:PAINTING
+  offset: 0x23620
+  symbol: test_bob_painting

@@ -1,0 +1,11 @@
+:config:
+  compression:
+    offset: 0x396340
+  segments:
+    - [ 0x7, 0x396340 ]
+  force: true
+
+test_painting_map:
+  type: SM64:PAINTING_MAP
+  offset: 0x21AE0
+  symbol: test_castle_inside_painting_map

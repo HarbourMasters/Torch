@@ -1,0 +1,13 @@
+:config:
+  compression:
+    offset: 0x42CF20
+  segments:
+    - [ 0x7, 0x42CF20 ]
+  force: true
+
+test_movtex_nonquad_color:
+  type: SM64:MOVTEX
+  count: 14
+  has_color: true
+  offset: 0x16840
+  symbol: test_ttc_movtex_tris_big_surface_treadmill

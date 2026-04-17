@@ -1,0 +1,11 @@
+:config:
+  compression:
+    offset: 0x396340
+  segments:
+    - [ 0x7, 0x396340 ]
+  force: true
+
+test_trajectory:
+  type: SM64:TRAJECTORY
+  offset: 0x78EF8
+  symbol: test_castle_inside_trajectory_mips

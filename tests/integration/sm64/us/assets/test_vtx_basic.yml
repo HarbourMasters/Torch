@@ -1,0 +1,10 @@
+:config:
+  segments:
+    - [ 0x8, 0x1F2200 ]
+  force: true
+
+test_vtx:
+  type: VTX
+  count: 4
+  offset: 0x2DE0
+  symbol: test_amp_body_vtx
