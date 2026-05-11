@@ -28,9 +28,10 @@ ExportResult NSampleCodeExporter::Export(std::ostream& write, std::shared_ptr<IP
 
 ExportResult NSampleBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
-    auto writer = LUS::BinaryWriter();
+    // parse() returns nullopt for duplicates, so Export() is only reached for
+    // canonical samples — no redirect check needed here.
     auto data = std::static_pointer_cast<NSampleData>(raw);
-
+    auto writer = LUS::BinaryWriter();
     WriteHeader(writer, Torch::ResourceType::Sample, 1);
     writer.Write((uint8_t)data->codec);
     writer.Write((uint8_t)data->medium);
@@ -189,6 +190,25 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     sample->tuning = tuning;
     sample->sampleBankId = sampleBankId;
     sample->sampleRate = sampleRate;
+
+    // Build dedup maps at parse time so GetPathByAddr() has full information
+    // before any instrument/drum export runs.
+    if (addr != 0) {
+        uint64_t key = ((uint64_t)sampleBankId << 32) | (uint64_t)addr;
+        auto it = AudioContext::sampleDedup.find(key);
+        if (it == AudioContext::sampleDedup.end()) {
+            // First time we see this audio data: this struct is the canonical.
+            auto pathDec = Companion::Instance->GetNodeByAddr(offset);
+            if (pathDec.has_value()) {
+                AudioContext::sampleDedup[key] = std::get<0>(pathDec.value());
+            }
+        } else {
+            // Duplicate: map this ROM offset → canonical path for GetPathByAddr(),
+            // then return nullopt so the Companion produces no archive entry for it.
+            AudioContext::sampleAddrRemap[offset] = it->second;
+            return std::nullopt;
+        }
+    }
 
     return sample;
 }
