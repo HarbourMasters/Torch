@@ -666,6 +666,11 @@ void Companion::ProcessFile(YAML::Node root) {
 
 void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     assetCount++;
+    // Reset per-file state so segment/offset settings from a previous file don't
+    // bleed into this file's Phase 1 gAddrMap registration.
+    gCurrentSegmentNumber = 0;
+    gCurrentFileOffset = 0;
+    gCurrentCompressionType = CompressionType::None;
     // Set compressed file offsets and compression type
     if (auto segments = root[":config"]["segments"]) {
         if (segments.IsSequence() && segments.size() > 0) {
@@ -711,7 +716,8 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
             node["path"] = gCurrentVirtualPath;
         }
 
-        this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
+        auto off = node["offset"].as<uint32_t>();
+        this->gAddrMap[this->gCurrentFile][off] = std::make_tuple(output, node);
     }
 
     // Stupid hack because the iteration broke the assets

@@ -141,23 +141,38 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         auto explicitSamples = Companion::Instance->GetNodesByType("NAUDIO:V1:SAMPLE");
         if (explicitSamples.has_value()) {
             auto& fontBuf = AudioContext::tables[AudioTableType::FONT_TABLE].buffer;
-            for (auto& [path, node] : explicitSamples.value()) {
-                auto sampleOffset = GetSafeNode<uint32_t>(node, "offset");
-                auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
-                // Read physical sampleAddr (second u32 in the Sample struct) from
-                // the font-table buffer.  flags is first, sampleAddr is second.
-                if (sampleOffset + 8 > fontBuf.size()) {
+            size_t prePopCount = 0;
+            size_t skippedCount = 0;
+            SPDLOG_INFO("Pre-populating sampleDedup from {} explicit NAUDIO:V1:SAMPLE entries (fontBuf size=0x{:X})",
+                        explicitSamples->size(), fontBuf.size());
+            for (auto& [path, sampleNode] : explicitSamples.value()) {
+                uint32_t sampleOffset = 0, sampleBankId = 0;
+                try {
+                    sampleOffset = GetSafeNode<uint32_t>(sampleNode, "offset");
+                    sampleBankId = GetSafeNode<uint32_t>(sampleNode, "sampleBankId");
+                } catch (...) {
+                    SPDLOG_WARN("sampleDedup pre-pop: skipping {} — missing offset or sampleBankId", path);
+                    skippedCount++;
+                    continue;
+                }
+                if (sampleOffset == 0 || sampleOffset + 8 > fontBuf.size()) {
+                    SPDLOG_WARN("sampleDedup pre-pop: skipping {} — offset 0x{:X} out of fontBuf bounds (0x{:X})",
+                                path, sampleOffset, fontBuf.size());
+                    skippedCount++;
                     continue;
                 }
                 auto sReader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, sampleOffset);
                 sReader.ReadUInt32();  // skip flags
                 uint32_t sampleAddr = sReader.ReadUInt32();
                 if (sampleAddr == 0) {
+                    skippedCount++;
                     continue;
                 }
                 uint64_t key = ((uint64_t)sampleBankId << 32) | (uint64_t)sampleAddr;
                 AudioContext::sampleDedup[key] = path;
+                prePopCount++;
             }
+            SPDLOG_INFO("sampleDedup pre-pop done: {} registered, {} skipped", prePopCount, skippedCount);
         }
     }
 

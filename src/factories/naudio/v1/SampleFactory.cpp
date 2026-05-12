@@ -51,6 +51,11 @@ ExportResult NSampleBinaryExporter::Export(std::ostream& write, std::shared_ptr<
 
 ExportResult NSampleModdingExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
+    // Skip unnamed auto-generated samples — only explicitly declared (aliased) samples
+    // are useful for modding replacement.
+    if (GetSafeNode<bool>(node, "autogen", false)) {
+        return std::nullopt;
+    }
     auto aiff = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<NSampleData>(raw);
 
