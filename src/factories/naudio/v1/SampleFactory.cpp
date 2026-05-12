@@ -194,6 +194,10 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     // Build dedup maps at parse time so GetPathByAddr() has full information
     // before any instrument/drum export runs.
     if (addr != 0) {
+        // Explicit YAML entries (autogen == false) are always canonical — they were
+        // pre-registered in sampleDedup by AudioTableFactory before the cascade.
+        // Only auto-generated entries should be suppressed as duplicates.
+        bool isAutogen = GetSafeNode<bool>(node, "autogen", false);
         uint64_t key = ((uint64_t)sampleBankId << 32) | (uint64_t)addr;
         auto it = AudioContext::sampleDedup.find(key);
         if (it == AudioContext::sampleDedup.end()) {
@@ -202,12 +206,12 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
             if (pathDec.has_value()) {
                 AudioContext::sampleDedup[key] = std::get<0>(pathDec.value());
             }
-        } else {
-            // Duplicate: map this ROM offset → canonical path for GetPathByAddr(),
-            // then return nullopt so the Companion produces no archive entry for it.
+        } else if (isAutogen) {
+            // Auto-generated duplicate: redirect to canonical, suppress export.
             AudioContext::sampleAddrRemap[offset] = it->second;
             return std::nullopt;
         }
+        // Explicit entries fall through — always exported with their declared name.
     }
 
     return sample;

@@ -133,6 +133,28 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
     SPDLOG_INFO("medium: {}", bmedium);
     SPDLOG_INFO("addr: {}", baddr);
 
+    // Before the SoundFont cascade begins, pre-populate sampleDedup with every
+    // explicitly-declared NAUDIO:V1:SAMPLE entry so that auto-generated
+    // duplicates (same bankId + sampleAddr, different parent) are suppressed
+    // and don't shadow the explicit canonical entries.
+    if (type == AudioTableType::FONT_TABLE) {
+        auto explicitSamples = Companion::Instance->GetNodesByType("NAUDIO:V1:SAMPLE");
+        if (explicitSamples.has_value()) {
+            for (auto& [path, node] : explicitSamples.value()) {
+                auto sampleOffset  = GetSafeNode<uint32_t>(node, "offset");
+                auto sampleBankId  = GetSafeNode<uint32_t>(node, "sampleBankId");
+                // Read physical sampleAddr (second u32 in the Sample struct) from
+                // the font-table buffer.  flags is first, sampleAddr is second.
+                auto sReader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, sampleOffset);
+                sReader.ReadUInt32();  // skip flags
+                uint32_t sampleAddr = sReader.ReadUInt32();
+                if (sampleAddr == 0) continue;
+                uint64_t key = ((uint64_t)sampleBankId << 32) | (uint64_t)sampleAddr;
+                AudioContext::sampleDedup[key] = path;
+            }
+        }
+    }
+
     std::vector<AudioTableEntry> entries;
 
     for (size_t i = 0; i < count; i++) {
