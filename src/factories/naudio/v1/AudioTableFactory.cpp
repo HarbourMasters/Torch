@@ -140,15 +140,21 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
     if (type == AudioTableType::FONT_TABLE) {
         auto explicitSamples = Companion::Instance->GetNodesByType("NAUDIO:V1:SAMPLE");
         if (explicitSamples.has_value()) {
+            auto& fontBuf = AudioContext::tables[AudioTableType::FONT_TABLE].buffer;
             for (auto& [path, node] : explicitSamples.value()) {
-                auto sampleOffset  = GetSafeNode<uint32_t>(node, "offset");
-                auto sampleBankId  = GetSafeNode<uint32_t>(node, "sampleBankId");
+                auto sampleOffset = GetSafeNode<uint32_t>(node, "offset");
+                auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
                 // Read physical sampleAddr (second u32 in the Sample struct) from
                 // the font-table buffer.  flags is first, sampleAddr is second.
+                if (sampleOffset + 8 > fontBuf.size()) {
+                    continue;
+                }
                 auto sReader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, sampleOffset);
                 sReader.ReadUInt32();  // skip flags
                 uint32_t sampleAddr = sReader.ReadUInt32();
-                if (sampleAddr == 0) continue;
+                if (sampleAddr == 0) {
+                    continue;
+                }
                 uint64_t key = ((uint64_t)sampleBankId << 32) | (uint64_t)sampleAddr;
                 AudioContext::sampleDedup[key] = path;
             }
