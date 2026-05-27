@@ -399,9 +399,17 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
                                         uint32_t subTableAbsOff = fileOffset + cmdOffset;
                                         if (CHECK_BOUNDS(subTableAbsOff, trackCount * 4, size)) {
                                             uint16_t* subEntries = reinterpret_cast<uint16_t*>(data + subTableAbsOff);
+                                            // Stop at the first offset==0 sentinel, the trailing
+                                            // unused slots can overlap the next sub-table, and
+                                            // double-swapping those bytes reverts them to BE
+                                            // (e.g. SOUND_FLO_BEANSTALK_START_GROWING).
                                             for (uint32_t t = 0; t < trackCount; t++) {
-                                                subEntries[t * 2] = BSWAP16(subEntries[t * 2]);         // offset
-                                                subEntries[t * 2 + 1] = BSWAP16(subEntries[t * 2 + 1]); // info
+                                                uint16_t off = BSWAP16(subEntries[t * 2]);
+                                                if (off == 0) {
+                                                    break;
+                                                }
+                                                subEntries[t * 2] = off;
+                                                subEntries[t * 2 + 1] = BSWAP16(subEntries[t * 2 + 1]);
                                             }
                                         }
                                         swappedSubTables.insert(cmdOffset);
