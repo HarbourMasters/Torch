@@ -348,26 +348,59 @@ static void ByteSwapModelNode(uint8_t* data, uint32_t offset, size_t size) {
 }
 
 // Find the ROOT node (type=7) by scanning the shape data
-// Returns the file offset of the ROOT node, or 0 if not found
+// Returns the file offset of the ROOT node, or 0 if not found.
+//
+// Some shapes (e.g. hos_03) contain a dummy/unused node with type=7 that appears
+// earlier in the file than the real root and passes the same surface-level
+// validation. To disambiguate, we collect ALL type=7 candidates and prefer
+// the one whose implied base addres equals the standard PM64 shape base 0x80210000.
 static uint32_t FindRootNodeOffset(uint8_t* data, size_t size) {
+    uint32_t headerRootAddr = BSWAP32(*reinterpret_cast<uint32_t*>(data));
+
+    uint32_t firstValid = 0;        // fallback: behaviour before the disambiguation
+    uint32_t bestExact = 0;         // implied base == 0x80210000 (the known PM64 base)
+    uint32_t bestAligned = 0;       // implied base aligned to 0x10000
+
     for (uint32_t offset = 0x20; offset < size - 0x14; offset += 4) {
         int32_t type = static_cast<int32_t>(BSWAP32(*reinterpret_cast<uint32_t*>(data + offset)));
 
-        if (type == 7) { // SHAPE_TYPE_ROOT
-            // Validate surrounding fields look like a ModelNode
-            uint32_t displayAddr = BSWAP32(*reinterpret_cast<uint32_t*>(data + offset + 0x04));
-            int32_t numProps = static_cast<int32_t>(BSWAP32(*reinterpret_cast<uint32_t*>(data + offset + 0x08)));
-            uint32_t groupAddr = BSWAP32(*reinterpret_cast<uint32_t*>(data + offset + 0x10));
+        if (type != 7) // SHAPE_TYPE_ROOT
+            continue;
 
-            bool valid = (displayAddr == 0 || displayAddr > 0x80000000);
-            valid = valid && (groupAddr == 0 || groupAddr > 0x80000000);
-            valid = valid && (numProps >= 0 && numProps <= 100);
+        uint32_t displayAddr = BSWAP32(*reinterpret_cast<uint32_t*>(data + offset + 0x04));
+        int32_t numProps = static_cast<int32_t>(BSWAP32(*reinterpret_cast<uint32_t*>(data + offset + 0x08)));
+        uint32_t groupAddr = BSWAP32(*reinterpret_cast<uint32_t*>(data + offset + 0x10));
 
-            if (valid) {
-                return offset;
-            }
+        bool valid = (displayAddr == 0 || displayAddr > 0x80000000);
+        valid = valid && (groupAddr == 0 || groupAddr > 0x80000000);
+        valid = valid && (numProps >= 0 && numProps <= 100);
+        if (!valid)
+            continue;
+
+        if (firstValid == 0)
+            firstValid = offset;
+
+        // Skip the implied-base check when header[0] doesn't look like a valid
+        // N64 vaddr
+        if (headerRootAddr <= 0x80000000 || headerRootAddr <= offset)
+            continue;
+
+        uint32_t impliedBase = headerRootAddr - offset;
+        if (impliedBase == 0x80210000) {
+            bestExact = offset;
+            break; // perfect match — stop scanning
+        }
+        if (bestAligned == 0 && (impliedBase & 0xFFFF) == 0) {
+            bestAligned = offset;
         }
     }
+
+    if (bestExact != 0)
+        return bestExact;
+    if (bestAligned != 0)
+        return bestAligned;
+    if (firstValid != 0)
+        return firstValid;
 
     SPDLOG_WARN("Could not find ROOT node in shape data");
     return 0;
