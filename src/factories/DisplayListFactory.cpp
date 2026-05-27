@@ -260,7 +260,7 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                     break;
             }
 
-            auto ptr = w1;
+            auto ptr = Companion::Instance->PatchVirtualAddr(w1);
 
             auto overlap = GFXDOverride::GetVtxOverlap(ptr);
             if (overlap.has_value()) {
