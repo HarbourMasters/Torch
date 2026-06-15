@@ -1,0 +1,13 @@
+:config:
+  compression:
+    offset: 0x4614D0
+  segments:
+    - [ 0x7, 0x4614D0 ]
+  force: true
+
+test_movtex_nonquad:
+  type: SM64:MOVTEX
+  count: 4
+  has_color: false
+  offset: 0x15AF0
+  symbol: test_bitfs_movtex_tris_lava_first_section

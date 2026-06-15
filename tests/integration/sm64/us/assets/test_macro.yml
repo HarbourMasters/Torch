@@ -1,0 +1,11 @@
+:config:
+  compression:
+    offset: 0x396340
+  segments:
+    - [ 0x7, 0x396340 ]
+  force: true
+
+test_macro:
+  type: SM64:MACRO
+  offset: 0x77764
+  symbol: test_castle_inside_macro_objs

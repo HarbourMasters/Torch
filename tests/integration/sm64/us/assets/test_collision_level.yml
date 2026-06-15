@@ -1,0 +1,11 @@
+:config:
+  compression:
+    offset: 0x3FC2B0
+  segments:
+    - [ 0x7, 0x3FC2B0 ]
+  force: true
+
+test_collision_level:
+  type: SM64:COLLISION
+  offset: 0xE958
+  symbol: test_bob_seg7_collision_level

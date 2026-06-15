@@ -1,0 +1,9 @@
+:config:
+  segments:
+    - [ 0xD, 0x1B9070 ]
+  force: true
+
+test_geo_bomb:
+  type: SM64:GEO_LAYOUT
+  offset: 0xD000BBC
+  symbol: test_bowser_bomb_geo

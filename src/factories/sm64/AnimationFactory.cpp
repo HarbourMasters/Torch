@@ -3,8 +3,6 @@
 
 #include "utils/Decompressor.h"
 
-#define ANIMINDEX_COUNT(boneCount) (((boneCount) + 1) * 6)
-
 ExportResult SM64::AnimationBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                                    std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();

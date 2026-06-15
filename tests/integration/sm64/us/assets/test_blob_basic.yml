@@ -1,0 +1,8 @@
+:config:
+  force: true
+
+test_blob:
+  type: BLOB
+  size: 64
+  offset: 0x40
+  symbol: test_blob_data

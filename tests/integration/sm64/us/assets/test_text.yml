@@ -1,0 +1,11 @@
+:config:
+  compression:
+    offset: 0x108A40
+  segments:
+    - [ 0x2, 0x108A40 ]
+  force: true
+
+test_text:
+  type: SM64:TEXT
+  offset: 0x10FD4
+  symbol: test_act_00

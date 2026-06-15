@@ -1,0 +1,7 @@
+:config:
+  force: true
+
+test_anim:
+  type: SM64:ANIM
+  offset: 0x4EC690
+  symbol: test_anim_00

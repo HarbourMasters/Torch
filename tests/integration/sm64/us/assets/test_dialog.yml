@@ -1,0 +1,11 @@
+:config:
+  compression:
+    offset: 0x108A40
+  segments:
+    - [ 0x2, 0x108A40 ]
+  force: true
+
+test_dialog:
+  type: SM64:DIALOG
+  offset: 0xFFC8
+  symbol: test_dialog_00

@@ -2,6 +2,8 @@
 
 #include <factories/BaseFactory.h>
 
+#define ANIMINDEX_COUNT(boneCount) (((boneCount) + 1) * 6)
+
 namespace SM64 {
 class AnimationData : public IParsedData {
 public:

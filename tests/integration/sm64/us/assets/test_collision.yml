@@ -1,0 +1,9 @@
+:config:
+  segments:
+    - [ 0x8, 0x1F2200 ]
+  force: true
+
+test_collision:
+  type: SM64:COLLISION
+  offset: 0x4950
+  symbol: test_cannon_lid_collision

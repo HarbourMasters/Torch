@@ -1,0 +1,9 @@
+:config:
+  segments:
+    - [ 0xF, 0x2008D0 ]
+  force: true
+
+test_geo_goomba:
+  type: SM64:GEO_LAYOUT
+  offset: 0xF0006E4
+  symbol: test_goomba_geo
