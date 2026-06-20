@@ -5,10 +5,12 @@
 #include <filesystem>
 #include <vector>
 #include <atomic>
+#include <array>
 #include <fstream>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
+#include <functional>
 #include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
 #include "utils/Decompressor.h"
@@ -36,7 +38,8 @@ enum class GBIMinorVersion {
     None,
     Mk64,
     SM64,
-    PM64
+    PM64,
+    BK64
 };
 
 enum class TableMode {
@@ -54,6 +57,7 @@ struct SegmentConfig {
     std::unordered_map<uint32_t, uint32_t> global;
     std::unordered_map<uint32_t, uint32_t> local;
     std::unordered_map<uint32_t, uint32_t> temporal;
+    std::unordered_map<std::string, std::unordered_map<uint32_t, std::pair<std::uint32_t, std::uint32_t>>> compressed;
 };
 
 struct Table {
@@ -95,6 +99,8 @@ struct TorchConfig {
     bool debug;
     bool modding;
     bool textureDefines;
+    bool includeAutogen;
+    bool dialogPack = false;
 };
 
 struct ParseResultData {
@@ -124,6 +130,7 @@ public:
         this->gConfig.debug = debug;
         this->gConfig.modding = modding;
         this->gConfig.textureDefines = false;
+        this->gConfig.includeAutogen = false;
     }
 
     explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const bool modding = false,
@@ -134,7 +141,10 @@ public:
         this->gConfig.debug = debug;
         this->gConfig.modding = modding;
         this->gConfig.textureDefines = false;
+        this->gConfig.includeAutogen = false;
     }
+
+    void SetRomPath(std::filesystem::path path) { this->gRomPath = std::move(path); }
 
     explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
                        Companion(rom, otr, debug, false, srcDir, destPath) {}
@@ -143,7 +153,7 @@ public:
                        Companion(rom, otr, debug, false, srcDir, destPath) {}
 
     void Init(ExportType type);
-    void Init(ExportType type, std::atomic<size_t>& assetCount);
+    void Init(ExportType type, std::atomic<size_t>& assetCount, bool shouldProcess);
 
     bool NodeHasChanges(const std::string& string);
 
@@ -156,6 +166,7 @@ public:
     N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
     std::vector<uint8_t>& GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gConfig.outputPath; }
+    const std::string& GetAssetPath() const { return this->gAssetPath; }
     std::string GetDestRelativeOutputPath() { return RelativePathToDestDir(GetOutputPath()); }
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
@@ -168,18 +179,25 @@ public:
     std::optional<ParseResultData> GetParseDataBySymbol(const std::string& symbol);
 
     std::optional<std::uint32_t> GetFileOffsetFromSegmentedAddr(uint8_t segment) const;
+    std::optional<std::pair<std::uint32_t, std::uint32_t>> GetFileOffsetFromCompressedSegmentedAddr(uint8_t segment) const;
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
     uint32_t PatchVirtualAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     std::optional<std::string> GetStringByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);
     std::optional<std::string> GetSafeStringByAddr(const uint32_t addr, std::string type);
-    std::optional<std::vector<std::tuple<std::string, YAML::Node>>> GetNodesByType(const std::string& type);
+    std::optional<std::vector<std::tuple<std::string, YAML::Node>>> GetNodesByType(const std::string& type, bool includeAutogen = false);
+    // Same as GetNodesByType but returns a pointer into the internal cache to
+    // avoid copying. The pointer is valid until the cache is invalidated; do not
+    // hold across AddAsset/RegisterAsset calls. Returns nullptr if the current
+    // file has no nodes registered.
+    const std::vector<std::tuple<std::string, YAML::Node>>* GetNodesByTypeRef(const std::string& type, bool includeAutogen = false);
     std::string GetSymbolFromAddr(uint32_t addr, bool validZero = false);
 
     std::optional<std::uint32_t> GetFileOffset(void) const { return this->gCurrentFileOffset; };
     std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
+    std::optional<std::uint32_t> GetCurrentCompressedSize(void) const { return this->gCurrentCompressedSize; };
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
     std::optional<Table> SearchTable(uint32_t addr);
 
@@ -194,13 +212,19 @@ public:
     void SetAdditionalFiles(const std::vector<std::string>& files) { this->gAdditionalFiles = files; }
     void SetVersion(const std::string& version) { this->gVersion = version; }
 
+    std::string GetCurrentAssetName() const { return this->gCurrentAssetName; }
+    void SetAssetTotal(std::atomic<size_t>* total) { this->gAssetTotal = total; }
+    void SetPhaseCallback(std::function<void(int)> cb) { this->gPhaseCallback = cb; }
+
     void SetProcess(bool shouldProcess);
     TorchConfig& GetConfig() { return this->gConfig; }
     BinaryWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
+    std::optional<YAML::Node> AddSubFileAsset(YAML::Node asset, std::string newFileName, CompressionType newCompressionType, uint32_t compressedSize = 0);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
-    void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
+    void SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);
+    bool GetCompressedSegmentOffset(uint32_t* addr);
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
@@ -221,16 +245,22 @@ private:
     BinaryWrapper* gCurrentWrapper;
 
     // Temporal Variables
+    std::string gCurrentAssetName;
+    std::atomic<size_t>* gAssetCounter = nullptr;
+    std::atomic<size_t>* gAssetTotal = nullptr;
+    std::function<void(int)> gPhaseCallback;
     std::string gCurrentFile;
+    std::vector<std::string> gSubFileList;
     std::string gCurrentVirtualPath;
     std::string gFileHeader;
     bool gEnablePadGen = false;
-    bool process = true;
+    bool mShouldProcess = true;
     uint32_t gCurrentPad = 0;
     uint32_t gCurrentFileOffset;
     uint32_t gCurrentSegmentNumber;
     std::optional<VRAMEntry> gCurrentVram;
     CompressionType gCurrentCompressionType = CompressionType::None;
+    std::optional<std::uint32_t> gCurrentCompressedSize;
     std::vector<Table> gTables;
     std::vector<std::string> gCurrentExternalFiles;
     std::unordered_map<int, std::string> gManualSegments;
@@ -246,13 +276,24 @@ private:
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>> gVirtualAddrMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;
+    // Cached results of GetNodesByType keyed by [file][type][includeAutogen?].
+    // Built lazily; invalidated on RegisterAsset for the affected (file, type).
+    // Index 0 = !includeAutogen, index 1 = includeAutogen.
+    std::unordered_map<std::string,
+                       std::unordered_map<std::string, std::array<std::vector<std::tuple<std::string, YAML::Node>>, 2>>>
+        gNodesByTypeCache;
+    // Validity bitmap; bit 0 = !includeAutogen, bit 1 = includeAutogen.
+    std::unordered_map<std::string, std::unordered_map<std::string, uint8_t>> gNodesByTypeCacheValid;
 
+    void ProcessParseFile(YAML::Node root, std::atomic<size_t>& assetCount);
+    void ProcessExportFile();
     void ProcessFile(YAML::Node root);
     void ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount);
     void ParseEnums(std::string& file);
     void ParseHash();
     void ParseModdingConfig();
     void ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& assetCount);
+    void RegisterFactory(const std::string& type, const std::shared_ptr<BaseFactory>& factory);
     void ExtractNode(YAML::Node& node, std::string& name, BinaryWrapper* binary);
     void ProcessTables(YAML::Node& rom);
     void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);

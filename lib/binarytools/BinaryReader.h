@@ -41,6 +41,7 @@ class BinaryReader {
     float ReadFloat();
     double ReadDouble();
     std::string ReadString();
+    std::string ReadString(size_t length);
     std::string ReadCString();
 
     std::vector<char> ToVector();
