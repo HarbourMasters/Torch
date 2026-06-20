@@ -2,6 +2,8 @@
 #include "CLI11.hpp"
 #include "Companion.h"
 
+Companion* Companion::Instance;
+
 #if defined(STANDALONE) && !defined(__EMSCRIPTEN__)
 
 int main(int argc, char* argv[]) {
