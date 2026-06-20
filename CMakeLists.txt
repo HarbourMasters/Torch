@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 project(torch)
 include(FetchContent)
 
+set(CMAKE_POLICY_VERSION_MINIMUM 3.12)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -17,6 +19,7 @@ option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
 option(BUILD_SF64 "Build with Star Fox 64 support" ON)
 option(BUILD_PM64 "Build with Paper Mario support" ON)
 option(BUILD_FZERO "Build with F-Zero X support" ON)
+option(BUILD_BK64 "Build with Banjo Kazooie support" ON)
 option(BUILD_MARIO_ARTIST "Build with Mario Artist support" ON)
 option(BUILD_NAUDIO "Build with NAudio support" ON)
 
@@ -69,7 +72,7 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp)
+file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/bk_zip/*.cpp)
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libmio0/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libyay0/*.c)
 set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
 
@@ -103,6 +106,12 @@ else()
     list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/fzerox/*")
 endif()
 
+if(BUILD_BK64)
+    add_definitions(-DBK64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/bk64/*")
+endif()
+
 if(BUILD_MARIO_ARTIST)
     add_definitions(-DMARIO_ARTIST_SUPPORT)
 else()
@@ -118,6 +127,11 @@ endif()
 if(ENABLE_ASAN)
     add_compile_options(-fsanitize=address)
     add_link_options(-fsanitize=address)
+endif()
+
+# MSVC static runtime for all targets (must be set before add_subdirectory/FetchContent)
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 # Build
@@ -143,7 +157,7 @@ else()
         $<$<CONFIG:Debug>:
             /w;
             /Od;
-            /ZI;
+            $<IF:$<BOOL:${ENABLE_ASAN}>,/Zi,/ZI>;
             /${LINK_TYPE}d
         >
         $<$<CONFIG:Release>:
@@ -176,7 +190,6 @@ else()
         target_link_options(${PROJECT_NAME} PRIVATE /bigobj)
     endif()
     add_definitions(-DSTORMLIB_NO_AUTO_LINK)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 
@@ -256,6 +269,24 @@ if(USE_STANDALONE)
 
 	FetchContent_MakeAvailable(spdlog)
 	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+
+	if (MSVC)
+		FetchContent_Declare(
+			zlib
+			GIT_REPOSITORY "https://github.com/madler/zlib.git"
+			GIT_TAG v1.3.1
+			FIND_PACKAGE_ARGS NAMES ZLIB
+		)
+		FetchContent_MakeAvailable(zlib)
+		set(ZLIB_INCLUDE_DIRS ${zlib_SOURCE_DIR})
+		set(ZLIB_LIBRARY zlibstatic CACHE STRING "")
+		set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
+		set(ZLIB_FOUND 1)
+		add_library(ZLIB::ZLIB ALIAS zlibstatic)
+	else ()
+		find_package(ZLIB REQUIRED)
+		target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
+	endif()
 else()
 	find_package(spdlog QUIET)
     if(NOT spdlog_FOUND)
@@ -280,7 +311,20 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tinyxml2)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2 yaml-cpp N64Graphics BinaryTools)
+# Link zlib
+set(ZLIB_BUILD_SHARED_LIBS OFF CACHE BOOL "Build zlib as a static library" FORCE)
+set(ZLIB_BUILD_TESTS OFF CACHE BOOL "Disable building zlib tests" FORCE)
+set(SKIP_INSTALL_ALL ON CACHE BOOL "Skip zlib install targets" FORCE)
+
+FetchContent_Declare(
+    zlib
+    GIT_REPOSITORY https://github.com/madler/zlib.git
+    GIT_TAG v1.3.1
+    OVERRIDE_FIND_PACKAGE
+)
+FetchContent_MakeAvailable(zlib)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2 zlibstatic yaml-cpp N64Graphics BinaryTools)
 
 if(NOT USE_STANDALONE)
     target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
