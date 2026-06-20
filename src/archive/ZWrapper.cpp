@@ -34,7 +34,13 @@ bool ZWrapper::AddFile(const std::string& path, std::vector<char> data) {
         stream.close();
     }
 
-    this->mZip->writebytes(path, data);
+    try {
+        this->mZip->writebytes(path, data);
+    } catch (const std::exception& e) {
+        // miniz's own error says nothing useful, so log which entry blew up and how big.
+        SPDLOG_ERROR("[ZWrapper] Failed to add '{}' ({} bytes): {}", path, fileSize, e.what());
+        throw;
+    }
     return true;
 }
 

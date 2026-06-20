@@ -12,6 +12,8 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem>
+#include <thread>
+#include <mutex>
 
 #include "factories/GenericArrayFactory.h"
 #include "factories/VtxFactory.h"
@@ -91,6 +93,20 @@
 #include "factories/fzerox/EADLimbFactory.h"
 #include "factories/fzerox/SequenceFactory.h"
 #include "factories/fzerox/SoundFontFactory.h"
+#endif
+
+#ifdef BK64_SUPPORT
+#include "factories/bk64/AnimFactory.h"
+#include "factories/bk64/BKAssetFactory.h"
+#include "factories/bk64/DemoInputFactory.h"
+#include "factories/bk64/DialogFactory.h"
+#include "factories/bk64/GeoLayoutFactory.h"
+#include "factories/bk64/GruntyQuestionFactory.h"
+#include "factories/bk64/QuizQuestionFactory.h"
+#include "factories/bk64/SpriteFactory.h"
+#include "factories/bk64/ModelFactory.h"
+#include "factories/bk64/MapFactory.h"
+#include "factories/bk64/SoundfontTblFactory.h"
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -228,6 +244,20 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("FZX:LIMB", std::make_shared<FZX::EADLimbFactory>());
     this->RegisterFactory("FZX:SEQUENCE", std::make_shared<FZX::SequenceFactory>());
     this->RegisterFactory("FZX:SOUNDFONT", std::make_shared<FZX::SoundFontFactory>());
+#endif
+
+#ifdef BK64_SUPPORT
+    this->RegisterFactory("BK64:ANIM", std::make_shared<BK64::AnimFactory>());
+    this->RegisterFactory("BK64:ASSET_TABLE", std::make_shared<BK64::BKAssetFactory>());
+    this->RegisterFactory("BK64:DEMO", std::make_shared<BK64::DemoInputFactory>());
+    this->RegisterFactory("BK64:DIALOG", std::make_shared<BK64::DialogFactory>());
+    this->RegisterFactory("BK64:GEO_LAYOUT", std::make_shared<BK64::GeoLayoutFactory>());
+    this->RegisterFactory("BK64:GRUNTYQ", std::make_shared<BK64::GruntyQuestionFactory>());
+    this->RegisterFactory("BK64:MAP", std::make_shared<BK64::MapFactory>());
+    this->RegisterFactory("BK64:QUIZQ", std::make_shared<BK64::QuizQuestionFactory>());
+    this->RegisterFactory("BK64:MODEL", std::make_shared<BK64::ModelFactory>());
+    this->RegisterFactory("BK64:SOUNDFONT_TBL", std::make_shared<BK64::SoundfontTblFactory>());
+    this->RegisterFactory("BK64:SPRITE", std::make_shared<BK64::SpriteFactory>());
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -729,11 +759,17 @@ void Companion::ProcessExportFile() {
             try {
                 switch (this->gConfig.exporterType) {
                     case ExportType::Binary: {
-                        stream.str("");
-                        stream.clear();
-                        exporter->get()->Export(stream, data, result.name, result.node, &result.name);
-                        auto data = stream.str();
-                        this->gCurrentWrapper->AddFile(result.name, std::vector(data.begin(), data.end()));
+                        // no_export: still parse it for the side effects — VTX sub-refs,
+                        // companion-file registration — just don't write the body itself.
+                        // Whatever companion files it spun up still need to go out.
+                        const bool noExport = result.node["no_export"] && result.node["no_export"].as<bool>();
+                        if (!noExport) {
+                            stream.str("");
+                            stream.clear();
+                            exporter->get()->Export(stream, data, result.name, result.node, &result.name);
+                            auto data = stream.str();
+                            this->gCurrentWrapper->AddFile(result.name, std::vector(data.begin(), data.end()));
+                        }
 
                         for (auto& entry : this->gCompanionFiles) {
                             auto output = (this->gCurrentDirectory / entry.first).string();
@@ -1074,6 +1110,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // Stupid hack because the iteration broke the assets
     root = YAML::LoadFile(this->gCurrentFile);
     this->gConfig.segment.local.clear();
+    this->gConfig.segment.compressed.clear();
     this->gFileHeader.clear();
     this->gCurrentPad = 0;
     this->gCurrentVram = std::nullopt;
@@ -1083,7 +1120,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     this->gCurrentFileOffset = 0;
     this->gTables.clear();
     this->gCurrentExternalFiles.clear();
-    this->gManualSegments.clear();
+    this->gSubFileList.clear();
     GFXDOverride::ClearVtx();
 
     if (root[":config"]) {
@@ -1271,6 +1308,9 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         } else if (key == "F3DEX_MK64") {
             this->gConfig.gbi.version = GBIVersion::f3dex;
             this->gConfig.gbi.subversion = GBIMinorVersion::Mk64;
+        } else if (key == "F3DEX_BK64") {
+            this->gConfig.gbi.version = GBIVersion::f3dex;
+            this->gConfig.gbi.subversion = GBIMinorVersion::BK64;
         } else {
             SPDLOG_ERROR("Invalid GBI version");
             return;
@@ -1340,6 +1380,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     }
 
     this->gConfig.textureDefines = cfg["textures"] && (cfg["textures"].as<std::string>() == "ADDITIONAL_DEFINES");
+    this->gConfig.includeAutogen = cfg["include_autogen"] && cfg["include_autogen"].as<bool>();
 
     this->ParseHash();
 
@@ -1431,6 +1472,119 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             ProcessFile(root, assetCount);
             if (mShouldProcess) {
                 this->gProcessedFiles.insert(this->gCurrentFile);
+            }
+
+            // Sub-files were already parsed when they got created, so all that's left is export.
+            auto parentDir = this->gCurrentDirectory;
+
+            if (this->gConfig.exporterType == ExportType::Modding || this->gConfig.exporterType == ExportType::XML) {
+                // Modding export is parallel.
+                std::mutex moddedPathsMutex;
+                std::mutex dirCreateMutex;
+                // Torch is already running on a worker thread, so leave a core for the parent.
+                const unsigned int hwThreads = std::thread::hardware_concurrency();
+                const size_t numThreads = hwThreads > 1 ? hwThreads - 1 : 1u;
+                const size_t totalFiles = this->gSubFileList.size();
+                SPDLOG_CRITICAL("Exporting {} sub-files using {} threads", totalFiles, numThreads);
+
+                auto exportRange = [&](size_t start, size_t end) {
+                    for (size_t si = start; si < end; si++) {
+                        const auto subFile = this->gSubFileList[si];
+                        auto it = this->gParseResults.find(subFile);
+                        if (it == this->gParseResults.end() || it->second.empty()) {
+                            continue;
+                        }
+
+                        auto localDir = parentDir / subFile;
+
+                        for (auto& result : it->second) {
+                            const auto factory = this->GetFactory(result.type);
+                            if (!factory.has_value())
+                                continue;
+                            const auto impl = factory->get();
+                            const auto exporter = impl->GetExporter(this->gConfig.exporterType);
+                            if (!exporter.has_value())
+                                continue;
+
+                            try {
+                                std::ostringstream stream;
+                                std::string ogname = result.name;
+                                exporter->get()->Export(stream, result.data.value(), result.name, result.node,
+                                                        &result.name);
+
+                                auto data = stream.str();
+                                if (data.empty())
+                                    continue;
+
+                                std::string dpath = this->GetOutputPath() + "/" + result.name;
+                                {
+                                    std::lock_guard<std::mutex> lock(dirCreateMutex);
+                                    if (!exists(fs::path(dpath).parent_path())) {
+                                        create_directories(fs::path(dpath).parent_path());
+                                    }
+                                }
+
+                                std::ofstream file(dpath, std::ios::binary);
+                                file.write(data.c_str(), data.size());
+                                file.close();
+
+                                {
+                                    std::lock_guard<std::mutex> lock(moddedPathsMutex);
+                                    this->gModdedAssetPaths[ogname] = result.name;
+                                }
+                            } catch (const std::exception& e) {
+                                SPDLOG_ERROR("Sub-file export failed [{}] {}: {}", si, subFile, e.what());
+                            } catch (...) { SPDLOG_ERROR("Sub-file export crashed [{}] {}", si, subFile); }
+                        }
+
+                        if (this->gAssetCounter) {
+                            (*this->gAssetCounter)++;
+                        }
+                    }
+                };
+
+                std::vector<std::thread> threads;
+                size_t chunkSize = (totalFiles + numThreads - 1) / numThreads;
+                for (size_t t = 0; t < numThreads; t++) {
+                    size_t start = t * chunkSize;
+                    size_t end = std::min(start + chunkSize, totalFiles);
+                    if (start < end) {
+                        threads.emplace_back(exportRange, start, end);
+                    }
+                }
+                for (auto& t : threads) {
+                    t.join();
+                }
+                SPDLOG_CRITICAL("Parallel export complete: {} modded assets", this->gModdedAssetPaths.size());
+
+                // gModdedAssetPaths is only filled once the threads finish, so write modding.yml here.
+                if (mShouldProcess) {
+                    auto moddingPath = fs::path(this->gConfig.outputPath) / "modding.yml";
+                    YAML::Node modding;
+                    for (const auto& [key, value] : this->gModdedAssetPaths) {
+                        modding["assets"][key] = value;
+                    }
+                    std::ofstream moddingFile(moddingPath.string(), std::ios::binary);
+                    moddingFile << modding;
+                    moddingFile.close();
+                }
+            } else {
+                // Binary/code/header all share wrapper state, so these have to go one at a time.
+                for (size_t si = 0; si < this->gSubFileList.size(); si++) {
+                    const auto subFile = this->gSubFileList[si];
+                    this->gCurrentDirectory = parentDir / subFile;
+                    this->gCurrentFile = subFile;
+                    if (!this->gProcessedFiles.contains(subFile)) {
+                        try {
+                            ProcessExportFile();
+                        } catch (const std::exception& e) {
+                            SPDLOG_ERROR("Sub-file export failed [{}] {}: {}", si, subFile, e.what());
+                        } catch (...) { SPDLOG_ERROR("Sub-file export crashed [{}] {}", si, subFile); }
+                        if (mShouldProcess) {
+                            this->gProcessedFiles.insert(subFile);
+                        }
+                    }
+                }
             }
         }
     }
@@ -1638,6 +1792,18 @@ std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uin
     return std::nullopt;
 }
 
+std::optional<std::pair<std::uint32_t, std::uint32_t>>
+Companion::GetFileOffsetFromCompressedSegmentedAddr(const uint8_t segment) const {
+
+    auto segments = this->gConfig.segment;
+
+    if (segments.compressed[this->gCurrentFile].contains(segment)) {
+        return segments.compressed[this->gCurrentFile][segment];
+    }
+
+    return std::nullopt;
+}
+
 uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
     if (addr & 0x80000000) {
         if (Torch::contains(gVirtualAddrMap, gCurrentFile)) {
@@ -1658,6 +1824,13 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
     addr = PatchVirtualAddr(addr);
 
     if (!Torch::contains(this->gAddrMap[this->gCurrentFile], addr)) {
+        auto realAddr = addr;
+        if (IS_SEGMENTED(addr) && GetCompressedSegmentOffset(&realAddr)) {
+            if (this->gAddrMap[this->gCurrentFile].contains(realAddr)) {
+                return this->gAddrMap[this->gCurrentFile][realAddr];
+            }
+        }
+
         for (auto& file : this->gCurrentExternalFiles) {
             if (!Torch::contains(this->gAddrMap, file)) {
                 SPDLOG_WARN("GetNodeByAddr: External File {} Not Found.", file);
@@ -1904,6 +2077,48 @@ std::vector<char> Companion::ParseVersionString(const std::string& version) {
     return wv.ToVector();
 }
 
+std::optional<YAML::Node> Companion::AddSubFileAsset(YAML::Node asset, std::string newFileName,
+                                                     CompressionType newCompressionType, uint32_t compressedSize) {
+    if (!asset["offset"] || !asset["type"]) {
+        return std::nullopt;
+    }
+
+    if (this->gParseResults.contains(newFileName) || this->gProcessedFiles.contains(newFileName)) {
+        SPDLOG_WARN("File with name {} already exists, skipping..", newFileName);
+        return std::nullopt;
+    }
+
+    auto addr = GetSafeNode<uint32_t>(asset, "offset");
+    asset["offset"] = 0;
+
+    auto oldFile = this->gCurrentFile;
+    auto oldVram = this->gCurrentVram;
+    auto oldCompressionType = this->gCurrentCompressionType;
+    auto oldCompressedSize = this->gCurrentCompressedSize;
+    this->gSubFileList.push_back(newFileName);
+    this->gCurrentAssetName = "Parsing: " + newFileName;
+    if (this->gAssetCounter) {
+        (*this->gAssetCounter)++;
+    }
+
+    this->gCurrentFile = newFileName;
+    this->gCurrentVram = { 0, addr };
+    this->gCurrentCompressionType = newCompressionType;
+    if (newCompressionType == CompressionType::BKZIP) {
+        this->gCurrentCompressedSize = compressedSize;
+    }
+
+    auto result = this->AddAsset(asset);
+
+    // ...and put the parent file's state back the way we found it.
+    this->gCurrentFile = oldFile;
+    this->gCurrentVram = oldVram;
+    this->gCurrentCompressionType = oldCompressionType;
+    this->gCurrentCompressedSize = oldCompressedSize;
+
+    return result;
+}
+
 std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     if (!asset["offset"] || !asset["type"]) {
         return std::nullopt;
@@ -1960,4 +2175,20 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     }
 
     return std::nullopt;
+}
+
+void Companion::SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset) {
+    this->gConfig.segment.compressed[this->gCurrentFile][segmentId] = std::make_pair(compressedFileOffset, offset);
+}
+
+bool Companion::GetCompressedSegmentOffset(uint32_t* addr) {
+    if (IS_SEGMENTED(*addr)) {
+        const auto compressedSegmentPair =
+            Companion::Instance->GetFileOffsetFromCompressedSegmentedAddr(SEGMENT_NUMBER(*addr));
+        if (compressedSegmentPair.has_value()) {
+            *addr = compressedSegmentPair.value().second + SEGMENT_OFFSET(*addr);
+            return true;
+        }
+    }
+    return false;
 }
