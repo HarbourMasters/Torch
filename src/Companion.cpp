@@ -709,6 +709,17 @@ void Companion::ProcessParseFile(YAML::Node root, std::atomic<size_t>& assetCoun
             continue;
         }
 
+        if (this->gConfig.dialogPack) {
+            bool isRoot = false;
+            if (assetNode["type"]) {
+                const auto factory = this->GetFactory(GetTypeNode(assetNode));
+                isRoot = factory.has_value() && factory->get()->IsDialogPackRoot();
+            }
+            if (!isRoot) {
+                continue;
+            }
+        }
+
         this->gCurrentAssetName = "Parsing: " + entryName;
 
         if (gCurrentFileOffset && assetNode["offset"]) {
@@ -762,7 +773,8 @@ void Companion::ProcessExportFile() {
                         // no_export: still parse it for the side effects — VTX sub-refs,
                         // companion-file registration — just don't write the body itself.
                         // Whatever companion files it spun up still need to go out.
-                        const bool noExport = result.node["no_export"] && result.node["no_export"].as<bool>();
+                        const bool noExport = (result.node["no_export"] && result.node["no_export"].as<bool>()) ||
+                                              (this->gConfig.dialogPack && impl->IsDialogPackRoot());
                         if (!noExport) {
                             stream.str("");
                             stream.clear();
@@ -1229,6 +1241,11 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     }
 
     auto cfg = rom["config"];
+    // Let factories rewrite the config before processing (e.g. dialog-pack output
+    // routing). Each guards on its own keys, so this is a no-op for unrelated roms.
+    for (auto& [type, factory] : this->gFactories) {
+        factory->PreprocessConfig(cfg, this->gCartridge.get());
+    }
     if (!cfg) {
         SPDLOG_ERROR("No config found for {}",
                      !isDirectoryMode ? this->gCartridge->GetHash() : GetSafeNode<std::string>(config, "folder"));
@@ -1288,6 +1305,9 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         }
     }
     this->gConfig.outputPath = output_path.string();
+    if (auto outParent = output_path.parent_path(); !outParent.empty() && !exists(outParent)) {
+        create_directories(outParent);
+    }
 
     if (gbi) {
         auto key = gbi.as<std::string>();
@@ -1381,6 +1401,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
 
     this->gConfig.textureDefines = cfg["textures"] && (cfg["textures"].as<std::string>() == "ADDITIONAL_DEFINES");
     this->gConfig.includeAutogen = cfg["include_autogen"] && cfg["include_autogen"].as<bool>();
+    this->gConfig.dialogPack = cfg["dialog_pack"] && cfg["dialog_pack"].as<bool>();
 
     this->ParseHash();
 
@@ -1615,6 +1636,11 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         wrapper->AddFile("version", vWriter.ToVector());
         vWriter.Close();
 
+        // Extra top-level files a factory asked us to drop at the archive root.
+        for (const auto& [name, fileData] : this->gArchiveFiles) {
+            wrapper->AddFile(name, fileData);
+        }
+
         this->gCurrentAssetName = "Writing archive to disk...";
         wrapper->Close();
     }
@@ -1633,6 +1659,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     spdlog::set_pattern(regular);
 
     Decompressor::ClearCache();
+    this->gArchiveFiles.clear();
     this->gCartridge = nullptr;
 }
 
@@ -1945,25 +1972,34 @@ std::optional<ParseResultData> Companion::GetParseDataByAddr(uint32_t addr) {
 }
 
 std::optional<ParseResultData> Companion::GetParseDataBySymbol(const std::string& symbol) {
-    if (CONTAINS(this->gParseResults, this->gCurrentFile)) {
-        for (auto& result : this->gParseResults[this->gCurrentFile]) {
+    auto searchBucket = [&](const std::string& file) -> std::optional<ParseResultData> {
+        auto it = this->gParseResults.find(file);
+        if (it == this->gParseResults.end()) {
+            return std::nullopt;
+        }
+        for (auto& result : it->second) {
             auto sym = GetNode<std::string>(result.node, "symbol");
-
             if (result.data.has_value() && sym.has_value() && sym.value() == symbol) {
                 return result;
             }
         }
+        return std::nullopt;
+    };
+
+    // Fast path: the current file and its declared externals.
+    if (auto r = searchBucket(this->gCurrentFile)) {
+        return r;
+    }
+    for (auto& file : this->gCurrentExternalFiles) {
+        if (auto r = searchBucket(file)) {
+            return r;
+        }
     }
 
-    for (auto& file : this->gCurrentExternalFiles) {
-        if (!CONTAINS(this->gParseResults, this->gCurrentFile)) {
-            SPDLOG_INFO("GetParseDataBySymbol: External File {} Not Found.", file);
-            continue;
-        }
-
-        for (auto& result : this->gParseResults[file]) {
+    // Global fallback to prevent racy lookups.
+    for (auto& [file, results] : this->gParseResults) {
+        for (auto& result : results) {
             auto sym = GetNode<std::string>(result.node, "symbol");
-
             if (result.data.has_value() && sym.has_value() && sym.value() == symbol) {
                 return result;
             }
@@ -2017,6 +2053,11 @@ void Companion::SetProcess(bool shouldProcess) {
 void Companion::RegisterCompanionFile(const std::string path, std::vector<char> data) {
     this->gCompanionFiles[path] = data;
     SPDLOG_TRACE("Registered companion file {}", path);
+}
+
+void Companion::RegisterArchiveFile(const std::string& name, std::vector<char> data) {
+    this->gArchiveFiles.emplace_back(name, std::move(data));
+    SPDLOG_TRACE("Registered archive root file {}", name);
 }
 
 std::string Companion::NormalizeAsset(const std::string& name) const {

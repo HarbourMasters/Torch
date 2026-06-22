@@ -209,6 +209,7 @@ public:
     std::string RelativePathToSrcDir(const std::string& path) const;
     std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
+    void RegisterArchiveFile(const std::string& name, std::vector<char> data);
     void SetAdditionalFiles(const std::vector<std::string>& files) { this->gAdditionalFiles = files; }
     void SetVersion(const std::string& version) { this->gVersion = version; }
 
@@ -219,6 +220,7 @@ public:
     void SetProcess(bool shouldProcess);
     TorchConfig& GetConfig() { return this->gConfig; }
     BinaryWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
+    const std::unordered_map<std::string, std::string>& GetModdedAssetPaths() const { return this->gModdedAssetPaths; }
 
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddSubFileAsset(YAML::Node asset, std::string newFileName, CompressionType newCompressionType, uint32_t compressedSize = 0);
@@ -267,6 +269,7 @@ private:
     std::unordered_set<std::string> gProcessedFiles;
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
+    std::vector<std::pair<std::string, std::vector<char>>> gArchiveFiles;
     std::unordered_map<std::string, std::vector<ParseResultData>> gParseResults;
     std::vector<std::string> gAdditionalFiles;
 
