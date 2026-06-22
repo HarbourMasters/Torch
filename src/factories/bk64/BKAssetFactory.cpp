@@ -1,7 +1,9 @@
 #include "BKAssetFactory.h"
 #include "Companion.h"
+#include "ConfigFactory.h"
 #include "spdlog/spdlog.h"
 #include "utils/Decompressor.h"
+#include "TinySHA1.hpp"
 #include <cstring>
 #include <iomanip>
 #include <thread>
@@ -260,6 +262,13 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
     const std::string langRegion =
         Companion::Instance->GetConfig().dialogPack ? ResolveLangRegion() : std::string();
 
+    // Romhack o2rs overlay the base bk.o2r, whose manifest already lives there: walk the
+    // table for side effects (BB config, modified-slot registration) but don't output a
+    // partial manifest blob over it.
+    if (IsRomhack(buffer)) {
+        node["no_export"] = true;
+    }
+
     reader.SetEndianness(Torch::Endianness::Big);
 
     uint32_t assetCount = reader.ReadUInt32();
@@ -346,6 +355,10 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
         t.join();
     SPDLOG_INFO("Pre-decompression complete");
 
+    const auto& rom = Companion::Instance->GetRomData();
+    const bool romhackMode = IsRomhack(rom);
+    size_t skipHits = 0;
+    size_t skipMisses = 0;
     size_t parseFailures = 0;
 
     for (uint32_t i = 0; i < assetCount - 1; i++) {
@@ -382,6 +395,29 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
 
         SPDLOG_TRACE("Parsing asset {} mode={} offset=0x{:X} size=0x{:X} comp={}", assetInfo.index, assetInfo.assetMode,
                      assetOffset, assetSize, assetInfo.compressionFlag);
+
+        if (romhackMode && assetSize > 0) {
+            const std::string& baselineHash = GetBaselineAssetHash(assetInfo.index);
+            if (!baselineHash.empty()) {
+                if (assetOffset + assetSize <= rom.size()) {
+                    sha1::SHA1 s;
+                    s.processBytes(rom.data() + assetOffset, assetSize);
+                    uint32_t digest[5];
+                    s.getDigest(digest);
+                    char buf[41];
+                    std::snprintf(buf, sizeof(buf), "%08x%08x%08x%08x%08x", digest[0], digest[1], digest[2], digest[3],
+                                  digest[4]);
+                    if (baselineHash == buf) {
+                        skipHits++;
+                        if ((skipHits % 500) == 0) {
+                            SPDLOG_WARN("Romhack hash-skip progress: {} hits, {} misses so far", skipHits, skipMisses);
+                        }
+                        continue;
+                    }
+                    skipMisses++;
+                }
+            }
+        }
 
         switch (assetInfo.assetMode) {
             case 0:
@@ -568,7 +604,10 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
       }
     }
 
-    if (parseFailures > 0) {
+    if (romhackMode) {
+        SPDLOG_WARN("Romhack hash-skip: {} slots matched v1.0 baseline (skipped), {} differed (extracted), {} failed",
+                    skipHits, skipMisses, parseFailures);
+    } else if (parseFailures > 0) {
         SPDLOG_WARN("[BKAssetFactory] {} slot(s) failed to parse and were skipped", parseFailures);
     }
 
@@ -647,6 +686,22 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
         if (additive > 0) {
             SPDLOG_INFO("[BKAssetFactory] emitted {} additive lang asset(s)", additive);
         }
+    }
+
+    // Detect BB romhack configuration from extended ROMs and write binary blob.
+    // Derive a short name from the output path.
+    std::string romName;
+    {
+        std::string outPath = Companion::Instance->GetOutputPath();
+        auto slash = outPath.find_last_of("/\\");
+        std::string filename = (slash != std::string::npos) ? outPath.substr(slash + 1) : outPath;
+        auto dot = filename.rfind('.');
+        romName = (dot != std::string::npos) ? filename.substr(0, dot) : filename;
+    }
+    std::vector<char> configBlob = BuildGameConfigBlob(buffer, romName);
+    if (!configBlob.empty()) {
+        SPDLOG_INFO("BB romhack config detected ({} bytes), writing to o2r as '{}'", configBlob.size(), romName);
+        Companion::Instance->RegisterCompanionFile("aGameConfig", configBlob);
     }
 
     return std::make_shared<BKAssetData>(assetTableInfo, symbolMap);

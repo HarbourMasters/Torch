@@ -1,6 +1,9 @@
 #include <iostream>
 #include "CLI11.hpp"
 #include "Companion.h"
+#ifdef BK64_SUPPORT
+#include "factories/bk64/ConfigFactory.h"
+#endif
 
 Companion* Companion::Instance;
 
@@ -139,6 +142,21 @@ int main(int argc, char* argv[]) {
             std::cout << "The folder is empty" << std::endl;
         }
     });
+
+#ifdef BK64_SUPPORT
+    /* Emit per-slot SHA-1s of the BK64 asset table */
+    std::string hashesOut;
+    const auto hashes = app.add_subcommand(
+        "hashes", "Hashes - Emit per-slot SHA-1 of BK64 asset table for v1.0 baseline\n");
+
+    hashes->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    hashes->add_option("-o,--output", hashesOut, "Output yaml path (default: hashes.yaml in cwd)");
+
+    hashes->parse_complete_callback([&] {
+        const std::filesystem::path outPath = hashesOut.empty() ? "hashes.yaml" : hashesOut;
+        BK64::EmitAssetHashes(filename, outPath);
+    });
+#endif
 
     /* Generate modding files */
     const auto modding_root = app.add_subcommand("modding", "Modding - Generates modding files like png\n");
