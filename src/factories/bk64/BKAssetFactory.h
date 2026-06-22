@@ -79,6 +79,12 @@ class BKAssetFactory : public BaseFactory {
     bool HasModdedDependencies() override {
         return true;
     }
+
+    bool IsDialogPackRoot() const override {
+        return true;
+    }
+
+    void PreprocessConfig(YAML::Node& cfg, N64::Cartridge* cart) override;
 };
 
 } // namespace BK64

@@ -113,6 +113,10 @@ public:
     virtual uint32_t GetAlignment() {
         return 4;
     }
+    virtual bool IsDialogPackRoot() const {
+        return false;
+    }
+    virtual void PreprocessConfig(YAML::Node& cfg, N64::Cartridge* cart) {}
     virtual std::optional<std::shared_ptr<IParsedData>> CreateDataPointer() {
         return std::nullopt;
     }

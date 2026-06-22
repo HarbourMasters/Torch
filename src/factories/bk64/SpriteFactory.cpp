@@ -351,4 +351,113 @@ std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse(std::vector<uin
                                         unkA, animSpeed, animType, animDirection, animFlip);
 }
 
+std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse_modding(std::vector<uint8_t>& buffer,
+                                                                         YAML::Node& node) {
+    YAML::Node root;
+    try {
+        root = YAML::Load(std::string(reinterpret_cast<char*>(buffer.data()), buffer.size()));
+    } catch (const YAML::ParserException& e) {
+        SPDLOG_ERROR("Failed to parse sprite modding yaml: {}", e.what());
+        return std::nullopt;
+    }
+    auto content = root.begin()->second;
+    auto frames = content["Frames"];
+    if (!frames || !frames.IsSequence() || frames.size() != 1) {
+        // Only single-frame sprites (fonts, banners) support yaml-driven (re)build;
+        // leave multi-frame sprites to the ROM parse.
+        auto base = this->parse(Companion::Instance->GetRomData(), node);
+        return base.has_value() ? std::optional(base.value()) : std::nullopt;
+    }
+    auto frame0 = frames[0];
+    const auto newCount = GetSafeNode<uint16_t>(frame0, "ChunkCount");
+    std::vector<std::pair<int16_t, int16_t>> positions;
+    auto chunks = frame0["Chunks"];
+    for (std::size_t i = 0; i < chunks.size(); i++) {
+        YAML::Node chunk = chunks[i];
+        positions.emplace_back(GetSafeNode<int16_t>(chunk, "X"), GetSafeNode<int16_t>(chunk, "Y"));
+    }
+    if (positions.empty() || positions.size() != newCount) {
+        SPDLOG_ERROR("Sprite modding: ChunkCount {} != Chunks listed {}", newCount, positions.size());
+        return std::nullopt;
+    }
+
+    const auto frameCount = GetSafeNode<int16_t>(content, "FrameCount", 1);
+    const auto formatCode = GetSafeNode<int16_t>(content, "FormatCode", static_cast<int16_t>(0x100));
+
+    // Header/anim/frame fields and the existing chunk count come from the ROM sprite — but
+    // an *additive* sprite (an id the ROM lacks, e.g. a language-pack world-name banner at
+    // 0x1600+) has no ROM sprite to read, so default them and supply every chunk from PNGs.
+    int16_t unk4 = 0, unk6 = 0, unk8 = 0, unkA = 0;
+    uint8_t animSpeed = 0, animType = 0, animDirection = 0, animFlip = 0;
+    std::vector<SpriteFrameHeader> frameHeaders;
+    uint16_t romCount = 0;
+    const bool additive = node["additive"] && node["additive"].as<bool>();
+    if (!additive) {
+        auto base = this->parse(Companion::Instance->GetRomData(), node);
+        if (!base.has_value()) {
+            return std::nullopt;
+        }
+        auto sprite = std::static_pointer_cast<SpriteData>(base.value());
+        unk4 = sprite->mUnk4;
+        unk6 = sprite->mUnk6;
+        unk8 = sprite->mUnk8;
+        unkA = sprite->mUnkA;
+        animSpeed = sprite->mAnimSpeed;
+        animType = sprite->mAnimType;
+        animDirection = sprite->mAnimDirection;
+        animFlip = sprite->mAnimFlip;
+        frameHeaders = sprite->mFrameHeaders;
+        romCount = static_cast<uint16_t>(sprite->mPositions.size());
+    } else {
+        // Additive: no ROM sprite, so take the header/frame fields from the yaml (a
+        // banner mirrors the JP layout); fields default to a frame sized to the chunk.
+        const auto i16 = [](int v) { return static_cast<int16_t>(v); };
+        unk4 = GetSafeNode<int16_t>(content, "Unk4", i16(0));
+        unk6 = GetSafeNode<int16_t>(content, "Unk6", i16(0));
+        unk8 = GetSafeNode<int16_t>(content, "Unk8", positions[0].first);
+        unkA = GetSafeNode<int16_t>(content, "UnkA", positions[0].second);
+        YAML::Node fh = frame0["FrameHeader"];
+        if (fh) {
+            frameHeaders.push_back({ GetSafeNode<int16_t>(fh, "x", i16(0)), GetSafeNode<int16_t>(fh, "y", i16(0)),
+                                     GetSafeNode<int16_t>(fh, "w", positions[0].first),
+                                     GetSafeNode<int16_t>(fh, "h", positions[0].second),
+                                     GetSafeNode<int16_t>(fh, "unkA", i16(0)), GetSafeNode<int16_t>(fh, "unkC", i16(0)),
+                                     GetSafeNode<int16_t>(fh, "unkE", i16(0)), GetSafeNode<int16_t>(fh, "unk10", i16(0)),
+                                     GetSafeNode<int16_t>(fh, "unk12", i16(0)) });
+        } else {
+            frameHeaders.push_back({ 0, 0, positions[0].first, positions[0].second, 0, 0, 0, 0, 0 });
+        }
+    }
+
+    std::string format;
+    switch (formatCode) {
+        case 0x1: format = "CI4"; break;
+        case 0x4: format = "CI8"; break;
+        case 0x20: format = "I4"; break;
+        case 0x40: format = "I8"; break;
+        case 0x80: format = "IA4"; break;
+        case 0x100: format = "IA8"; break;
+        case 0x400: format = "RGBA16"; break;
+        case 0x800: format = "RGBA32"; break;
+        default: format = "IA8"; break;
+    }
+
+    const auto symbol = GetSafeNode<std::string>(node, "symbol");
+    for (uint16_t i = romCount; i < newCount; i++) {
+        YAML::Node texture;
+        texture["type"] = "TEXTURE";
+        texture["offset"] = 0xF0000000u + i;
+        texture["format"] = format;
+        texture["ctype"] = "u16";
+        texture["width"] = additive ? frameHeaders[0].w : positions[i].first;
+        texture["height"] = additive ? frameHeaders[0].h : positions[i].second;
+        texture["symbol"] = symbol + "_0_" + std::to_string(i);
+        Companion::Instance->AddAsset(texture);
+    }
+
+    return std::make_shared<SpriteData>(frameCount, formatCode, std::vector<uint16_t>{ newCount }, positions,
+                                        frameHeaders, unk4, unk6, unk8, unkA, animSpeed, animType, animDirection,
+                                        animFlip);
+}
+
 } // namespace BK64

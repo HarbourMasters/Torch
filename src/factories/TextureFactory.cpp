@@ -420,34 +420,34 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
         }
         case TextureType::Palette8bpp:
         case TextureType::Palette4bpp: {
-            // This implementation is not correct.
-            // The process should be:
-            // png2rgba --> imgpal2rawci
-
-            // todo: Add wheel palette input
-            // Implement so that it works.
-
-            // auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");
-            // auto tlutTextureMap = Companion::Instance->GetTlutTextureMap();
-            // auto palettePtr = tlutTextureMap[tlut];
-
-            // if (palettePtr) {
-
-            //     auto imgi = png2rgba(buffer.data(), buffer.size(), &width, &height);
-            //     auto pal = png2rgba(palettePtr->mBuffer.data(), (palettePtr->mWidth * palettePtr->mWidth *
-            //     palettePtr->mFormat.depth * 2), &width, &height);
-
-            //     size = width * height * fmt.depth / 8;
-            //     raw = new uint8_t[size];
-
-            //     if(imgpal2rawci(raw, imgi, pal, 0, 0, width, height, fmt.depth) <= 0){
-            //         throw std::runtime_error("Failed to convert PNG to texture");
-            //     }
-            // } else {
-
-            // }
-            SPDLOG_ERROR("Unsupported texture format for modding: {}", format);
-            return std::nullopt;
+            // Re-index the edited PNG against this texture's palette to rebuild the
+            // CI4/CI8 data.
+            rgba* img = png2rgba(buffer.data(), buffer.size(), &width, &height);
+            if (img == nullptr) {
+                throw std::runtime_error("Failed to read PNG for CI texture");
+            }
+            rgba* pal = nullptr;
+            int palColors = (fmt.depth == 4) ? 16 : 256;
+            if (node["tlut_symbol"]) {
+                const auto tlut = GetSafeNode<std::string>(node, "tlut_symbol");
+                if (auto palette = Companion::Instance->GetParseDataBySymbol(tlut); palette.has_value()) {
+                    auto palTex = std::static_pointer_cast<TextureData>(palette.value().data.value());
+                    palColors = static_cast<int>(palTex->mWidth);
+                    pal = raw2rgba(palTex->mBuffer.data(), palColors, 1, palTex->mFormat.depth);
+                }
+            }
+            if (pal == nullptr) {
+                SPDLOG_ERROR("CI texture '{}': could not resolve palette '{}' for re-encode",
+                             GetSafeNode<std::string>(node, "symbol", ""),
+                             GetSafeNode<std::string>(node, "tlut_symbol", ""));
+                return std::nullopt;
+            }
+            size = width * height * fmt.depth / 8;
+            raw = new uint8_t[size];
+            if (imgpal2rawci(raw, img, pal, nullptr, size, fmt.depth, width * height, palColors) <= 0) {
+                throw std::runtime_error("Failed to convert PNG to CI texture");
+            }
+            break;
         }
         case TextureType::Grayscale8bpp:
         case TextureType::Grayscale4bpp: {
