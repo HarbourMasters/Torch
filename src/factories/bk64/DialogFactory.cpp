@@ -179,6 +179,22 @@ static DialogLang ParseLangBlock(LUS::BinaryReader& reader) {
         lang.bottom.push_back(dialogString);
     }
 
+    // Banjo's Backpack writes a 04 01 00 separator between bottom and top
+    // sections unconditionally, even when bottomSize is 0. When present,
+    // skip it so topSize reads correctly. Only check after an empty bottom
+    // to avoid false matches in vanilla dialogs.
+    if (bottomSize == 0) {
+        uint32_t savedPos = reader.GetBaseAddress();
+        if (savedPos + 3 <= reader.GetLength()) {
+            uint8_t b0 = reader.ReadUByte();
+            uint8_t b1 = reader.ReadUByte();
+            uint8_t b2 = reader.ReadUByte();
+            if (b0 != 0x04 || b1 != 0x01 || b2 != 0x00) {
+                reader.Seek(savedPos, LUS::SeekOffsetType::Start);
+            }
+        }
+    }
+
     auto topSize = reader.ReadUByte();
     for (uint8_t i = 0; i < topSize; i++) {
         DialogString dialogString;

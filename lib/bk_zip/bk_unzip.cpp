@@ -89,7 +89,10 @@ uint8_t* bk_unzip(const uint8_t* in_buffer, uint32_t* size) {
     // Check for successful decompression:
     // - Z_STREAM_END: normal completion
     // - Z_BUF_ERROR with no input remaining: input fully consumed
-    bool success = (result == Z_STREAM_END) || (result == Z_BUF_ERROR && stream.avail_in == 0);
+    // - Z_BUF_ERROR with output complete: all expected bytes produced (BB-extended ROMs
+    //   may have compressed sizes that include trailing padding from adjacent assets)
+    bool success = (result == Z_STREAM_END) || (result == Z_BUF_ERROR && stream.avail_in == 0) ||
+                   (result == Z_BUF_ERROR && stream.total_out == expected_len);
 
     // Clean up zlib stream
     inflateEnd(&stream);

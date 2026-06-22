@@ -98,6 +98,7 @@
 #ifdef BK64_SUPPORT
 #include "factories/bk64/AnimFactory.h"
 #include "factories/bk64/BKAssetFactory.h"
+#include "factories/bk64/ConfigFactory.h"
 #include "factories/bk64/DemoInputFactory.h"
 #include "factories/bk64/DialogFactory.h"
 #include "factories/bk64/GeoLayoutFactory.h"
@@ -1193,8 +1194,17 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         this->gCartridge->Initialize();
 
         if (!config[this->gCartridge->GetHash()]) {
-            SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
-            return;
+            bool synthesized = false;
+#ifdef BK64_SUPPORT
+            if (this->gRomPath.has_value()) {
+                synthesized = BK64::TrySynthesizeRomConfig(config, this->gCartridge->GetHash(), this->gRomPath.value(),
+                                                           this->gRomData);
+            }
+#endif
+            if (!synthesized) {
+                SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
+                return;
+            }
         }
 
         this->gConfig.parseMode = ParseMode::Default;
