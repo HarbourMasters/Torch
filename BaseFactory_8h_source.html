@@ -213,19 +213,24 @@ $(function(){initNavTree('BaseFactory_8h_source.html','',''); });
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="keyword">virtual</span> uint32_t GetAlignment() {</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        <span class="keywordflow">return</span> 4;</div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    }</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    <span class="keyword">virtual</span> std::optional&lt;std::shared_ptr&lt;IParsedData&gt;&gt; CreateDataPointer() {</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        <span class="keywordflow">return</span> std::nullopt;</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    <span class="keyword">virtual</span> <span class="keywordtype">bool</span> IsDialogPackRoot()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    }</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keyword">virtual</span> std::unordered_map&lt;ExportType, std::shared_ptr&lt;BaseExporter&gt;&gt; GetExporters() {</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        <span class="keywordflow">return</span> {};</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="keyword">virtual</span> <span class="keywordtype">void</span> PreprocessConfig(YAML::Node&amp; cfg, <a class="code hl_class" href="classN64_1_1Cartridge.html">N64::Cartridge</a>* cart) {}</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keyword">virtual</span> std::optional&lt;std::shared_ptr&lt;IParsedData&gt;&gt; CreateDataPointer() {</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        <span class="keywordflow">return</span> std::nullopt;</div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    }</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>};</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    <span class="keyword">virtual</span> std::unordered_map&lt;ExportType, std::shared_ptr&lt;BaseExporter&gt;&gt; GetExporters() {</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        <span class="keywordflow">return</span> {};</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    }</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>};</div>
 </div>
 <div class="ttc" id="aclassBaseExporter_html"><div class="ttname"><a href="classBaseExporter.html">BaseExporter</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:88</div></div>
 <div class="ttc" id="aclassBaseFactory_html"><div class="ttname"><a href="classBaseFactory.html">BaseFactory</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:94</div></div>
 <div class="ttc" id="aclassGenericData_html"><div class="ttname"><a href="classGenericData.html">GenericData</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:83</div></div>
 <div class="ttc" id="aclassIParsedData_html"><div class="ttname"><a href="classIParsedData.html">IParsedData</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:80</div></div>
+<div class="ttc" id="aclassN64_1_1Cartridge_html"><div class="ttname"><a href="classN64_1_1Cartridge.html">N64::Cartridge</a></div><div class="ttdef"><b>Definition</b> Cartridge.h:15</div></div>
 <div class="ttc" id="astructOffsetEntry_html"><div class="ttname"><a href="structOffsetEntry.html">OffsetEntry</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:32</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

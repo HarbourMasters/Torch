@@ -12,9 +12,10 @@ var searchData=
   ['offsetentry_9',['OffsetEntry',['../structOffsetEntry.html',1,'']]],
   ['oflt_10',['Float Resource (OFLT)',['../otr_float.html#autotoc_md14',1,'']]],
   ['omtx_11',['Matrix Resource (OMTX)',['../otr_matrix.html#autotoc_md32',1,'']]],
-  ['otex_12',['Texture Resource (OTEX)',['../otr_texture.html#autotoc_md36',1,'']]],
-  ['otr_20file_20format_20specification_13',['OTR File Format Specification',['../otr_format.html',1,'OTR File Format Specification'],['../otr_format.html#autotoc_md26',1,'OTR File Format Specification']]],
-  ['overview_14',['Overview',['../otr_format.html#autotoc_md27',1,'']]],
-  ['ovpt_15',['Viewport Resource (OVPT)',['../otr_viewport.html#autotoc_md53',1,'']]],
-  ['ovtx_16',['Vertex Resource (OVTX)',['../otr_vertex.html#autotoc_md49',1,'']]]
+  ['optionstring_12',['OptionString',['../structBK64_1_1OptionString.html',1,'BK64']]],
+  ['otex_13',['Texture Resource (OTEX)',['../otr_texture.html#autotoc_md36',1,'']]],
+  ['otr_20file_20format_20specification_14',['OTR File Format Specification',['../otr_format.html',1,'OTR File Format Specification'],['../otr_format.html#autotoc_md26',1,'OTR File Format Specification']]],
+  ['overview_15',['Overview',['../otr_format.html#autotoc_md27',1,'']]],
+  ['ovpt_16',['Viewport Resource (OVPT)',['../otr_viewport.html#autotoc_md53',1,'']]],
+  ['ovtx_17',['Vertex Resource (OVTX)',['../otr_vertex.html#autotoc_md49',1,'']]]
 ];

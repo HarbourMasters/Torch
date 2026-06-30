@@ -7,13 +7,14 @@ var searchData=
   ['levelscriptfactory_4',['LevelScriptFactory',['../classSM64_1_1LevelScriptFactory.html',1,'SM64']]],
   ['levelscriptheaderexporter_5',['LevelScriptHeaderExporter',['../classSM64_1_1LevelScriptHeaderExporter.html',1,'SM64']]],
   ['light_5ftraw_6',['Light_tRaw',['../structLight__tRaw.html',1,'']]],
-  ['lightraw_7',['LightRaw',['../unionLightRaw.html',1,'']]],
-  ['lights1raw_8',['Lights1Raw',['../structLights1Raw.html',1,'']]],
-  ['lightsbinaryexporter_9',['LightsBinaryExporter',['../classLightsBinaryExporter.html',1,'']]],
-  ['lightscodeexporter_10',['LightsCodeExporter',['../classLightsCodeExporter.html',1,'']]],
-  ['lightsdata_11',['LightsData',['../classLightsData.html',1,'']]],
-  ['lightsfactory_12',['LightsFactory',['../classLightsFactory.html',1,'']]],
-  ['lightsheaderexporter_13',['LightsHeaderExporter',['../classLightsHeaderExporter.html',1,'']]],
-  ['limbdata_14',['LimbData',['../classSF64_1_1LimbData.html',1,'SF64']]],
-  ['loop_15',['Loop',['../structLoop.html',1,'']]]
+  ['lightingvector_7',['LightingVector',['../structBK64_1_1LightingVector.html',1,'BK64']]],
+  ['lightraw_8',['LightRaw',['../unionLightRaw.html',1,'']]],
+  ['lights1raw_9',['Lights1Raw',['../structLights1Raw.html',1,'']]],
+  ['lightsbinaryexporter_10',['LightsBinaryExporter',['../classLightsBinaryExporter.html',1,'']]],
+  ['lightscodeexporter_11',['LightsCodeExporter',['../classLightsCodeExporter.html',1,'']]],
+  ['lightsdata_12',['LightsData',['../classLightsData.html',1,'']]],
+  ['lightsfactory_13',['LightsFactory',['../classLightsFactory.html',1,'']]],
+  ['lightsheaderexporter_14',['LightsHeaderExporter',['../classLightsHeaderExporter.html',1,'']]],
+  ['limbdata_15',['LimbData',['../classSF64_1_1LimbData.html',1,'SF64']]],
+  ['loop_16',['Loop',['../structLoop.html',1,'']]]
 ];

@@ -7,5 +7,6 @@ var searchData=
   ['objinitfactory_4',['ObjInitFactory',['../classSF64_1_1ObjInitFactory.html',1,'SF64']]],
   ['objinitheaderexporter_5',['ObjInitHeaderExporter',['../classSF64_1_1ObjInitHeaderExporter.html',1,'SF64']]],
   ['objinitxmlexporter_6',['ObjInitXMLExporter',['../classSF64_1_1ObjInitXMLExporter.html',1,'SF64']]],
-  ['offsetentry_7',['OffsetEntry',['../structOffsetEntry.html',1,'']]]
+  ['offsetentry_7',['OffsetEntry',['../structOffsetEntry.html',1,'']]],
+  ['optionstring_8',['OptionString',['../structBK64_1_1OptionString.html',1,'BK64']]]
 ];

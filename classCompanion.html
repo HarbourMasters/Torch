@@ -98,14 +98,16 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Companion</b> (std::filesystem::path rom, const ArchiveType otr, const bool debug, const bool modding=false, const std::string &amp;srcDir=&quot;&quot;, const std::string &amp;destPath=&quot;&quot;)</td></tr>
 <tr class="memitem:a0627946d45268927019f619b9ee8a828" id="r_a0627946d45268927019f619b9ee8a828"><td class="memItemLeft" align="right" valign="top"><a id="a0627946d45268927019f619b9ee8a828" name="a0627946d45268927019f619b9ee8a828"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Companion</b> (std::vector&lt; uint8_t &gt; rom, const ArchiveType otr, const bool debug, const bool modding=false, const std::string &amp;srcDir=&quot;&quot;, const std::string &amp;destPath=&quot;&quot;)</td></tr>
+<tr class="memitem:a36f2aea1b8a4abd100f1675361639760" id="r_a36f2aea1b8a4abd100f1675361639760"><td class="memItemLeft" align="right" valign="top"><a id="a36f2aea1b8a4abd100f1675361639760" name="a36f2aea1b8a4abd100f1675361639760"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>SetRomPath</b> (std::filesystem::path path)</td></tr>
 <tr class="memitem:a3c977d638208e4d7ac599c60a78f70f6" id="r_a3c977d638208e4d7ac599c60a78f70f6"><td class="memItemLeft" align="right" valign="top"><a id="a3c977d638208e4d7ac599c60a78f70f6" name="a3c977d638208e4d7ac599c60a78f70f6"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Companion</b> (std::filesystem::path rom, const ArchiveType otr, const bool debug, const std::string &amp;srcDir=&quot;&quot;, const std::string &amp;destPath=&quot;&quot;)</td></tr>
 <tr class="memitem:aa2cc83bddacb19465962716bad76cce5" id="r_aa2cc83bddacb19465962716bad76cce5"><td class="memItemLeft" align="right" valign="top"><a id="aa2cc83bddacb19465962716bad76cce5" name="aa2cc83bddacb19465962716bad76cce5"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Companion</b> (std::vector&lt; uint8_t &gt; rom, const ArchiveType otr, const bool debug, const std::string &amp;srcDir=&quot;&quot;, const std::string &amp;destPath=&quot;&quot;)</td></tr>
 <tr class="memitem:a06eac14265f050bb5e75543936f1ca7c" id="r_a06eac14265f050bb5e75543936f1ca7c"><td class="memItemLeft" align="right" valign="top"><a id="a06eac14265f050bb5e75543936f1ca7c" name="a06eac14265f050bb5e75543936f1ca7c"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>Init</b> (ExportType type)</td></tr>
-<tr class="memitem:ac869e3d635520ed9959f73474e4149bd" id="r_ac869e3d635520ed9959f73474e4149bd"><td class="memItemLeft" align="right" valign="top"><a id="ac869e3d635520ed9959f73474e4149bd" name="ac869e3d635520ed9959f73474e4149bd"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Init</b> (ExportType type, std::atomic&lt; size_t &gt; &amp;assetCount)</td></tr>
+<tr class="memitem:a6e2d6dde81a73bcf4d9c7bd6badef486" id="r_a6e2d6dde81a73bcf4d9c7bd6badef486"><td class="memItemLeft" align="right" valign="top"><a id="a6e2d6dde81a73bcf4d9c7bd6badef486" name="a6e2d6dde81a73bcf4d9c7bd6badef486"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>Init</b> (ExportType type, std::atomic&lt; size_t &gt; &amp;assetCount, bool shouldProcess)</td></tr>
 <tr class="memitem:a4b3f571f25c046aa1ef748d2a8577109" id="r_a4b3f571f25c046aa1ef748d2a8577109"><td class="memItemLeft" align="right" valign="top"><a id="a4b3f571f25c046aa1ef748d2a8577109" name="a4b3f571f25c046aa1ef748d2a8577109"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>NodeHasChanges</b> (const std::string &amp;string)</td></tr>
 <tr class="memitem:a923987be52d0fe9dc30300d4fa87b0db" id="r_a923987be52d0fe9dc30300d4fa87b0db"><td class="memItemLeft" align="right" valign="top"><a id="a923987be52d0fe9dc30300d4fa87b0db" name="a923987be52d0fe9dc30300d4fa87b0db"></a>
@@ -122,6 +124,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>AddTextureDefines</b>
 std::vector&lt; uint8_t &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetRomData</b> ()</td></tr>
 <tr class="memitem:ae3f75157e5935092bbfed1c6f340fd1b" id="r_ae3f75157e5935092bbfed1c6f340fd1b"><td class="memItemLeft" align="right" valign="top"><a id="ae3f75157e5935092bbfed1c6f340fd1b" name="ae3f75157e5935092bbfed1c6f340fd1b"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>GetOutputPath</b> ()</td></tr>
+<tr class="memitem:ad763d669eda1292dc80925d3a451f9a0" id="r_ad763d669eda1292dc80925d3a451f9a0"><td class="memItemLeft" align="right" valign="top"><a id="ad763d669eda1292dc80925d3a451f9a0" name="ad763d669eda1292dc80925d3a451f9a0"></a>
+const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetAssetPath</b> () const</td></tr>
 <tr class="memitem:a1d62c59e819fefe58313680f80b7d10b" id="r_a1d62c59e819fefe58313680f80b7d10b"><td class="memItemLeft" align="right" valign="top"><a id="a1d62c59e819fefe58313680f80b7d10b" name="a1d62c59e819fefe58313680f80b7d10b"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>GetDestRelativeOutputPath</b> ()</td></tr>
 <tr class="memitem:afe458ca08eed25cc7096eacb04cfade0" id="r_afe458ca08eed25cc7096eacb04cfade0"><td class="memItemLeft" align="right" valign="top"><a id="afe458ca08eed25cc7096eacb04cfade0" name="afe458ca08eed25cc7096eacb04cfade0"></a>
@@ -140,6 +144,8 @@ std::optional&lt; <a class="el" href="structParseResultData.html">ParseResultDat
 std::optional&lt; <a class="el" href="structParseResultData.html">ParseResultData</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetParseDataBySymbol</b> (const std::string &amp;symbol)</td></tr>
 <tr class="memitem:a4f9b3fbcb5839614cdb254b94869da84" id="r_a4f9b3fbcb5839614cdb254b94869da84"><td class="memItemLeft" align="right" valign="top"><a id="a4f9b3fbcb5839614cdb254b94869da84" name="a4f9b3fbcb5839614cdb254b94869da84"></a>
 std::optional&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetFileOffsetFromSegmentedAddr</b> (uint8_t segment) const</td></tr>
+<tr class="memitem:a770eedc9b073c99ad255e01c083ed983" id="r_a770eedc9b073c99ad255e01c083ed983"><td class="memItemLeft" align="right" valign="top"><a id="a770eedc9b073c99ad255e01c083ed983" name="a770eedc9b073c99ad255e01c083ed983"></a>
+std::optional&lt; std::pair&lt; std::uint32_t, std::uint32_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetFileOffsetFromCompressedSegmentedAddr</b> (uint8_t segment) const</td></tr>
 <tr class="memitem:ac4a73d191bc6b46ef5d29269a6b9ca01" id="r_ac4a73d191bc6b46ef5d29269a6b9ca01"><td class="memItemLeft" align="right" valign="top"><a id="ac4a73d191bc6b46ef5d29269a6b9ca01" name="ac4a73d191bc6b46ef5d29269a6b9ca01"></a>
 std::optional&lt; std::shared_ptr&lt; <a class="el" href="classBaseFactory.html">BaseFactory</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetFactory</b> (const std::string &amp;type)</td></tr>
 <tr class="memitem:ab46721b43e807de93cdaa8a3b020d4e9" id="r_ab46721b43e807de93cdaa8a3b020d4e9"><td class="memItemLeft" align="right" valign="top"><a id="ab46721b43e807de93cdaa8a3b020d4e9" name="ab46721b43e807de93cdaa8a3b020d4e9"></a>
@@ -152,8 +158,10 @@ std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bo
 std::optional&lt; std::tuple&lt; std::string, YAML::Node &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetSafeNodeByAddr</b> (const uint32_t addr, std::string type)</td></tr>
 <tr class="memitem:a9788dbc26ce7da79c4ed1a0dfe787350" id="r_a9788dbc26ce7da79c4ed1a0dfe787350"><td class="memItemLeft" align="right" valign="top"><a id="a9788dbc26ce7da79c4ed1a0dfe787350" name="a9788dbc26ce7da79c4ed1a0dfe787350"></a>
 std::optional&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetSafeStringByAddr</b> (const uint32_t addr, std::string type)</td></tr>
-<tr class="memitem:a760867b4cd1f0a8b5e0853753299d9bc" id="r_a760867b4cd1f0a8b5e0853753299d9bc"><td class="memItemLeft" align="right" valign="top"><a id="a760867b4cd1f0a8b5e0853753299d9bc" name="a760867b4cd1f0a8b5e0853753299d9bc"></a>
-std::optional&lt; std::vector&lt; std::tuple&lt; std::string, YAML::Node &gt; &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetNodesByType</b> (const std::string &amp;type)</td></tr>
+<tr class="memitem:a330ea1e48a9261b2cdce4b6bc0ee45fc" id="r_a330ea1e48a9261b2cdce4b6bc0ee45fc"><td class="memItemLeft" align="right" valign="top"><a id="a330ea1e48a9261b2cdce4b6bc0ee45fc" name="a330ea1e48a9261b2cdce4b6bc0ee45fc"></a>
+std::optional&lt; std::vector&lt; std::tuple&lt; std::string, YAML::Node &gt; &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetNodesByType</b> (const std::string &amp;type, bool includeAutogen=false)</td></tr>
+<tr class="memitem:af6ae1f53a0108eac3b7de6e1a717e3ee" id="r_af6ae1f53a0108eac3b7de6e1a717e3ee"><td class="memItemLeft" align="right" valign="top"><a id="af6ae1f53a0108eac3b7de6e1a717e3ee" name="af6ae1f53a0108eac3b7de6e1a717e3ee"></a>
+const std::vector&lt; std::tuple&lt; std::string, YAML::Node &gt; &gt; *&#160;</td><td class="memItemRight" valign="bottom"><b>GetNodesByTypeRef</b> (const std::string &amp;type, bool includeAutogen=false)</td></tr>
 <tr class="memitem:aea7f61cd14cc453b39c80c9fd106ed5b" id="r_aea7f61cd14cc453b39c80c9fd106ed5b"><td class="memItemLeft" align="right" valign="top"><a id="aea7f61cd14cc453b39c80c9fd106ed5b" name="aea7f61cd14cc453b39c80c9fd106ed5b"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>GetSymbolFromAddr</b> (uint32_t addr, bool validZero=false)</td></tr>
 <tr class="memitem:af91b9abba00eb9a7b5398e2d10936882" id="r_af91b9abba00eb9a7b5398e2d10936882"><td class="memItemLeft" align="right" valign="top"><a id="af91b9abba00eb9a7b5398e2d10936882" name="af91b9abba00eb9a7b5398e2d10936882"></a>
@@ -162,6 +170,8 @@ std::optional&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="
 std::optional&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrSegmentNumber</b> (void) const</td></tr>
 <tr class="memitem:a8d8a619e5ad88c53afd43fa63fab37ec" id="r_a8d8a619e5ad88c53afd43fa63fab37ec"><td class="memItemLeft" align="right" valign="top"><a id="a8d8a619e5ad88c53afd43fa63fab37ec" name="a8d8a619e5ad88c53afd43fa63fab37ec"></a>
 CompressionType&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrCompressionType</b> (void) const</td></tr>
+<tr class="memitem:aa9c198a690d3b1a54f0d51dbb62bcf01" id="r_aa9c198a690d3b1a54f0d51dbb62bcf01"><td class="memItemLeft" align="right" valign="top"><a id="aa9c198a690d3b1a54f0d51dbb62bcf01" name="aa9c198a690d3b1a54f0d51dbb62bcf01"></a>
+std::optional&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrentCompressedSize</b> (void) const</td></tr>
 <tr class="memitem:a2575d9bb28fbd7fc00e000bc1d9a6134" id="r_a2575d9bb28fbd7fc00e000bc1d9a6134"><td class="memItemLeft" align="right" valign="top"><a id="a2575d9bb28fbd7fc00e000bc1d9a6134" name="a2575d9bb28fbd7fc00e000bc1d9a6134"></a>
 std::optional&lt; <a class="el" href="structVRAMEntry.html">VRAMEntry</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrentVRAM</b> (void) const</td></tr>
 <tr class="memitem:ae959eec0273a6474f1973f5b89fbbab9" id="r_ae959eec0273a6474f1973f5b89fbbab9"><td class="memItemLeft" align="right" valign="top"><a id="ae959eec0273a6474f1973f5b89fbbab9" name="ae959eec0273a6474f1973f5b89fbbab9"></a>
@@ -176,22 +186,36 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>RelativePathTo
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>RelativePathToDestDir</b> (const std::string &amp;path) const</td></tr>
 <tr class="memitem:ad8b2f6ee1140b95d76dcaa345c13918f" id="r_ad8b2f6ee1140b95d76dcaa345c13918f"><td class="memItemLeft" align="right" valign="top"><a id="ad8b2f6ee1140b95d76dcaa345c13918f" name="ad8b2f6ee1140b95d76dcaa345c13918f"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>RegisterCompanionFile</b> (const std::string path, std::vector&lt; char &gt; data)</td></tr>
+<tr class="memitem:add1d6ac1dc1f04a1149c856d4ca6f9e5" id="r_add1d6ac1dc1f04a1149c856d4ca6f9e5"><td class="memItemLeft" align="right" valign="top"><a id="add1d6ac1dc1f04a1149c856d4ca6f9e5" name="add1d6ac1dc1f04a1149c856d4ca6f9e5"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>RegisterArchiveFile</b> (const std::string &amp;name, std::vector&lt; char &gt; data)</td></tr>
 <tr class="memitem:ab0c3fb945fac4e6ff38250d710904eb9" id="r_ab0c3fb945fac4e6ff38250d710904eb9"><td class="memItemLeft" align="right" valign="top"><a id="ab0c3fb945fac4e6ff38250d710904eb9" name="ab0c3fb945fac4e6ff38250d710904eb9"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>SetAdditionalFiles</b> (const std::vector&lt; std::string &gt; &amp;files)</td></tr>
 <tr class="memitem:a34014bf205931131c3d6aacad8649cb0" id="r_a34014bf205931131c3d6aacad8649cb0"><td class="memItemLeft" align="right" valign="top"><a id="a34014bf205931131c3d6aacad8649cb0" name="a34014bf205931131c3d6aacad8649cb0"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>SetVersion</b> (const std::string &amp;version)</td></tr>
+<tr class="memitem:ac3b35c17b534f46214957663acd470d6" id="r_ac3b35c17b534f46214957663acd470d6"><td class="memItemLeft" align="right" valign="top"><a id="ac3b35c17b534f46214957663acd470d6" name="ac3b35c17b534f46214957663acd470d6"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrentAssetName</b> () const</td></tr>
+<tr class="memitem:a55fcf4239fd5931a8f00fb3ef0196f80" id="r_a55fcf4239fd5931a8f00fb3ef0196f80"><td class="memItemLeft" align="right" valign="top"><a id="a55fcf4239fd5931a8f00fb3ef0196f80" name="a55fcf4239fd5931a8f00fb3ef0196f80"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>SetAssetTotal</b> (std::atomic&lt; size_t &gt; *total)</td></tr>
+<tr class="memitem:a8023d0484dbb66f10a0dbad88daf47fc" id="r_a8023d0484dbb66f10a0dbad88daf47fc"><td class="memItemLeft" align="right" valign="top"><a id="a8023d0484dbb66f10a0dbad88daf47fc" name="a8023d0484dbb66f10a0dbad88daf47fc"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>SetPhaseCallback</b> (std::function&lt; void(int)&gt; cb)</td></tr>
 <tr class="memitem:ac89a05757ba734ffdecb635a3af87042" id="r_ac89a05757ba734ffdecb635a3af87042"><td class="memItemLeft" align="right" valign="top"><a id="ac89a05757ba734ffdecb635a3af87042" name="ac89a05757ba734ffdecb635a3af87042"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>SetProcess</b> (bool shouldProcess)</td></tr>
 <tr class="memitem:aedea48e28860d559dde022100289c5af" id="r_aedea48e28860d559dde022100289c5af"><td class="memItemLeft" align="right" valign="top"><a id="aedea48e28860d559dde022100289c5af" name="aedea48e28860d559dde022100289c5af"></a>
 <a class="el" href="structTorchConfig.html">TorchConfig</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetConfig</b> ()</td></tr>
 <tr class="memitem:a853a4dbe76c7ebe7d2c874334b94536c" id="r_a853a4dbe76c7ebe7d2c874334b94536c"><td class="memItemLeft" align="right" valign="top"><a id="a853a4dbe76c7ebe7d2c874334b94536c" name="a853a4dbe76c7ebe7d2c874334b94536c"></a>
 <a class="el" href="classBinaryWrapper.html">BinaryWrapper</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrentWrapper</b> ()</td></tr>
+<tr class="memitem:a1b9c6e60ff20e255a43977fbba0ca39c" id="r_a1b9c6e60ff20e255a43977fbba0ca39c"><td class="memItemLeft" align="right" valign="top"><a id="a1b9c6e60ff20e255a43977fbba0ca39c" name="a1b9c6e60ff20e255a43977fbba0ca39c"></a>
+const std::unordered_map&lt; std::string, std::string &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetModdedAssetPaths</b> () const</td></tr>
 <tr class="memitem:a81aadaa8b873c317e43e42b8fedcb3ea" id="r_a81aadaa8b873c317e43e42b8fedcb3ea"><td class="memItemLeft" align="right" valign="top"><a id="a81aadaa8b873c317e43e42b8fedcb3ea" name="a81aadaa8b873c317e43e42b8fedcb3ea"></a>
 std::optional&lt; std::tuple&lt; std::string, YAML::Node &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>RegisterAsset</b> (const std::string &amp;name, YAML::Node &amp;node)</td></tr>
+<tr class="memitem:a3ee50f5af88e0e7de3d14ff0738c74a9" id="r_a3ee50f5af88e0e7de3d14ff0738c74a9"><td class="memItemLeft" align="right" valign="top"><a id="a3ee50f5af88e0e7de3d14ff0738c74a9" name="a3ee50f5af88e0e7de3d14ff0738c74a9"></a>
+std::optional&lt; YAML::Node &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>AddSubFileAsset</b> (YAML::Node asset, std::string newFileName, CompressionType newCompressionType, uint32_t compressedSize=0)</td></tr>
 <tr class="memitem:af8623c48fd81c67f1f65c03e80a945d8" id="r_af8623c48fd81c67f1f65c03e80a945d8"><td class="memItemLeft" align="right" valign="top"><a id="af8623c48fd81c67f1f65c03e80a945d8" name="af8623c48fd81c67f1f65c03e80a945d8"></a>
 std::optional&lt; YAML::Node &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>AddAsset</b> (YAML::Node asset)</td></tr>
-<tr class="memitem:adccca1e4403e1b2162754f7e619ed239" id="r_adccca1e4403e1b2162754f7e619ed239"><td class="memItemLeft" align="right" valign="top"><a id="adccca1e4403e1b2162754f7e619ed239" name="adccca1e4403e1b2162754f7e619ed239"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>RegisterFactory</b> (const std::string &amp;type, const std::shared_ptr&lt; <a class="el" href="classBaseFactory.html">BaseFactory</a> &gt; &amp;factory)</td></tr>
+<tr class="memitem:aebae1719c8400a4c32c9d89e74852fb5" id="r_aebae1719c8400a4c32c9d89e74852fb5"><td class="memItemLeft" align="right" valign="top"><a id="aebae1719c8400a4c32c9d89e74852fb5" name="aebae1719c8400a4c32c9d89e74852fb5"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>SetCompressedSegment</b> (uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset)</td></tr>
+<tr class="memitem:a74a42030f59223d663e0578338870391" id="r_a74a42030f59223d663e0578338870391"><td class="memItemLeft" align="right" valign="top"><a id="a74a42030f59223d663e0578338870391" name="a74a42030f59223d663e0578338870391"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>GetCompressedSegmentOffset</b> (uint32_t *addr)</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-static-methods" class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -210,6 +234,7 @@ static <a class="el" href="classCompanion.html">Companion</a> *&#160;</td><td cl
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="Companion_8h_source.html">Companion.h</a></li>
 <li>src/<b>Companion.cpp</b></li>
+<li>src/<b>main.cpp</b></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->
