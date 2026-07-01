@@ -290,6 +290,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterUIFactory("TEXTURE", std::make_shared<TextureFactoryUI>());
     this->RegisterUIFactory("VTX", std::make_shared<VtxFactoryUI>());
     this->RegisterUIFactory("GFX", std::make_shared<DListFactoryUI>());
+    this->RegisterUIFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactoryUI>());
 #endif
 
 #ifndef __EMSCRIPTEN__ // We call this manually
@@ -1913,6 +1914,33 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
     }
 
     return this->gAddrMap[this->gCurrentFile][addr];
+}
+
+std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint32_t addr, const std::string& file) {
+    if (Torch::contains(this->gAddrMap, file) && Torch::contains(this->gAddrMap[file], addr)) {
+        return this->gAddrMap[file][addr];
+    }
+
+    // The parse pass resolves cross-file references through the yml's
+    // external_files context, which is gone by UI time. Approximate it: sibling
+    // ymls (same directory) first — e.g. an actor's geo.yml referencing display
+    // lists declared in its model.yml — then any file. Segmented addresses can
+    // repeat across unrelated groups, so proximity ordering matters.
+    const auto slash = file.find_last_of('/');
+    const std::string dir = slash != std::string::npos ? file.substr(0, slash + 1) : "";
+    if (!dir.empty()) {
+        for (auto& [f, map] : this->gAddrMap) {
+            if (f != file && f.rfind(dir, 0) == 0 && Torch::contains(map, addr)) {
+                return map[addr];
+            }
+        }
+    }
+    for (auto& [f, map] : this->gAddrMap) {
+        if (f != file && Torch::contains(map, addr)) {
+            return map[addr];
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> Companion::GetStringByAddr(const uint32_t addr) {

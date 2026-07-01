@@ -52,4 +52,15 @@ public:
         };
     }
 };
+
+#ifdef BUILD_UI
+// Previews the geo layout as an assembled N64 model: the node tree is flattened
+// at bind pose (static transforms, first switch case, branches followed) into
+// per-part display lists rendered via Fast3D.
+class GeoLayoutFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif
 }

@@ -26,6 +26,16 @@ struct PreviewVertex {
     unsigned char color[4];
 };
 
+// One display list of an assembled model (e.g. a flattened geo layout) with its
+// object->world transform. Row-vector convention (v' = v * M), matching the
+// N64: rotation in the upper 3x3, translation in row 3. `layer` is the SM64
+// drawing layer (0-7), which selects the render mode (opaque/cutout/xlu).
+struct ModelPart {
+    std::string resource;
+    float mtx[4][4];
+    uint8_t layer = 1; // LAYER_OPAQUE
+};
+
 class BaseBackend {
 public:
     virtual ~BaseBackend() = default;
@@ -55,6 +65,13 @@ public:
     // screen rect. Requires the resource's archive to be mounted. Optional.
     virtual void DrawModel(const std::string& resourceName, const ImVec2& topLeft, const ImVec2& size,
                            float yaw, float pitch, float zoom) {}
+
+    // Preview a multi-part model: each part is a display-list resource with its
+    // own object->world transform (a geo layout flattened at bind pose). `key`
+    // identifies the assembled model for render-target reuse. Optional.
+    virtual void DrawModelParts(const std::string& key, const std::vector<ModelPart>& parts,
+                                const ImVec2& topLeft, const ImVec2& size,
+                                float yaw, float pitch, float zoom) {}
 };
 
 inline BaseBackend*& ActiveBackend() {

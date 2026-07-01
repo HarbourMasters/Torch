@@ -717,3 +717,457 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
     return std::make_shared<GeoLayout>(commands);
 }
+
+#ifdef BUILD_UI
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+
+#include "ui/BaseBackend.h"
+#include "ui/Widgets.h"
+
+namespace {
+
+// 4x4 in row-vector convention (v' = v * M), matching the N64 Mat4 layout:
+// rotation in the upper 3x3, translation in row 3.
+struct Mat4 {
+    float m[4][4];
+};
+
+Mat4 Mat4Identity() {
+    Mat4 r{};
+    r.m[0][0] = r.m[1][1] = r.m[2][2] = r.m[3][3] = 1.0f;
+    return r;
+}
+
+// r = a * b (a applied first).
+Mat4 Mat4Mul(const Mat4& a, const Mat4& b) {
+    Mat4 r{};
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            r.m[i][j] = a.m[i][0] * b.m[0][j] + a.m[i][1] * b.m[1][j] + a.m[i][2] * b.m[2][j] + a.m[i][3] * b.m[3][j];
+        }
+    }
+    return r;
+}
+
+// SM64's mtxf_rotate_zxy_and_translate; rotation given in degrees (the geo
+// format stores degrees, converted to binary angles at runtime).
+Mat4 Mat4RotZXYTranslate(const Vec3s& t, const Vec3s& rotDeg) {
+    const float d2r = (float)M_PI / 180.0f;
+    const float sx = std::sin(rotDeg.x * d2r), cx = std::cos(rotDeg.x * d2r);
+    const float sy = std::sin(rotDeg.y * d2r), cy = std::cos(rotDeg.y * d2r);
+    const float sz = std::sin(rotDeg.z * d2r), cz = std::cos(rotDeg.z * d2r);
+
+    Mat4 r = Mat4Identity();
+    r.m[0][0] = cy * cz + sx * sy * sz;
+    r.m[1][0] = -cy * sz + sx * sy * cz;
+    r.m[2][0] = cx * sy;
+    r.m[3][0] = t.x;
+    r.m[0][1] = cx * sz;
+    r.m[1][1] = cx * cz;
+    r.m[2][1] = -sx;
+    r.m[3][1] = t.y;
+    r.m[0][2] = -sy * cz + sx * cy * sz;
+    r.m[1][2] = sy * sz + sx * cy * cz;
+    r.m[2][2] = cx * cy;
+    r.m[3][2] = t.z;
+    return r;
+}
+
+Mat4 Mat4Scale(float s) {
+    Mat4 r = Mat4Identity();
+    r.m[0][0] = r.m[1][1] = r.m[2][2] = s;
+    return r;
+}
+
+const uint8_t* ArgU8(const std::vector<GeoArgument>& args, size_t i) {
+    return i < args.size() ? std::get_if<uint8_t>(&args[i]) : nullptr;
+}
+const int16_t* ArgS16(const std::vector<GeoArgument>& args, size_t i) {
+    return i < args.size() ? std::get_if<int16_t>(&args[i]) : nullptr;
+}
+const uint32_t* ArgU32(const std::vector<GeoArgument>& args, size_t i) {
+    return i < args.size() ? std::get_if<uint32_t>(&args[i]) : nullptr;
+}
+const uint64_t* ArgU64(const std::vector<GeoArgument>& args, size_t i) {
+    return i < args.size() ? std::get_if<uint64_t>(&args[i]) : nullptr;
+}
+const Vec3s* ArgVec3s(const std::vector<GeoArgument>& args, size_t i) {
+    return i < args.size() ? std::get_if<Vec3s>(&args[i]) : nullptr;
+}
+
+bool IsNodeCommand(GeoOpcode op) {
+    switch (op) {
+        case GeoOpcode::NodeRoot:
+        case GeoOpcode::NodeOrthoProjection:
+        case GeoOpcode::NodePerspective:
+        case GeoOpcode::NodeStart:
+        case GeoOpcode::NodeMasterList:
+        case GeoOpcode::NodeLevelOfDetail:
+        case GeoOpcode::NodeSwitchCase:
+        case GeoOpcode::NodeCamera:
+        case GeoOpcode::NodeTranslationRotation:
+        case GeoOpcode::NodeTranslation:
+        case GeoOpcode::NodeRotation:
+        case GeoOpcode::NodeAnimatedPart:
+        case GeoOpcode::NodeBillboard:
+        case GeoOpcode::NodeDisplayList:
+        case GeoOpcode::NodeShadow:
+        case GeoOpcode::NodeObjectParent:
+        case GeoOpcode::NodeAsm:
+        case GeoOpcode::NodeBackground:
+        case GeoOpcode::CopyView:
+        case GeoOpcode::NodeHeldObj:
+        case GeoOpcode::NodeScale:
+        case GeoOpcode::NodeCullingRadius:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Mirrors rendering_graph_node.c enough for a bind-pose preview: a transform
+// stack accumulated per node (child world = local * parent), only the first
+// case of a switch, animated parts at their rest translation, billboards as
+// plain translations. Camera/shadow/ASM/etc. nodes pass through untransformed.
+struct GeoWalk {
+    std::vector<UI::ModelPart> parts;
+    std::vector<Mat4> stack{ Mat4Identity() };
+    struct Frame {
+        bool switchMode = false;
+        int children = 0;
+    };
+    std::vector<Frame> frames{ Frame{} };
+    Mat4 lastLocal = Mat4Identity();
+    bool lastWasSwitch = false;
+    bool pendingSkip = false; // last node culled; skip its subtree if one opens
+    int skipDepth = -1;       // raw depth to return to before resuming
+    int rawDepth = 0;         // open/close nesting, counted even while skipping
+    const std::string* file = nullptr;
+    int branchDepth = 0;
+};
+
+const ParseResultData* FindResultByName(const std::string& name) {
+    for (const auto& [file, results] : Companion::Instance->GetParseResults()) {
+        for (const auto& r : results) {
+            if (r.name == name) {
+                return &r;
+            }
+        }
+    }
+    return nullptr;
+}
+
+std::optional<std::string> ResolveAddr(uint64_t ptr, const std::string& file) {
+    if (ptr == 0) {
+        return std::nullopt;
+    }
+    auto node = Companion::Instance->GetNodeByAddr((uint32_t)ptr, file);
+    if (!node.has_value()) {
+        return std::nullopt;
+    }
+    return std::get<0>(node.value());
+}
+
+void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx);
+
+void WalkGeoTarget(uint64_t ptr, GeoWalk& ctx) {
+    if (ctx.branchDepth > 8) {
+        return;
+    }
+    const auto name = ResolveAddr(ptr, *ctx.file);
+    if (!name.has_value()) {
+        return;
+    }
+    const ParseResultData* target = FindResultByName(name.value());
+    if (target == nullptr || !target->data.has_value() || target->type != "SM64:GEO_LAYOUT") {
+        return;
+    }
+    auto geo = std::static_pointer_cast<SM64::GeoLayout>(target->data.value());
+    if (geo == nullptr) {
+        return;
+    }
+    ctx.branchDepth++;
+    WalkGeoCommands(geo->commands, ctx);
+    ctx.branchDepth--;
+}
+
+void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
+    for (const auto& cmd : cmds) {
+        // While culling a switch's non-selected child, only track nesting.
+        if (ctx.skipDepth >= 0) {
+            if (cmd.opcode == GeoOpcode::OpenNode) {
+                ctx.rawDepth++;
+            } else if (cmd.opcode == GeoOpcode::CloseNode) {
+                ctx.rawDepth--;
+                if (ctx.rawDepth <= ctx.skipDepth) {
+                    ctx.skipDepth = -1;
+                }
+            } else if (cmd.opcode == GeoOpcode::End || cmd.opcode == GeoOpcode::Return || cmd.skipped) {
+                return;
+            }
+            continue;
+        }
+        if (cmd.skipped) {
+            return; // unbalanced stream; exported as GEO_END
+        }
+
+        switch (cmd.opcode) {
+            case GeoOpcode::OpenNode: {
+                ctx.rawDepth++;
+                if (ctx.pendingSkip) {
+                    ctx.pendingSkip = false;
+                    ctx.skipDepth = ctx.rawDepth - 1;
+                    break;
+                }
+                ctx.stack.push_back(Mat4Mul(ctx.lastLocal, ctx.stack.back()));
+                ctx.frames.push_back({ ctx.lastWasSwitch, 0 });
+                ctx.lastLocal = Mat4Identity();
+                ctx.lastWasSwitch = false;
+                break;
+            }
+            case GeoOpcode::CloseNode: {
+                ctx.rawDepth--;
+                if (ctx.stack.size() > 1) {
+                    ctx.stack.pop_back();
+                    ctx.frames.pop_back();
+                }
+                ctx.lastLocal = Mat4Identity();
+                ctx.lastWasSwitch = false;
+                ctx.pendingSkip = false;
+                break;
+            }
+            case GeoOpcode::End:
+            case GeoOpcode::Return: {
+                return;
+            }
+            case GeoOpcode::Branch: {
+                const auto jmp = ArgU8(cmd.arguments, 0);
+                const auto ptr = ArgU64(cmd.arguments, 1);
+                if (ptr != nullptr) {
+                    WalkGeoTarget(*ptr, ctx);
+                }
+                if (jmp == nullptr || *jmp != 1) {
+                    return; // branch without return replaces this stream
+                }
+                break;
+            }
+            case GeoOpcode::BranchAndLink: {
+                const auto ptr = ArgU64(cmd.arguments, 0);
+                if (ptr != nullptr) {
+                    WalkGeoTarget(*ptr, ctx);
+                }
+                break;
+            }
+            default: {
+                if (!IsNodeCommand(cmd.opcode)) {
+                    break;
+                }
+                ctx.pendingSkip = false;
+                GeoWalk::Frame& parent = ctx.frames.back();
+                parent.children++;
+                if (parent.switchMode && parent.children > 1) {
+                    // Only the first switch case previews (no game state to pick).
+                    ctx.pendingSkip = true;
+                    ctx.lastLocal = Mat4Identity();
+                    ctx.lastWasSwitch = false;
+                    break;
+                }
+
+                Mat4 local = Mat4Identity();
+                uint64_t dlPtr = 0;
+                uint8_t dlLayer = 1; // LAYER_OPAQUE
+                const auto& args = cmd.arguments;
+                switch (cmd.opcode) {
+                    case GeoOpcode::NodeTranslationRotation: {
+                        const auto params = ArgU8(args, 0);
+                        if (params == nullptr) {
+                            break;
+                        }
+                        Vec3s trans{}, rot{};
+                        size_t next = 1;
+                        switch ((*params & 0x70) >> 4) {
+                            case 0:
+                                if (const auto t = ArgVec3s(args, 1)) trans = *t;
+                                if (const auto r = ArgVec3s(args, 2)) rot = *r;
+                                next = 3;
+                                break;
+                            case 1:
+                                if (const auto t = ArgVec3s(args, 1)) trans = *t;
+                                next = 2;
+                                break;
+                            case 2:
+                                if (const auto r = ArgVec3s(args, 1)) rot = *r;
+                                next = 2;
+                                break;
+                            case 3:
+                                if (const auto y = ArgS16(args, 1)) rot = Vec3s(0, *y, 0);
+                                next = 2;
+                                break;
+                        }
+                        local = Mat4RotZXYTranslate(trans, rot);
+                        if ((*params & 0x80) != 0) {
+                            if (const auto dl = ArgU64(args, next)) dlPtr = *dl;
+                            dlLayer = *params & 0x0F;
+                        }
+                        break;
+                    }
+                    case GeoOpcode::NodeTranslation:
+                    case GeoOpcode::NodeBillboard: { // billboard treated as a translation
+                        const auto params = ArgU8(args, 0);
+                        Vec3s trans{};
+                        if (const auto t = ArgVec3s(args, 1)) trans = *t;
+                        local = Mat4RotZXYTranslate(trans, Vec3s());
+                        if (params != nullptr && (*params & 0x80) != 0) {
+                            if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+                            dlLayer = *params & 0x0F;
+                        }
+                        break;
+                    }
+                    case GeoOpcode::NodeRotation: {
+                        const auto params = ArgU8(args, 0);
+                        Vec3s rot{};
+                        if (const auto r = ArgVec3s(args, 1)) rot = *r;
+                        local = Mat4RotZXYTranslate(Vec3s(), rot);
+                        if (params != nullptr && (*params & 0x80) != 0) {
+                            if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+                            dlLayer = *params & 0x0F;
+                        }
+                        break;
+                    }
+                    case GeoOpcode::NodeScale: {
+                        const auto params = ArgU8(args, 0);
+                        if (const auto s = ArgU32(args, 1)) {
+                            local = Mat4Scale((float)*s / 65536.0f);
+                        }
+                        if (params != nullptr && (*params & 0x80) != 0) {
+                            if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+                            dlLayer = *params & 0x0F;
+                        }
+                        break;
+                    }
+                    case GeoOpcode::NodeAnimatedPart: { // bind pose: rest translation only
+                        Vec3s trans{};
+                        if (const auto layer = ArgU8(args, 0)) dlLayer = *layer & 0x0F;
+                        if (const auto t = ArgVec3s(args, 1)) trans = *t;
+                        local = Mat4RotZXYTranslate(trans, Vec3s());
+                        if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+                        break;
+                    }
+                    case GeoOpcode::NodeDisplayList: {
+                        if (const auto layer = ArgU8(args, 0)) dlLayer = *layer & 0x0F;
+                        if (const auto dl = ArgU64(args, 1)) dlPtr = *dl;
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+                ctx.lastLocal = local;
+                ctx.lastWasSwitch = cmd.opcode == GeoOpcode::NodeSwitchCase;
+
+                if (dlPtr != 0) {
+                    if (const auto dlName = ResolveAddr(dlPtr, *ctx.file)) {
+                        const Mat4 world = Mat4Mul(local, ctx.stack.back());
+                        UI::ModelPart part;
+                        part.resource = dlName.value();
+                        std::memcpy(part.mtx, world.m, sizeof(world.m));
+                        part.layer = dlLayer;
+                        ctx.parts.push_back(std::move(part));
+                    }
+                }
+                break;
+            }
+        }
+    }
+}
+
+const std::string* FindOwningFile(const ParseResultData& item) {
+    for (const auto& [file, results] : Companion::Instance->GetParseResults()) {
+        for (const auto& r : results) {
+            if (&r == &item) {
+                return &file;
+            }
+        }
+    }
+    return nullptr;
+}
+
+const std::vector<UI::ModelPart>& FlattenGeoLayout(const ParseResultData& item) {
+    static std::unordered_map<std::string, std::vector<UI::ModelPart>> sCache;
+    auto it = sCache.find(item.name);
+    if (it != sCache.end()) {
+        return it->second;
+    }
+
+    GeoWalk ctx;
+    const std::string* file = FindOwningFile(item);
+    if (file != nullptr && item.data.has_value()) {
+        if (auto geo = std::static_pointer_cast<SM64::GeoLayout>(item.data.value())) {
+            ctx.file = file;
+            WalkGeoCommands(geo->commands, ctx);
+        }
+    }
+    return sCache.emplace(item.name, std::move(ctx.parts)).first->second;
+}
+
+struct GeoModelView {
+    float yaw = 0.6f;
+    float pitch = 0.3f;
+    float zoom = 1.0f;
+};
+std::unordered_map<std::string, GeoModelView> sGeoViews;
+
+} // namespace
+
+float SM64::GeoLayoutFactoryUI::GetItemHeight(const ParseResultData&) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 324.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+}
+
+void SM64::GeoLayoutFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+
+    const auto& parts = FlattenGeoLayout(item);
+    ImGui::TextDisabled("geo layout  \xe2\x80\x94  %zu parts, drag to orbit, \xe2\x8c\x98/Ctrl+scroll to zoom",
+                        parts.size());
+
+    GeoModelView& view = sGeoViews[item.name];
+
+    const float vh = 320.0f;
+    const float availW = ImGui::GetContentRegionAvail().x;
+    const float vw = std::min(availW, vh * 3.0f);
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (availW - vw) * 0.5f);
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+
+    ImGui::InvisibleButton("##geoview", ImVec2(vw, vh));
+    const float winTop = ImGui::GetWindowPos().y;
+    const float winBot = winTop + ImGui::GetWindowHeight();
+    const bool visible = ImGui::GetItemRectMax().y > winTop && ImGui::GetItemRectMin().y < winBot;
+    if (ImGui::IsItemActive()) {
+        const ImVec2 drag = ImGui::GetIO().MouseDelta;
+        view.yaw -= drag.x * 0.01f;
+        view.pitch = std::clamp(view.pitch + drag.y * 0.01f, -1.55f, 1.55f);
+    }
+    ImGuiIO& io = ImGui::GetIO();
+    if (ImGui::IsItemHovered() && io.MouseWheel != 0.0f && (io.KeyCtrl || io.KeySuper)) {
+        view.zoom = std::clamp(view.zoom * (1.0f + io.MouseWheel * 0.1f), 0.02f, 50.0f);
+        io.MouseWheel = 0.0f;
+    }
+
+    if (visible) {
+        ImGui::GetWindowDrawList()->AddRectFilled(origin, ImVec2(origin.x + vw, origin.y + vh),
+                                                  IM_COL32(18, 18, 22, 255));
+        if (parts.empty()) {
+            const char* label = "no drawable display lists";
+            const ImVec2 ts = ImGui::CalcTextSize(label);
+            ImGui::GetWindowDrawList()->AddText(
+                ImVec2(origin.x + (vw - ts.x) * 0.5f, origin.y + (vh - ts.y) * 0.5f), IM_COL32(120, 120, 130, 255),
+                label);
+        } else {
+            UI::GetBackend()->DrawModelParts(item.name, parts, origin, ImVec2(vw, vh), view.yaw, view.pitch,
+                                             view.zoom);
+        }
+    }
+}
+#endif // BUILD_UI

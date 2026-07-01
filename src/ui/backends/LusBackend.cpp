@@ -31,7 +31,9 @@
 #include <ship/resource/archive/ArchiveManager.h>
 #include <libultraship/libultra/gbi.h>
 
+#include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -212,14 +214,26 @@ public:
 
     void DrawModel(const std::string& resourceName, const ImVec2& topLeft, const ImVec2& size, float yaw, float pitch,
                    float zoom) override {
-        if (size.x < 1.0f || size.y < 1.0f) {
+        // A single display list is just a one-part model with an identity transform.
+        static const float kIdentity[4][4] = {
+            { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 }
+        };
+        ModelPart part;
+        part.resource = resourceName;
+        std::memcpy(part.mtx, kIdentity, sizeof(kIdentity));
+        DrawModelParts(resourceName, { part }, topLeft, size, yaw, pitch, zoom);
+    }
+
+    void DrawModelParts(const std::string& key, const std::vector<ModelPart>& parts, const ImVec2& topLeft,
+                        const ImVec2& size, float yaw, float pitch, float zoom) override {
+        if (size.x < 1.0f || size.y < 1.0f || parts.empty()) {
             return;
         }
         // Queue for next frame's render pass, then blit this model's framebuffer
         // (sized to its rect, so it fills the canvas centered).
-        mRequests.push_back({ resourceName, topLeft, size, yaw, pitch, zoom });
+        mRequests.push_back({ key, parts, topLeft, size, yaw, pitch, zoom });
 
-        auto it = mNameToFb.find(resourceName);
+        auto it = mNameToFb.find(key);
         if (it == mNameToFb.end()) {
             return;
         }
@@ -248,6 +262,16 @@ public:
     }
 
 private:
+    // out = a * b in row-vector convention (a applied first).
+    static void MulMtxF(MtxF& out, const float a[4][4], const MtxF& b) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                out.mf[i][j] = a[i][0] * b.mf[0][j] + a[i][1] * b.mf[1][j] + a[i][2] * b.mf[2][j] +
+                               a[i][3] * b.mf[3][j];
+            }
+        }
+    }
+
     // Row-vector (v' = v*M) perspective + look-at, matching N64/Fast3D convention.
     static void Perspective(MtxF& m, float fovyDeg, float aspect, float n, float f) {
         for (auto& row : m.mf) {
@@ -365,6 +389,52 @@ private:
         return b;
     }
 
+    // Combined bounds of a multi-part model: each part's display-list bounds
+    // (cached per resource) transformed by the part's matrix — center mapped
+    // through it, radius scaled by its largest axis — then unioned.
+    ModelBounds ComputePartsBounds(const std::vector<ModelPart>& parts,
+                                   const std::shared_ptr<Ship::ResourceManager>& rm) {
+        float mn[3] = { 1e18f, 1e18f, 1e18f };
+        float mx[3] = { -1e18f, -1e18f, -1e18f };
+        bool any = false;
+        for (const auto& part : parts) {
+            auto bit = mBoundsCache.find(part.resource);
+            if (bit == mBoundsCache.end()) {
+                auto dl = std::static_pointer_cast<Fast::DisplayList>(rm->LoadResource(part.resource));
+                if (dl == nullptr) {
+                    continue;
+                }
+                bit = mBoundsCache.emplace(part.resource, ComputeBounds(dl, rm)).first;
+            }
+            const ModelBounds& pb = bit->second;
+            const auto& m = part.mtx;
+            const float cx = pb.cx * m[0][0] + pb.cy * m[1][0] + pb.cz * m[2][0] + m[3][0];
+            const float cy = pb.cx * m[0][1] + pb.cy * m[1][1] + pb.cz * m[2][1] + m[3][1];
+            const float cz = pb.cx * m[0][2] + pb.cy * m[1][2] + pb.cz * m[2][2] + m[3][2];
+            float scale = 0.0f;
+            for (int r = 0; r < 3; ++r) {
+                scale = std::max(scale, std::sqrt(m[r][0] * m[r][0] + m[r][1] * m[r][1] + m[r][2] * m[r][2]));
+            }
+            const float radius = pb.radius * std::max(scale, 0.001f);
+            mn[0] = std::min(mn[0], cx - radius); mx[0] = std::max(mx[0], cx + radius);
+            mn[1] = std::min(mn[1], cy - radius); mx[1] = std::max(mx[1], cy + radius);
+            mn[2] = std::min(mn[2], cz - radius); mx[2] = std::max(mx[2], cz + radius);
+            any = true;
+        }
+        ModelBounds b;
+        if (any) {
+            b.cx = (mn[0] + mx[0]) * 0.5f;
+            b.cy = (mn[1] + mx[1]) * 0.5f;
+            b.cz = (mn[2] + mx[2]) * 0.5f;
+            const float dx = mx[0] - mn[0], dy = mx[1] - mn[1], dz = mx[2] - mn[2];
+            b.radius = std::max(0.5f * std::sqrt(dx * dx + dy * dy + dz * dz), 1.0f);
+        }
+        if (!any || b.radius > 50000.0f || !std::isfinite(b.radius)) {
+            b = ModelBounds{};
+        }
+        return b;
+    }
+
     // A reusable render target for one model preview. Held in a fixed-size pool
     // and reassigned by model name (LRU-ish) as rows scroll in and out of view.
     struct FbSlot {
@@ -372,8 +442,7 @@ private:
         uint32_t w = 0, h = 0;
         std::string owner; // model currently rendered into this framebuffer
         Vp vp{};
-        Mtx proj{};        // stable addresses: keys into the Mtx->MtxF replacement map
-        Mtx view{};
+        Mtx proj{};        // stable address: key into the Mtx->MtxF replacement map
         // Last view actually rendered into this framebuffer; used to detect when a
         // model needs re-rendering (its FB content persists between frames).
         bool rendered = false;
@@ -498,23 +567,35 @@ private:
             return nullptr; // nothing changed; every framebuffer keeps its last render
         }
 
-        // Phase 2: render just the target model into its framebuffer.
+        // Phase 2: render just the target model (all of its parts) into its framebuffer.
         const ModelRequest& req = mRenderList[targetReqIdx];
         FbSlot& slot = mFbPool[targetIdx];
-        auto dl = std::static_pointer_cast<Fast::DisplayList>(rm->LoadResource(req.name));
-        if (dl == nullptr) {
+
+        // Resolve every part's display list up front; a part that fails to load is
+        // dropped rather than failing the whole model.
+        std::vector<std::pair<const ModelPart*, Gfx*>> drawable;
+        drawable.reserve(req.parts.size());
+        for (const auto& part : req.parts) {
+            auto dl = std::static_pointer_cast<Fast::DisplayList>(rm->LoadResource(part.resource));
+            Gfx* gfx = dl != nullptr ? dl->GetPointer() : nullptr;
+            if (gfx != nullptr) {
+                drawable.emplace_back(&part, gfx);
+            }
+        }
+        if (drawable.empty()) {
+            slot.rendered = true; // nothing loadable; don't retry every frame
             return nullptr;
         }
-        Gfx* model = dl->GetPointer();
-        if (model == nullptr) {
-            return nullptr;
-        }
+        // Draw in SM64 master-list order (layer 0..7) so transparent layers blend
+        // over the opaque geometry already in the framebuffer.
+        std::stable_sort(drawable.begin(), drawable.end(),
+                         [](const auto& a, const auto& b) { return a.first->layer < b.first->layer; });
 
         auto bit = mBoundsCache.find(req.name);
         if (bit == mBoundsCache.end()) {
-            bit = mBoundsCache.emplace(req.name, ComputeBounds(dl, rm)).first;
+            bit = mBoundsCache.emplace(req.name, ComputePartsBounds(req.parts, rm)).first;
         }
-        const ModelBounds& b = bit->second;
+        const ModelBounds b = bit->second;
 
         const float aspect = (float)slot.w / (float)slot.h;
         const float dist = (b.radius * 2.5f) / std::max(req.zoom, 0.02f);
@@ -527,7 +608,16 @@ private:
         MtxF viewF{};
         LookAt(viewF, eyeX, eyeY, eyeZ, b.cx, b.cy, b.cz);
         mMtxReplacements[&slot.proj] = projF;
-        mMtxReplacements[&slot.view] = viewF;
+
+        // Each part's modelview = its object->world transform times the view.
+        // mPartMtxKeys supplies stable Mtx addresses to key the replacement map;
+        // it must not reallocate between here and the interpreter Run.
+        mPartMtxKeys.resize(drawable.size());
+        for (size_t i = 0; i < drawable.size(); ++i) {
+            MtxF mv{};
+            MulMtxF(mv, drawable[i].first->mtx, viewF);
+            mMtxReplacements[&mPartMtxKeys[i]] = mv;
+        }
 
         const int16_t vx = (int16_t)(slot.w * 2);
         const int16_t vy = (int16_t)(slot.h * 2);
@@ -538,7 +628,7 @@ private:
 
         mLights = gdSPDefLights1(0x40, 0x40, 0x40, 0xff, 0xff, 0xff, 0x49, 0x49, 0x49);
 
-        mCmd.assign(72, Gfx{});
+        mCmd.assign(48 + drawable.size() * 5, Gfx{});
         Gfx* p = mCmd.data();
         // Load f3d ucode + reset segment 0 (global state).
         p->words.w0 = ((uintptr_t)0xDD << 24) | ((uintptr_t)ucode_f3d & 0xFFFFFF);
@@ -577,14 +667,33 @@ private:
         gDPSetAlphaCompare(p++, G_AC_NONE);
         gDPSetColorDither(p++, G_CD_DISABLE);
         gSPMatrix(p++, &slot.proj, G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
-        gSPMatrix(p++, &slot.view, G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
         gDPSetCombineMode(p++, G_CC_MODULATEI, G_CC_MODULATEI_PRIM2);
         gDPSetDepthSource(p++, G_ZS_PIXEL);
         gDPSetCycleType(p++, G_CYC_1CYCLE);
-        gDPSetRenderMode(p++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
         gSPSetGeometryMode(p++, G_ZBUFFER | G_SHADE | G_SHADING_SMOOTH | G_LIGHTING);
         gSPSetLights1(p++, mLights);
-        __gSPDisplayList(p++, model);
+        // Per-layer render modes (SM64 renderModeTable_1Cycle, z-buffered): the
+        // layer decides opaque vs cutout (TEX_EDGE) vs transparent, which is what
+        // makes alpha textures punch through instead of rendering opaque.
+        static const uint32_t kLayerCycle1[8] = {
+            G_RM_ZB_OPA_SURF,     G_RM_AA_ZB_OPA_SURF,  G_RM_AA_ZB_OPA_DECAL, G_RM_AA_ZB_OPA_INTER,
+            G_RM_AA_ZB_TEX_EDGE,  G_RM_AA_ZB_XLU_SURF,  G_RM_AA_ZB_XLU_DECAL, G_RM_AA_ZB_XLU_INTER,
+        };
+        static const uint32_t kLayerCycle2[8] = {
+            G_RM_ZB_OPA_SURF2,    G_RM_AA_ZB_OPA_SURF2, G_RM_AA_ZB_OPA_DECAL2, G_RM_AA_ZB_OPA_INTER2,
+            G_RM_AA_ZB_TEX_EDGE2, G_RM_AA_ZB_XLU_SURF2, G_RM_AA_ZB_XLU_DECAL2, G_RM_AA_ZB_XLU_INTER2,
+        };
+        int lastLayer = -1;
+        for (size_t i = 0; i < drawable.size(); ++i) {
+            const int layer = drawable[i].first->layer & 7;
+            if (layer != lastLayer) {
+                gDPPipeSync(p++);
+                gDPSetRenderMode(p++, kLayerCycle1[layer], kLayerCycle2[layer]);
+                lastLayer = layer;
+            }
+            gSPMatrix(p++, &mPartMtxKeys[i], G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
+            __gSPDisplayList(p++, drawable[i].second);
+        }
         gDPFullSync(p++);
         // Restore the main framebuffer (G_RESETFB 0x22) before the gui draws.
         p->words.w0 = (uintptr_t)0x22 << 24;
@@ -601,9 +710,10 @@ private:
 
     static constexpr int kFbPoolSize = 24;
 
-    // A model preview render request, queued by DrawModel during the gui draw.
+    // A model preview render request, queued by DrawModelParts during the gui draw.
     struct ModelRequest {
         std::string name;
+        std::vector<ModelPart> parts;
         ImVec2 topLeft;
         ImVec2 size;
         float yaw = 0.0f, pitch = 0.0f, zoom = 1.0f;
@@ -614,6 +724,8 @@ private:
     std::unordered_map<std::string, int> mNameToFb;          // model -> framebuffer id
     std::unordered_map<std::string, ModelBounds> mBoundsCache;
     std::vector<FbSlot> mFbPool;
+    // Stable Mtx addresses keying each rendered part's modelview replacement.
+    std::vector<Mtx> mPartMtxKeys;
     Lights1 mLights{};
     std::vector<Gfx> mCmd;
     std::unordered_map<Mtx*, MtxF> mMtxReplacements;
