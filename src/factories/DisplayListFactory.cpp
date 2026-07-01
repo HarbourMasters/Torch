@@ -660,3 +660,66 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
     return std::make_shared<DListData>(gfxs);
 }
+
+#ifdef BUILD_UI
+#include <algorithm>
+#include <cmath>
+#include <unordered_map>
+
+#include "ui/BaseBackend.h"
+#include "ui/Widgets.h"
+
+namespace {
+struct ModelView {
+    float yaw = 0.6f;
+    float pitch = 0.3f;
+    float zoom = 1.0f;
+};
+std::unordered_map<std::string, ModelView> sModelViews;
+} // namespace
+
+float DListFactoryUI::GetItemHeight(const ParseResultData&) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 324.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+}
+
+void DListFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+    ImGui::TextDisabled("display list  \xe2\x80\x94  drag to orbit, \xe2\x8c\x98/Ctrl+scroll to zoom");
+
+    ModelView& view = sModelViews[item.name];
+
+    // Preview box: cap the aspect at 3:1 (a full-width box on a wide window
+    // collapses the perspective to a sliver) and center it in the available width.
+    const float vh = 320.0f;
+    const float availW = ImGui::GetContentRegionAvail().x;
+    const float vw = std::min(availW, vh * 3.0f);
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (availW - vw) * 0.5f);
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+
+    ImGui::InvisibleButton("##modelview", ImVec2(vw, vh));
+    // On-screen test against the scroll viewport (IsItemVisible is unreliable right
+    // after a resize).
+    const float winTop = ImGui::GetWindowPos().y;
+    const float winBot = winTop + ImGui::GetWindowHeight();
+    const bool visible = ImGui::GetItemRectMax().y > winTop && ImGui::GetItemRectMin().y < winBot;
+    if (ImGui::IsItemActive()) {
+        const ImVec2 drag = ImGui::GetIO().MouseDelta;
+        view.yaw -= drag.x * 0.01f;
+        view.pitch = std::clamp(view.pitch + drag.y * 0.01f, -1.55f, 1.55f);
+    }
+    // Modifier-gated zoom so plain scroll still scrolls the list past the previews.
+    ImGuiIO& io = ImGui::GetIO();
+    if (ImGui::IsItemHovered() && io.MouseWheel != 0.0f && (io.KeyCtrl || io.KeySuper)) {
+        view.zoom = std::clamp(view.zoom * (1.0f + io.MouseWheel * 0.1f), 0.02f, 50.0f);
+        io.MouseWheel = 0.0f;
+    }
+
+    // Every row is submitted (correct hit-testing); only on-screen rows request the
+    // offscreen 3D render.
+    if (visible) {
+        ImGui::GetWindowDrawList()->AddRectFilled(origin, ImVec2(origin.x + vw, origin.y + vh),
+                                                  IM_COL32(18, 18, 22, 255));
+        UI::GetBackend()->DrawModel(item.name, origin, ImVec2(vw, vh), view.yaw, view.pitch, view.zoom);
+    }
+}
+#endif

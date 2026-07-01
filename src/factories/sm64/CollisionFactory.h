@@ -70,6 +70,7 @@ class CollisionBinaryExporter : public BaseExporter {
 
 class CollisionFactory : public BaseFactory {
 public:
+    bool CanPreviewCode() override { return true; }
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {

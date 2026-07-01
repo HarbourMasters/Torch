@@ -227,6 +227,12 @@ public:
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
     void SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);
     bool GetCompressedSegmentOffset(uint32_t* addr);
+
+#ifdef BUILD_UI
+    void RegisterUIFactory(const std::string& type, const std::shared_ptr<BaseFactoryUI>& factory);
+    std::optional<std::shared_ptr<BaseFactoryUI>> GetUIFactory(const std::string& type);
+    const std::unordered_map<std::string, std::vector<ParseResultData>>& GetParseResults() { return this->gParseResults; }
+#endif
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
@@ -276,6 +282,9 @@ private:
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
+#ifdef BUILD_UI
+    std::unordered_map<std::string, std::shared_ptr<BaseFactoryUI>> gUIFactories;
+#endif
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>> gVirtualAddrMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;

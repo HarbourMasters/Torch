@@ -181,3 +181,60 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
 
     return std::make_shared<VtxData>(vertices);
 }
+
+#ifdef BUILD_UI
+#include <algorithm>
+#include <cmath>
+#include <unordered_map>
+
+#include "ui/BaseBackend.h"
+#include "ui/Widgets.h"
+
+namespace {
+// Per-asset orbit camera state, keyed by symbol so it persists across frames.
+struct VtxView {
+    float yaw = 0.6f;
+    float pitch = 0.4f;
+    float zoom = 1.0f;
+};
+std::unordered_map<std::string, VtxView> sVtxViews;
+} // namespace
+
+float VtxFactoryUI::GetItemHeight(const ParseResultData&) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 184.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+}
+
+void VtxFactoryUI::DrawUI(const ParseResultData& item) {
+    const auto vtx = std::static_pointer_cast<VtxData>(item.data.value());
+    UI::AssetHeader(item.name, item.type);
+    ImGui::TextDisabled("%zu vertices  —  drag to orbit, scroll to zoom", vtx->mVtxs.size());
+
+    VtxView& view = sVtxViews[item.name];
+
+    const float vw = ImGui::GetContentRegionAvail().x;
+    const float vh = 176.0f;
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+
+    // Invisible button reserves the rect and captures drag/scroll; the backend
+    // then paints the rendered cloud into the same rect.
+    ImGui::InvisibleButton("##vtxview", ImVec2(vw, vh));
+    if (ImGui::IsItemActive()) {
+        const ImVec2 drag = ImGui::GetIO().MouseDelta;
+        view.yaw -= drag.x * 0.01f;
+        view.pitch = std::clamp(view.pitch + drag.y * 0.01f, -1.55f, 1.55f);
+    }
+    if (ImGui::IsItemHovered() && ImGui::GetIO().MouseWheel != 0.0f) {
+        view.zoom = std::clamp(view.zoom * (1.0f + ImGui::GetIO().MouseWheel * 0.1f), 0.1f, 10.0f);
+    }
+
+    std::vector<UI::PreviewVertex> points;
+    points.reserve(vtx->mVtxs.size());
+    for (const auto& v : vtx->mVtxs) {
+        points.push_back({ { (float)v.ob[0], (float)v.ob[1], (float)v.ob[2] },
+                           { v.cn[0], v.cn[1], v.cn[2], 255 } });
+    }
+
+    const uint64_t id = std::hash<std::string>{}(item.name);
+    UI::GetBackend()->DrawPointCloud(id, points, origin, ImVec2(vw, vh), view.yaw, view.pitch, view.zoom);
+}
+#endif

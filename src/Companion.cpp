@@ -282,6 +282,16 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 #endif
+
+#ifdef BUILD_UI
+    // Custom preview renderers. Types without one fall back to BaseFactoryUI,
+    // which shows the Code-exporter text (for factories that opt in via
+    // CanPreviewCode) or the asset's YAML config.
+    this->RegisterUIFactory("TEXTURE", std::make_shared<TextureFactoryUI>());
+    this->RegisterUIFactory("VTX", std::make_shared<VtxFactoryUI>());
+    this->RegisterUIFactory("GFX", std::make_shared<DListFactoryUI>());
+#endif
+
 #ifndef __EMSCRIPTEN__ // We call this manually
     this->Process(assetCount);
 #endif
@@ -1284,37 +1294,42 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     auto output_path = this->gDestinationDirectory;
 
     this->gConfig.moddingPath = (this->gDestinationDirectory / modding_path).string();
-    switch (this->gConfig.exporterType) {
-        case ExportType::Binary: {
-            std::string extension = "";
-            switch (this->gConfig.otrMode) {
-                case ArchiveType::OTR:
-                    extension = ".otr";
-                    break;
-                case ArchiveType::O2R:
-                    extension = ".o2r";
-                    break;
-                default:
-                    throw std::runtime_error("Invalid archive type for export type Binary");
+    // The output path is only consumed by the exporters. In parse-only mode
+    // (mShouldProcess == false, e.g. the `ui` viewer) nothing is written, so skip
+    // the setup — this also avoids requiring an archive type for Binary parsing.
+    if (this->mShouldProcess) {
+        switch (this->gConfig.exporterType) {
+            case ExportType::Binary: {
+                std::string extension = "";
+                switch (this->gConfig.otrMode) {
+                    case ArchiveType::OTR:
+                        extension = ".otr";
+                        break;
+                    case ArchiveType::O2R:
+                        extension = ".o2r";
+                        break;
+                    default:
+                        throw std::runtime_error("Invalid archive type for export type Binary");
+                }
+                output_path /= opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
+                break;
             }
-            output_path /= opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
-            break;
+            case ExportType::Header: {
+                output_path /= opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
+                break;
+            }
+            case ExportType::Code: {
+                output_path /= opath && opath["code"] ? opath["code"].as<std::string>() : "code";
+                break;
+            }
+            case ExportType::XML:
+            case ExportType::Modding: {
+                output_path /= modding_path;
+                break;
+            }
         }
-        case ExportType::Header: {
-            output_path /= opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
-            break;
-        }
-        case ExportType::Code: {
-            output_path /= opath && opath["code"] ? opath["code"].as<std::string>() : "code";
-            break;
-        }
-        case ExportType::XML:
-        case ExportType::Modding: {
-            output_path /= modding_path;
-            break;
-        }
+        this->gConfig.outputPath = output_path.string();
     }
-    this->gConfig.outputPath = output_path.string();
     if (auto outParent = output_path.parent_path(); !outParent.empty() && !exists(outParent)) {
         create_directories(outParent);
     }
@@ -1787,6 +1802,21 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
 
     return this->gFactories[type];
 }
+
+#ifdef BUILD_UI
+void Companion::RegisterUIFactory(const std::string& type, const std::shared_ptr<BaseFactoryUI>& factory) {
+    this->gUIFactories[type] = factory;
+    SPDLOG_INFO("Registered UI factory for {}", type);
+}
+
+std::optional<std::shared_ptr<BaseFactoryUI>> Companion::GetUIFactory(const std::string& type) {
+    if (!Torch::contains(this->gUIFactories, type)) {
+        return std::nullopt;
+    }
+
+    return this->gUIFactories[type];
+}
+#endif
 
 std::optional<Table> Companion::SearchTable(uint32_t addr) {
     for (auto& table : this->gTables) {

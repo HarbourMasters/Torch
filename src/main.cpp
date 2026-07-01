@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 #include "CLI11.hpp"
 #include "Companion.h"
 #ifdef BK64_SUPPORT
@@ -8,6 +9,32 @@
 Companion* Companion::Instance;
 
 #if defined(STANDALONE) && !defined(__EMSCRIPTEN__)
+
+#ifdef BUILD_UI
+#include "imgui.h"
+#include "ui/BaseBackend.h"
+#include "ui/View.h"
+#include "ui/list/Main.h"
+#include "ui/backends/LusBackend.h"
+
+static void LaunchUI() {
+    if (Companion::Instance == nullptr) {
+        std::cout << "No ROM loaded; nothing to display." << std::endl;
+        return;
+    }
+
+    auto backend = UI::CreateLusBackend();
+    UI::SetBackend(backend.get());
+
+    auto views = std::make_shared<ViewManager>();
+    views->SetView(std::make_shared<MainView>());
+
+    // The backend owns the window + frame loop; returns when the user quits.
+    backend->RunViewer(views);
+
+    UI::SetBackend(nullptr);
+}
+#endif
 
 int main(int argc, char* argv[]) {
     CLI::App app{ "Torch - [T]orch is [O]ur [R]esource [C]onversion [H]elper\n\
@@ -215,6 +242,27 @@ int main(int argc, char* argv[]) {
             instance->Init(ExportType::Modding);
         }
     });
+
+#ifdef BUILD_UI
+    /* Launch the interactive viewer */
+    const auto ui = app.add_subcommand("ui", "UI - Parses a baserom and opens the interactive asset viewer\n");
+
+    ui->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    ui->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
+    ui->add_option("-s,--srcdir", srcdir,
+                   "Set source directory to locate config.yml and asset metadata for processing")
+        ->check(CLI::ExistingDirectory);
+
+    ui->parse_complete_callback([&] {
+        const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
+        // Parse-only: populate the asset results for the viewer without exporting
+        // anything (shouldProcess = false skips all writes). Export type is
+        // irrelevant since nothing is exported.
+        std::atomic<size_t> assetCount{ 0 };
+        instance->Init(ExportType::Binary, assetCount, false);
+        LaunchUI();
+    });
+#endif
 
     try {
         app.parse(argc, argv);
