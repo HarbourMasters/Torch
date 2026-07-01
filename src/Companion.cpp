@@ -284,9 +284,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
 #endif
 
 #ifdef BUILD_UI
-    // Custom preview renderers. Types without one fall back to BaseFactoryUI,
-    // which shows the Code-exporter text (for factories that opt in via
-    // CanPreviewCode) or the asset's YAML config.
+    // Custom preview renderers; other types fall back to BaseFactoryUI.
     this->RegisterUIFactory("TEXTURE", std::make_shared<TextureFactoryUI>());
     this->RegisterUIFactory("VTX", std::make_shared<VtxFactoryUI>());
     this->RegisterUIFactory("GFX", std::make_shared<DListFactoryUI>());
@@ -1921,11 +1919,9 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
         return this->gAddrMap[file][addr];
     }
 
-    // The parse pass resolves cross-file references through the yml's
-    // external_files context, which is gone by UI time. Approximate it: sibling
-    // ymls (same directory) first — e.g. an actor's geo.yml referencing display
-    // lists declared in its model.yml — then any file. Segmented addresses can
-    // repeat across unrelated groups, so proximity ordering matters.
+    // The external_files context used during parsing is unavailable here, so
+    // approximate it: sibling ymls first, then any file. Segmented addresses
+    // can repeat across groups, so proximity ordering matters.
     const auto slash = file.find_last_of('/');
     const std::string dir = slash != std::string::npos ? file.substr(0, slash + 1) : "";
     if (!dir.empty()) {

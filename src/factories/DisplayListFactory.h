@@ -44,8 +44,8 @@ public:
 };
 
 #ifdef BUILD_UI
-// Previews the display list as a shaded N64 model via Fast3D (drag to orbit,
-// scroll to zoom). Requires the asset's .o2r archive to be mounted.
+// Previews the display list as a shaded model via Fast3D. Requires the
+// asset's .o2r archive to be mounted.
 class DListFactoryUI : public BaseFactoryUI {
 public:
     float GetItemHeight(const ParseResultData& data) override;

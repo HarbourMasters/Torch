@@ -183,8 +183,8 @@ public:
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
     uint32_t PatchVirtualAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
-    // File-scoped variant for use outside the parse/export passes (e.g. the UI),
-    // where gCurrentFile no longer points at the file that owns the address.
+    // File-scoped variant for use outside the parse/export passes, where
+    // gCurrentFile no longer points at the owning file.
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr, const std::string& file);
     std::optional<std::string> GetStringByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);

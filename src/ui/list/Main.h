@@ -119,9 +119,8 @@ private:
             return;
         }
 
-        // Submit every row in order (ImGui hit-testing needs it and auto-clips
-        // off-screen widgets); factories gate their expensive preview render to
-        // on-screen rows themselves.
+        // Submit every row; ImGui clips off-screen widgets and factories gate
+        // their own preview rendering.
         for (size_t i = 0; i < assets->size(); ++i) {
             ImGui::PushID((int)i);
             DrawAsset((*assets)[i]);

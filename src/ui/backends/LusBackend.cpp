@@ -42,10 +42,8 @@ namespace UI {
 
 namespace {
 
-// Hosts the Torch viewer inside LUS's gui draw loop. LUS calls Draw() on every
-// registered GuiWindow each frame between ImGui::NewFrame and ImGui::Render; we
-// override it to drive the active View directly (the View owns its own
-// fullscreen ImGui window, so we bypass GuiWindow's default Begin/End).
+// Hosts the Torch views inside LUS's gui draw loop. Draw() is overridden to
+// drive the active View directly; the View owns its own fullscreen window.
 class ViewHostWindow : public Ship::GuiWindow {
 public:
     explicit ViewHostWindow(std::shared_ptr<ViewManager> views)
@@ -56,8 +54,7 @@ public:
     void DrawElement() override {}
 
     void Draw() override {
-        // Keep everything inside one OS window: never let ImGui spawn platform
-        // viewports (the viewer is a single fullscreen window, not a dockspace).
+        // Single OS window: no platform viewports or docking.
         ImGui::GetIO().ConfigFlags &= ~(ImGuiConfigFlags_ViewportsEnable | ImGuiConfigFlags_DockingEnable);
         if (mViews != nullptr) {
             mViews->Render();
@@ -77,9 +74,8 @@ public:
     void WriteToPad(void*) override {}
 };
 
-// Fast3dGui draws a fullscreen "Main Game" window with the (empty, black) game
-// framebuffer on top of our UI. The asset viewer has no game scene, so suppress
-// it; 3D previews render into their own ImGui images in the asset panel.
+// Suppress Fast3dGui's fullscreen "Main Game" window; there is no game scene
+// and it would cover the viewer.
 class ViewerGui final : public Fast::Fast3dGui {
 public:
     using Fast::Fast3dGui::Fast3dGui;
@@ -95,10 +91,8 @@ public:
         ctx->InitLogging();
         ctx->InitControlDeck(std::make_shared<ViewerControlDeck>());
 
-        // Load any .o2r archives in the working directory so Fast3D can resolve
-        // the resources (DisplayList/Vertex/Texture) referenced by the assets we
-        // preview. These are produced by Torch's own o2r export, so the resource
-        // hashes match what the display lists reference.
+        // Mount the .o2r archives from the working directory so Fast3D can
+        // resolve the resources referenced by the previewed assets.
         std::vector<std::string> archives;
         std::error_code ec;
         for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::current_path(), ec)) {
@@ -116,9 +110,7 @@ public:
         ctx->InitResourceManager(archives, {}, 1);
         ctx->InitConsole();
 
-        // Register the Fast3D binary resource factories so the ResourceManager can
-        // import the resources our display lists reference (DisplayList/Vertex/
-        // Texture/Matrix/Light). Without these, LoadResource fails on ODLT etc.
+        // Fast3D binary resource factories (DisplayList/Vertex/Texture/Matrix/Light).
         auto loader = ctx->GetResourceManager()->GetResourceLoader();
         loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryDisplayListV0>(),
                                         RESOURCE_FORMAT_BINARY, "DisplayList",
@@ -139,9 +131,8 @@ public:
                                         RESOURCE_FORMAT_BINARY, "Light",
                                         static_cast<uint32_t>(Fast::ResourceType::Light), 0);
 
-        // Construct with no gui windows: the window must be registered with the
-        // Context (InitWindow) before any GuiWindow is added, otherwise their
-        // setup dereferences Context::GetWindow() before it is set.
+        // GuiWindows must be added after InitWindow; their setup dereferences
+        // Context::GetWindow().
         auto gui = std::make_shared<ViewerGui>(std::vector<std::shared_ptr<Ship::GuiWindow>>{});
         auto window = std::make_shared<Fast::Fast3dWindow>(gui);
         ctx->InitWindow(window);
@@ -150,15 +141,11 @@ public:
         window->GetGui()->AddGuiWindow(std::make_shared<ViewHostWindow>(views));
 
         window->SetTargetFps(60);
-        // Force Fast3D to render into the offscreen game framebuffer (mRendersToFb)
-        // rather than straight to the window backbuffer — otherwise the model draws
-        // behind our ImGui and GetGfxFrameBuffer() has nothing to show. Enabling
-        // MSAA is the trigger (StartFrame: mMsaaLevel > 1) and also looks nicer.
+        // MSAA > 1 forces Fast3D into the offscreen game framebuffer
+        // (mRendersToFb), which the previews rely on.
         window->SetMsaaLevel(4);
 
-        // SM64/Torch display lists are F3D (opcodes G_VTX=0x04, G_ENDDL=0xB8) and
-        // our gbi.h is F3DEX_GBI, whose macros emit the same F3D opcodes. f3dex2
-        // would misread them. Per-DL ucode for mixed archives is a later step.
+        // SM64 display lists are F3D; f3dex2 would misread the opcodes.
         window->SetRendererUCode(ucode_f3d);
 
         ApplyTorchTheme();
@@ -167,9 +154,8 @@ public:
         while (window->IsRunning()) {
             window->HandleEvents();
 
-            // Visible rows queue a preview request during the gui draw; render the
-            // previous frame's queue here, then the gui draw blits the results and
-            // queues the next frame.
+            // Render the previous frame's preview requests; the gui draw blits
+            // the results and queues the next batch.
             mRenderList.swap(mRequests);
             mRequests.clear();
             Gfx* commands = BuildModelCommands(window);
@@ -185,8 +171,7 @@ public:
         if (pixels == nullptr || width <= 0 || height <= 0) {
             return kInvalidTexture;
         }
-        // Called from factory DrawUI (inside the gui draw), so the rendering API
-        // is current. Mirrors Fast3dGui::LoadGuiTexture's GPU upload path.
+        // Mirrors Fast3dGui::LoadGuiTexture's upload path.
         auto window = std::dynamic_pointer_cast<Fast::Fast3dWindow>(Ship::Context::GetInstance()->GetWindow());
         if (window == nullptr) {
             return kInvalidTexture;
@@ -212,8 +197,8 @@ public:
         // Superseded by DrawModel for GFX assets.
     }
 
-    void DrawModel(const std::string& resourceName, const ImVec2& topLeft, const ImVec2& size, float yaw, float pitch,
-                   float zoom) override {
+    void DrawModel(const std::string& resourceName, const ImVec2& topLeft, const ImVec2& size,
+                   const OrbitView& view) override {
         // A single display list is just a one-part model with an identity transform.
         static const float kIdentity[4][4] = {
             { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 }
@@ -221,17 +206,17 @@ public:
         ModelPart part;
         part.resource = resourceName;
         std::memcpy(part.mtx, kIdentity, sizeof(kIdentity));
-        DrawModelParts(resourceName, { part }, topLeft, size, yaw, pitch, zoom);
+        DrawModelParts(resourceName, { part }, topLeft, size, view);
     }
 
     void DrawModelParts(const std::string& key, const std::vector<ModelPart>& parts, const ImVec2& topLeft,
-                        const ImVec2& size, float yaw, float pitch, float zoom) override {
+                        const ImVec2& size, const OrbitView& view) override {
         if (size.x < 1.0f || size.y < 1.0f || parts.empty()) {
             return;
         }
         // Queue for next frame's render pass, then blit this model's framebuffer
         // (sized to its rect, so it fills the canvas centered).
-        mRequests.push_back({ key, parts, topLeft, size, yaw, pitch, zoom });
+        mRequests.push_back({ key, parts, topLeft, size, view });
 
         auto it = mNameToFb.find(key);
         if (it == mNameToFb.end()) {
@@ -314,10 +299,9 @@ private:
         m.mf[3][3] = 1.0f;
     }
 
-    // Walk a display list accumulating vertex bounds, following both vertex loads
-    // (G_VTX_OTR_HASH 0x32) and display-list branches (G_DL_OTR_HASH 0x31) so
-    // container DLs (which only branch to sub-DLs) are framed by their children.
-    // Torch stores the referenced resource hash in the Gfx word after the command.
+    // Accumulate vertex bounds across a display list, following vertex loads
+    // (G_VTX_OTR_HASH) and sub-DL branches (G_DL_OTR_HASH). The resource hash
+    // sits in the Gfx word after the command.
     void AccumulateBounds(const std::shared_ptr<Fast::DisplayList>& dl,
                           const std::shared_ptr<Ship::ResourceManager>& rm, float mn[3], float mx[3], bool& any,
                           std::unordered_set<std::string>& visited, int depth) {
@@ -389,9 +373,7 @@ private:
         return b;
     }
 
-    // Combined bounds of a multi-part model: each part's display-list bounds
-    // (cached per resource) transformed by the part's matrix — center mapped
-    // through it, radius scaled by its largest axis — then unioned.
+    // Union of each part's bounds transformed by its matrix.
     ModelBounds ComputePartsBounds(const std::vector<ModelPart>& parts,
                                    const std::shared_ptr<Ship::ResourceManager>& rm) {
         float mn[3] = { 1e18f, 1e18f, 1e18f };
@@ -408,9 +390,13 @@ private:
             }
             const ModelBounds& pb = bit->second;
             const auto& m = part.mtx;
-            const float cx = pb.cx * m[0][0] + pb.cy * m[1][0] + pb.cz * m[2][0] + m[3][0];
-            const float cy = pb.cx * m[0][1] + pb.cy * m[1][1] + pb.cz * m[2][1] + m[3][1];
-            const float cz = pb.cx * m[0][2] + pb.cy * m[1][2] + pb.cz * m[2][2] + m[3][2];
+            // Billboard matrices are anchor-relative; shift by the anchor.
+            const float ax = part.billboard ? part.anchor[0] : 0.0f;
+            const float ay = part.billboard ? part.anchor[1] : 0.0f;
+            const float az = part.billboard ? part.anchor[2] : 0.0f;
+            const float cx = pb.cx * m[0][0] + pb.cy * m[1][0] + pb.cz * m[2][0] + m[3][0] + ax;
+            const float cy = pb.cx * m[0][1] + pb.cy * m[1][1] + pb.cz * m[2][1] + m[3][1] + ay;
+            const float cz = pb.cx * m[0][2] + pb.cy * m[1][2] + pb.cz * m[2][2] + m[3][2] + az;
             float scale = 0.0f;
             for (int r = 0; r < 3; ++r) {
                 scale = std::max(scale, std::sqrt(m[r][0] * m[r][0] + m[r][1] * m[r][1] + m[r][2] * m[r][2]));
@@ -435,22 +421,54 @@ private:
         return b;
     }
 
-    // A reusable render target for one model preview. Held in a fixed-size pool
-    // and reassigned by model name (LRU-ish) as rows scroll in and out of view.
+    // Render target for one model preview, pooled and reassigned by name as
+    // rows scroll.
     struct FbSlot {
         int fbId = -1;
         uint32_t w = 0, h = 0;
         std::string owner; // model currently rendered into this framebuffer
         Vp vp{};
         Mtx proj{};        // stable address: key into the Mtx->MtxF replacement map
-        // Last view actually rendered into this framebuffer; used to detect when a
-        // model needs re-rendering (its FB content persists between frames).
+        // Last rendered state; the framebuffer persists until these change.
         bool rendered = false;
-        float lastYaw = 0.0f, lastPitch = 0.0f, lastZoom = 0.0f;
+        OrbitView lastView{};
+        uint64_t lastPartsHash = 0;
     };
 
-    // Pick a pool slot for `name`: reuse its existing one, else a slot whose owner
-    // isn't visible this frame, else any free slot. -1 if the pool is exhausted.
+    static bool SameView(const OrbitView& a, const OrbitView& b) {
+        return a.yaw == b.yaw && a.pitch == b.pitch && a.zoom == b.zoom && a.panX == b.panX && a.panY == b.panY;
+    }
+
+    // FNV-1a over the parts' resources, layers and transforms.
+    static uint64_t HashParts(const std::vector<ModelPart>& parts) {
+        uint64_t h = 1469598103934665603ull;
+        const auto mix = [&h](const void* data, size_t n) {
+            const auto* p = static_cast<const uint8_t*>(data);
+            for (size_t i = 0; i < n; ++i) {
+                h ^= p[i];
+                h *= 1099511628211ull;
+            }
+        };
+        for (const auto& part : parts) {
+            mix(part.resource.data(), part.resource.size());
+            mix(&part.layer, sizeof(part.layer));
+            mix(part.mtx, sizeof(part.mtx));
+            mix(&part.billboard, sizeof(part.billboard));
+            mix(part.anchor, sizeof(part.anchor));
+        }
+        // Light edits must re-render every framebuffer.
+        const PreviewLighting& light = GetPreviewLighting();
+        mix(&light.enabled, sizeof(light.enabled));
+        mix(light.ambient, sizeof(light.ambient));
+        mix(light.color, sizeof(light.color));
+        mix(light.position, sizeof(light.position));
+        mix(&light.intensity, sizeof(light.intensity));
+        mix(&light.falloff, sizeof(light.falloff));
+        return h;
+    }
+
+    // Reuse the slot owned by `name`, else one whose owner isn't visible, else
+    // any free slot; -1 when exhausted.
     int AssignSlot(const std::string& name, const std::vector<bool>& used,
                    const std::unordered_set<std::string>& visible) {
         for (size_t i = 0; i < mFbPool.size(); ++i) {
@@ -471,11 +489,9 @@ private:
         return -1;
     }
 
-    // Assign a framebuffer to every visible model, then build a command list that
-    // renders just the one model whose view changed this frame (G_SETFB/G_RESETFB
-    // target it). One framebuffer per frame — see the phase-2 note. Returns nullptr
-    // if nothing needs rendering. mNameToFb (built here) lets DrawModel blit each
-    // model's persisted framebuffer.
+    // Assigns a framebuffer to every visible model and builds a command list
+    // rendering the one whose content changed this frame. Returns nullptr if
+    // nothing needs rendering.
     Gfx* BuildModelCommands(const std::shared_ptr<Fast::Fast3dWindow>& window) {
         mMtxReplacements.clear();
         if (mRenderList.empty()) {
@@ -500,14 +516,12 @@ private:
         }
         std::vector<bool> used(mFbPool.size(), false);
 
-        // Phase 1: give every visible model a framebuffer slot (its last render
-        // persists to be blitted), and pick the ONE model to (re)render this frame.
-        // Only one framebuffer is rendered per frame because this LUS Metal backend
-        // only presents the first offscreen framebuffer drawn per frame — rendering
-        // N at once left all but the first frozen. Idle models don't change, so
-        // their persisted render stays valid; the dragged model is dirty every frame.
+        // Phase 1: assign framebuffer slots and pick one dirty model to render.
+        // The Metal backend only presents the first offscreen framebuffer drawn
+        // per frame, so the rest keep their persisted render.
         int targetIdx = -1;
         int targetReqIdx = -1;
+        std::vector<std::pair<int, int>> dirtySlots; // (pool idx, request idx)
         for (size_t ri = 0; ri < mRenderList.size(); ++ri) {
             const ModelRequest& req = mRenderList[ri];
             const int idx = AssignSlot(req.name, used, visible);
@@ -545,17 +559,31 @@ private:
                 slot.rendered = false;
             }
 
-            const bool dirty = !slot.rendered || slot.lastYaw != req.yaw || slot.lastPitch != req.pitch ||
-                               slot.lastZoom != req.zoom;
-            if (dirty && targetIdx < 0) {
-                targetIdx = idx;
-                targetReqIdx = (int)ri;
+            // Content hash catches pose changes (e.g. animation frames).
+            const uint64_t partsHash = HashParts(req.parts);
+            const bool dirty = !slot.rendered || !SameView(slot.lastView, req.view) || slot.lastPartsHash != partsHash;
+            if (dirty) {
+                dirtySlots.emplace_back(idx, (int)ri);
             }
         }
 
-        // Rebuild the name->framebuffer map from the pool's current owners so
-        // DrawModel can blit any slot still holding a model (even ones not
-        // re-rendered this frame), and evicted owners drop out.
+        // Round-robin so simultaneous animations don't starve each other.
+        for (const auto& [idx, ri] : dirtySlots) {
+            if (ri >= (int)mScanStart) {
+                targetIdx = idx;
+                targetReqIdx = ri;
+                break;
+            }
+        }
+        if (targetIdx < 0 && !dirtySlots.empty()) {
+            targetIdx = dirtySlots.front().first;
+            targetReqIdx = dirtySlots.front().second;
+        }
+        if (targetReqIdx >= 0) {
+            mScanStart = (size_t)targetReqIdx + 1;
+        }
+
+        // Mirror the pool's owners so DrawModelParts can blit persisted slots.
         mNameToFb.clear();
         for (const auto& s : mFbPool) {
             if (s.fbId >= 0 && !s.owner.empty()) {
@@ -567,12 +595,11 @@ private:
             return nullptr; // nothing changed; every framebuffer keeps its last render
         }
 
-        // Phase 2: render just the target model (all of its parts) into its framebuffer.
+        // Phase 2: render the target model into its framebuffer.
         const ModelRequest& req = mRenderList[targetReqIdx];
         FbSlot& slot = mFbPool[targetIdx];
 
-        // Resolve every part's display list up front; a part that fails to load is
-        // dropped rather than failing the whole model.
+        // Parts that fail to load are dropped rather than failing the model.
         std::vector<std::pair<const ModelPart*, Gfx*>> drawable;
         drawable.reserve(req.parts.size());
         for (const auto& part : req.parts) {
@@ -584,10 +611,11 @@ private:
         }
         if (drawable.empty()) {
             slot.rendered = true; // nothing loadable; don't retry every frame
+            slot.lastView = req.view;
+            slot.lastPartsHash = HashParts(req.parts);
             return nullptr;
         }
-        // Draw in SM64 master-list order (layer 0..7) so transparent layers blend
-        // over the opaque geometry already in the framebuffer.
+        // Master-list order (layer 0..7) so transparency blends over opaque.
         std::stable_sort(drawable.begin(), drawable.end(),
                          [](const auto& a, const auto& b) { return a.first->layer < b.first->layer; });
 
@@ -597,25 +625,57 @@ private:
         }
         const ModelBounds b = bit->second;
 
+        const OrbitView& v = req.view;
         const float aspect = (float)slot.w / (float)slot.h;
-        const float dist = (b.radius * 2.5f) / std::max(req.zoom, 0.02f);
-        const float eyeX = b.cx + dist * std::cos(req.pitch) * std::sin(req.yaw);
-        const float eyeY = b.cy + dist * std::sin(req.pitch);
-        const float eyeZ = b.cz + dist * std::cos(req.pitch) * std::cos(req.yaw);
+        const float dist = (b.radius * 2.5f) / std::max(v.zoom, 0.02f);
+
+        // Camera basis (matches LookAt). Pan shifts eye and target along x/y,
+        // scaled by distance so drag speed is zoom-independent.
+        const float zx = std::cos(v.pitch) * std::sin(v.yaw);
+        const float zy = std::sin(v.pitch);
+        const float zz = std::cos(v.pitch) * std::cos(v.yaw);
+        float xx = zz, xz = -zx;
+        const float xl = std::sqrt(xx * xx + xz * xz);
+        if (xl > 0.0001f) {
+            xx /= xl;
+            xz /= xl;
+        }
+        const float yx = zy * xz;
+        const float yy = zz * xx - zx * xz;
+        const float yz = -zy * xx;
+        const float panScale = dist * 0.0015f;
+        const float cx = b.cx + (-v.panX * xx) * panScale + (v.panY * yx) * panScale;
+        const float cy = b.cy + (v.panY * yy) * panScale;
+        const float cz = b.cz + (-v.panX * xz) * panScale + (v.panY * yz) * panScale;
+
+        const float eyeX = cx + dist * zx;
+        const float eyeY = cy + dist * zy;
+        const float eyeZ = cz + dist * zz;
 
         MtxF projF{};
         Perspective(projF, 45.0f, aspect, std::max(dist * 0.01f, 1.0f), dist * 4.0f + b.radius * 4.0f);
         MtxF viewF{};
-        LookAt(viewF, eyeX, eyeY, eyeZ, b.cx, b.cy, b.cz);
+        LookAt(viewF, eyeX, eyeY, eyeZ, cx, cy, cz);
         mMtxReplacements[&slot.proj] = projF;
 
-        // Each part's modelview = its object->world transform times the view.
-        // mPartMtxKeys supplies stable Mtx addresses to key the replacement map;
-        // it must not reallocate between here and the interpreter Run.
+        // Modelview per part = world * view. Billboards get an identity rotation
+        // in view space at their anchor (mtxf_billboard). mPartMtxKeys provides
+        // stable addresses for the replacement map; no reallocation before Run.
         mPartMtxKeys.resize(drawable.size());
         for (size_t i = 0; i < drawable.size(); ++i) {
+            const ModelPart& part = *drawable[i].first;
             MtxF mv{};
-            MulMtxF(mv, drawable[i].first->mtx, viewF);
+            if (part.billboard) {
+                MtxF bb{};
+                bb.mf[0][0] = bb.mf[1][1] = bb.mf[2][2] = bb.mf[3][3] = 1.0f;
+                for (int c = 0; c < 3; ++c) {
+                    bb.mf[3][c] = part.anchor[0] * viewF.mf[0][c] + part.anchor[1] * viewF.mf[1][c] +
+                                  part.anchor[2] * viewF.mf[2][c] + viewF.mf[3][c];
+                }
+                MulMtxF(mv, part.mtx, bb);
+            } else {
+                MulMtxF(mv, part.mtx, viewF);
+            }
             mMtxReplacements[&mPartMtxKeys[i]] = mv;
         }
 
@@ -626,26 +686,58 @@ private:
         slot.vp.vp.vtrans[0] = vx; slot.vp.vp.vtrans[1] = vy; slot.vp.vp.vtrans[2] = G_MAXZ / 2;
         slot.vp.vp.vtrans[3] = 0;
 
-        mLights = gdSPDefLights1(0x40, 0x40, 0x40, 0xff, 0xff, 0xff, 0x49, 0x49, 0x49);
+        // Point light approximated per part (the RSP only has directional
+        // lights): direction from the light position to the part, color
+        // attenuated by distance, supplied in view space. Parts that bind their
+        // own material lights override it.
+        const PreviewLighting& lighting = GetPreviewLighting();
+        const auto to8 = [](float v) { return (uint8_t)std::clamp((int)(v * 255.0f + 0.5f), 0, 255); };
+        const float lpx = b.cx + lighting.position[0] * b.radius;
+        const float lpy = b.cy + lighting.position[1] * b.radius;
+        const float lpz = b.cz + lighting.position[2] * b.radius;
+        mPartLights.resize(drawable.size());
+        for (size_t i = 0; i < drawable.size(); ++i) {
+            const ModelPart& part = *drawable[i].first;
+            const float px = part.billboard ? part.anchor[0] : part.mtx[3][0];
+            const float py = part.billboard ? part.anchor[1] : part.mtx[3][1];
+            const float pz = part.billboard ? part.anchor[2] : part.mtx[3][2];
+            float dx = lpx - px, dy = lpy - py, dz = lpz - pz;
+            const float distSq = dx * dx + dy * dy + dz * dz;
+            const float dlen = std::sqrt(distSq);
+            if (dlen > 0.0001f) {
+                dx /= dlen; dy /= dlen; dz /= dlen;
+            } else {
+                dy = 1.0f; dx = dz = 0.0f;
+            }
+            const float radii = b.radius > 0.0001f ? dlen / b.radius : 0.0f;
+            const float atten = std::clamp(lighting.intensity / (1.0f + lighting.falloff * radii * radii), 0.0f, 1.0f);
+            // World direction -> view space (rotation rows of the view matrix).
+            const float vx = dx * viewF.mf[0][0] + dy * viewF.mf[1][0] + dz * viewF.mf[2][0];
+            const float vy = dx * viewF.mf[0][1] + dy * viewF.mf[1][1] + dz * viewF.mf[2][1];
+            const float vz = dx * viewF.mf[0][2] + dy * viewF.mf[1][2] + dz * viewF.mf[2][2];
+            mPartLights[i] = gdSPDefLights1(
+                to8(lighting.ambient[0]), to8(lighting.ambient[1]), to8(lighting.ambient[2]),
+                to8(lighting.color[0] * atten), to8(lighting.color[1] * atten), to8(lighting.color[2] * atten),
+                (int8_t)(vx * 127.0f), (int8_t)(vy * 127.0f), (int8_t)(vz * 127.0f));
+        }
 
-        mCmd.assign(48 + drawable.size() * 5, Gfx{});
+        mCmd.assign(48 + drawable.size() * 8, Gfx{});
         Gfx* p = mCmd.data();
         // Load f3d ucode + reset segment 0 (global state).
         p->words.w0 = ((uintptr_t)0xDD << 24) | ((uintptr_t)ucode_f3d & 0xFFFFFF);
         p->words.w1 = 0;
         ++p;
         __gSPSegment(p++, 0, 0x0);
-        // Non-zero color image so FILL rects clear color (else GfxDpFillRectangle
-        // treats it as a depth clear when color/z image addresses match at 0).
+        // Non-zero color image address so FILL rects clear color instead of
+        // being treated as depth clears.
         gDPSetColorImage(p++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, (void*)(uintptr_t)0x10);
 
         // Switch the render target to this model's framebuffer (G_SETFB 0x21).
         p->words.w0 = (uintptr_t)0x21 << 24;
         p->words.w1 = (uintptr_t)slot.fbId;
         ++p;
-        // Clear color with a flat fill rectangle (G_SETFB already cleared depth to
-        // far). The quad is at the near plane, so use a no-Z rendermode or it writes
-        // "nearest" depth and occludes the model.
+        // Color clear (depth was cleared by G_SETFB). The fill quad sits at the
+        // near plane, so it must not write depth.
         gDPPipeSync(p++);
         gDPSetScissor(p++, G_SC_NON_INTERLACE, 0, 0, (int)slot.w, (int)slot.h);
         gDPSetRenderMode(p++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
@@ -670,11 +762,8 @@ private:
         gDPSetCombineMode(p++, G_CC_MODULATEI, G_CC_MODULATEI_PRIM2);
         gDPSetDepthSource(p++, G_ZS_PIXEL);
         gDPSetCycleType(p++, G_CYC_1CYCLE);
-        gSPSetGeometryMode(p++, G_ZBUFFER | G_SHADE | G_SHADING_SMOOTH | G_LIGHTING);
-        gSPSetLights1(p++, mLights);
-        // Per-layer render modes (SM64 renderModeTable_1Cycle, z-buffered): the
-        // layer decides opaque vs cutout (TEX_EDGE) vs transparent, which is what
-        // makes alpha textures punch through instead of rendering opaque.
+        gSPSetGeometryMode(p++, G_ZBUFFER | G_SHADE | G_SHADING_SMOOTH | (lighting.enabled ? G_LIGHTING : 0));
+        // Per-layer render modes (SM64 renderModeTable_1Cycle, z-buffered).
         static const uint32_t kLayerCycle1[8] = {
             G_RM_ZB_OPA_SURF,     G_RM_AA_ZB_OPA_SURF,  G_RM_AA_ZB_OPA_DECAL, G_RM_AA_ZB_OPA_INTER,
             G_RM_AA_ZB_TEX_EDGE,  G_RM_AA_ZB_XLU_SURF,  G_RM_AA_ZB_XLU_DECAL, G_RM_AA_ZB_XLU_INTER,
@@ -691,6 +780,7 @@ private:
                 gDPSetRenderMode(p++, kLayerCycle1[layer], kLayerCycle2[layer]);
                 lastLayer = layer;
             }
+            gSPSetLights1(p++, mPartLights[i]);
             gSPMatrix(p++, &mPartMtxKeys[i], G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
             __gSPDisplayList(p++, drawable[i].second);
         }
@@ -702,9 +792,8 @@ private:
         gSPEndDisplayList(p++);
 
         slot.rendered = true;
-        slot.lastYaw = req.yaw;
-        slot.lastPitch = req.pitch;
-        slot.lastZoom = req.zoom;
+        slot.lastView = req.view;
+        slot.lastPartsHash = HashParts(req.parts);
         return mCmd.data();
     }
 
@@ -716,7 +805,7 @@ private:
         std::vector<ModelPart> parts;
         ImVec2 topLeft;
         ImVec2 size;
-        float yaw = 0.0f, pitch = 0.0f, zoom = 1.0f;
+        OrbitView view;
     };
 
     std::vector<ModelRequest> mRequests;   // filled this frame, rendered next
@@ -724,9 +813,11 @@ private:
     std::unordered_map<std::string, int> mNameToFb;          // model -> framebuffer id
     std::unordered_map<std::string, ModelBounds> mBoundsCache;
     std::vector<FbSlot> mFbPool;
-    // Stable Mtx addresses keying each rendered part's modelview replacement.
+    size_t mScanStart = 0; // round-robin cursor for the one-render-per-frame pick
+    // Stable keys for the Mtx->MtxF replacement map.
     std::vector<Mtx> mPartMtxKeys;
-    Lights1 mLights{};
+    // Per-part light evaluation; alive through the interpreter Run.
+    std::vector<Lights1> mPartLights;
     std::vector<Gfx> mCmd;
     std::unordered_map<Mtx*, MtxF> mMtxReplacements;
 };

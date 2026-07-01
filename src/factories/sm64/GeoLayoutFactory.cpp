@@ -720,9 +720,11 @@ std::optional<std::shared_ptr<IParsedData>> SM64::GeoLayoutFactory::parse(std::v
 
 #ifdef BUILD_UI
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <cstring>
 
+#include "AnimationFactory.h"
 #include "ui/BaseBackend.h"
 #include "ui/Widgets.h"
 
@@ -781,6 +783,30 @@ Mat4 Mat4Scale(float s) {
     return r;
 }
 
+// SM64's mtxf_rotate_xyz_and_translate (used by animated parts); rotation in
+// s16 binary angles, translation in float units.
+Mat4 Mat4RotXYZTranslate(const float t[3], const int16_t rotBin[3]) {
+    const float b2r = (float)M_PI / 32768.0f;
+    const float sx = std::sin(rotBin[0] * b2r), cx = std::cos(rotBin[0] * b2r);
+    const float sy = std::sin(rotBin[1] * b2r), cy = std::cos(rotBin[1] * b2r);
+    const float sz = std::sin(rotBin[2] * b2r), cz = std::cos(rotBin[2] * b2r);
+
+    Mat4 r = Mat4Identity();
+    r.m[0][0] = cy * cz;
+    r.m[0][1] = cy * sz;
+    r.m[0][2] = -sy;
+    r.m[1][0] = sx * sy * cz - cx * sz;
+    r.m[1][1] = sx * sy * sz + cx * cz;
+    r.m[1][2] = sx * cy;
+    r.m[2][0] = cx * sy * cz + sx * sz;
+    r.m[2][1] = cx * sy * sz - sx * cz;
+    r.m[2][2] = cx * cy;
+    r.m[3][0] = t[0];
+    r.m[3][1] = t[1];
+    r.m[3][2] = t[2];
+    return r;
+}
+
 const uint8_t* ArgU8(const std::vector<GeoArgument>& args, size_t i) {
     return i < args.size() ? std::get_if<uint8_t>(&args[i]) : nullptr;
 }
@@ -827,13 +853,20 @@ bool IsNodeCommand(GeoOpcode op) {
     }
 }
 
-// Mirrors rendering_graph_node.c enough for a bind-pose preview: a transform
-// stack accumulated per node (child world = local * parent), only the first
-// case of a switch, animated parts at their rest translation, billboards as
-// plain translations. Camera/shadow/ASM/etc. nodes pass through untransformed.
+// Flattens the graph like rendering_graph_node.c: transform stack per node
+// (child world = local * parent), first switch case only, camera/shadow/ASM
+// nodes pass through untransformed.
 struct GeoWalk {
     std::vector<UI::ModelPart> parts;
-    std::vector<Mat4> stack{ Mat4Identity() };
+    // Transform per open scope; inside a GEO_BILLBOARD subtree `rel` restarts
+    // at the billboard node so parts can be rebuilt camera-facing.
+    struct XformEntry {
+        Mat4 world = Mat4Identity();
+        Mat4 rel = Mat4Identity();
+        bool inBillboard = false;
+        float anchor[3] = { 0.0f, 0.0f, 0.0f };
+    };
+    std::vector<XformEntry> stack{ XformEntry{} };
     struct Frame {
         bool switchMode = false;
         int children = 0;
@@ -841,11 +874,35 @@ struct GeoWalk {
     std::vector<Frame> frames{ Frame{} };
     Mat4 lastLocal = Mat4Identity();
     bool lastWasSwitch = false;
+    bool lastWasBillboard = false;
     bool pendingSkip = false; // last node culled; skip its subtree if one opens
     int skipDepth = -1;       // raw depth to return to before resuming
     int rawDepth = 0;         // open/close nesting, counted even while skipping
     const std::string* file = nullptr;
     int branchDepth = 0;
+
+    // Animation state (gCurrAnimType/gCurrAnimAttribute): the first animated
+    // part consumes the translation channels, every part its rotation triplet.
+    enum AnimType { kAnimNone = 0, kAnimTranslation, kAnimVertical, kAnimLateral, kAnimNoTranslation, kAnimRotation };
+    const SM64::AnimationData* anim = nullptr;
+    AnimType animType = kAnimNone;
+    size_t animAttr = 0; // cursor into anim->mIndices (count/offset pairs)
+    int animFrame = 0;
+
+    // retrieve_animation_index: values[offset + min(frame, count-1)].
+    int16_t AnimValue() {
+        if (anim == nullptr || animAttr + 1 >= anim->mIndices.size()) {
+            return 0;
+        }
+        const uint16_t count = anim->mIndices[animAttr];
+        const uint16_t offset = anim->mIndices[animAttr + 1];
+        animAttr += 2;
+        const int32_t idx = offset + std::min<int32_t>(animFrame, (int32_t)count - 1);
+        if (idx < 0 || idx >= (int32_t)anim->mEntries.size()) {
+            return 0;
+        }
+        return anim->mEntries[idx];
+    }
 };
 
 const ParseResultData* FindResultByName(const std::string& name) {
@@ -859,7 +916,9 @@ const ParseResultData* FindResultByName(const std::string& name) {
     return nullptr;
 }
 
-std::optional<std::string> ResolveAddr(uint64_t ptr, const std::string& file) {
+// Resolves an asset pointer to (o2r path, asset type); segment address
+// collisions can land on non-GFX assets, so callers must check the type.
+std::optional<std::tuple<std::string, std::string>> ResolveAddr(uint64_t ptr, const std::string& file) {
     if (ptr == 0) {
         return std::nullopt;
     }
@@ -867,7 +926,9 @@ std::optional<std::string> ResolveAddr(uint64_t ptr, const std::string& file) {
     if (!node.has_value()) {
         return std::nullopt;
     }
-    return std::get<0>(node.value());
+    auto type = GetSafeNode<std::string>(std::get<1>(node.value()), "type", "");
+    std::transform(type.begin(), type.end(), type.begin(), ::toupper);
+    return std::make_tuple(std::get<0>(node.value()), type);
 }
 
 void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx);
@@ -876,11 +937,11 @@ void WalkGeoTarget(uint64_t ptr, GeoWalk& ctx) {
     if (ctx.branchDepth > 8) {
         return;
     }
-    const auto name = ResolveAddr(ptr, *ctx.file);
-    if (!name.has_value()) {
+    const auto resolved = ResolveAddr(ptr, *ctx.file);
+    if (!resolved.has_value()) {
         return;
     }
-    const ParseResultData* target = FindResultByName(name.value());
+    const ParseResultData* target = FindResultByName(std::get<0>(resolved.value()));
     if (target == nullptr || !target->data.has_value() || target->type != "SM64:GEO_LAYOUT") {
         return;
     }
@@ -921,10 +982,24 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                     ctx.skipDepth = ctx.rawDepth - 1;
                     break;
                 }
-                ctx.stack.push_back(Mat4Mul(ctx.lastLocal, ctx.stack.back()));
+                const GeoWalk::XformEntry& top = ctx.stack.back();
+                GeoWalk::XformEntry e;
+                e.world = Mat4Mul(ctx.lastLocal, top.world);
+                if (top.inBillboard) {
+                    e.inBillboard = true;
+                    e.rel = Mat4Mul(ctx.lastLocal, top.rel);
+                    std::memcpy(e.anchor, top.anchor, sizeof(e.anchor));
+                } else if (ctx.lastWasBillboard) {
+                    e.inBillboard = true; // children hang off the camera-facing node
+                    e.anchor[0] = e.world.m[3][0];
+                    e.anchor[1] = e.world.m[3][1];
+                    e.anchor[2] = e.world.m[3][2];
+                }
+                ctx.stack.push_back(e);
                 ctx.frames.push_back({ ctx.lastWasSwitch, 0 });
                 ctx.lastLocal = Mat4Identity();
                 ctx.lastWasSwitch = false;
+                ctx.lastWasBillboard = false;
                 break;
             }
             case GeoOpcode::CloseNode: {
@@ -935,6 +1010,7 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                 }
                 ctx.lastLocal = Mat4Identity();
                 ctx.lastWasSwitch = false;
+                ctx.lastWasBillboard = false;
                 ctx.pendingSkip = false;
                 break;
             }
@@ -972,6 +1048,7 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                     ctx.pendingSkip = true;
                     ctx.lastLocal = Mat4Identity();
                     ctx.lastWasSwitch = false;
+                    ctx.lastWasBillboard = false;
                     break;
                 }
 
@@ -1014,7 +1091,7 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                         break;
                     }
                     case GeoOpcode::NodeTranslation:
-                    case GeoOpcode::NodeBillboard: { // billboard treated as a translation
+                    case GeoOpcode::NodeBillboard: { // billboard: translation here, camera-facing at emit
                         const auto params = ArgU8(args, 0);
                         Vec3s trans{};
                         if (const auto t = ArgVec3s(args, 1)) trans = *t;
@@ -1047,12 +1124,47 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                         }
                         break;
                     }
-                    case GeoOpcode::NodeAnimatedPart: { // bind pose: rest translation only
+                    case GeoOpcode::NodeAnimatedPart: {
                         Vec3s trans{};
                         if (const auto layer = ArgU8(args, 0)) dlLayer = *layer & 0x0F;
                         if (const auto t = ArgVec3s(args, 1)) trans = *t;
-                        local = Mat4RotZXYTranslate(trans, Vec3s());
                         if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+
+                        // geo_process_animated_part; bind pose without an anim.
+                        float t[3] = { (float)trans.x, (float)trans.y, (float)trans.z };
+                        int16_t rot[3] = { 0, 0, 0 };
+                        switch (ctx.animType) {
+                            case GeoWalk::kAnimTranslation:
+                                t[0] += ctx.AnimValue();
+                                t[1] += ctx.AnimValue();
+                                t[2] += ctx.AnimValue();
+                                ctx.animType = GeoWalk::kAnimRotation;
+                                break;
+                            case GeoWalk::kAnimLateral:
+                                t[0] += ctx.AnimValue();
+                                ctx.animAttr += 2;
+                                t[2] += ctx.AnimValue();
+                                ctx.animType = GeoWalk::kAnimRotation;
+                                break;
+                            case GeoWalk::kAnimVertical:
+                                ctx.animAttr += 2;
+                                t[1] += ctx.AnimValue();
+                                ctx.animAttr += 2;
+                                ctx.animType = GeoWalk::kAnimRotation;
+                                break;
+                            case GeoWalk::kAnimNoTranslation:
+                                ctx.animAttr += 6;
+                                ctx.animType = GeoWalk::kAnimRotation;
+                                break;
+                            default:
+                                break;
+                        }
+                        if (ctx.animType == GeoWalk::kAnimRotation) {
+                            rot[0] = ctx.AnimValue();
+                            rot[1] = ctx.AnimValue();
+                            rot[2] = ctx.AnimValue();
+                        }
+                        local = Mat4RotXYZTranslate(t, rot);
                         break;
                     }
                     case GeoOpcode::NodeDisplayList: {
@@ -1066,14 +1178,33 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
 
                 ctx.lastLocal = local;
                 ctx.lastWasSwitch = cmd.opcode == GeoOpcode::NodeSwitchCase;
+                ctx.lastWasBillboard = cmd.opcode == GeoOpcode::NodeBillboard;
 
                 if (dlPtr != 0) {
-                    if (const auto dlName = ResolveAddr(dlPtr, *ctx.file)) {
-                        const Mat4 world = Mat4Mul(local, ctx.stack.back());
+                    const auto resolved = ResolveAddr(dlPtr, *ctx.file);
+                    if (resolved.has_value() && std::get<1>(resolved.value()) == "GFX") {
+                        const GeoWalk::XformEntry& top = ctx.stack.back();
+                        const Mat4 world = Mat4Mul(local, top.world);
                         UI::ModelPart part;
-                        part.resource = dlName.value();
-                        std::memcpy(part.mtx, world.m, sizeof(world.m));
+                        part.resource = std::get<0>(resolved.value());
                         part.layer = dlLayer;
+                        if (top.inBillboard) {
+                            // Relative to the camera-facing billboard node.
+                            const Mat4 rel = Mat4Mul(local, top.rel);
+                            std::memcpy(part.mtx, rel.m, sizeof(rel.m));
+                            part.billboard = true;
+                            std::memcpy(part.anchor, top.anchor, sizeof(part.anchor));
+                        } else if (cmd.opcode == GeoOpcode::NodeBillboard) {
+                            // The billboard node's own display list.
+                            static const Mat4 kIdent = Mat4Identity();
+                            std::memcpy(part.mtx, kIdent.m, sizeof(kIdent.m));
+                            part.billboard = true;
+                            part.anchor[0] = world.m[3][0];
+                            part.anchor[1] = world.m[3][1];
+                            part.anchor[2] = world.m[3][2];
+                        } else {
+                            std::memcpy(part.mtx, world.m, sizeof(world.m));
+                        }
                         ctx.parts.push_back(std::move(part));
                     }
                 }
@@ -1094,45 +1225,168 @@ const std::string* FindOwningFile(const ParseResultData& item) {
     return nullptr;
 }
 
-const std::vector<UI::ModelPart>& FlattenGeoLayout(const ParseResultData& item) {
-    static std::unordered_map<std::string, std::vector<UI::ModelPart>> sCache;
-    auto it = sCache.find(item.name);
+// Geo layouts don't reference their animations (objects bind them at
+// runtime), so offer every SM64:ANIM from the actor's directory.
+struct AnimEntry {
+    std::string name;
+    const SM64::AnimationData* data;
+};
+
+const std::vector<AnimEntry>& CollectAnims(const std::string& file) {
+    static std::unordered_map<std::string, std::vector<AnimEntry>> sCache;
+    const auto slash = file.find_last_of('/');
+    const std::string dir = slash != std::string::npos ? file.substr(0, slash + 1) : "";
+    auto it = sCache.find(dir);
     if (it != sCache.end()) {
         return it->second;
     }
 
-    GeoWalk ctx;
-    const std::string* file = FindOwningFile(item);
-    if (file != nullptr && item.data.has_value()) {
-        if (auto geo = std::static_pointer_cast<SM64::GeoLayout>(item.data.value())) {
-            ctx.file = file;
-            WalkGeoCommands(geo->commands, ctx);
+    const auto collectFrom = [](const std::vector<ParseResultData>& results, std::vector<AnimEntry>& out) {
+        for (const auto& r : results) {
+            if (r.type == "SM64:ANIM" && r.data.has_value()) {
+                out.push_back({ r.name, std::static_pointer_cast<SM64::AnimationData>(r.data.value()).get() });
+            }
+        }
+    };
+
+    // Actor directory first; if it has no animations, fall back to the
+    // root-most anims.yml (the gMarioAnims DMA bank).
+    std::vector<AnimEntry> anims;
+    const auto& parseResults = Companion::Instance->GetParseResults();
+    for (const auto& [f, results] : parseResults) {
+        if (dir.empty() || f.rfind(dir, 0) == 0) {
+            collectFrom(results, anims);
         }
     }
-    return sCache.emplace(item.name, std::move(ctx.parts)).first->second;
+    if (anims.empty()) {
+        const std::string* bank = nullptr;
+        for (const auto& [f, results] : parseResults) {
+            const auto fslash = f.find_last_of('/');
+            const std::string base = fslash != std::string::npos ? f.substr(fslash + 1) : f;
+            if (base != "anims.yml") {
+                continue;
+            }
+            if (bank == nullptr || f.size() < bank->size()) {
+                bank = &f;
+            }
+        }
+        if (bank != nullptr) {
+            collectFrom(parseResults.at(*bank), anims);
+        }
+    }
+    std::sort(anims.begin(), anims.end(), [](const AnimEntry& a, const AnimEntry& b) { return a.name < b.name; });
+    return sCache.emplace(dir, std::move(anims)).first->second;
 }
 
-struct GeoModelView {
-    float yaw = 0.6f;
-    float pitch = 0.3f;
-    float zoom = 1.0f;
+std::vector<UI::ModelPart> FlattenGeoLayout(const ParseResultData& item, const std::string& file,
+                                            const SM64::AnimationData* anim, int frame) {
+    GeoWalk ctx;
+    if (!item.data.has_value()) {
+        return {};
+    }
+    if (anim != nullptr) {
+        ctx.anim = anim;
+        ctx.animFrame = frame;
+        const int16_t flags = anim->mFlags;
+        if ((flags & (1 << 3)) != 0) {        // ANIM_FLAG_HOR_TRANS
+            ctx.animType = GeoWalk::kAnimLateral;
+        } else if ((flags & (1 << 4)) != 0) { // ANIM_FLAG_VERT_TRANS
+            ctx.animType = GeoWalk::kAnimVertical;
+        } else if ((flags & (1 << 6)) != 0) { // ANIM_FLAG_6 (no translation)
+            ctx.animType = GeoWalk::kAnimNoTranslation;
+        } else {
+            ctx.animType = GeoWalk::kAnimTranslation;
+        }
+    }
+    if (auto geo = std::static_pointer_cast<SM64::GeoLayout>(item.data.value())) {
+        ctx.file = &file;
+        WalkGeoCommands(geo->commands, ctx);
+    }
+    return std::move(ctx.parts);
+}
+
+struct GeoPreviewState {
+    UI::OrbitView view;
+    int animIndex = 0; // index into CollectAnims list; -1 = bind pose
+    int frame = 0;
+    bool playing = false;
+    float playAccum = 0.0f; // fractional frames pending at the N64's 30 fps
+    std::vector<UI::ModelPart> parts;
+    int builtAnim = INT_MIN; // (anim, frame) the parts were flattened with
+    int builtFrame = INT_MIN;
 };
-std::unordered_map<std::string, GeoModelView> sGeoViews;
+std::unordered_map<std::string, GeoPreviewState> sGeoState;
 
 } // namespace
 
 float SM64::GeoLayoutFactoryUI::GetItemHeight(const ParseResultData&) {
-    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 324.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + ImGui::GetFrameHeightWithSpacing() + 324.0f +
+           ImGui::GetStyle().ItemSpacing.y * 4.0f;
 }
 
 void SM64::GeoLayoutFactoryUI::DrawUI(const ParseResultData& item) {
     UI::AssetHeader(item.name, item.type);
+    ImGui::TextDisabled("geo layout  \xe2\x80\x94  drag to orbit, shift+drag to pan, \xe2\x8c\x98/Ctrl+scroll to zoom");
+    ImGui::SameLine();
+    UI::LightingControls();
 
-    const auto& parts = FlattenGeoLayout(item);
-    ImGui::TextDisabled("geo layout  \xe2\x80\x94  %zu parts, drag to orbit, \xe2\x8c\x98/Ctrl+scroll to zoom",
-                        parts.size());
+    GeoPreviewState& view = sGeoState[item.name];
+    const std::string* file = FindOwningFile(item);
+    static const std::vector<AnimEntry> kNoAnims;
+    const std::vector<AnimEntry>& anims = file != nullptr ? CollectAnims(*file) : kNoAnims;
+    if (view.animIndex >= (int)anims.size()) {
+        view.animIndex = anims.empty() ? -1 : 0;
+    }
+    const AnimEntry* anim = view.animIndex >= 0 && view.animIndex < (int)anims.size() ? &anims[view.animIndex]
+                                                                                      : nullptr;
 
-    GeoModelView& view = sGeoViews[item.name];
+    // Animation picker + frame scrubber.
+    const auto shortName = [](const std::string& n) {
+        const auto pos = n.find_last_of('/');
+        return pos != std::string::npos ? n.c_str() + pos + 1 : n.c_str();
+    };
+    ImGui::SetNextItemWidth(std::min(ImGui::GetContentRegionAvail().x * 0.5f, 340.0f));
+    if (ImGui::BeginCombo("##geoanim", anim != nullptr ? shortName(anim->name) : "bind pose")) {
+        if (ImGui::Selectable("bind pose", anim == nullptr)) {
+            view.animIndex = -1;
+        }
+        for (int i = 0; i < (int)anims.size(); ++i) {
+            if (ImGui::Selectable(shortName(anims[i].name), i == view.animIndex)) {
+                view.animIndex = i;
+                view.frame = anims[i].data->mStartFrame;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    if (anim != nullptr) {
+        const int maxFrame = std::max((int)anim->data->mLoopEnd - 1, 0);
+        ImGui::SameLine();
+        if (ImGui::Button(view.playing ? "Stop##geoplay" : "Loop##geoplay")) {
+            view.playing = !view.playing;
+            view.playAccum = 0.0f;
+        }
+        if (view.playing) {
+            // Advance at the game's 30 fps, wrapping loopEnd -> loopStart.
+            const int loopStart = std::clamp((int)anim->data->mLoopStart, 0, maxFrame);
+            view.playAccum += ImGui::GetIO().DeltaTime * 30.0f;
+            while (view.playAccum >= 1.0f) {
+                view.playAccum -= 1.0f;
+                view.frame = view.frame >= maxFrame ? loopStart : view.frame + 1;
+            }
+        }
+        view.frame = std::clamp(view.frame, 0, maxFrame);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(std::min(ImGui::GetContentRegionAvail().x - 8.0f, 260.0f));
+        ImGui::SliderInt("##geoframe", &view.frame, 0, maxFrame, "frame %d");
+    }
+
+    // Re-flatten when the selected animation or frame changes.
+    if (file != nullptr && (view.builtAnim != view.animIndex || view.builtFrame != view.frame)) {
+        view.parts = FlattenGeoLayout(item, *file, anim != nullptr ? anim->data : nullptr, view.frame);
+        view.builtAnim = view.animIndex;
+        view.builtFrame = view.frame;
+    }
+    const std::vector<UI::ModelPart>& parts = view.parts;
 
     const float vh = 320.0f;
     const float availW = ImGui::GetContentRegionAvail().x;
@@ -1144,16 +1398,7 @@ void SM64::GeoLayoutFactoryUI::DrawUI(const ParseResultData& item) {
     const float winTop = ImGui::GetWindowPos().y;
     const float winBot = winTop + ImGui::GetWindowHeight();
     const bool visible = ImGui::GetItemRectMax().y > winTop && ImGui::GetItemRectMin().y < winBot;
-    if (ImGui::IsItemActive()) {
-        const ImVec2 drag = ImGui::GetIO().MouseDelta;
-        view.yaw -= drag.x * 0.01f;
-        view.pitch = std::clamp(view.pitch + drag.y * 0.01f, -1.55f, 1.55f);
-    }
-    ImGuiIO& io = ImGui::GetIO();
-    if (ImGui::IsItemHovered() && io.MouseWheel != 0.0f && (io.KeyCtrl || io.KeySuper)) {
-        view.zoom = std::clamp(view.zoom * (1.0f + io.MouseWheel * 0.1f), 0.02f, 50.0f);
-        io.MouseWheel = 0.0f;
-    }
+    UI::OrbitControls(view.view);
 
     if (visible) {
         ImGui::GetWindowDrawList()->AddRectFilled(origin, ImVec2(origin.x + vw, origin.y + vh),
@@ -1165,8 +1410,7 @@ void SM64::GeoLayoutFactoryUI::DrawUI(const ParseResultData& item) {
                 ImVec2(origin.x + (vw - ts.x) * 0.5f, origin.y + (vh - ts.y) * 0.5f), IM_COL32(120, 120, 130, 255),
                 label);
         } else {
-            UI::GetBackend()->DrawModelParts(item.name, parts, origin, ImVec2(vw, vh), view.yaw, view.pitch,
-                                             view.zoom);
+            UI::GetBackend()->DrawModelParts(item.name, parts, origin, ImVec2(vw, vh), view.view);
         }
     }
 }
