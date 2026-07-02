@@ -42,12 +42,3 @@ public:
 
     bool SupportModdedAssets() override { return true; }
 };
-
-#ifdef BUILD_UI
-// Renders the m64 sequence offline through a reduced interpreter and plays it.
-class SequenceFactoryUI : public BaseFactoryUI {
-public:
-    float GetItemHeight(const ParseResultData& data) override;
-    void DrawUI(const ParseResultData& data) override;
-};
-#endif

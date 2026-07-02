@@ -40,6 +40,9 @@ public:
 // tuning-derived natural rate.
 bool DecodeSampleToPcm(AudioBankSample* sample, std::vector<int16_t>& pcm, int& rate);
 
+// Parses an in-memory AIFF (as produced by write_aiff) into PCM16.
+bool DecodeAiffBytes(const std::vector<char>& bytes, std::vector<int16_t>& pcm, int& rate);
+
 // Plays the sample (decoded through the AIFF converter) with basic controls.
 class SampleFactoryUI : public BaseFactoryUI {
 public:

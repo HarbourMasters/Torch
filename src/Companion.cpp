@@ -119,6 +119,11 @@
 #include "factories/naudio/v0/BankFactory.h"
 #include "factories/naudio/v0/SampleFactory.h"
 #include "factories/naudio/v0/SequenceFactory.h"
+#ifdef BUILD_UI
+#include "factories/naudio/v0/SequencePlayerV0.h"
+#include "factories/naudio/v1/SequencePlayerV1.h"
+#include "ui/audio/SequenceDriver.h"
+#endif
 
 #include "factories/naudio/v1/AudioContext.h"
 #include "factories/naudio/v1/SoundFontFactory.h"
@@ -295,7 +300,10 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterUIFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactoryUI>());
 #ifdef NAUDIO_SUPPORT
     this->RegisterUIFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactoryUI>());
-    this->RegisterUIFactory("NAUDIO:V0:SEQUENCE", std::make_shared<SequenceFactoryUI>());
+    UI::RegisterSequenceDriver("NAUDIO:V0:SEQUENCE", std::make_shared<SequencePlayerV0>());
+    this->RegisterUIFactory("NAUDIO:V0:SEQUENCE", std::make_shared<UI::SequencePreviewUI>());
+    UI::RegisterSequenceDriver("NAUDIO:V1:SEQUENCE", std::make_shared<SequencePlayerV1>());
+    this->RegisterUIFactory("NAUDIO:V1:SEQUENCE", std::make_shared<UI::SequencePreviewUI>());
 #endif
 #endif
 
@@ -1209,6 +1217,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
 
         this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
         this->gCartridge->Initialize();
+        this->gGameTitle = this->gCartridge->GetGameTitle();
 
         if (!config[this->gCartridge->GetHash()]) {
             bool synthesized = false;
@@ -1246,6 +1255,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                     this->gRomData = CompTool::Decompress(this->gRomData);
                     this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
                     this->gCartridge->Initialize();
+                    this->gGameTitle = this->gCartridge->GetGameTitle();
 
                     auto hash = this->gCartridge->GetHash();
 

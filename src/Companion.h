@@ -164,6 +164,8 @@ public:
     bool AddTextureDefines() const { return this->gConfig.textureDefines; }
 
     N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
+    // Survives cartridge teardown so the UI can key game-specific behavior.
+    const std::string& GetGameTitle() const { return this->gGameTitle; }
     std::vector<uint8_t>& GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gConfig.outputPath; }
     const std::string& GetAssetPath() const { return this->gAssetPath; }
@@ -251,6 +253,7 @@ private:
     bool gIndividualIncludes = false;
     YAML::Node gHashNode;
     std::shared_ptr<N64::Cartridge> gCartridge;
+    std::string gGameTitle;
     std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
     BinaryWrapper* gCurrentWrapper;

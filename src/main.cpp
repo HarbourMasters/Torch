@@ -16,6 +16,7 @@ Companion* Companion::Instance;
 #include "ui/View.h"
 #include "ui/list/Main.h"
 #include "ui/backends/LusBackend.h"
+#include "ui/audio/SequenceDriver.h"
 
 static void LaunchUI() {
     if (Companion::Instance == nullptr) {
@@ -260,6 +261,55 @@ int main(int argc, char* argv[]) {
         // irrelevant since nothing is exported.
         std::atomic<size_t> assetCount{ 0 };
         instance->Init(ExportType::Binary, assetCount, false);
+        if (std::getenv("TORCH_SEQ_TEST") != nullptr) { // headless driver check, no window
+            for (const auto& [file, results] : instance->GetParseResults()) {
+                for (const auto& item : results) {
+                    if (item.type.find("SEQUENCE") == std::string::npos || !item.data.has_value()) {
+                        continue;
+                    }
+                    auto* driver = UI::GetSequenceDriver(item.type);
+                    if (driver == nullptr) {
+                        continue;
+                    }
+                    UI::RenderedAudio out;
+                    const bool ok = driver->Render(item, 0, out);
+                    float peak = 0.0f;
+                    double sumSq = 0.0;
+                    size_t loud = 0;
+                    for (const auto v : out.pcm) {
+                        const float f = std::fabs((float)v) / 32768.0f;
+                        peak = std::max(peak, f);
+                        sumSq += (double)f * f;
+                        loud += f > 0.01f ? 1 : 0;
+                    }
+                    const double rms = out.pcm.empty() ? 0.0 : std::sqrt(sumSq / (double)out.pcm.size());
+                    printf("[seqtest] %s ok=%d notes=%zu frames=%zu peak=%.3f rms=%.4f loud=%.1f%%\n",
+                           item.name.c_str(), ok, out.noteCount, out.pcm.size() / 2, peak, rms,
+                           out.pcm.empty() ? 0.0 : 100.0 * (double)loud / (double)out.pcm.size());
+                    if (const char* wavDir = std::getenv("TORCH_SEQ_WAV")) {
+                        std::string base = item.name;
+                        std::replace(base.begin(), base.end(), '/', '_');
+                        const std::string wavPath = std::string(wavDir) + "/" + base + ".wav";
+                        FILE* f = fopen(wavPath.c_str(), "wb");
+                        if (f != nullptr) {
+                            const uint32_t dataSize = (uint32_t)(out.pcm.size() * 2);
+                            const uint32_t riffSize = 36 + dataSize;
+                            const uint32_t rate = 32000, byteRate = rate * 4;
+                            const uint16_t fmt = 1, ch = 2, align = 4, bits = 16;
+                            const uint32_t fmtSize = 16;
+                            fwrite("RIFF", 1, 4, f); fwrite(&riffSize, 4, 1, f); fwrite("WAVE", 1, 4, f);
+                            fwrite("fmt ", 1, 4, f); fwrite(&fmtSize, 4, 1, f); fwrite(&fmt, 2, 1, f);
+                            fwrite(&ch, 2, 1, f); fwrite(&rate, 4, 1, f); fwrite(&byteRate, 4, 1, f);
+                            fwrite(&align, 2, 1, f); fwrite(&bits, 2, 1, f);
+                            fwrite("data", 1, 4, f); fwrite(&dataSize, 4, 1, f);
+                            fwrite(out.pcm.data(), 2, out.pcm.size(), f);
+                            fclose(f);
+                        }
+                    }
+                }
+            }
+            return;
+        }
         LaunchUI();
     });
 #endif

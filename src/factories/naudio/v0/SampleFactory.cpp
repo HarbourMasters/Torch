@@ -152,6 +152,16 @@ bool DecodeSample(const ParseResultData& item) {
 
 } // namespace
 
+bool DecodeAiffBytes(const std::vector<char>& bytes, std::vector<int16_t>& pcm, int& rate) {
+    DecodedSample decoded;
+    if (!ParseAiff(bytes, decoded)) {
+        return false;
+    }
+    pcm = std::move(decoded.pcm);
+    rate = decoded.rate;
+    return true;
+}
+
 bool DecodeSampleToPcm(AudioBankSample* sample, std::vector<int16_t>& pcm, int& rate) {
     LUS::BinaryWriter aifc;
     AudioConverter::SampleV0ToAIFC(sample, aifc);

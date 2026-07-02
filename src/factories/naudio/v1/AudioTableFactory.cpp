@@ -203,9 +203,13 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                 font["sd2"] = (int32_t)sd2;
                 font["sd3"] = (int32_t)sd3;
 
-                Companion::Instance->AddAsset(font);
-                std::string path = font["vpath"].as<std::string>();
-                crc = CRC64(path.c_str());
+                // On re-parse AddAsset returns the already-registered node.
+                auto res = Companion::Instance->AddAsset(font);
+                if (res.has_value() && (*res)["vpath"]) {
+                    crc = CRC64((*res)["vpath"].as<std::string>().c_str());
+                } else if (font["vpath"]) {
+                    crc = CRC64(font["vpath"].as<std::string>().c_str());
+                }
                 break;
             }
             case AudioTableType::SEQ_TABLE: {
@@ -215,9 +219,12 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                     seq["type"] = "NAUDIO:V1:SEQUENCE";
                     seq["offset"] = parent + addr;
                     seq["size"] = size;
-                    Companion::Instance->AddAsset(seq);
-                    auto path = seq["vpath"].as<std::string>();
-                    crc = CRC64(path.c_str());
+                    auto res = Companion::Instance->AddAsset(seq);
+                    if (res.has_value() && (*res)["vpath"]) {
+                        crc = CRC64((*res)["vpath"].as<std::string>().c_str());
+                    } else if (seq["vpath"]) {
+                        crc = CRC64(seq["vpath"].as<std::string>().c_str());
+                    }
                     break;
                 }
             }

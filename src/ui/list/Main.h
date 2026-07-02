@@ -67,9 +67,11 @@ private:
         ImGui::SameLine();
         ImGui::TextDisabled("resource viewer");
         ImGui::SameLine();
-        const std::string countText = std::to_string(files.size()) + " files";
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(countText.c_str()).x);
-        ImGui::TextDisabled("%s", countText.c_str());
+        char status[96];
+        snprintf(status, sizeof(status), "%zu files   %.0f fps (%.1f ms)", files.size(),
+                 ImGui::GetIO().Framerate, 1000.0f / std::max(ImGui::GetIO().Framerate, 0.001f));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(status).x);
+        ImGui::TextDisabled("%s", status);
         ImGui::Separator();
     }
 
@@ -113,6 +115,11 @@ private:
         return it == results.end() ? nullptr : &it->second;
     }
 
+    // Deduped row indices for the selected file (shared audio samples get
+    // registered once per referencing bank).
+    std::string rowsFile;
+    std::vector<size_t> rows;
+
     void DrawAssets() {
         const auto* assets = SelectedAssets();
         if (assets == nullptr || assets->empty()) {
@@ -120,19 +127,45 @@ private:
             return;
         }
 
-        // Submit every row; ImGui clips off-screen widgets and factories gate
-        // their own preview rendering. Skip duplicate names (shared audio
-        // samples get registered once per referencing bank).
-        std::unordered_set<std::string> seen;
-        for (size_t i = 0; i < assets->size(); ++i) {
-            if (!seen.insert((*assets)[i].name).second) {
-                continue;
+        if (rowsFile != selectedFile.value()) {
+            rowsFile = selectedFile.value();
+            rows.clear();
+            std::unordered_set<std::string> seen;
+            for (size_t i = 0; i < assets->size(); ++i) {
+                if (seen.insert((*assets)[i].name).second) {
+                    rows.push_back(i);
+                }
             }
-            ImGui::PushID((int)i);
-            DrawAsset((*assets)[i]);
+        }
+
+        // Virtualized: lay rows out by reported height and only submit the
+        // visible range. Files with thousands of assets stay responsive.
+        const float sepH = ImGui::GetStyle().ItemSpacing.y * 2.0f + 1.0f;
+        std::vector<float> offs(rows.size() + 1);
+        float y = 0.0f;
+        for (size_t i = 0; i < rows.size(); ++i) {
+            offs[i] = y;
+            const auto& a = (*assets)[rows[i]];
+            y += (a.data.has_value() ? UIFor(a)->GetItemHeight(a) : ImGui::GetTextLineHeightWithSpacing()) + sepH;
+        }
+        offs[rows.size()] = y;
+
+        const float top = ImGui::GetCursorPosY();
+        const float scrollY = ImGui::GetScrollY();
+        const float viewH = ImGui::GetWindowSize().y;
+        size_t first = (size_t)(std::upper_bound(offs.begin(), offs.end(), scrollY - top) - offs.begin());
+        if (first > 0) {
+            first--;
+        }
+        for (size_t i = first; i < rows.size() && top + offs[i] < scrollY + viewH; ++i) {
+            ImGui::SetCursorPosY(top + offs[i]);
+            ImGui::PushID((int)rows[i]);
+            DrawAsset((*assets)[rows[i]]);
             ImGui::PopID();
             ImGui::Separator();
         }
+        ImGui::SetCursorPosY(top + offs[rows.size()]);
+        ImGui::Dummy(ImVec2(0.0f, 0.0f));
     }
 
     BaseFactoryUI defaultUI;
