@@ -221,3 +221,119 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
 
     return sample;
 }
+
+#ifdef BUILD_UI
+#include <cmath>
+#include <unordered_map>
+#include "imgui.h"
+#include "SequencePlayerV1.h"
+#include "ui/BaseBackend.h"
+#include "ui/ExportUtils.h"
+#include "ui/Widgets.h"
+
+namespace {
+
+struct DecodedNSample {
+    std::string name;
+    std::vector<int16_t> pcm;
+    int rate = 0;
+};
+
+DecodedNSample sNDecoded; // last decoded sample (they can be large)
+std::string sNPlayingName;
+std::unordered_map<std::string, float> sNSampleSpeeds;
+
+bool DecodeNSample(const ParseResultData& item) {
+    if (sNDecoded.name == item.name) {
+        return !sNDecoded.pcm.empty();
+    }
+    sNDecoded = {};
+    sNDecoded.name = item.name;
+    if (!DecodeV1SampleToPcm(item, sNDecoded.pcm, sNDecoded.rate)) {
+        sNDecoded.pcm.clear();
+        return false;
+    }
+    return true;
+}
+
+} // namespace
+
+float NSampleFactoryUI::GetItemHeight(const ParseResultData&) {
+    return ImGui::GetTextLineHeightWithSpacing() * 3.0f + ImGui::GetFrameHeightWithSpacing() * 2.0f +
+           ImGui::GetStyle().ItemSpacing.y * 4.0f;
+}
+
+void NSampleFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+    if (!item.data.has_value()) {
+        ImGui::TextDisabled("no data");
+        return;
+    }
+    const auto sample = std::static_pointer_cast<NSampleData>(item.data.value());
+    ImGui::TextDisabled("sample  \xe2\x80\x94  %u bytes codec %u, bank %u, %u Hz, tuning %.3f", (uint32_t)sample->size,
+                        (uint32_t)sample->codec, sample->sampleBankId, sample->sampleRate, sample->tuning);
+
+    auto speedIt = sNSampleSpeeds.emplace(item.name, 1.0f).first;
+    const bool playingThis = sNPlayingName == item.name && UI::GetBackend()->AudioProgress() >= 0.0f;
+    if (ImGui::Button(playingThis ? "Stop##nsample" : "Play##nsample")) {
+        if (playingThis) {
+            UI::GetBackend()->StopAudio();
+            sNPlayingName.clear();
+        } else if (DecodeNSample(item)) {
+            if (UI::GetBackend()->PlaySamples(sNDecoded.pcm.data(), sNDecoded.pcm.size(), sNDecoded.rate, 1)) {
+                sNPlayingName = item.name;
+                UI::GetBackend()->SetAudioSpeed(speedIt->second);
+            }
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("WAV##nsampleexp")) {
+        if (DecodeNSample(item)) {
+            const auto path = UI::ExportFilePath(item.name, "wav");
+            UI::NoteExport(item.name, UI::WriteWavFile(path, sNDecoded.pcm.data(), sNDecoded.pcm.size(), 1, sNDecoded.rate)
+                                      ? path.string()
+                                      : "export failed");
+        } else {
+            UI::NoteExport(item.name, "decode failed");
+        }
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Export decoded sample to torch-exports/");
+    }
+    UI::DrawExportMarker(item.name);
+    ImGui::SameLine();
+    float volume = UI::GetBackend()->GetAudioVolume();
+    ImGui::SetNextItemWidth(140.0f);
+    if (ImGui::SliderFloat("##nvol", &volume, 0.0f, 1.0f, "vol %.2f")) {
+        UI::GetBackend()->SetAudioVolume(volume);
+    }
+    ImGui::SameLine();
+    float& speed = speedIt->second;
+    ImGui::SetNextItemWidth(140.0f);
+    if (ImGui::SliderFloat("##nspeed", &speed, 0.25f, 4.0f, "%.2fx", ImGuiSliderFlags_Logarithmic)) {
+        static const float kSnaps[] = { 0.5f, 1.0f, 2.0f };
+        for (const float snap : kSnaps) {
+            if (std::fabs(speed - snap) < 0.05f) {
+                speed = snap;
+                break;
+            }
+        }
+        if (playingThis) {
+            UI::GetBackend()->SetAudioSpeed(speed);
+        }
+    }
+    ImGui::SameLine();
+    if (sNDecoded.name == item.name && !sNDecoded.pcm.empty()) {
+        const float seconds = (float)sNDecoded.pcm.size() / (float)sNDecoded.rate;
+        ImGui::TextDisabled("%d Hz, mono, %.2fs", sNDecoded.rate, seconds);
+    } else {
+        ImGui::TextDisabled("press play to decode");
+    }
+
+    float progress = playingThis ? std::max(UI::GetBackend()->AudioProgress(), 0.0f) : 0.0f;
+    ImGui::SetNextItemWidth(std::min(ImGui::GetContentRegionAvail().x, 420.0f));
+    if (ImGui::SliderFloat("##nseek", &progress, 0.0f, 1.0f, "") && playingThis) {
+        UI::GetBackend()->SeekAudio(progress);
+    }
+}
+#endif

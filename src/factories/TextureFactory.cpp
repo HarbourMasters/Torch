@@ -486,8 +486,10 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
 
 #ifdef BUILD_UI
 #include <array>
+#include <fstream>
 #include <unordered_map>
 #include "ui/BaseBackend.h"
+#include "ui/ExportUtils.h"
 
 // symbol -> handle, so each texture is decoded and uploaded only once. The
 // backend owns the GPU resources and frees them on shutdown.
@@ -673,6 +675,29 @@ void TextureFactoryUI::DrawUI(const ParseResultData& item) {
     if (ImGui::SmallButton("Copy symbol")) {
         ImGui::SetClipboardText(item.name.c_str());
     }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Export PNG")) {
+        const auto path = UI::ExportFilePath(item.name, "png");
+        std::string result = path.string();
+        try {
+            const auto factory = Companion::Instance->GetFactory(item.type);
+            const auto exporter =
+                factory.has_value() ? factory.value()->GetExporter(ExportType::Modding) : std::nullopt;
+            if (!exporter.has_value()) {
+                result = "no png exporter for this type";
+            } else {
+                std::ofstream file(path, std::ios::binary);
+                std::string entryName = item.name;
+                std::string replacement = item.name;
+                YAML::Node copy = YAML::Clone(item.node);
+                exporter.value()->Export(file, item.data.value(), entryName, copy, &replacement);
+            }
+        } catch (const std::exception& e) {
+            result = std::string("export failed: ") + e.what();
+        }
+        UI::NoteExport(item.name, result);
+    }
+    UI::DrawExportMarker(item.name);
     ImGui::EndGroup();
 
     ImGui::PopID();

@@ -32,10 +32,18 @@ public:
         ReloadFiles();
     }
 
+    // Only assets whose type registered a dedicated UI are shown.
+    static bool HasUI(const ParseResultData& asset) {
+        return asset.data.has_value() && Companion::Instance->GetUIFactory(asset.type).has_value();
+    }
+
     void ReloadFiles() {
         files.clear();
         for (const auto& [file, assets] : Companion::Instance->GetParseResults()) {
-            files.push_back(file);
+            const bool anyUI = std::any_of(assets.begin(), assets.end(), HasUI);
+            if (anyUI) {
+                files.push_back(file);
+            }
         }
         std::sort(files.begin(), files.end());
         BuildTree();
@@ -96,7 +104,9 @@ private:
                 const auto* assets = SelectedAssets();
                 ImGui::Text("%s", fs::path(selectedFile.value()).filename().string().c_str());
                 ImGui::SameLine();
-                ImGui::TextDisabled("(%zu assets)", assets != nullptr ? assets->size() : 0);
+                ImGui::TextDisabled("(%zu assets)", rowsFile == selectedFile.value() ? rows.size()
+                                                    : assets != nullptr             ? assets->size()
+                                                                                    : 0);
             } else {
                 ImGui::TextDisabled("Assets");
             }
@@ -132,7 +142,7 @@ private:
             rows.clear();
             std::unordered_set<std::string> seen;
             for (size_t i = 0; i < assets->size(); ++i) {
-                if (seen.insert((*assets)[i].name).second) {
+                if (HasUI((*assets)[i]) && seen.insert((*assets)[i].name).second) {
                     rows.push_back(i);
                 }
             }

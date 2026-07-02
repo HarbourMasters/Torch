@@ -54,6 +54,10 @@ struct AssetIndex {
     std::unordered_map<uint32_t, const EnvelopeData*> envByOffset;
     std::unordered_map<uint32_t, const ADPCMLoopData*> loopByOffset;
     std::unordered_map<uint32_t, const ADPCMBookData*> bookByOffset;
+    // Per-sample reference tuning: of every tuning that references the sample
+    // (instrument slots + drums), the one closest to 1.0. Natural rate is
+    // tuning * 32000.
+    std::unordered_map<const NSampleData*, float> refTuning;
     // gSeqFontTable blob: u16 offsets per seqId, then {count, fontIds...}.
     std::vector<uint8_t> seqFontTable;
 };
@@ -110,6 +114,40 @@ AssetIndex& Assets() {
             }
         }
     }
+    // Resolve dedup-suppressed addresses to their canonical sample.
+    const auto resolve = [&](uint32_t addr) -> const NSampleData* {
+        const auto it = index.sampleByOffset.find(addr);
+        if (it != index.sampleByOffset.end()) {
+            return it->second;
+        }
+        const auto rit = AudioContext::sampleAddrRemap.find(addr);
+        if (rit != AudioContext::sampleAddrRemap.end()) {
+            const auto nit = index.sampleByName.find(rit->second);
+            if (nit != index.sampleByName.end()) {
+                return nit->second;
+            }
+        }
+        return nullptr;
+    };
+    const auto addTuning = [&](uint32_t addr, float tuning) {
+        const NSampleData* sample = resolve(addr);
+        if (sample == nullptr || tuning <= 0.0f) {
+            return;
+        }
+        const auto it = index.refTuning.find(sample);
+        if (it == index.refTuning.end() || std::fabs(tuning - 1.0f) < std::fabs(it->second - 1.0f)) {
+            index.refTuning[sample] = tuning;
+        }
+    };
+    for (const auto& [off, inst] : index.instByOffset) {
+        addTuning(inst->lowPitchTunedSample.sample, inst->lowPitchTunedSample.tuning);
+        addTuning(inst->normalPitchTunedSample.sample, inst->normalPitchTunedSample.tuning);
+        addTuning(inst->highPitchTunedSample.sample, inst->highPitchTunedSample.tuning);
+    }
+    for (const auto& [off, drum] : index.drumByOffset) {
+        addTuning(drum->tunedSample.sample, drum->tunedSample.tuning);
+    }
+
     std::sort(fonts.begin(), fonts.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
     for (auto& [id, ref] : fonts) {
         ref.id = id;
@@ -1264,6 +1302,55 @@ std::vector<uint8_t> SeqFontsForItem(const ParseResultData& item) {
         return {};
     }
     return std::vector<uint8_t>(blob.begin() + at + 1, blob.begin() + at + 1 + blob[at]);
+}
+
+bool DecodeV1SampleToPcm(const ParseResultData& item, std::vector<int16_t>& pcm, int& rate) {
+    if (!item.data.has_value()) {
+        return false;
+    }
+    auto* sample = std::static_pointer_cast<NSampleData>(item.data.value()).get();
+    const auto& assets = Assets();
+    const auto tit = assets.refTuning.find(sample);
+    if (tit != assets.refTuning.end()) {
+        rate = (int)std::lround(tit->second * 32000.0f);
+    } else if (sample->sampleRate != 0) {
+        rate = (int)sample->sampleRate;
+    } else {
+        rate = (int)(32000.0f * sample->tuning);
+    }
+    if (rate <= 0) {
+        rate = 32000;
+    }
+
+#ifdef SF64_SUPPORT
+    if (AudioContext::driver == NAudioDrivers::SF64 && sample->codec == 2) {
+        auto& table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
+        const uint8_t* ptr = table.buffer.data() + table.info->entries[sample->sampleBankId].addr + sample->sampleAddr;
+        std::vector<uint8_t> raw(ptr, ptr + sample->size);
+        std::vector<int16_t> out(sample->size * 2, 0);
+        SF64::DecompressAudio(raw, out.data());
+        pcm.assign(out.begin(), out.begin() + sample->size);
+        return !pcm.empty();
+    }
+#endif
+
+    const auto lit = assets.loopByOffset.find(sample->loop);
+    const auto bit = assets.bookByOffset.find(sample->book);
+    if (lit == assets.loopByOffset.end() || bit == assets.bookByOffset.end()) {
+        return false;
+    }
+    LUS::BinaryWriter aifc;
+    AudioConverter::SampleV1ToAIFC(sample, lit->second, bit->second, aifc);
+    const auto bytes = aifc.ToVector();
+    aifc.Close();
+    if (bytes.empty()) {
+        return false;
+    }
+    LUS::BinaryWriter aiff;
+    write_aiff(bytes, aiff);
+    const bool ok = DecodeAiffBytes(aiff.ToVector(), pcm, rate);
+    aiff.Close();
+    return ok && !pcm.empty();
 }
 
 bool SequencePlayerV1::Render(const ParseResultData& item, int, UI::RenderedAudio& out) {

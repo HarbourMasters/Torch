@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "ui/BaseBackend.h"
+#include "ui/ExportUtils.h"
 #include "ui/Widgets.h"
 
 namespace UI {
@@ -80,6 +81,21 @@ void SequencePreviewUI::DrawUI(const ParseResultData& item) {
             }
         }
     }
+    ImGui::SameLine();
+    if (ImGui::Button("WAV##seqexp")) {
+        if (RenderCached(driver, item, choice)) {
+            const auto path = ExportFilePath(item.name, "wav");
+            NoteExport(item.name, WriteWavFile(path, sRendered.pcm.data(), sRendered.pcm.size() / 2, 2, kSynthRate)
+                                      ? path.string()
+                                      : "export failed");
+        } else {
+            NoteExport(item.name, "render failed");
+        }
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Export rendered sequence to torch-exports/");
+    }
+    DrawExportMarker(item.name);
     ImGui::SameLine();
     float volume = GetBackend()->GetAudioVolume();
     ImGui::SetNextItemWidth(140.0f);

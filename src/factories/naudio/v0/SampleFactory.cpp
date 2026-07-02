@@ -68,6 +68,7 @@ std::optional<std::shared_ptr<IParsedData>> SampleFactory::parse(std::vector<uin
 #include <cstring>
 
 #include "ui/BaseBackend.h"
+#include "ui/ExportUtils.h"
 #include "ui/Widgets.h"
 
 namespace {
@@ -224,6 +225,22 @@ void SampleFactoryUI::DrawUI(const ParseResultData& item) {
             }
         }
     }
+    ImGui::SameLine();
+    if (ImGui::Button("WAV##sampleexp")) {
+        if (DecodeSample(item)) {
+            const auto path = UI::ExportFilePath(item.name, "wav");
+            UI::NoteExport(item.name, UI::WriteWavFile(path, sDecoded.pcm.data(), sDecoded.pcm.size() / sDecoded.channels,
+                                                   sDecoded.channels, sDecoded.rate)
+                                      ? path.string()
+                                      : "export failed");
+        } else {
+            UI::NoteExport(item.name, "decode failed");
+        }
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Export decoded sample to torch-exports/");
+    }
+    UI::DrawExportMarker(item.name);
     ImGui::SameLine();
     float volume = UI::GetBackend()->GetAudioVolume();
     ImGui::SetNextItemWidth(140.0f);

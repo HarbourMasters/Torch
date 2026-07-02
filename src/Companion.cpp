@@ -304,6 +304,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterUIFactory("NAUDIO:V0:SEQUENCE", std::make_shared<UI::SequencePreviewUI>());
     UI::RegisterSequenceDriver("NAUDIO:V1:SEQUENCE", std::make_shared<SequencePlayerV1>());
     this->RegisterUIFactory("NAUDIO:V1:SEQUENCE", std::make_shared<UI::SequencePreviewUI>());
+    this->RegisterUIFactory("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactoryUI>());
 #endif
 #endif
 
