@@ -5,6 +5,7 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 #include <algorithm>
+#include <map>
 #include <string>
 
 #include "ui/BaseBackend.h"
@@ -64,8 +65,18 @@ inline void LightingControls() {
         ImGui::SliderFloat("intensity", &light.intensity, 0.0f, 3.0f, "%.2f");
         ImGui::SetNextItemWidth(200.0f);
         ImGui::SliderFloat("falloff", &light.falloff, 0.0f, 2.0f, "%.2f");
+        ImGui::Separator();
+        PreviewAtmosphere& atmo = GetPreviewAtmosphere();
+        ImGui::Checkbox("fog", &atmo.fogEnabled);
+        ImGui::ColorEdit3("fog color", atmo.fogColor, ImGuiColorEditFlags_NoInputs);
+        ImGui::SetNextItemWidth(200.0f);
+        ImGui::DragIntRange2("fog range", &atmo.fogStart, &atmo.fogEnd, 2, 0, 1000);
+        if (atmo.fogEnd <= atmo.fogStart) {
+            atmo.fogEnd = atmo.fogStart + 1;
+        }
         if (ImGui::SmallButton("reset##light")) {
             light = PreviewLighting{};
+            atmo = PreviewAtmosphere{};
         }
         ImGui::EndPopup();
     }
@@ -117,6 +128,89 @@ inline PreviewCanvas BeginPreviewCanvas(const char* strId, float height, OrbitVi
     if (visible) {
         ImGui::GetWindowDrawList()->AddRectFilled(origin, ImVec2(origin.x + vw, origin.y + height),
                                                   IM_COL32(18, 18, 22, 255));
+    }
+    return { origin, ImVec2(vw, height), visible };
+}
+
+// --- resizable preview ------------------------------------------------------
+// Preview canvases can be resized vertically by dragging their bottom edge.
+// The width keeps the default cap (it does not grow with the height). Heights
+// are persisted per asset and read back by GetItemHeight so the virtualized
+// asset list allocates the right row height.
+
+constexpr float kPreviewDefaultHeight = 320.0f;
+constexpr float kPreviewMinHeight = 140.0f;
+constexpr float kPreviewMaxHeight = 1400.0f;
+constexpr float kPreviewGripHeight = 11.0f;
+
+inline std::map<std::string, float>& PreviewHeights() {
+    static std::map<std::string, float> heights;
+    return heights;
+}
+
+inline float PreviewHeight(const std::string& key) {
+    const auto it = PreviewHeights().find(key);
+    if (it != PreviewHeights().end()) {
+        return it->second;
+    }
+    if (const char* forced = std::getenv("TORCH_UI_CANVASH")) {
+        const float h = (float)atof(forced);
+        if (h >= kPreviewMinHeight && h <= kPreviewMaxHeight) {
+            return h;
+        }
+    }
+    return kPreviewDefaultHeight;
+}
+
+// Canvas plus grip, for GetItemHeight sizing.
+inline float PreviewBlockHeight(const std::string& key) {
+    return PreviewHeight(key) + kPreviewGripHeight;
+}
+
+// Preview canvas with a drag-to-resize bottom edge (double-click resets).
+inline PreviewCanvas BeginResizableCanvas(const char* strId, const std::string& key, OrbitView& view) {
+    const float height = PreviewHeight(key);
+    const float availW = ImGui::GetContentRegionAvail().x;
+    // Width limit is independent of the dragged height.
+    const float vw = std::min(availW, kPreviewDefaultHeight * 3.0f);
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (availW - vw) * 0.5f);
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+    ImGui::InvisibleButton(strId, ImVec2(vw, height));
+    const float winTop = ImGui::GetWindowPos().y;
+    const float winBot = winTop + ImGui::GetWindowHeight();
+    const bool visible = ImGui::GetItemRectMax().y > winTop && ImGui::GetItemRectMin().y < winBot;
+    OrbitControls(view);
+    if (visible) {
+        ImGui::GetWindowDrawList()->AddRectFilled(origin, ImVec2(origin.x + vw, origin.y + height),
+                                                  IM_COL32(18, 18, 22, 255));
+    }
+
+    ImGui::SetCursorScreenPos(ImVec2(origin.x, origin.y + height));
+    ImGui::PushID(strId);
+    ImGui::InvisibleButton("##canvasgrip", ImVec2(vw, kPreviewGripHeight));
+    ImGui::PopID();
+    const bool hovered = ImGui::IsItemHovered();
+    const bool active = ImGui::IsItemActive();
+    if (hovered || active) {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+    }
+    if (active) {
+        const float dy = ImGui::GetIO().MouseDelta.y;
+        if (dy != 0.0f) {
+            PreviewHeights()[key] = std::clamp(height + dy, kPreviewMinHeight, kPreviewMaxHeight);
+        }
+    }
+    if (hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+        PreviewHeights().erase(key);
+    }
+    if (visible) {
+        // Grip bar, brighter while interacting.
+        const ImVec2 mid(origin.x + vw * 0.5f, origin.y + height + kPreviewGripHeight * 0.5f);
+        const ImU32 col = active    ? IM_COL32(160, 160, 170, 255)
+                          : hovered ? IM_COL32(120, 120, 130, 255)
+                                    : IM_COL32(70, 70, 78, 255);
+        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(mid.x - 24.0f, mid.y - 1.5f),
+                                                  ImVec2(mid.x + 24.0f, mid.y + 1.5f), col, 1.5f);
     }
     return { origin, ImVec2(vw, height), visible };
 }

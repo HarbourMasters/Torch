@@ -17,6 +17,9 @@ Companion* Companion::Instance;
 #include "ui/list/Main.h"
 #include "ui/backends/LusBackend.h"
 #include "ui/audio/SequenceDriver.h"
+#ifdef PM64_SUPPORT
+#include "factories/pm64/ShapeFactory.h"
+#endif
 
 static void LaunchUI() {
     if (Companion::Instance == nullptr) {
@@ -261,6 +264,23 @@ int main(int argc, char* argv[]) {
         // irrelevant since nothing is exported.
         std::atomic<size_t> assetCount{ 0 };
         instance->Init(ExportType::Binary, assetCount, false);
+        if (std::getenv("TORCH_PM64_TEST") != nullptr) { // headless shape walk, no window
+#ifdef PM64_SUPPORT
+            for (const auto& [file, results] : instance->GetParseResults()) {
+                for (const auto& item : results) {
+                    if (item.type != "PM64:SHAPE") {
+                        continue;
+                    }
+                    if (const char* filter = std::getenv("TORCH_SEQ_FILTER");
+                        filter != nullptr && item.name.find(filter) == std::string::npos) {
+                        continue;
+                    }
+                    PM64ShapeDebugBuild(item);
+                }
+            }
+#endif
+            return;
+        }
         if (std::getenv("TORCH_SEQ_TEST") != nullptr) { // headless driver check, no window
             for (const auto& [file, results] : instance->GetParseResults()) {
                 for (const auto& item : results) {

@@ -194,8 +194,9 @@ namespace {
 std::unordered_map<std::string, UI::OrbitView> sVtxViews;
 } // namespace
 
-float VtxFactoryUI::GetItemHeight(const ParseResultData&) {
-    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 324.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+float VtxFactoryUI::GetItemHeight(const ParseResultData& item) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + UI::PreviewBlockHeight(item.name) + 4.0f +
+           ImGui::GetStyle().ItemSpacing.y * 3.0f;
 }
 
 void VtxFactoryUI::DrawUI(const ParseResultData& item) {
@@ -205,7 +206,7 @@ void VtxFactoryUI::DrawUI(const ParseResultData& item) {
                         vtx->mVtxs.size());
 
     UI::OrbitView& view = sVtxViews[item.name];
-    const UI::PreviewCanvas canvas = UI::BeginPreviewCanvas("##vtxview", 320.0f, view);
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##vtxview", item.name, view);
     if (!canvas.visible) {
         return;
     }

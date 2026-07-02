@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <string>
 #include <vector>
@@ -28,12 +30,63 @@ struct PreviewVertex {
 // (row-vector convention, translation in row 3) and SM64 drawing layer.
 // Billboarded parts store their transform relative to the billboard node plus
 // the node's world position; the backend rebuilds them facing the camera.
+// Texture bound to a model part; the backend emits the tile setup. Offsets
+// index into blob; fmt/siz are G_IM_FMT_*/G_IM_SIZ_* values, cm* are
+// G_TX_WRAP/MIRROR/CLAMP flags.
+struct PartTexture {
+    std::shared_ptr<std::vector<uint8_t>> blob;
+    uint32_t rasterOffset = 0;
+    uint32_t paletteOffset = 0; // CI formats only
+    uint16_t width = 0;
+    uint16_t height = 0;
+    uint8_t fmt = 0;
+    uint8_t siz = 0;
+    uint8_t cmS = 0;
+    uint8_t cmT = 0;
+    // Cycle-1 combine: 0 modulate, 1 blend, 2 decal (PM64 main-only subtypes).
+    uint8_t combine = 0;
+    // Second tile blended into cycle 1 (PM64 aux textures): 0 = none,
+    // 2 = shared raster (aux is the second half of the main raster),
+    // 3 = independent raster/palette.
+    uint8_t auxMode = 0;
+    uint32_t auxRasterOffset = 0;
+    uint32_t auxPaletteOffset = 0;
+    uint16_t auxWidth = 0;
+    uint16_t auxHeight = 0;
+    uint8_t auxFmt = 0;
+    uint8_t auxSiz = 0;
+    uint8_t auxCmS = 0;
+    uint8_t auxCmT = 0;
+};
+
 struct ModelPart {
     std::string resource;
     float mtx[4][4];
     uint8_t layer = 1; // LAYER_OPAQUE
+    // Exact render mode pair (othermode L cycle words); 0 = layer default.
+    uint32_t renderMode1 = 0;
+    uint32_t renderMode2 = 0;
+    uint8_t cycleType = 1; // pipeline cycles the render mode pair expects (1 or 2)
     bool billboard = false;
     float anchor[3] = { 0.0f, 0.0f, 0.0f };
+    bool unlit = false; // vertex-colored geometry; preview lighting must not apply
+    std::shared_ptr<PartTexture> texture;
+};
+
+// A display-list bundle parsed from a game blob: byte-swapped f3dex2 command
+// words whose pointer operands are file offsets. G_VTX operands are relative
+// to vtxBase within the blob; G_DL operands reference other dlists by their
+// blob offset; G_SETTIMG operands are blob offsets.
+struct GfxBundleDList {
+    uint32_t offset = 0;
+    std::vector<uint32_t> words; // w0/w1 pairs
+};
+
+struct GfxBundle {
+    std::shared_ptr<std::vector<uint8_t>> blob;
+    uint32_t vtxBase = 0;
+    uint32_t vtxSize = 0;
+    std::vector<GfxBundleDList> dlists;
 };
 
 // Orbit camera: yaw/pitch in radians, zoom > 1 moves closer, pan in screen
@@ -63,6 +116,31 @@ inline PreviewLighting& GetPreviewLighting() {
     return lighting;
 }
 
+// Shared preview fog (N64 vertex fog: blender cycle-1 fog shade). Start/end
+// are gSPFogPosition units (0..1000 across the near..far range).
+struct PreviewAtmosphere {
+    bool fogEnabled = false;
+    float fogColor[3] = { 0.45f, 0.50f, 0.65f };
+    int fogStart = 890;
+    int fogEnd = 1000;
+};
+
+inline PreviewAtmosphere& GetPreviewAtmosphere() {
+    static PreviewAtmosphere atmosphere = [] {
+        PreviewAtmosphere a;
+        if (const char* f = std::getenv("TORCH_UI_FOG")) {
+            a.fogEnabled = true;
+            int s0 = 0, e0 = 0;
+            if (sscanf(f, "%d:%d", &s0, &e0) == 2 && e0 > s0) {
+                a.fogStart = s0;
+                a.fogEnd = e0;
+            }
+        }
+        return a;
+    }();
+    return atmosphere;
+}
+
 class BaseBackend {
 public:
     virtual ~BaseBackend() = default;
@@ -89,6 +167,16 @@ public:
     // identifies the assembled model for render-target reuse. Optional.
     virtual void DrawModelParts(const std::string& key, const std::vector<ModelPart>& parts,
                                 const ImVec2& topLeft, const ImVec2& size, const OrbitView& view) {}
+
+    // Registers an entry display list from a parsed game blob under `name` so
+    // ModelPart::resource can reference it. Returns false if unsupported.
+    virtual bool RegisterGameDList(const std::string& name, const GfxBundle& bundle, uint32_t entryOffset) {
+        return false;
+    }
+
+    // Screen-space backdrop image (RGBA8, cover-fit) drawn behind the model
+    // keyed by DrawModelParts' `key`. nullptr clears it. Optional.
+    virtual void SetPreviewBackdrop(const std::string& key, const uint8_t* rgba, int width, int height) {}
 
     // Renders a colored triangle soup (three PreviewVertex per triangle) with
     // the same camera and render-target reuse as DrawModelParts. Optional.

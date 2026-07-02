@@ -183,8 +183,9 @@ const std::vector<UI::PreviewVertex>& TrajectoryTris(const ParseResultData& item
 
 } // namespace
 
-float SM64::TrajectoryFactoryUI::GetItemHeight(const ParseResultData&) {
-    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 324.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+float SM64::TrajectoryFactoryUI::GetItemHeight(const ParseResultData& item) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + UI::PreviewBlockHeight(item.name) + 4.0f +
+           ImGui::GetStyle().ItemSpacing.y * 3.0f;
 }
 
 void SM64::TrajectoryFactoryUI::DrawUI(const ParseResultData& item) {
@@ -197,7 +198,7 @@ void SM64::TrajectoryFactoryUI::DrawUI(const ParseResultData& item) {
     ImGui::TextDisabled("trajectory  \xe2\x80\x94  %zu points, green start to red end", data->mTrajectoryData.size());
 
     UI::OrbitView& view = sTrajectoryViews[item.name];
-    const UI::PreviewCanvas canvas = UI::BeginPreviewCanvas("##trajview", 320.0f, view);
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##trajview", item.name, view);
     if (canvas.visible) {
         const auto& tris = TrajectoryTris(item);
         if (tris.empty()) {

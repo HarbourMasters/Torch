@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <map>
 #include <optional>
 #include <string>
@@ -30,6 +31,14 @@ public:
 
     void Init() override {
         ReloadFiles();
+        if (const char* sel = std::getenv("TORCH_UI_AUTOSELECT")) {
+            for (const auto& f : files) {
+                if (f.find(sel) != std::string::npos) {
+                    selectedFile = f;
+                    break;
+                }
+            }
+        }
     }
 
     // Only assets whose type registered a dedicated UI are shown.
@@ -75,9 +84,9 @@ private:
         ImGui::SameLine();
         ImGui::TextDisabled("resource viewer");
         ImGui::SameLine();
-        char status[96];
-        snprintf(status, sizeof(status), "%zu files   %.0f fps (%.1f ms)", files.size(),
-                 ImGui::GetIO().Framerate, 1000.0f / std::max(ImGui::GetIO().Framerate, 0.001f));
+        char status[128];
+        snprintf(status, sizeof(status), "build %s %s   %zu files   %.0f fps (%.1f ms)", __DATE__, __TIME__,
+                 files.size(), ImGui::GetIO().Framerate, 1000.0f / std::max(ImGui::GetIO().Framerate, 0.001f));
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(status).x);
         ImGui::TextDisabled("%s", status);
         ImGui::Separator();
@@ -141,7 +150,11 @@ private:
             rowsFile = selectedFile.value();
             rows.clear();
             std::unordered_set<std::string> seen;
+            const char* only = std::getenv("TORCH_UI_ONLY");
             for (size_t i = 0; i < assets->size(); ++i) {
+                if (only != nullptr && (*assets)[i].name.find(only) == std::string::npos) {
+                    continue;
+                }
                 if (HasUI((*assets)[i]) && seen.insert((*assets)[i].name).second) {
                     rows.push_back(i);
                 }
@@ -160,6 +173,10 @@ private:
         }
         offs[rows.size()] = y;
 
+        if (std::getenv("TORCH_UI_AUTOSCROLL") != nullptr) {
+            const float cur = ImGui::GetScrollY();
+            ImGui::SetScrollY(cur + 2.0f >= ImGui::GetScrollMaxY() ? 0.0f : cur + 2.0f);
+        }
         const float top = ImGui::GetCursorPosY();
         const float scrollY = ImGui::GetScrollY();
         const float viewH = ImGui::GetWindowSize().y;

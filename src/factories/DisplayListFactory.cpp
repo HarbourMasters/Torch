@@ -673,8 +673,9 @@ namespace {
 std::unordered_map<std::string, UI::OrbitView> sModelViews;
 } // namespace
 
-float DListFactoryUI::GetItemHeight(const ParseResultData&) {
-    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 324.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+float DListFactoryUI::GetItemHeight(const ParseResultData& item) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + UI::PreviewBlockHeight(item.name) + 4.0f +
+           ImGui::GetStyle().ItemSpacing.y * 3.0f;
 }
 
 void DListFactoryUI::DrawUI(const ParseResultData& item) {
@@ -685,26 +686,10 @@ void DListFactoryUI::DrawUI(const ParseResultData& item) {
     UI::LightingControls();
 
     UI::OrbitView& view = sModelViews[item.name];
-
-    // Cap the preview aspect at 3:1 and center it.
-    const float vh = 320.0f;
-    const float availW = ImGui::GetContentRegionAvail().x;
-    const float vw = std::min(availW, vh * 3.0f);
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (availW - vw) * 0.5f);
-    const ImVec2 origin = ImGui::GetCursorScreenPos();
-
-    ImGui::InvisibleButton("##modelview", ImVec2(vw, vh));
-    // On-screen test (IsItemVisible is unreliable right after a resize).
-    const float winTop = ImGui::GetWindowPos().y;
-    const float winBot = winTop + ImGui::GetWindowHeight();
-    const bool visible = ImGui::GetItemRectMax().y > winTop && ImGui::GetItemRectMin().y < winBot;
-    UI::OrbitControls(view);
-
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##modelview", item.name, view);
     // Only on-screen rows request the offscreen render.
-    if (visible) {
-        ImGui::GetWindowDrawList()->AddRectFilled(origin, ImVec2(origin.x + vw, origin.y + vh),
-                                                  IM_COL32(18, 18, 22, 255));
-        UI::GetBackend()->DrawModel(item.name, origin, ImVec2(vw, vh), view);
+    if (canvas.visible) {
+        UI::GetBackend()->DrawModel(item.name, canvas.origin, canvas.size, view);
     }
 }
 #endif

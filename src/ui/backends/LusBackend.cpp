@@ -354,6 +354,160 @@ public:
                                              ImVec2(topLeft.x + size.x, topLeft.y + size.y), uvMin, uvMax);
     }
 
+    void SetPreviewBackdrop(const std::string& key, const uint8_t* rgba, int width, int height) override {
+        if (rgba == nullptr || width <= 0 || height <= 0) {
+            mBackdrops.erase(key);
+            return;
+        }
+        // Texel buffers are content-keyed and never freed: the interpreter's
+        // texture cache keys on the data address, so reusing one buffer for a
+        // different image would serve the stale GPU texture.
+        const uint64_t hash = HashBytes(rgba, (size_t)width * height * 4, 1469598103934665603ull + width * 131 + height);
+        auto& texels = mBackdropTexelCache[hash];
+        if (texels.empty()) {
+            // N64 RGBA16 texels (big-endian 5551) for the texture-rectangle strips.
+            texels.resize((size_t)width * height * 2);
+            for (int i = 0; i < width * height; ++i) {
+                const uint16_t v = (uint16_t)(((rgba[i * 4 + 0] >> 3) << 11) | ((rgba[i * 4 + 1] >> 3) << 6) |
+                                              ((rgba[i * 4 + 2] >> 3) << 1) | 1);
+                texels[i * 2 + 0] = (uint8_t)(v >> 8);
+                texels[i * 2 + 1] = (uint8_t)(v & 0xFF);
+            }
+        }
+        Backdrop& bd = mBackdrops[key];
+        bd.texels = &texels;
+        bd.w = width;
+        bd.h = height;
+        bd.generation = hash;
+    }
+
+    bool RegisterGameDList(const std::string& name, const UI::GfxBundle& bundle, uint32_t entryOffset) override {
+        if (mGameGfx.count(name) != 0) {
+            return true;
+        }
+        if (bundle.blob == nullptr || bundle.blob->empty()) {
+            return false;
+        }
+        auto bit = mGameBundles.find(bundle.blob.get());
+        if (bit == mGameBundles.end()) {
+            auto gb = std::make_shared<GameBundle>();
+            gb->blob = bundle.blob;
+            gb->vtxBase = bundle.vtxBase;
+            gb->vtxSize = bundle.vtxSize;
+            // Two passes: allocate every dlist first so G_DL can cross-reference.
+            for (const auto& dl : bundle.dlists) {
+                gb->dlists[dl.offset].resize(dl.words.size() / 2);
+            }
+            uint8_t* blobData = gb->blob->data();
+            const size_t blobSize = gb->blob->size();
+            for (const auto& dl : bundle.dlists) {
+                auto& out = gb->dlists[dl.offset];
+                for (size_t i = 0; i + 1 < dl.words.size(); i += 2) {
+                    const uint32_t w0 = dl.words[i];
+                    const uint32_t w1 = dl.words[i + 1];
+                    const uint8_t op = w0 >> 24;
+                    Gfx& g = out[i / 2];
+                    g.words.w0 = w0;
+                    g.words.w1 = w1;
+                    const auto noop = [&g] {
+                        g.words.w0 = 0;
+                        g.words.w1 = 0;
+                    };
+                    if (op == 0x01) { // G_VTX: vtxBase-relative byte offset
+                        const uint32_t numv = (w0 >> 12) & 0xFF;
+                        const uint64_t off = (uint64_t)gb->vtxBase + w1;
+                        if (numv != 0 && off + (uint64_t)numv * 16 <= blobSize) {
+                            g.words.w1 = (uintptr_t)(blobData + off);
+                            gb->meta[dl.offset].vtxSpans.emplace_back((uint32_t)off, numv);
+                        } else {
+                            noop();
+                        }
+                    } else if (op == 0xDE) { // G_DL: blob offset of another dlist
+                        auto tit = gb->dlists.find(w1);
+                        if (tit != gb->dlists.end()) {
+                            g.words.w1 = (uintptr_t)tit->second.data();
+                            gb->meta[dl.offset].children.push_back(w1);
+                        } else {
+                            g.words.w0 = (uintptr_t)0xDF << 24; // missing target: end
+                            g.words.w1 = 0;
+                        }
+                    } else if (op == 0xFD) { // G_SETTIMG
+                        if (w1 < blobSize) {
+                            g.words.w1 = (uintptr_t)(blobData + w1);
+                        } else {
+                            noop();
+                        }
+                    } else if (op == 0x04 || op == 0xDA || op == 0xDC) {
+                        // BRANCH_Z / G_MTX / G_MOVEMEM carry addresses we can't
+                        // resolve; drop them rather than dereference garbage.
+                        noop();
+                    }
+                }
+            }
+            bit = mGameBundles.emplace(bundle.blob.get(), std::move(gb)).first;
+        }
+        auto& gb = bit->second;
+        auto eit = gb->dlists.find(entryOffset);
+        if (eit == gb->dlists.end() || eit->second.empty()) {
+            return false;
+        }
+        // Bounds from the vertices this dlist (and its G_DL children) actually
+        // loads, so the camera frames each part instead of the whole table.
+        if (mBoundsCache.find(name) == mBoundsCache.end()) {
+            float mn[3] = { 1e18f, 1e18f, 1e18f }, mx[3] = { -1e18f, -1e18f, -1e18f };
+            bool any = false;
+            std::vector<uint32_t> queue{ entryOffset };
+            std::unordered_set<uint32_t> seen{ entryOffset };
+            while (!queue.empty()) {
+                const uint32_t off = queue.back();
+                queue.pop_back();
+                const auto mit = gb->meta.find(off);
+                if (mit == gb->meta.end()) {
+                    continue;
+                }
+                for (const auto& [vtxOff, numv] : mit->second.vtxSpans) {
+                    for (uint32_t i = 0; i < numv; ++i) {
+                        const int16_t* pos = (const int16_t*)(gb->blob->data() + vtxOff + i * 16);
+                        for (int a = 0; a < 3; ++a) {
+                            mn[a] = std::min(mn[a], (float)pos[a]);
+                            mx[a] = std::max(mx[a], (float)pos[a]);
+                        }
+                        any = true;
+                    }
+                }
+                for (const uint32_t child : mit->second.children) {
+                    if (seen.insert(child).second) {
+                        queue.push_back(child);
+                    }
+                }
+            }
+            // Fallback: the blob's whole vertex table.
+            if (!any && gb->vtxSize >= 16) {
+                const uint8_t* base = gb->blob->data() + gb->vtxBase;
+                const size_t count = std::min<size_t>(gb->vtxSize / 16, (gb->blob->size() - gb->vtxBase) / 16);
+                for (size_t i = 0; i < count; ++i) {
+                    const int16_t* pos = (const int16_t*)(base + i * 16);
+                    for (int a = 0; a < 3; ++a) {
+                        mn[a] = std::min(mn[a], (float)pos[a]);
+                        mx[a] = std::max(mx[a], (float)pos[a]);
+                    }
+                    any = true;
+                }
+            }
+            if (any) {
+                ModelBounds b;
+                b.cx = (mn[0] + mx[0]) * 0.5f;
+                b.cy = (mn[1] + mx[1]) * 0.5f;
+                b.cz = (mn[2] + mx[2]) * 0.5f;
+                const float dx = mx[0] - mn[0], dy = mx[1] - mn[1], dz = mx[2] - mn[2];
+                b.radius = std::max(0.5f * std::sqrt(dx * dx + dy * dy + dz * dz), 1.0f);
+                mBoundsCache.emplace(name, b);
+            }
+        }
+        mGameGfx[name] = { gb, eit->second.data() };
+        return true;
+    }
+
     bool PlaySamples(const int16_t* frames, size_t frameCount, int sampleRate, int channels) override {
         if (frames == nullptr || frameCount == 0 || sampleRate <= 0 || channels <= 0) {
             return false;
@@ -533,20 +687,28 @@ private:
         return b;
     }
 
-    // Union of each part's bounds transformed by its matrix.
+    // Union of each part's bounds transformed by its matrix. Parts far larger
+    // than the rest (sky domes, backdrops) are excluded from framing so the
+    // camera isn't pushed inside them.
     ModelBounds ComputePartsBounds(const std::vector<ModelPart>& parts,
                                    const std::shared_ptr<Ship::ResourceManager>& rm) {
-        float mn[3] = { 1e18f, 1e18f, 1e18f };
-        float mx[3] = { -1e18f, -1e18f, -1e18f };
-        bool any = false;
+        struct Sphere {
+            float c[3];
+            float r;
+        };
+        std::vector<Sphere> spheres;
+        spheres.reserve(parts.size());
         for (const auto& part : parts) {
             auto bit = mBoundsCache.find(part.resource);
-            if (bit == mBoundsCache.end()) {
+            if (bit == mBoundsCache.end() && mGameGfx.count(part.resource) == 0) {
                 auto dl = std::static_pointer_cast<Fast::DisplayList>(rm->LoadResource(part.resource));
                 if (dl == nullptr) {
                     continue;
                 }
                 bit = mBoundsCache.emplace(part.resource, ComputeBounds(dl, rm)).first;
+            }
+            if (bit == mBoundsCache.end()) {
+                continue;
             }
             const ModelBounds& pb = bit->second;
             const auto& m = part.mtx;
@@ -554,17 +716,40 @@ private:
             const float ax = part.billboard ? part.anchor[0] : 0.0f;
             const float ay = part.billboard ? part.anchor[1] : 0.0f;
             const float az = part.billboard ? part.anchor[2] : 0.0f;
-            const float cx = pb.cx * m[0][0] + pb.cy * m[1][0] + pb.cz * m[2][0] + m[3][0] + ax;
-            const float cy = pb.cx * m[0][1] + pb.cy * m[1][1] + pb.cz * m[2][1] + m[3][1] + ay;
-            const float cz = pb.cx * m[0][2] + pb.cy * m[1][2] + pb.cz * m[2][2] + m[3][2] + az;
+            Sphere s;
+            s.c[0] = pb.cx * m[0][0] + pb.cy * m[1][0] + pb.cz * m[2][0] + m[3][0] + ax;
+            s.c[1] = pb.cx * m[0][1] + pb.cy * m[1][1] + pb.cz * m[2][1] + m[3][1] + ay;
+            s.c[2] = pb.cx * m[0][2] + pb.cy * m[1][2] + pb.cz * m[2][2] + m[3][2] + az;
             float scale = 0.0f;
             for (int r = 0; r < 3; ++r) {
                 scale = std::max(scale, std::sqrt(m[r][0] * m[r][0] + m[r][1] * m[r][1] + m[r][2] * m[r][2]));
             }
-            const float radius = pb.radius * std::max(scale, 0.001f);
-            mn[0] = std::min(mn[0], cx - radius); mx[0] = std::max(mx[0], cx + radius);
-            mn[1] = std::min(mn[1], cy - radius); mx[1] = std::max(mx[1], cy + radius);
-            mn[2] = std::min(mn[2], cz - radius); mx[2] = std::max(mx[2], cz + radius);
+            s.r = pb.radius * std::max(scale, 0.001f);
+            spheres.push_back(s);
+        }
+
+        float cutoff = 1e18f;
+        if (spheres.size() >= 4) {
+            std::vector<float> radii;
+            radii.reserve(spheres.size());
+            for (const auto& s : spheres) {
+                radii.push_back(s.r);
+            }
+            std::nth_element(radii.begin(), radii.begin() + radii.size() / 2, radii.end());
+            cutoff = std::max(radii[radii.size() / 2] * 6.0f, 1.0f);
+        }
+
+        float mn[3] = { 1e18f, 1e18f, 1e18f };
+        float mx[3] = { -1e18f, -1e18f, -1e18f };
+        bool any = false;
+        for (const auto& s : spheres) {
+            if (s.r > cutoff) {
+                continue;
+            }
+            for (int a = 0; a < 3; ++a) {
+                mn[a] = std::min(mn[a], s.c[a] - s.r);
+                mx[a] = std::max(mx[a], s.c[a] + s.r);
+            }
             any = true;
         }
         ModelBounds b;
@@ -677,6 +862,7 @@ private:
             }
         };
         for (const auto& part : parts) {
+            h = h * 1099511628211ULL + (part.texture != nullptr ? part.texture->rasterOffset + 1 : 0);
             mix(part.resource.data(), part.resource.size());
             mix(&part.layer, sizeof(part.layer));
             mix(part.mtx, sizeof(part.mtx));
@@ -691,6 +877,11 @@ private:
         mix(light.position, sizeof(light.position));
         mix(&light.intensity, sizeof(light.intensity));
         mix(&light.falloff, sizeof(light.falloff));
+        const PreviewAtmosphere& atmo = GetPreviewAtmosphere();
+        mix(&atmo.fogEnabled, sizeof(atmo.fogEnabled));
+        mix(atmo.fogColor, sizeof(atmo.fogColor));
+        mix(&atmo.fogStart, sizeof(atmo.fogStart));
+        mix(&atmo.fogEnd, sizeof(atmo.fogEnd));
         return h;
     }
 
@@ -756,6 +947,121 @@ private:
         if ((size_t)mAudioPos >= mAudioTotalFrames) {
             StopAudio();
         }
+    }
+
+    // Emits the tile setup for a part texture using the game's conventions
+    // (texel wrap masks from dimensions, CI palettes via TLUT).
+    static int ILog2(uint16_t v) {
+        int m = 0;
+        while ((1 << (m + 1)) <= v) {
+            m++;
+        }
+        return m;
+    }
+
+    Gfx* EmitPartTexture(Gfx* p, const UI::PartTexture& t, bool fog) {
+        uint8_t* raster = t.blob->data() + t.rasterOffset;
+        const int maskS = ILog2(t.width);
+        const int maskT = ILog2(t.height);
+        const bool aux = t.auxMode != 0 && t.auxRasterOffset != 0 && t.auxWidth != 0 && t.auxHeight != 0;
+        gDPPipeSync(p++);
+        gSPTexture(p++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
+        // pmret SolidCombineModes, TINT_COMBINE_NONE / TINT_COMBINE_FOG
+        // columns (fog moves the second cycle to PASS so blender cycle 1 can
+        // fog the combined color).
+        if (aux) {
+            if (fog) { // G_CC_INTERFERENCE, PM_CC2_MULTIPLY_SHADE
+                gDPSetCombineLERP(p++, TEXEL0, 0, TEXEL1, 0, TEXEL0, 0, TEXEL1, 0,
+                                  COMBINED, 0, SHADE, 0, 0, 0, 0, COMBINED);
+            } else { // PM_CC_ALT_INTERFERENCE, G_CC_MODULATEIA2
+                gDPSetCombineLERP(p++, TEXEL1, 0, TEXEL0, 0, TEXEL1, 0, TEXEL0, 0,
+                                  COMBINED, 0, SHADE, 0, COMBINED, 0, SHADE, 0);
+            }
+        } else if (t.combine == 1) {
+            if (fog) {
+                gDPSetCombineMode(p++, G_CC_BLENDRGBA, G_CC_PASS2);
+            } else {
+                gDPSetCombineMode(p++, G_CC_BLENDRGBA, G_CC_BLENDRGBA);
+            }
+        } else if (t.combine == 2) {
+            if (fog) {
+                gDPSetCombineMode(p++, G_CC_DECALRGBA, G_CC_PASS2);
+            } else {
+                gDPSetCombineMode(p++, G_CC_DECALRGBA, G_CC_DECALRGBA);
+            }
+        } else {
+            if (fog) {
+                gDPSetCombineMode(p++, G_CC_MODULATEIDECALA, G_CC_PASS2);
+            } else {
+                gDPSetCombineMode(p++, G_CC_MODULATEIA, G_CC_MODULATEIA);
+            }
+        }
+        const bool auxCi = aux && t.auxFmt == G_IM_FMT_CI;
+        if (t.fmt == G_IM_FMT_CI || auxCi) {
+            gDPSetTextureLUT(p++, G_TT_RGBA16);
+            if (t.fmt == G_IM_FMT_CI) {
+                uint8_t* pal = t.blob->data() + t.paletteOffset;
+                if (t.siz == G_IM_SIZ_8b) {
+                    gDPLoadTLUT_pal256(p++, pal);
+                } else {
+                    gDPLoadTLUT_pal16(p++, 0, pal);
+                }
+            }
+            // Independent aux palette rides in slot 1 (shared-raster aux reuses
+            // the main palette).
+            if (auxCi && t.auxMode == 3 && t.auxPaletteOffset != 0 && t.auxSiz != G_IM_SIZ_8b) {
+                gDPLoadTLUT_pal16(p++, 1, t.blob->data() + t.auxPaletteOffset);
+            }
+        } else {
+            gDPSetTextureLUT(p++, G_TT_NONE);
+        }
+        switch (t.siz) {
+            case G_IM_SIZ_4b:
+                gDPLoadTextureBlock_4b(p++, raster, t.fmt, t.width, t.height, 0, t.cmS, t.cmT, maskS, maskT,
+                                       G_TX_NOLOD, G_TX_NOLOD);
+                break;
+            case G_IM_SIZ_8b:
+                gDPLoadTextureBlock(p++, raster, t.fmt, G_IM_SIZ_8b, t.width, t.height, 0, t.cmS, t.cmT, maskS, maskT,
+                                    G_TX_NOLOD, G_TX_NOLOD);
+                break;
+            case G_IM_SIZ_32b:
+                gDPLoadTextureBlock(p++, raster, t.fmt, G_IM_SIZ_32b, t.width, t.height, 0, t.cmS, t.cmT, maskS, maskT,
+                                    G_TX_NOLOD, G_TX_NOLOD);
+                break;
+            default:
+                gDPLoadTextureBlock(p++, raster, t.fmt, G_IM_SIZ_16b, t.width, t.height, 0, t.cmS, t.cmT, maskS, maskT,
+                                    G_TX_NOLOD, G_TX_NOLOD);
+                break;
+        }
+        if (aux) {
+            // Second tile into the upper TMEM slot (any nonzero tmem selects
+            // the interpreter's slot 1); TEXEL1 blends it in cycle 1.
+            uint8_t* auxRaster = t.blob->data() + t.auxRasterOffset;
+            const uint32_t mainBytes = ((uint32_t)t.width * t.height * (4u << t.siz)) / 8;
+            const uint32_t tmem = std::max(1u, (mainBytes + 7) >> 3);
+            const int auxPalIdx = t.auxMode == 3 && auxCi && t.auxSiz != G_IM_SIZ_8b ? 1 : 0;
+            const int auxMaskS = ILog2(t.auxWidth);
+            const int auxMaskT = ILog2(t.auxHeight);
+            switch (t.auxSiz) {
+                case G_IM_SIZ_4b:
+                    gDPLoadMultiBlock_4b(p++, auxRaster, tmem, 1, t.auxFmt, t.auxWidth, t.auxHeight, auxPalIdx,
+                                         t.auxCmS, t.auxCmT, auxMaskS, auxMaskT, G_TX_NOLOD, G_TX_NOLOD);
+                    break;
+                case G_IM_SIZ_8b:
+                    gDPLoadMultiBlock(p++, auxRaster, tmem, 1, t.auxFmt, G_IM_SIZ_8b, t.auxWidth, t.auxHeight,
+                                      auxPalIdx, t.auxCmS, t.auxCmT, auxMaskS, auxMaskT, G_TX_NOLOD, G_TX_NOLOD);
+                    break;
+                case G_IM_SIZ_32b:
+                    gDPLoadMultiBlock(p++, auxRaster, tmem, 1, t.auxFmt, G_IM_SIZ_32b, t.auxWidth, t.auxHeight,
+                                      auxPalIdx, t.auxCmS, t.auxCmT, auxMaskS, auxMaskT, G_TX_NOLOD, G_TX_NOLOD);
+                    break;
+                default:
+                    gDPLoadMultiBlock(p++, auxRaster, tmem, 1, t.auxFmt, G_IM_SIZ_16b, t.auxWidth, t.auxHeight,
+                                      auxPalIdx, t.auxCmS, t.auxCmT, auxMaskS, auxMaskT, G_TX_NOLOD, G_TX_NOLOD);
+                    break;
+            }
+        }
+        return p;
     }
 
     // Assigns a framebuffer to every visible model and builds a command list
@@ -829,7 +1135,7 @@ private:
             }
 
             // Content hash catches pose changes (e.g. animation frames).
-            const uint64_t partsHash = HashParts(req.parts);
+            const uint64_t partsHash = HashRequest(req);
             const bool dirty = !slot.rendered || !SameView(slot.lastView, req.view) || slot.lastPartsHash != partsHash;
             if (dirty) {
                 dirtySlots.emplace_back(idx, (int)ri);
@@ -851,11 +1157,19 @@ private:
         if (targetReqIdx >= 0) {
             mScanStart = (size_t)targetReqIdx + 1;
         }
+        if (std::getenv("TORCH_UI_RENDERLOG") != nullptr) {
+            static int sFrame = 0;
+            fprintf(stderr, "[render] f%d reqs=%zu dirty=%zu target=%s\n", sFrame++, mRenderList.size(),
+                    dirtySlots.size(), targetReqIdx >= 0 ? mRenderList[targetReqIdx].name.c_str() : "(none)");
+        }
 
         // Mirror the pool's owners so DrawModelParts can blit persisted slots.
+        // Unrendered slots are excluded: a freshly created/resized Metal
+        // texture holds stale VRAM (other previews' old renders) until this
+        // slot's round-robin turn comes; blitting it bleeds display lists.
         mNameToFb.clear();
         for (const auto& s : mFbPool) {
-            if (s.fbId >= 0 && !s.owner.empty()) {
+            if (s.fbId >= 0 && !s.owner.empty() && s.rendered) {
                 mNameToFb[s.owner] = s.fbId;
             }
         }
@@ -880,9 +1194,12 @@ private:
             Gfx* gfx = nullptr;
             bool raw = false;
             auto rawIt = mRawModels.find(part.resource);
+            auto gameIt = mGameGfx.find(part.resource);
             if (rawIt != mRawModels.end()) {
                 gfx = rawIt->second.gfx.data();
                 raw = true;
+            } else if (gameIt != mGameGfx.end()) {
+                gfx = gameIt->second.second;
             } else {
                 auto dl = std::static_pointer_cast<Fast::DisplayList>(rm->LoadResource(part.resource));
                 gfx = dl != nullptr ? dl->GetPointer() : nullptr;
@@ -894,7 +1211,7 @@ private:
         if (drawable.empty()) {
             slot.rendered = true; // nothing loadable; don't retry every frame
             slot.lastView = req.view;
-            slot.lastPartsHash = HashParts(req.parts);
+            slot.lastPartsHash = HashRequest(req);
             return nullptr;
         }
         // Master-list order (layer 0..7) so transparency blends over opaque.
@@ -935,7 +1252,7 @@ private:
         const float eyeZ = cz + dist * zz;
 
         MtxF projF{};
-        Perspective(projF, 45.0f, aspect, std::max(dist * 0.01f, 1.0f), dist * 4.0f + b.radius * 4.0f);
+        Perspective(projF, 45.0f, aspect, std::max(dist * 0.08f, 1.0f), dist * 4.0f + b.radius * 4.0f);
         MtxF viewF{};
         LookAt(viewF, eyeX, eyeY, eyeZ, cx, cy, cz);
         mMtxReplacements[&slot.proj] = projF;
@@ -1003,7 +1320,16 @@ private:
                 (int8_t)(vx * 127.0f), (int8_t)(vy * 127.0f), (int8_t)(vz * 127.0f));
         }
 
-        mCmd.assign(48 + drawable.size() * 14, Gfx{});
+        const Backdrop* backdrop = nullptr;
+        if (const auto bdit = mBackdrops.find(req.name); bdit != mBackdrops.end() && bdit->second.w > 0) {
+            backdrop = &bdit->second;
+        }
+        size_t backdropCmds = 0;
+        if (backdrop != nullptr) {
+            const int rowsPer = std::max(1, 2048 / backdrop->w);
+            backdropCmds = 32 + (size_t)((backdrop->h + rowsPer - 1) / rowsPer) * 12;
+        }
+        mCmd.assign(80 + drawable.size() * 64 + backdropCmds, Gfx{});
         Gfx* p = mCmd.data();
         // Load f3d ucode + reset segment 0 (global state).
         p->words.w0 = ((uintptr_t)0xDD << 24) | ((uintptr_t)ucode_f3d & 0xFFFFFF);
@@ -1041,10 +1367,61 @@ private:
         gDPSetAlphaCompare(p++, G_AC_NONE);
         gDPSetColorDither(p++, G_CD_DISABLE);
         gSPMatrix(p++, &slot.proj, G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
-        gDPSetCombineMode(p++, G_CC_MODULATEI, G_CC_MODULATEI_PRIM2);
+        gDPSetCombineMode(p++, G_CC_SHADE, G_CC_SHADE);
         gDPSetDepthSource(p++, G_ZS_PIXEL);
         gDPSetCycleType(p++, G_CYC_1CYCLE);
-        gSPSetGeometryMode(p++, G_ZBUFFER | G_SHADE | G_SHADING_SMOOTH | (lighting.enabled ? G_LIGHTING : 0));
+        if (backdrop != nullptr) {
+            // Cover-fit texture-rectangle strips (TMEM holds 2048 RGBA16
+            // texels per load), drawn before any geometry, no depth writes.
+            gDPPipeSync(p++);
+            gDPSetTexturePersp(p++, G_TP_NONE);
+            gDPSetRenderMode(p++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+            gDPSetCombineMode(p++, G_CC_DECALRGBA, G_CC_DECALRGBA);
+            gSPTexture(p++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
+            const float sc = std::max((float)slot.w / backdrop->w, (float)slot.h / backdrop->h);
+            const float offX = ((float)slot.w - backdrop->w * sc) * 0.5f;
+            const float offY = ((float)slot.h - backdrop->h * sc) * 0.5f;
+            const int rowsPer = std::max(1, 2048 / backdrop->w);
+            const int dsdx = (int)(1024.0f / sc); // s5.10 texels per pixel
+            for (int row = 0; row < backdrop->h; row += rowsPer) {
+                const int rows = std::min(rowsPer, backdrop->h - row);
+                gDPLoadTextureBlock(p++, backdrop->texels->data() + (size_t)row * backdrop->w * 2, G_IM_FMT_RGBA,
+                                    G_IM_SIZ_16b, backdrop->w, rows, 0, G_TX_CLAMP, G_TX_CLAMP, G_TX_NOMASK,
+                                    G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
+                const float y0f = offY + row * sc;
+                const int x0 = std::max((int)offX, 0);
+                const int x1 = std::min((int)std::ceil(offX + backdrop->w * sc), (int)slot.w);
+                const int y0 = std::clamp((int)y0f, 0, (int)slot.h);
+                const int y1 = std::clamp((int)std::ceil(offY + (row + rows) * sc), 0, (int)slot.h);
+                if (x1 <= x0 || y1 <= y0) {
+                    continue;
+                }
+                const int S = (int)((x0 - offX) / sc * 32.0f);
+                const int T = (int)((y0 - y0f) / sc * 32.0f);
+                gSPTextureRectangle(p++, x0 << 2, y0 << 2, x1 << 2, y1 << 2, G_TX_RENDERTILE, S, T, dsdx, dsdx);
+            }
+            gDPPipeSync(p++);
+            gDPSetTexturePersp(p++, G_TP_PERSP);
+            gSPTexture(p++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_OFF);
+            gDPSetCombineMode(p++, G_CC_SHADE, G_CC_SHADE);
+        }
+        const PreviewAtmosphere& atmo = GetPreviewAtmosphere();
+        const bool fog = atmo.fogEnabled;
+        uint32_t fogWord = 0;
+        if (fog) {
+            gDPSetFogColor(p++, to8(atmo.fogColor[0]), to8(atmo.fogColor[1]), to8(atmo.fogColor[2]), 255);
+            // G_MOVEWORD/G_MW_FOG, raw-encoded per dialect (the compiled gbi
+            // macros target another one). w1 = fog scale << 16 | fog offset.
+            const int range = std::max(atmo.fogEnd - atmo.fogStart, 1);
+            const uint16_t fm = (uint16_t)(int16_t)(128000 / range);
+            const uint16_t fo = (uint16_t)(int16_t)(((500 - atmo.fogStart) * 256) / range);
+            fogWord = ((uint32_t)fm << 16) | fo;
+            p->words.w0 = ((uintptr_t)0xBC << 24) | 0x08;
+            p->words.w1 = fogWord;
+            ++p;
+        }
+        const uint32_t baseGeo = G_ZBUFFER | G_SHADE | G_SHADING_SMOOTH | (fog ? G_FOG : 0);
+        gSPSetGeometryMode(p++, baseGeo | (lighting.enabled ? G_LIGHTING : 0));
         // Per-layer render modes (SM64 renderModeTable_1Cycle, z-buffered).
         static const uint32_t kLayerCycle1[8] = {
             G_RM_ZB_OPA_SURF,     G_RM_AA_ZB_OPA_SURF,  G_RM_AA_ZB_OPA_DECAL, G_RM_AA_ZB_OPA_INTER,
@@ -1054,16 +1431,51 @@ private:
             G_RM_ZB_OPA_SURF2,    G_RM_AA_ZB_OPA_SURF2, G_RM_AA_ZB_OPA_DECAL2, G_RM_AA_ZB_OPA_INTER2,
             G_RM_AA_ZB_TEX_EDGE2, G_RM_AA_ZB_XLU_SURF2, G_RM_AA_ZB_XLU_DECAL2, G_RM_AA_ZB_XLU_INTER2,
         };
-        int lastLayer = -1;
+        uint32_t lastRm1 = 0, lastRm2 = 0;
+        int lastCyc = -1;
         for (size_t i = 0; i < drawable.size(); ++i) {
             const int layer = drawable[i].first->layer & 7;
-            if (layer != lastLayer) {
+            uint32_t rm1, rm2;
+            int cyc;
+            if (drawable[i].first->renderMode1 != 0 || drawable[i].first->renderMode2 != 0) {
+                rm1 = drawable[i].first->renderMode1;
+                rm2 = drawable[i].first->renderMode2;
+                cyc = drawable[i].first->cycleType;
+            } else {
+                rm1 = kLayerCycle1[layer];
+                rm2 = kLayerCycle2[layer];
+                cyc = 1;
+            }
+            if (fog) {
+                // Fog runs in blender cycle 1 (the game's RENDER_CLASS_FOG).
+                rm1 = G_RM_FOG_SHADE_A;
+                cyc = 2;
+            }
+            if (rm1 != lastRm1 || rm2 != lastRm2 || cyc != lastCyc) {
                 gDPPipeSync(p++);
-                gDPSetRenderMode(p++, kLayerCycle1[layer], kLayerCycle2[layer]);
-                lastLayer = layer;
+                gDPSetCycleType(p++, cyc == 2 ? G_CYC_2CYCLE : G_CYC_1CYCLE);
+                gDPSetRenderMode(p++, rm1, rm2);
+                lastRm1 = rm1;
+                lastRm2 = rm2;
+                lastCyc = cyc;
             }
             gSPSetLights1(p++, mPartLights[i]);
             gSPMatrix(p++, &mPartMtxKeys[i], G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
+            const ModelPart& partRef = *drawable[i].first;
+            if (partRef.texture != nullptr && partRef.texture->blob != nullptr) {
+                p = EmitPartTexture(p, *partRef.texture, fog);
+            } else {
+                gDPPipeSync(p++);
+                gSPTexture(p++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_OFF);
+                gDPSetTextureLUT(p++, G_TT_NONE);
+                // Shade-only: MODULATE variants still sample TEXEL0, which
+                // would multiply in whatever texture the previous part bound.
+                if (fog) {
+                    gDPSetCombineMode(p++, G_CC_SHADE, G_CC_PASS2);
+                } else {
+                    gDPSetCombineMode(p++, G_CC_SHADE, G_CC_SHADE);
+                }
+            }
             const UcodeHandlers gameUcode = ConfigUcode();
             if (!drawable[i].raw && gameUcode != ucode_f3d) {
                 // Run the game's list under its own dialect, then return to
@@ -1071,12 +1483,24 @@ private:
                 p->words.w0 = ((uintptr_t)0xDD << 24) | ((uintptr_t)gameUcode & 0xFFFFFF);
                 p->words.w1 = 0;
                 ++p;
+                if (fog) {
+                    // Ucode loads reset the RSP fog factor; re-arm it in the
+                    // game dialect (f3dex2 moveword: index in w0 bits 16-23).
+                    if (gameUcode == ucode_f3dex2) {
+                        p->words.w0 = ((uintptr_t)0xDB << 24) | ((uintptr_t)0x08 << 16);
+                    } else {
+                        p->words.w0 = ((uintptr_t)0xBC << 24) | 0x08;
+                    }
+                    p->words.w1 = fogWord;
+                    ++p;
+                }
                 if (gameUcode == ucode_f3dex2) {
                     // Geometry-mode bits are stored raw and read per-dialect:
                     // F3D's SMOOTH (0x200) is f3dex2's CULL_FRONT. Re-set the
                     // baseline with f3dex2 values (SMOOTH = 0x200000).
                     p->words.w0 = (uintptr_t)0xD9 << 24; // clear all
-                    p->words.w1 = 0x1 | 0x4 | 0x200000 | (lighting.enabled ? 0x20000 : 0);
+                    p->words.w1 = 0x1 | 0x4 | 0x200000 | (fog ? 0x10000 : 0) |
+                                  (lighting.enabled && !partRef.unlit ? 0x20000 : 0);
                     ++p;
                 }
                 p->words.w0 = (uintptr_t)(gameUcode == ucode_f3dex2 ? 0xDE : 0x06) << 24;
@@ -1085,10 +1509,14 @@ private:
                 p->words.w0 = ((uintptr_t)0xDD << 24) | ((uintptr_t)ucode_f3d & 0xFFFFFF);
                 p->words.w1 = 0;
                 ++p;
+                if (fog) {
+                    p->words.w0 = ((uintptr_t)0xBC << 24) | 0x08;
+                    p->words.w1 = fogWord;
+                    ++p;
+                }
                 if (gameUcode == ucode_f3dex2) {
                     gSPClearGeometryMode(p++, 0xFFFFFFFF);
-                    gSPSetGeometryMode(p++,
-                                       G_ZBUFFER | G_SHADE | G_SHADING_SMOOTH | (lighting.enabled ? G_LIGHTING : 0));
+                    gSPSetGeometryMode(p++, baseGeo | (lighting.enabled ? G_LIGHTING : 0));
                 }
             } else {
                 __gSPDisplayList(p++, drawable[i].second);
@@ -1100,10 +1528,28 @@ private:
         p->words.w1 = 0;
         ++p;
         gSPEndDisplayList(p++);
+        if ((size_t)(p - mCmd.data()) > mCmd.size()) {
+            SPDLOG_ERROR("Preview command list overflow: {} > {}", (size_t)(p - mCmd.data()), mCmd.size());
+        }
+
+        if (const char* dump = std::getenv("TORCH_UI_DUMPCMDS");
+            dump != nullptr && req.name.find(dump) != std::string::npos) {
+            static int sRenderCount = 0;
+            size_t texCount = 0;
+            for (const auto& d : drawable) {
+                texCount += d.first->texture != nullptr ? 1 : 0;
+            }
+            fprintf(stderr, "[cmds] render %d of %s: %zu cmds, %zu/%zu parts textured in request\n", sRenderCount++,
+                    req.name.c_str(), (size_t)(p - mCmd.data()), texCount, drawable.size());
+            for (Gfx* g = mCmd.data(); g < p; ++g) {
+                fprintf(stderr, "[cmds]   %02X %08X %016llX\n", (unsigned)(g->words.w0 >> 24) & 0xFF,
+                        (unsigned)(g->words.w0 & 0xFFFFFF), (unsigned long long)g->words.w1);
+            }
+        }
 
         slot.rendered = true;
         slot.lastView = req.view;
-        slot.lastPartsHash = HashParts(req.parts);
+        slot.lastPartsHash = HashRequest(req);
         return mCmd.data();
     }
 
@@ -1138,6 +1584,16 @@ private:
         OrbitView view;
     };
 
+    // Parts hash plus the backdrop generation, so backdrop edits re-render.
+    uint64_t HashRequest(const ModelRequest& req) {
+        uint64_t h = HashParts(req.parts);
+        const auto it = mBackdrops.find(req.name);
+        if (it != mBackdrops.end()) {
+            h = h * 1099511628211ull + it->second.generation;
+        }
+        return h;
+    }
+
     std::vector<ModelRequest> mRequests;   // filled this frame, rendered next
     std::vector<ModelRequest> mRenderList; // snapshot being rendered this frame
     std::unordered_map<std::string, int> mNameToFb;          // model -> framebuffer id
@@ -1149,6 +1605,35 @@ private:
     // Per-part light evaluation; alive through the interpreter Run.
     std::vector<Lights1> mPartLights;
     std::unordered_map<std::string, RawModel> mRawModels;
+    // Game-dialect display lists registered from parsed blobs. Pointer
+    // operands are resolved once into owned native Gfx arrays.
+    struct GameBundle {
+        std::shared_ptr<std::vector<uint8_t>> blob;
+        uint32_t vtxBase = 0;
+        uint32_t vtxSize = 0;
+        std::unordered_map<uint32_t, std::vector<Gfx>> dlists;
+        // Vertex spans (blob offset, count) and G_DL children per dlist, for
+        // per-dlist bounds.
+        struct DlMeta {
+            std::vector<std::pair<uint32_t, uint32_t>> vtxSpans;
+            std::vector<uint32_t> children;
+        };
+        std::unordered_map<uint32_t, DlMeta> meta;
+    };
+    std::unordered_map<void*, std::shared_ptr<GameBundle>> mGameBundles;   // keyed by blob
+    std::unordered_map<std::string, std::pair<std::shared_ptr<GameBundle>, Gfx*>> mGameGfx;
+
+    // Screen-space backdrops (N64 RGBA16 texels) drawn as texture-rectangle
+    // strips before a model's parts.
+    struct Backdrop {
+        const std::vector<uint8_t>* texels = nullptr;
+        int w = 0, h = 0;
+        uint64_t generation = 0;
+    };
+    std::unordered_map<std::string, Backdrop> mBackdrops;
+    // Content-hash -> converted texels; entries outlive backdrop switches.
+    std::unordered_map<uint64_t, std::vector<uint8_t>> mBackdropTexelCache;
+
     // One-shot sample playback, pushed to the LUS audio player each frame with
     // nearest-neighbor resampling to the device rate.
     std::vector<int16_t> mAudioPcm;

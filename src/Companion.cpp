@@ -298,6 +298,10 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterUIFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactoryUI>());
     this->RegisterUIFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactoryUI>());
     this->RegisterUIFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactoryUI>());
+#ifdef PM64_SUPPORT
+    this->RegisterUIFactory("PM64:SHAPE", std::make_shared<PM64ShapeFactoryUI>());
+    this->RegisterUIFactory("PM64:COLLISION", std::make_shared<PM64CollisionFactoryUI>());
+#endif
 #ifdef NAUDIO_SUPPORT
     this->RegisterUIFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactoryUI>());
     UI::RegisterSequenceDriver("NAUDIO:V0:SEQUENCE", std::make_shared<SequencePlayerV0>());

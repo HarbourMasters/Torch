@@ -1319,9 +1319,9 @@ std::unordered_map<std::string, GeoPreviewState> sGeoState;
 
 } // namespace
 
-float SM64::GeoLayoutFactoryUI::GetItemHeight(const ParseResultData&) {
-    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + ImGui::GetFrameHeightWithSpacing() + 324.0f +
-           ImGui::GetStyle().ItemSpacing.y * 4.0f;
+float SM64::GeoLayoutFactoryUI::GetItemHeight(const ParseResultData& item) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + ImGui::GetFrameHeightWithSpacing() +
+           UI::PreviewBlockHeight(item.name) + 4.0f + ImGui::GetStyle().ItemSpacing.y * 4.0f;
 }
 
 void SM64::GeoLayoutFactoryUI::DrawUI(const ParseResultData& item) {
@@ -1388,29 +1388,16 @@ void SM64::GeoLayoutFactoryUI::DrawUI(const ParseResultData& item) {
     }
     const std::vector<UI::ModelPart>& parts = view.parts;
 
-    const float vh = 320.0f;
-    const float availW = ImGui::GetContentRegionAvail().x;
-    const float vw = std::min(availW, vh * 3.0f);
-    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (availW - vw) * 0.5f);
-    const ImVec2 origin = ImGui::GetCursorScreenPos();
-
-    ImGui::InvisibleButton("##geoview", ImVec2(vw, vh));
-    const float winTop = ImGui::GetWindowPos().y;
-    const float winBot = winTop + ImGui::GetWindowHeight();
-    const bool visible = ImGui::GetItemRectMax().y > winTop && ImGui::GetItemRectMin().y < winBot;
-    UI::OrbitControls(view.view);
-
-    if (visible) {
-        ImGui::GetWindowDrawList()->AddRectFilled(origin, ImVec2(origin.x + vw, origin.y + vh),
-                                                  IM_COL32(18, 18, 22, 255));
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##geoview", item.name, view.view);
+    if (canvas.visible) {
         if (parts.empty()) {
             const char* label = "no drawable display lists";
             const ImVec2 ts = ImGui::CalcTextSize(label);
-            ImGui::GetWindowDrawList()->AddText(
-                ImVec2(origin.x + (vw - ts.x) * 0.5f, origin.y + (vh - ts.y) * 0.5f), IM_COL32(120, 120, 130, 255),
-                label);
+            ImGui::GetWindowDrawList()->AddText(ImVec2(canvas.origin.x + (canvas.size.x - ts.x) * 0.5f,
+                                                       canvas.origin.y + (canvas.size.y - ts.y) * 0.5f),
+                                                IM_COL32(120, 120, 130, 255), label);
         } else {
-            UI::GetBackend()->DrawModelParts(item.name, parts, origin, ImVec2(vw, vh), view.view);
+            UI::GetBackend()->DrawModelParts(item.name, parts, canvas.origin, canvas.size, view.view);
         }
     }
 }

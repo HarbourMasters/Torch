@@ -554,8 +554,9 @@ const std::vector<UI::PreviewVertex>& CollisionTris(const ParseResultData& item)
 
 } // namespace
 
-float SM64::CollisionFactoryUI::GetItemHeight(const ParseResultData&) {
-    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 324.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+float SM64::CollisionFactoryUI::GetItemHeight(const ParseResultData& item) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + UI::PreviewBlockHeight(item.name) + 4.0f +
+           ImGui::GetStyle().ItemSpacing.y * 3.0f;
 }
 
 void SM64::CollisionFactoryUI::DrawUI(const ParseResultData& item) {
@@ -573,7 +574,7 @@ void SM64::CollisionFactoryUI::DrawUI(const ParseResultData& item) {
                         triCount, collision->mVertices.size());
 
     UI::OrbitView& view = sCollisionViews[item.name];
-    const UI::PreviewCanvas canvas = UI::BeginPreviewCanvas("##colview", 320.0f, view);
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##colview", item.name, view);
     if (canvas.visible) {
         UI::GetBackend()->DrawTriangles(item.name, CollisionTris(item), canvas.origin, canvas.size, view);
     }
