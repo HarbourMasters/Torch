@@ -131,9 +131,24 @@ struct SeqSt {
 };
 
 
-float ReleaseSeconds(uint8_t rate) {
+// EU engines derive their ADSR tick rate from the session frequency
+// (60 fps frames, 192-sample chunks); US SM64 runs a fixed 240 ticks/s.
+float AdsrTickRate(bool euDialect, uint32_t frequency) {
+    if (!euDialect) {
+        return 240.0f;
+    }
+    const uint32_t samplesPerFrame = ((frequency / 60) + 15) & ~15u;
+    return 60.0f * (float)((samplesPerFrame + 16) / 192 + 1);
+}
+
+// US: fadeOutVel = rate*24 against 0x8000 at 240 ticks/s.
+// EU (MK64): fadeOutVel = rate*(3/2560)/updates against 1.0.
+float ReleaseSeconds(uint8_t rate, bool euDialect, float tickRate) {
     if (rate == 0) {
-        return 0.016f; // fadeOutVel = 0x8000/updatesPerFrame: gone in one frame
+        return 0.016f; // one-frame fade
+    }
+    if (euDialect) {
+        return 2560.0f / ((float)rate * tickRate);
     }
     return 32768.0f / ((float)rate * 24.0f * 240.0f);
 }
@@ -156,17 +171,13 @@ std::shared_ptr<UI::SynthSample> SynthSampleFor(AudioBankSample* sample) {
     return sCache.emplace(sample, std::move(synth)).first->second;
 }
 
-// Bank ADSR envelope to breakpoints: delay in 1/240s updates, level squared;
+// ADSR envelope to breakpoints: delay in 1/240s updates, level squared;
 // ADSR_GOTO (-2) / ADSR_RESTART (-3) set the loop point.
-void FillEnvelope(UI::SynthNote& ev, const Bank* bank, int envOverride, uint32_t envKey) {
-    const uint32_t key = envOverride >= 0 ? (uint32_t)envOverride : envKey;
-    const auto eit = bank->envelopes.find(key);
-    if (eit == bank->envelopes.end()) {
-        return;
-    }
+template <typename Points>
+void FillEnvelopePoints(UI::SynthNote& ev, const Points& points) {
     std::vector<int> entryPt;
     double at = 0.0;
-    for (const auto& entry : eit->second.entries) {
+    for (const auto& entry : points) {
         if (entry.delay > 0) {
             at += (double)entry.delay / 240.0;
             const float lvl = (float)entry.arg / 32767.0f;
@@ -188,6 +199,35 @@ void FillEnvelope(UI::SynthNote& ev, const Bank* bank, int envOverride, uint32_t
         }
         entryPt.push_back(-1);
     }
+}
+
+struct EnvPoint {
+    int16_t delay;
+    int16_t arg;
+};
+
+// Envelope overrides (chan 0xDA, layer 0xCB) point into the sequence data
+// itself; bank envelopes are keyed by ctl offset.
+void FillEnvelope(UI::SynthNote& ev, const Bank* bank, int envOverride, uint32_t envKey,
+                  const std::vector<uint8_t>& seq) {
+    if (envOverride >= 0) {
+        std::vector<EnvPoint> points;
+        for (size_t at = (size_t)envOverride; at + 3 < seq.size() && points.size() < 24; at += 4) {
+            const int16_t delay = (int16_t)((seq[at] << 8) | seq[at + 1]);
+            const int16_t arg = (int16_t)((seq[at + 2] << 8) | seq[at + 3]);
+            points.push_back({ delay, arg });
+            if (delay <= 0) {
+                break;
+            }
+        }
+        FillEnvelopePoints(ev, points);
+        return;
+    }
+    const auto eit = bank->envelopes.find(envKey);
+    if (eit == bank->envelopes.end()) {
+        return;
+    }
+    FillEnvelopePoints(ev, eit->second.entries);
 }
 
 float NoteFreq(int note) {
@@ -214,6 +254,10 @@ struct SeqRenderer {
     // MK64 ships the EU revision of the library: seq 0xDA/0xDB are fade
     // setup/target, channel 0x6N is delayshort, layers gain 0xCB/0xCC.
     bool euDialect = false;
+    // MK64 skips SM64's resampleRate (32000/sessionFreq) multiply, so its
+    // tunings are relative to the 26800 Hz session rate, not 32000.
+    float freqRatio = 1.0f;
+    float adsrTick = 240.0f;
     int pendingFadeTicks = 0;
     bool initChanMask[16]{};
     // Master*channel gain over time, so fades reach already-sounding notes.
@@ -223,7 +267,12 @@ struct SeqRenderer {
 
     void PushGain(int idx) {
         const ChanSt& ch = seq.chans[idx];
-        const float g = seq.vol * ch.vol * ch.volScale;
+        // The EU engine squares the whole channel volume chain
+        // (appliedVolume = channelVolume^2); US applies it linearly.
+        float g = seq.vol * ch.vol * ch.volScale;
+        if (euDialect) {
+            g *= g;
+        }
         auto& a = gainAuto[idx];
         if (a.empty() || a.back().second != g) {
             a.emplace_back((float)sec, g);
@@ -306,15 +355,17 @@ struct SeqRenderer {
         const float layerPan = ly.pan >= 0.0f ? ly.pan : 0.5f;
         ev.pan = ch.pan * ch.panWeight + layerPan * (1.0f - ch.panWeight);
         ev.reverb = (float)ch.reverb / 127.0f;
-        ev.releaseSec = ReleaseSeconds(ly.releaseRate >= 0 ? (uint8_t)ly.releaseRate : ch.releaseRate);
+        ev.releaseSec = ReleaseSeconds(ly.releaseRate >= 0 ? (uint8_t)ly.releaseRate : ch.releaseRate, euDialect, adsrTick);
         ev.sustainLevel = ch.sustain;
+        const float tick = adsrTick;
+        ev.sustainHoldSec = 128.0f / tick;
         ev.vibDepthStart = (float)ch.vibExtentStart / 127.0f;
         ev.vibDepthEnd = (float)ch.vibExtent / 127.0f;
-        ev.vibDelaySec = (float)ch.vibDelay * 16.0f / 240.0f;
-        ev.vibRampSec = (float)ch.vibRamp * 16.0f / 240.0f;
-        ev.vibRateStartHz = (float)ch.vibRateStart / 16.0f;
-        ev.vibRateEndHz = (float)ch.vibRate / 16.0f;
-        ev.vibRateRampSec = (float)ch.vibRateRamp * 16.0f / 240.0f;
+        ev.vibDelaySec = (float)ch.vibDelay * 16.0f / tick;
+        ev.vibRampSec = (float)ch.vibRamp * 16.0f / tick;
+        ev.vibRateStartHz = (float)ch.vibRateStart / 16.0f * (tick / 240.0f);
+        ev.vibRateEndHz = (float)ch.vibRate / 16.0f * (tick / 240.0f);
+        ev.vibRateRampSec = (float)ch.vibRateRamp * 16.0f / tick;
         ev.portaRatio = 1.0f;
         ev.portaSec = 0.0f;
 
@@ -330,8 +381,8 @@ struct SeqRenderer {
             if (!ly.ignoreDrumPan) {
                 ev.pan = ch.pan * ch.panWeight + ((float)drum.pan / 128.0f) * (1.0f - ch.panWeight);
             }
-            ev.releaseSec = ReleaseSeconds(drum.releaseRate);
-            FillEnvelope(ev, bank, ly.envOverride >= 0 ? ly.envOverride : ch.envOverride, drum.envelope);
+            ev.releaseSec = ReleaseSeconds(drum.releaseRate, euDialect, adsrTick);
+            FillEnvelope(ev, bank, ly.envOverride >= 0 ? ly.envOverride : ch.envOverride, drum.envelope, buf);
         } else {
             if (inst == nullptr) {
                 return;
@@ -351,7 +402,7 @@ struct SeqRenderer {
             }
             ev.sample = SynthSampleFor(SampleByOffset(bank, sound->value().offset));
             ev.freqScale = NoteFreq(note) * sound->value().tuning;
-            FillEnvelope(ev, bank, ly.envOverride >= 0 ? ly.envOverride : ch.envOverride, inst->envelope);
+            FillEnvelope(ev, bank, ly.envOverride >= 0 ? ly.envOverride : ch.envOverride, inst->envelope, buf);
             if (ly.portaMode != 0 && ly.portaTime > 0) {
                 const int target = std::clamp(ly.portaTarget + seq.transpose + ch.transpose + ly.transpose, 0, 127);
                 const float targetFreq = NoteFreq(target) * sound->value().tuning;
@@ -367,6 +418,7 @@ struct SeqRenderer {
                                           : (double)ly.portaTime * secPerTick);
             }
         }
+        ev.freqScale *= freqRatio;
         if (ev.sample == nullptr || ev.freqScale <= 0.0f) {
             return;
         }
@@ -548,7 +600,8 @@ struct SeqRenderer {
                             for (int c = 0; c < 16; ++c) {
                                 if (seq.chans[c].ex.data != nullptr) {
                                     const ChanSt& c2 = seq.chans[c];
-                                    gainAuto[c].emplace_back((float)at, seq.vol * c2.vol * c2.volScale);
+                                    const float cg = seq.vol * c2.vol * c2.volScale;
+                                    gainAuto[c].emplace_back((float)at, cg * cg);
                                 }
                             }
                         }
@@ -934,6 +987,7 @@ struct SeqRenderer {
                         } else if (instId < 0x80 && ch.bank != nullptr && instId < ch.bank->insts.size() &&
                                    ch.bank->insts[instId].valid) {
                             ly.inst = &ch.bank->insts[instId];
+                            ly.releaseRate = ly.inst->releaseRate;
                         } else {
                             ly.instSet = false;
                         }
@@ -1122,7 +1176,22 @@ bool SequencePlayerV0::Render(const ParseResultData& item, int, UI::RenderedAudi
     }
 
     SeqRenderer renderer(data->mBuffer);
-    renderer.euDialect = Companion::Instance->GetGameTitle().find("KART") != std::string::npos;
+    // Prefer the AUDIO_HEADER yaml settings; fall back to the cartridge
+    // title for configs that don't declare them (MK64 = EU dialect, 26800 Hz
+    // session rate).
+    std::string dialect = AudioManager::Instance->GetDialect();
+    uint32_t frequency = AudioManager::Instance->GetSessionFrequency();
+    if (dialect.empty() && Companion::Instance->GetGameTitle().find("KART") != std::string::npos) {
+        dialect = "EU";
+        if (frequency == 0) {
+            frequency = 26800;
+        }
+    }
+    renderer.euDialect = dialect == "EU";
+    if (frequency != 0) {
+        renderer.freqRatio = (float)frequency / 32000.0f;
+    }
+    renderer.adsrTick = AdsrTickRate(renderer.euDialect, frequency != 0 ? frequency : 32000);
     for (const auto& bankName : data->mBanks) {
         const Bank* bank = FindBankByName(sBanks, bankName);
         if (bank != nullptr) {

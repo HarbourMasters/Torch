@@ -12,7 +12,7 @@
 namespace UI {
 
 constexpr int kSynthRate = 32000;
-constexpr double kSynthMaxSeconds = 150.0;
+constexpr double kSynthMaxSeconds = 330.0;
 
 struct SynthSample {
     std::vector<int16_t> pcm; // decoded, 1:1 with the source sample units
@@ -41,6 +41,7 @@ struct SynthNote {
     // level, holds ~0.53s, then resumes.
     float releaseSec = 0.1f;
     float sustainLevel = 0.0f;
+    float sustainHoldSec = 128.0f / 240.0f;
     float vibDelaySec = 0.0f;
     float vibRampSec = 0.0f;
     float vibDepthStart = 0.0f;

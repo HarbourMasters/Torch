@@ -181,11 +181,24 @@ NSampleData* SampleByAddr(uint32_t addr) {
     return nullptr;
 }
 
+// fadeOutVel = decayIndex/2560 against 1.0 at 180 ticks/s.
+// Engine timing from the audio spec: ticksPerUpdate derives from the
+// session frequency (60 fps frames, 192-sample chunks), the ADSR runs at
+// 60 * ticksPerUpdate ticks/s.
+int TicksPerUpdate() {
+    const uint32_t samplesPerFrame = ((AudioContext::sessionFrequency / 60) + 15) & ~15u;
+    return (int)((samplesPerFrame + 16) / 192 + 1);
+}
+
+float AdsrTickRate() {
+    return 60.0f * (float)TicksPerUpdate();
+}
+
 float ReleaseSeconds(uint8_t decayIndex) {
     if (decayIndex == 0) {
-        return 0.016f; // fadeOutVel = 0x8000/updatesPerFrame: gone in one frame
+        return 0.016f; // one-frame fade
     }
-    return 32768.0f / ((float)decayIndex * 24.0f * 240.0f);
+    return 2560.0f / ((float)decayIndex * AdsrTickRate());
 }
 
 std::shared_ptr<UI::SynthSample> SynthSampleFor(NSampleData* sample) {
@@ -224,7 +237,12 @@ std::shared_ptr<UI::SynthSample> SynthSampleFor(NSampleData* sample) {
             LUS::BinaryWriter aiff;
             write_aiff(bytes, aiff);
             int rate = 0;
-            DecodeAiffBytes(aiff.ToVector(), synth->pcm, rate);
+            const bool ok = DecodeAiffBytes(aiff.ToVector(), synth->pcm, rate);
+            if ((!ok || synth->pcm.empty()) && std::getenv("TORCH_SEQ_DEBUG") != nullptr) {
+                printf("[sample] DECODE FAIL addr=0x%X book(order=%d npred=%d coeffs=%zu) loop(%u..%u x%u) aifc=%zu\n",
+                       sample->sampleAddr, bit->second->order, bit->second->numPredictors, bit->second->book.size(),
+                       lit0->second->start, lit0->second->end, lit0->second->count, bytes.size());
+            }
             aiff.Close();
             const size_t expected = (size_t)sample->size * 16 / 9;
             if (synth->pcm.size() < expected) {
@@ -240,24 +258,31 @@ std::shared_ptr<UI::SynthSample> SynthSampleFor(NSampleData* sample) {
         synth->loopEnd = lit->second->end;
         synth->looped = lit->second->count != 0;
     }
+    if (std::getenv("TORCH_SEQ_DEBUG") != nullptr) {
+        static int sDumped = 0;
+        float pk = 0;
+        for (size_t i = 0; i < synth->pcm.size(); ++i) pk = std::max(pk, std::fabs((float)synth->pcm[i]));
+        if (sDumped++ < 8) {
+            printf("[sample] codec=%u size=%u addr=0x%X bank=%u loop=0x%X book=0x%X tuning=%.3f pcm=%zu peak=%.0f\n",
+                   (uint32_t)sample->codec, (uint32_t)sample->size, sample->sampleAddr, sample->sampleBankId,
+                   sample->loop, sample->book, sample->tuning, synth->pcm.size(), pk);
+        }
+    }
     return sCache.emplace(sample, std::move(synth)).first->second;
 }
 
 // Envelope points: delay in 1/240s updates, level squared; -2/-3 loop.
-// EnvelopeData stores values byte-swapped (the port keeps envelopes
-// big-endian in memory and swaps at use), so un-swap here.
-void FillEnvelope(UI::SynthNote& ev, uint32_t envOffset) {
-    const auto eit = Assets().envByOffset.find(envOffset);
-    if (eit == Assets().envByOffset.end()) {
-        return;
-    }
+void FillEnvelopePoints(UI::SynthNote& ev, const std::vector<EnvelopePoint>& points) {
     std::vector<int> entryPt;
     double at = 0.0;
-    for (const auto& entry : eit->second->points) {
-        const int16_t delay = (int16_t)BSWAP16((uint16_t)entry.delay);
-        const int16_t arg = (int16_t)BSWAP16((uint16_t)entry.arg);
+    for (const auto& entry : points) {
+        const int16_t delay = entry.delay;
+        const int16_t arg = entry.arg;
         if (delay > 0) {
-            at += (double)delay / 240.0;
+            // Engine scales delays >= 4 by ticksPerUpdate/numBuffers/4.
+            const int tpu = TicksPerUpdate();
+            const int ticks = delay >= 4 ? (delay * tpu / (int)AudioContext::numBuffers) / 4 : delay;
+            at += (double)ticks / (double)AdsrTickRate();
             const float lvl = (float)arg / 32767.0f;
             entryPt.push_back((int)ev.envPoints.size());
             ev.envPoints.emplace_back((float)at, lvl * lvl);
@@ -277,6 +302,33 @@ void FillEnvelope(UI::SynthNote& ev, uint32_t envOffset) {
         }
         entryPt.push_back(-1);
     }
+}
+
+// Font envelopes store values byte-swapped (the port keeps envelopes
+// big-endian in memory and swaps at use). Overrides (chan 0xDA, layer 0xCB)
+// point into the sequence data itself.
+void FillEnvelope(UI::SynthNote& ev, int envOverride, uint32_t envKey, const std::vector<uint8_t>& seq) {
+    std::vector<EnvelopePoint> points;
+    if (envOverride >= 0) {
+        for (size_t at = (size_t)envOverride; at + 3 < seq.size() && points.size() < 24; at += 4) {
+            const int16_t delay = (int16_t)((seq[at] << 8) | seq[at + 1]);
+            const int16_t arg = (int16_t)((seq[at + 2] << 8) | seq[at + 3]);
+            points.push_back({ delay, arg });
+            if (delay <= 0) {
+                break;
+            }
+        }
+        FillEnvelopePoints(ev, points);
+        return;
+    }
+    const auto eit = Assets().envByOffset.find(envKey);
+    if (eit == Assets().envByOffset.end()) {
+        return;
+    }
+    for (const auto& entry : eit->second->points) {
+        points.push_back({ (int16_t)BSWAP16((uint16_t)entry.delay), (int16_t)BSWAP16((uint16_t)entry.arg) });
+    }
+    FillEnvelopePoints(ev, points);
 }
 
 float NoteFreq(int note) {
@@ -430,7 +482,10 @@ struct SeqRenderer {
 
     void PushGain(int idx) {
         const ChanSt& ch = seq.chans[idx];
-        const float g = seq.vol * ch.vol * ch.volScale;
+        // appliedVolume = SQ(channelVolume): the engine squares the whole
+        // channel volume chain.
+        float g = seq.vol * ch.vol * ch.volScale;
+        g *= g;
         auto& a = gainAuto[idx];
         if (a.empty() || a.back().second != g) {
             a.emplace_back((float)sec, g);
@@ -525,13 +580,15 @@ struct SeqRenderer {
         ev.reverb = (float)ch.reverb / 127.0f;
         ev.releaseSec = ReleaseSeconds(ly.releaseRate >= 0 ? (uint8_t)ly.releaseRate : ch.decayIndex);
         ev.sustainLevel = ch.sustain;
+        const float tick = AdsrTickRate();
+        ev.sustainHoldSec = 128.0f / tick;
         ev.vibDepthStart = (float)ch.vibExtentStart / 127.0f;
         ev.vibDepthEnd = (float)ch.vibExtent / 127.0f;
-        ev.vibDelaySec = (float)ch.vibDelay * 16.0f / 240.0f;
-        ev.vibRampSec = (float)ch.vibRamp * 16.0f / 240.0f;
-        ev.vibRateStartHz = (float)ch.vibRateStart / 16.0f;
-        ev.vibRateEndHz = (float)ch.vibRate / 16.0f;
-        ev.vibRateRampSec = (float)ch.vibRateRamp * 16.0f / 240.0f;
+        ev.vibDelaySec = (float)ch.vibDelay * 16.0f / tick;
+        ev.vibRampSec = (float)ch.vibRamp * 16.0f / tick;
+        ev.vibRateStartHz = (float)ch.vibRateStart / 16.0f * (tick / 240.0f);
+        ev.vibRateEndHz = (float)ch.vibRate / 16.0f * (tick / 240.0f);
+        ev.vibRateRampSec = (float)ch.vibRateRamp * 16.0f / tick;
         ev.portaRatio = 1.0f;
         ev.portaSec = 0.0f;
 
@@ -551,9 +608,7 @@ struct SeqRenderer {
                 ev.pan = ch.pan * ch.panWeight + ((float)drum->pan / 128.0f) * (1.0f - ch.panWeight);
             }
             ev.releaseSec = ReleaseSeconds(drum->adsrDecayIndex);
-            FillEnvelope(ev, ly.envOverride >= 0   ? (uint32_t)ly.envOverride
-                             : ch.envOverride >= 0 ? (uint32_t)ch.envOverride
-                                                   : drum->envelope);
+            FillEnvelope(ev, ly.envOverride >= 0 ? ly.envOverride : ch.envOverride, drum->envelope, buf);
         } else {
             if (inst == nullptr) {
                 return;
@@ -570,9 +625,7 @@ struct SeqRenderer {
             }
             ev.sample = SynthSampleFor(SampleByAddr(sound->sample));
             ev.freqScale = NoteFreq(note) * sound->tuning;
-            FillEnvelope(ev, ly.envOverride >= 0   ? (uint32_t)ly.envOverride
-                             : ch.envOverride >= 0 ? (uint32_t)ch.envOverride
-                                                   : inst->envelope);
+            FillEnvelope(ev, ly.envOverride >= 0 ? ly.envOverride : ch.envOverride, inst->envelope, buf);
             if (ly.portaMode != 0 && ly.portaTime > 0) {
                 const int target = std::clamp(ly.portaTarget + seq.transpose + ch.transpose + ly.transpose, 0, 127);
                 const float targetFreq = NoteFreq(target) * sound->tuning;
@@ -745,7 +798,8 @@ struct SeqRenderer {
                             for (int c = 0; c < 16; ++c) {
                                 if (seq.chans[c].ex.data != nullptr) {
                                     const ChanSt& ch = seq.chans[c];
-                                    gainAuto[c].emplace_back((float)at, seq.vol * ch.vol * ch.volScale);
+                                    const float cg = seq.vol * ch.vol * ch.volScale;
+                                    gainAuto[c].emplace_back((float)at, cg * cg);
                                 }
                             }
                         }
@@ -1126,6 +1180,7 @@ struct SeqRenderer {
                         } else if (instId < 0x80 && ch.font != nullptr && instId < ch.font->insts.size() &&
                                    ch.font->insts[instId] != nullptr) {
                             ly.inst = ch.font->insts[instId];
+                            ly.releaseRate = ly.inst->adsrDecayIndex;
                         } else {
                             ly.instSet = false;
                         }

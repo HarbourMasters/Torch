@@ -267,6 +267,10 @@ int main(int argc, char* argv[]) {
                     if (item.type.find("SEQUENCE") == std::string::npos || !item.data.has_value()) {
                         continue;
                     }
+                    if (const char* filter = std::getenv("TORCH_SEQ_FILTER");
+                        filter != nullptr && item.name.find(filter) == std::string::npos) {
+                        continue;
+                    }
                     auto* driver = UI::GetSequenceDriver(item.type);
                     if (driver == nullptr) {
                         continue;

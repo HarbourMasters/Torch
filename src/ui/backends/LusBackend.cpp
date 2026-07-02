@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <vector>
 
+#include "Companion.h"
 #include "ui/Theme.h"
 #include "ui/View.h"
 
@@ -148,7 +149,6 @@ public:
         // (mRendersToFb), which the previews rely on.
         window->SetMsaaLevel(4);
 
-        // SM64 display lists are F3D; f3dex2 would misread the opcodes.
         window->SetRendererUCode(ucode_f3d);
 
         ApplyTorchTheme();
@@ -869,19 +869,26 @@ private:
         FbSlot& slot = mFbPool[targetIdx];
 
         // Parts that fail to load are dropped rather than failing the model.
-        std::vector<std::pair<const ModelPart*, Gfx*>> drawable;
+        struct DrawEntry {
+            const ModelPart* first;
+            Gfx* second;
+            bool raw;
+        };
+        std::vector<DrawEntry> drawable;
         drawable.reserve(req.parts.size());
         for (const auto& part : req.parts) {
             Gfx* gfx = nullptr;
+            bool raw = false;
             auto rawIt = mRawModels.find(part.resource);
             if (rawIt != mRawModels.end()) {
                 gfx = rawIt->second.gfx.data();
+                raw = true;
             } else {
                 auto dl = std::static_pointer_cast<Fast::DisplayList>(rm->LoadResource(part.resource));
                 gfx = dl != nullptr ? dl->GetPointer() : nullptr;
             }
             if (gfx != nullptr) {
-                drawable.emplace_back(&part, gfx);
+                drawable.push_back({ &part, gfx, raw });
             }
         }
         if (drawable.empty()) {
@@ -996,7 +1003,7 @@ private:
                 (int8_t)(vx * 127.0f), (int8_t)(vy * 127.0f), (int8_t)(vz * 127.0f));
         }
 
-        mCmd.assign(48 + drawable.size() * 8, Gfx{});
+        mCmd.assign(48 + drawable.size() * 14, Gfx{});
         Gfx* p = mCmd.data();
         // Load f3d ucode + reset segment 0 (global state).
         p->words.w0 = ((uintptr_t)0xDD << 24) | ((uintptr_t)ucode_f3d & 0xFFFFFF);
@@ -1057,7 +1064,35 @@ private:
             }
             gSPSetLights1(p++, mPartLights[i]);
             gSPMatrix(p++, &mPartMtxKeys[i], G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
-            __gSPDisplayList(p++, drawable[i].second);
+            const UcodeHandlers gameUcode = ConfigUcode();
+            if (!drawable[i].raw && gameUcode != ucode_f3d) {
+                // Run the game's list under its own dialect, then return to
+                // F3D for the prefix commands. G_DL is 0xDE on f3dex2.
+                p->words.w0 = ((uintptr_t)0xDD << 24) | ((uintptr_t)gameUcode & 0xFFFFFF);
+                p->words.w1 = 0;
+                ++p;
+                if (gameUcode == ucode_f3dex2) {
+                    // Geometry-mode bits are stored raw and read per-dialect:
+                    // F3D's SMOOTH (0x200) is f3dex2's CULL_FRONT. Re-set the
+                    // baseline with f3dex2 values (SMOOTH = 0x200000).
+                    p->words.w0 = (uintptr_t)0xD9 << 24; // clear all
+                    p->words.w1 = 0x1 | 0x4 | 0x200000 | (lighting.enabled ? 0x20000 : 0);
+                    ++p;
+                }
+                p->words.w0 = (uintptr_t)(gameUcode == ucode_f3dex2 ? 0xDE : 0x06) << 24;
+                p->words.w1 = (uintptr_t)drawable[i].second;
+                ++p;
+                p->words.w0 = ((uintptr_t)0xDD << 24) | ((uintptr_t)ucode_f3d & 0xFFFFFF);
+                p->words.w1 = 0;
+                ++p;
+                if (gameUcode == ucode_f3dex2) {
+                    gSPClearGeometryMode(p++, 0xFFFFFFFF);
+                    gSPSetGeometryMode(p++,
+                                       G_ZBUFFER | G_SHADE | G_SHADING_SMOOTH | (lighting.enabled ? G_LIGHTING : 0));
+                }
+            } else {
+                __gSPDisplayList(p++, drawable[i].second);
+            }
         }
         gDPFullSync(p++);
         // Restore the main framebuffer (G_RESETFB 0x22) before the gui draws.
@@ -1070,6 +1105,26 @@ private:
         slot.lastView = req.view;
         slot.lastPartsHash = HashParts(req.parts);
         return mCmd.data();
+    }
+
+    // The game's display lists use the configured GBI dialect; our generated
+    // preview meshes are always F3D.
+    static UcodeHandlers ConfigUcode() {
+        if (Companion::Instance == nullptr) {
+            return ucode_f3d;
+        }
+        switch (Companion::Instance->GetGBIVersion()) {
+            case GBIVersion::f3db:
+                return ucode_f3db;
+            case GBIVersion::f3dex:
+                return ucode_f3dex;
+            case GBIVersion::f3dexb:
+                return ucode_f3dexb;
+            case GBIVersion::f3dex2:
+                return ucode_f3dex2;
+            default:
+                return ucode_f3d;
+        }
     }
 
     static constexpr int kFbPoolSize = 24;

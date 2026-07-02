@@ -124,8 +124,8 @@ std::vector<int16_t> Synthesize(const std::vector<SynthNote>& notes, const GainA
                     gateLevel = EvalEnv(note, note.soundSec);
                     susLevel = note.sustainLevel > 0.001f ? gateLevel * note.sustainLevel : 0.0f;
                     if (susLevel > 0.0f) {
-                        // Time to fade to the sustain floor, then ~128 updates hold.
-                        susHoldEnd = note.soundSec + (gateLevel - susLevel) / relSlope + 128.0 / 240.0;
+                        // Time to fade to the sustain floor, then the engine's hold.
+                        susHoldEnd = note.soundSec + (gateLevel - susLevel) / relSlope + note.sustainHoldSec;
                     }
                 }
                 const double rel = t - note.soundSec;

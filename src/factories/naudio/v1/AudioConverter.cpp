@@ -184,6 +184,11 @@ void AudioConverter::SampleV1ToAIFC(NSampleData* sample, const ADPCMLoopData* lo
     if (sample_rate == 0) {
         sample_rate = 32000 * sample->tuning;
     }
+    // Explicit yaml entries carry no tuning; a zero rate makes the AIFF
+    // invalid (decoders reject it), so fall back to the mixer reference.
+    if (sample_rate == 0) {
+        sample_rate = 32000;
+    }
 
     int16_t num_channels = 1;
     int16_t sample_size = 16;

@@ -3,6 +3,8 @@
 #include "Companion.h"
 
 std::unordered_map<AudioTableType, TableEntry> AudioContext::tables;
+uint32_t AudioContext::sessionFrequency = 32000;
+uint32_t AudioContext::numBuffers = 2;
 NAudioDrivers AudioContext::driver = NAudioDrivers::UNKNOWN;
 std::unordered_map<uint64_t, std::string> AudioContext::sampleDedup;
 std::unordered_map<uint32_t, std::string> AudioContext::sampleAddrRemap;
@@ -17,6 +19,9 @@ std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vect
     } else {
         throw std::runtime_error("Unknown NAudio driver");
     }
+
+    AudioContext::sessionFrequency = GetSafeNode<uint32_t>(node, "frequency", 32000);
+    AudioContext::numBuffers = GetSafeNode<uint32_t>(node, "buffers", 2);
 
     auto seq = GetSafeNode<YAML::Node>(node, "audio_seq");
     auto seqSize = GetSafeNode<uint32_t>(seq, "size");
