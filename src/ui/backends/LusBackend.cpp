@@ -291,7 +291,7 @@ public:
             mBoundsCache[key] = raw.bounds;
             for (auto& slot : mFbPool) {
                 if (slot.owner == key) {
-                    slot.rendered = false;
+                    slot.lastPartsHash = 0;
                 }
             }
         }

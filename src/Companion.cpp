@@ -79,6 +79,7 @@
 #include "factories/pm64/ShapeFactory.h"
 #include "factories/pm64/BackgroundFactory.h"
 #include "factories/pm64/AudioPreview.h"
+#include "factories/pm64/ImagePreview.h"
 #include "factories/pm64/CollisionFactory.h"
 #include "factories/pm64/MapTextureFactory.h"
 #include "factories/pm64/AudioFactory.h"
@@ -307,6 +308,11 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterUIFactory("PM64:SHAPE", std::make_shared<PM64ShapeFactoryUI>());
     this->RegisterUIFactory("PM64:COLLISION", std::make_shared<PM64CollisionFactoryUI>());
     this->RegisterUIFactory("PM64:BK_SAMPLE", std::make_shared<PM64BkSampleFactoryUI>());
+    this->RegisterUIFactory("PM64:SPRITE", std::make_shared<PM64SpriteFactoryUI>());
+    this->RegisterUIFactory("PM64:MAP_TEXTURE", std::make_shared<PM64MapTextureFactoryUI>());
+    this->RegisterUIFactory("PM64:IMGFX_ANIM", std::make_shared<PM64ImgFXAnimFactoryUI>());
+    this->RegisterUIFactory("PM64:TITLE_DATA", std::make_shared<PM64TitleDataFactoryUI>());
+    this->RegisterUIFactory("PM64:STORY_IMAGE", std::make_shared<PM64StoryImageFactoryUI>());
     UI::RegisterSequenceDriver("PM64:BGM", std::make_shared<SequencePlayerPM64>());
     this->RegisterUIFactory("PM64:BGM", std::make_shared<UI::SequencePreviewUI>());
 #endif
