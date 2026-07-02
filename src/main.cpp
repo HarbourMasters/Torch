@@ -2,6 +2,9 @@
 #include <memory>
 #include "CLI11.hpp"
 #include "Companion.h"
+#ifdef PM64_SUPPORT
+#include "factories/pm64/AudioPreview.h"
+#endif
 #ifdef BK64_SUPPORT
 #include "factories/bk64/ConfigFactory.h"
 #endif
@@ -259,6 +262,9 @@ int main(int argc, char* argv[]) {
 
     ui->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
+#ifdef PM64_SUPPORT
+        PM64Audio::SetPreviewAssets(true);
+#endif
         // Parse-only: populate the asset results for the viewer without exporting
         // anything (shouldProcess = false skips all writes). Export type is
         // irrelevant since nothing is exported.
@@ -284,7 +290,7 @@ int main(int argc, char* argv[]) {
         if (std::getenv("TORCH_SEQ_TEST") != nullptr) { // headless driver check, no window
             for (const auto& [file, results] : instance->GetParseResults()) {
                 for (const auto& item : results) {
-                    if (item.type.find("SEQUENCE") == std::string::npos || !item.data.has_value()) {
+                    if (UI::GetSequenceDriver(item.type) == nullptr || !item.data.has_value()) {
                         continue;
                     }
                     if (const char* filter = std::getenv("TORCH_SEQ_FILTER");

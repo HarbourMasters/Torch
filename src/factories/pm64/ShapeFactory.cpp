@@ -1133,9 +1133,9 @@ void WalkNode(WalkCtx& ctx, uint32_t nodeOff, const float parent[4][4]) {
         }
     }
 
-    // Only MODEL leaves (type 2) are drawn: group rendering expands children
-    // into per-child models (func_80117D00), so group/root display lists —
-    // which just re-call every child list — must not be drawn themselves.
+    // Only MODEL leaves (type 2) draw. Group rendering expands children into
+    // per-child models (func_80117D00); group/root display lists re-call every
+    // child list and drawing them double-draws the map untextured.
     constexpr uint32_t kShapeTypeModel = 2;
     const bool drawSelf = nodeType == kShapeTypeModel;
     (void)groupType;
