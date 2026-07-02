@@ -44,4 +44,13 @@ public:
         };
     }
 };
+
+#ifdef BUILD_UI
+// Previews the trajectory as a 3D path.
+class TrajectoryFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif
 }

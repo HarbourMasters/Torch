@@ -78,8 +78,7 @@ public:
     // Draws a colored point cloud at the given screen rect. `id` keys a
     // reusable render target. Optional.
     virtual void DrawPointCloud(uint64_t id, const std::vector<PreviewVertex>& points,
-                                const ImVec2& topLeft, const ImVec2& size,
-                                float yaw, float pitch, float zoom) {}
+                                const ImVec2& topLeft, const ImVec2& size, const OrbitView& view) {}
 
     // Previews a display-list resource as a shaded model at the given screen
     // rect. Requires the resource's archive to be mounted. Optional.
@@ -90,6 +89,23 @@ public:
     // identifies the assembled model for render-target reuse. Optional.
     virtual void DrawModelParts(const std::string& key, const std::vector<ModelPart>& parts,
                                 const ImVec2& topLeft, const ImVec2& size, const OrbitView& view) {}
+
+    // Renders a colored triangle soup (three PreviewVertex per triangle) with
+    // the same camera and render-target reuse as DrawModelParts. Optional.
+    virtual void DrawTriangles(const std::string& key, const std::vector<PreviewVertex>& tris,
+                               const ImVec2& topLeft, const ImVec2& size, const OrbitView& view) {}
+
+    // Plays interleaved 16-bit PCM, replacing whatever is currently playing.
+    virtual bool PlaySamples(const int16_t* frames, size_t frameCount, int sampleRate, int channels) { return false; }
+    virtual void StopAudio() {}
+    // Playback position in [0,1]; negative when idle/finished.
+    virtual float AudioProgress() { return -1.0f; }
+    virtual void SeekAudio(float progress) {}
+    virtual void SetAudioVolume(float volume) {}
+    virtual float GetAudioVolume() { return 1.0f; }
+    // Playback-rate multiplier (1 = the sample's own rate).
+    virtual void SetAudioSpeed(float speed) {}
+    virtual float GetAudioSpeed() { return 1.0f; }
 };
 
 inline BaseBackend*& ActiveBackend() {

@@ -96,6 +96,31 @@ inline void OrbitControls(OrbitView& view) {
     }
 }
 
+// Centered preview box (aspect capped at 3:1) with orbit controls and a dark
+// backdrop. `visible` is an on-screen test against the scroll viewport.
+struct PreviewCanvas {
+    ImVec2 origin;
+    ImVec2 size;
+    bool visible;
+};
+
+inline PreviewCanvas BeginPreviewCanvas(const char* strId, float height, OrbitView& view) {
+    const float availW = ImGui::GetContentRegionAvail().x;
+    const float vw = std::min(availW, height * 3.0f);
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (availW - vw) * 0.5f);
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+    ImGui::InvisibleButton(strId, ImVec2(vw, height));
+    const float winTop = ImGui::GetWindowPos().y;
+    const float winBot = winTop + ImGui::GetWindowHeight();
+    const bool visible = ImGui::GetItemRectMax().y > winTop && ImGui::GetItemRectMin().y < winBot;
+    OrbitControls(view);
+    if (visible) {
+        ImGui::GetWindowDrawList()->AddRectFilled(origin, ImVec2(origin.x + vw, origin.y + height),
+                                                  IM_COL32(18, 18, 22, 255));
+    }
+    return { origin, ImVec2(vw, height), visible };
+}
+
 } // namespace UI
 
 #endif // BUILD_UI

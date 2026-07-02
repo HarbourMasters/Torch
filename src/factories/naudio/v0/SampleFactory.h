@@ -33,3 +33,17 @@ public:
 
     bool SupportModdedAssets() override { return true; }
 };
+
+#ifdef BUILD_UI
+// Decodes a sample to PCM16 through the AIFF converter. The PCM is 1:1 with
+// the vadpcm frames (front-padded so loop points stay aligned); `rate` is the
+// tuning-derived natural rate.
+bool DecodeSampleToPcm(AudioBankSample* sample, std::vector<int16_t>& pcm, int& rate);
+
+// Plays the sample (decoded through the AIFF converter) with basic controls.
+class SampleFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif

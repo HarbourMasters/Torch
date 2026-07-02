@@ -80,4 +80,13 @@ public:
         };
     }
 };
+
+#ifdef BUILD_UI
+// Previews the collision mesh, colored per surface type with baked shading.
+class CollisionFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif
 }

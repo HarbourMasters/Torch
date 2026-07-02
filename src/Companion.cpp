@@ -288,7 +288,15 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterUIFactory("TEXTURE", std::make_shared<TextureFactoryUI>());
     this->RegisterUIFactory("VTX", std::make_shared<VtxFactoryUI>());
     this->RegisterUIFactory("GFX", std::make_shared<DListFactoryUI>());
+    this->RegisterUIFactory("LIGHTS", std::make_shared<LightsFactoryUI>());
     this->RegisterUIFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactoryUI>());
+    this->RegisterUIFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactoryUI>());
+    this->RegisterUIFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactoryUI>());
+    this->RegisterUIFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactoryUI>());
+#ifdef NAUDIO_SUPPORT
+    this->RegisterUIFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactoryUI>());
+    this->RegisterUIFactory("NAUDIO:V0:SEQUENCE", std::make_shared<SequenceFactoryUI>());
+#endif
 #endif
 
 #ifndef __EMSCRIPTEN__ // We call this manually

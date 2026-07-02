@@ -64,3 +64,11 @@ public:
         };
     }
 };
+
+#ifdef BUILD_UI
+// Shows the Lights1 colors and direction.
+class LightsFactoryUI : public BaseFactoryUI {
+public:
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif

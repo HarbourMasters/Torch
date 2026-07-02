@@ -25,7 +25,9 @@
 #include <fast/resource/factory/MatrixFactory.h>
 #include <fast/resource/factory/LightFactory.h>
 #include <fast/types.h>
+#include <fast/lus_gbi.h>
 #include <ship/resource/ResourceManager.h>
+#include <ship/audio/Audio.h>
 #include <ship/resource/ResourceLoader.h>
 #include <ship/resource/File.h>
 #include <ship/resource/archive/ArchiveManager.h>
@@ -109,6 +111,7 @@ public:
 #endif
         ctx->InitResourceManager(archives, {}, 1);
         ctx->InitConsole();
+        ctx->InitAudio(Ship::AudioSettings{});
 
         // Fast3D binary resource factories (DisplayList/Vertex/Texture/Matrix/Light).
         auto loader = ctx->GetResourceManager()->GetResourceLoader();
@@ -153,6 +156,7 @@ public:
         static Gfx emptyDl[] = { gsSPEndDisplayList() };
         while (window->IsRunning()) {
             window->HandleEvents();
+            PumpAudio();
 
             // Render the previous frame's preview requests; the gui draw blits
             // the results and queues the next batch.
@@ -192,9 +196,113 @@ public:
         return api->GetTextureById((int)id);
     }
 
-    void DrawPointCloud(uint64_t, const std::vector<PreviewVertex>&, const ImVec2&, const ImVec2&, float, float,
-                        float) override {
-        // Superseded by DrawModel for GFX assets.
+    void DrawPointCloud(uint64_t id, const std::vector<PreviewVertex>& points, const ImVec2& topLeft,
+                        const ImVec2& size, const OrbitView& view) override {
+        if (points.empty()) {
+            return;
+        }
+        // Octahedron marker per point, sized against the cloud's bounds.
+        float mn[3] = { 1e18f, 1e18f, 1e18f }, mx[3] = { -1e18f, -1e18f, -1e18f };
+        for (const auto& pt : points) {
+            for (int k = 0; k < 3; ++k) {
+                mn[k] = std::min(mn[k], pt.position[k]);
+                mx[k] = std::max(mx[k], pt.position[k]);
+            }
+        }
+        const float dx = mx[0] - mn[0], dy = mx[1] - mn[1], dz = mx[2] - mn[2];
+        const float r = std::max(std::sqrt(dx * dx + dy * dy + dz * dz) * 0.008f, 1.0f);
+
+        static const int kFaces[8][3] = {
+            { 0, 2, 4 }, { 2, 1, 4 }, { 1, 3, 4 }, { 3, 0, 4 },
+            { 2, 0, 5 }, { 1, 2, 5 }, { 3, 1, 5 }, { 0, 3, 5 },
+        };
+        constexpr size_t kMaxPoints = 4000;
+        std::vector<PreviewVertex> tris;
+        tris.reserve(std::min(points.size(), kMaxPoints) * 24);
+        for (size_t i = 0; i < points.size() && i < kMaxPoints; ++i) {
+            const auto& pt = points[i];
+            const float c[6][3] = {
+                { pt.position[0] + r, pt.position[1], pt.position[2] },
+                { pt.position[0] - r, pt.position[1], pt.position[2] },
+                { pt.position[0], pt.position[1], pt.position[2] + r },
+                { pt.position[0], pt.position[1], pt.position[2] - r },
+                { pt.position[0], pt.position[1] + r, pt.position[2] },
+                { pt.position[0], pt.position[1] - r, pt.position[2] },
+            };
+            for (const auto& face : kFaces) {
+                for (int k = 0; k < 3; ++k) {
+                    PreviewVertex v = pt;
+                    std::memcpy(v.position, c[face[k]], sizeof(v.position));
+                    tris.push_back(v);
+                }
+            }
+        }
+        // Thin ribbons between consecutive vertices; the buffer is laid out in
+        // triangle order, so the links trace the mesh structure.
+        const float lw = r * 0.35f;
+        for (size_t i = 0; i + 1 < points.size() && i + 1 < kMaxPoints; ++i) {
+            const float* a = points[i].position;
+            const float* b = points[i + 1].position;
+            float d[3] = { b[0] - a[0], b[1] - a[1], b[2] - a[2] };
+            const float len = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+            if (len < 0.0001f) {
+                continue;
+            }
+            unsigned char color[4];
+            for (int k = 0; k < 4; ++k) {
+                color[k] = (unsigned char)((points[i].color[k] + points[i + 1].color[k]) / 3);
+            }
+            color[3] = 255;
+            float u[3] = { d[2] / len * lw, 0.0f, -d[0] / len * lw };
+            if (std::fabs(u[0]) + std::fabs(u[2]) < 0.0001f) {
+                u[0] = lw;
+            }
+            const float v2[3] = { (d[1] * u[2] - d[2] * u[1]) / len, (d[2] * u[0] - d[0] * u[2]) / len,
+                                  (d[0] * u[1] - d[1] * u[0]) / len };
+            const float* offs[2] = { u, v2 };
+            for (const auto* o : offs) {
+                const float q0[3] = { a[0] - o[0], a[1] - o[1], a[2] - o[2] };
+                const float q1[3] = { a[0] + o[0], a[1] + o[1], a[2] + o[2] };
+                const float q2[3] = { b[0] + o[0], b[1] + o[1], b[2] + o[2] };
+                const float q3[3] = { b[0] - o[0], b[1] - o[1], b[2] - o[2] };
+                const float* quads[2][3] = { { q0, q1, q2 }, { q0, q2, q3 } };
+                for (const auto& q : quads) {
+                    for (int k = 0; k < 3; ++k) {
+                        PreviewVertex v{};
+                        std::memcpy(v.position, q[k], sizeof(v.position));
+                        std::memcpy(v.color, color, 4);
+                        tris.push_back(v);
+                    }
+                }
+            }
+        }
+        DrawTriangles("points://" + std::to_string(id), tris, topLeft, size, view);
+    }
+
+    void DrawTriangles(const std::string& key, const std::vector<PreviewVertex>& tris, const ImVec2& topLeft,
+                       const ImVec2& size, const OrbitView& view) override {
+        if (tris.size() < 3) {
+            return;
+        }
+        RawModel& raw = mRawModels[key];
+        const uint64_t hash = HashBytes(tris.data(), tris.size() * sizeof(PreviewVertex));
+        if (raw.hash != hash) {
+            BuildRawModel(raw, tris, hash);
+            mBoundsCache[key] = raw.bounds;
+            for (auto& slot : mFbPool) {
+                if (slot.owner == key) {
+                    slot.rendered = false;
+                }
+            }
+        }
+
+        ModelPart part;
+        part.resource = key;
+        static const float kIdentity[4][4] = {
+            { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 }
+        };
+        std::memcpy(part.mtx, kIdentity, sizeof(kIdentity));
+        DrawModelParts(key, { part }, topLeft, size, view);
     }
 
     void DrawModel(const std::string& resourceName, const ImVec2& topLeft, const ImVec2& size,
@@ -244,6 +352,58 @@ public:
         const ImVec2 uvMax(1.0f, flipV ? 0.0f : 1.0f);
         ImGui::GetWindowDrawList()->AddImage(reinterpret_cast<ImTextureID>(tex), topLeft,
                                              ImVec2(topLeft.x + size.x, topLeft.y + size.y), uvMin, uvMax);
+    }
+
+    bool PlaySamples(const int16_t* frames, size_t frameCount, int sampleRate, int channels) override {
+        if (frames == nullptr || frameCount == 0 || sampleRate <= 0 || channels <= 0) {
+            return false;
+        }
+        auto audio = Ship::Context::GetInstance()->GetAudio();
+        if (audio == nullptr || audio->GetAudioPlayer() == nullptr ||
+            !audio->GetAudioPlayer()->IsInitialized()) {
+            return false;
+        }
+        mAudioPcm.assign(frames, frames + frameCount * channels);
+        mAudioSrcRate = sampleRate;
+        mAudioSrcChannels = channels;
+        mAudioTotalFrames = frameCount;
+        mAudioPos = 0.0;
+        return true;
+    }
+
+    void StopAudio() override {
+        mAudioPcm.clear();
+        mAudioTotalFrames = 0;
+        mAudioPos = 0.0;
+    }
+
+    float AudioProgress() override {
+        if (mAudioTotalFrames == 0) {
+            return -1.0f;
+        }
+        return (float)(mAudioPos / (double)mAudioTotalFrames);
+    }
+
+    void SeekAudio(float progress) override {
+        if (mAudioTotalFrames != 0) {
+            mAudioPos = std::clamp((double)progress, 0.0, 1.0) * (double)mAudioTotalFrames;
+        }
+    }
+
+    void SetAudioVolume(float volume) override {
+        mAudioVolume = std::clamp(volume, 0.0f, 1.0f);
+    }
+
+    float GetAudioVolume() override {
+        return mAudioVolume;
+    }
+
+    void SetAudioSpeed(float speed) override {
+        mAudioSpeed = std::clamp(speed, 0.25f, 4.0f);
+    }
+
+    float GetAudioSpeed() override {
+        return mAudioSpeed;
     }
 
 private:
@@ -439,6 +599,73 @@ private:
         return a.yaw == b.yaw && a.pitch == b.pitch && a.zoom == b.zoom && a.panX == b.panX && a.panY == b.panY;
     }
 
+    static uint64_t HashBytes(const void* data, size_t n, uint64_t h = 1469598103934665603ull) {
+        const auto* p = static_cast<const uint8_t*>(data);
+        for (size_t i = 0; i < n; ++i) {
+            h ^= p[i];
+            h *= 1099511628211ull;
+        }
+        return h;
+    }
+
+    // In-memory geometry for DrawTriangles: vertex-colored, unlit.
+    struct RawModel {
+        std::vector<Fast::F3DVtx> vtx;
+        std::vector<Gfx> gfx;
+        ModelBounds bounds;
+        uint64_t hash = 0;
+    };
+
+    void BuildRawModel(RawModel& raw, const std::vector<PreviewVertex>& tris, uint64_t hash) {
+        static_assert(sizeof(Fast::F3DVtx) == 16, "F3D vertex encoding assumes 16-byte vertices");
+        const size_t triCount = tris.size() / 3;
+        raw.hash = hash;
+        raw.vtx.clear();
+        raw.gfx.clear();
+        raw.vtx.reserve(triCount * 3);
+
+        float mn[3] = { 1e18f, 1e18f, 1e18f }, mx[3] = { -1e18f, -1e18f, -1e18f };
+        for (size_t i = 0; i < triCount * 3; ++i) {
+            const PreviewVertex& src = tris[i];
+            Fast::F3DVtx v{};
+            for (int k = 0; k < 3; ++k) {
+                v.v.ob[k] = (short)std::clamp(src.position[k], -32768.0f, 32767.0f);
+                mn[k] = std::min(mn[k], src.position[k]);
+                mx[k] = std::max(mx[k], src.position[k]);
+            }
+            std::memcpy(v.v.cn, src.color, 4);
+            raw.vtx.push_back(v);
+        }
+        raw.bounds.cx = (mn[0] + mx[0]) * 0.5f;
+        raw.bounds.cy = (mn[1] + mx[1]) * 0.5f;
+        raw.bounds.cz = (mn[2] + mx[2]) * 0.5f;
+        const float dx = mx[0] - mn[0], dy = mx[1] - mn[1], dz = mx[2] - mn[2];
+        raw.bounds.radius = std::max(0.5f * std::sqrt(dx * dx + dy * dy + dz * dz), 1.0f);
+
+        // Vertex colors: no lighting, shade-only combiner. F3D loads at most 16
+        // vertices, so batch 5 triangles per load (raw F3D G_VTX/G_TRI1 words;
+        // the gbi.h macros emit F3DEX encodings the f3d handlers misread).
+        raw.gfx.reserve(triCount * 3 + 8);
+        Gfx g{};
+        gSPClearGeometryMode(&g, G_LIGHTING);
+        raw.gfx.push_back(g);
+        gDPSetCombineMode(&g, G_CC_SHADE, G_CC_SHADE);
+        raw.gfx.push_back(g);
+        for (size_t base = 0; base < triCount * 3; base += 15) {
+            const size_t n = std::min<size_t>(15, triCount * 3 - base);
+            g.words.w0 = ((uintptr_t)0x04 << 24) | (uintptr_t)(n * sizeof(Fast::F3DVtx)); // G_VTX, v0=0
+            g.words.w1 = (uintptr_t)&raw.vtx[base];
+            raw.gfx.push_back(g);
+            for (size_t t = 0; t + 2 < n; t += 3) {
+                g.words.w0 = (uintptr_t)0xBF << 24; // G_TRI1, indices * 10
+                g.words.w1 = ((uintptr_t)(t * 10) << 16) | ((uintptr_t)((t + 1) * 10) << 8) | (uintptr_t)((t + 2) * 10);
+                raw.gfx.push_back(g);
+            }
+        }
+        gSPEndDisplayList(&g);
+        raw.gfx.push_back(g);
+    }
+
     // FNV-1a over the parts' resources, layers and transforms.
     static uint64_t HashParts(const std::vector<ModelPart>& parts) {
         uint64_t h = 1469598103934665603ull;
@@ -487,6 +714,48 @@ private:
             }
         }
         return -1;
+    }
+
+    void PumpAudio() {
+        if (mAudioTotalFrames == 0) {
+            return;
+        }
+        auto audio = Ship::Context::GetInstance()->GetAudio();
+        auto player = audio != nullptr ? audio->GetAudioPlayer() : nullptr;
+        if (player == nullptr || !player->IsInitialized()) {
+            return;
+        }
+        const int outCh = player->GetNumOutputChannels();
+        const int need = player->GetDesiredBuffered() - player->Buffered();
+        if (need <= 0) {
+            return;
+        }
+        const int chunk = std::min(need, 4096);
+        const double step = (double)mAudioSrcRate * mAudioSpeed / (double)player->GetSampleRate();
+        std::vector<int16_t> out;
+        out.reserve((size_t)chunk * outCh);
+        for (int i = 0; i < chunk; ++i) {
+            const size_t frame = (size_t)mAudioPos;
+            if (frame >= mAudioTotalFrames) {
+                break;
+            }
+            const int16_t l = (int16_t)(mAudioPcm[frame * mAudioSrcChannels] * mAudioVolume);
+            const int16_t r = (int16_t)((mAudioSrcChannels > 1 ? mAudioPcm[frame * mAudioSrcChannels + 1]
+                                                               : mAudioPcm[frame * mAudioSrcChannels]) *
+                                        mAudioVolume);
+            out.push_back(l);
+            out.push_back(r);
+            for (int c = 2; c < outCh; ++c) {
+                out.push_back(0);
+            }
+            mAudioPos += step;
+        }
+        if (!out.empty()) {
+            player->Play((const uint8_t*)out.data(), out.size() * sizeof(int16_t));
+        }
+        if ((size_t)mAudioPos >= mAudioTotalFrames) {
+            StopAudio();
+        }
     }
 
     // Assigns a framebuffer to every visible model and builds a command list
@@ -603,8 +872,14 @@ private:
         std::vector<std::pair<const ModelPart*, Gfx*>> drawable;
         drawable.reserve(req.parts.size());
         for (const auto& part : req.parts) {
-            auto dl = std::static_pointer_cast<Fast::DisplayList>(rm->LoadResource(part.resource));
-            Gfx* gfx = dl != nullptr ? dl->GetPointer() : nullptr;
+            Gfx* gfx = nullptr;
+            auto rawIt = mRawModels.find(part.resource);
+            if (rawIt != mRawModels.end()) {
+                gfx = rawIt->second.gfx.data();
+            } else {
+                auto dl = std::static_pointer_cast<Fast::DisplayList>(rm->LoadResource(part.resource));
+                gfx = dl != nullptr ? dl->GetPointer() : nullptr;
+            }
             if (gfx != nullptr) {
                 drawable.emplace_back(&part, gfx);
             }
@@ -818,6 +1093,16 @@ private:
     std::vector<Mtx> mPartMtxKeys;
     // Per-part light evaluation; alive through the interpreter Run.
     std::vector<Lights1> mPartLights;
+    std::unordered_map<std::string, RawModel> mRawModels;
+    // One-shot sample playback, pushed to the LUS audio player each frame with
+    // nearest-neighbor resampling to the device rate.
+    std::vector<int16_t> mAudioPcm;
+    size_t mAudioTotalFrames = 0;
+    double mAudioPos = 0.0;
+    int mAudioSrcRate = 0;
+    int mAudioSrcChannels = 1;
+    float mAudioVolume = 1.0f;
+    float mAudioSpeed = 1.0f;
     std::vector<Gfx> mCmd;
     std::unordered_map<Mtx*, MtxF> mMtxReplacements;
 };

@@ -480,3 +480,102 @@ std::optional<std::shared_ptr<IParsedData>> SM64::CollisionFactory::parse(std::v
 
     return std::make_shared<Collision>(vertices, surfaces, specialObjects, envRegionBoxes);
 }
+#ifdef BUILD_UI
+#include <cmath>
+#include <unordered_map>
+
+#include "ui/BaseBackend.h"
+#include "ui/Widgets.h"
+
+namespace {
+
+std::unordered_map<std::string, UI::OrbitView> sCollisionViews;
+
+// Distinct pastel per surface type (golden-ratio hue).
+void SurfaceColor(uint32_t type, float out[3]) {
+    if (type == 0) { // SURFACE_DEFAULT
+        out[0] = out[1] = out[2] = 0.72f;
+        return;
+    }
+    const float h = std::fmod((float)type * 0.61803f, 1.0f) * 6.0f;
+    const float x = 1.0f - std::fabs(std::fmod(h, 2.0f) - 1.0f);
+    const float rgb[6][3] = {
+        { 1, x, 0 }, { x, 1, 0 }, { 0, 1, x }, { 0, x, 1 }, { x, 0, 1 }, { 1, 0, x }
+    };
+    const int i = std::min((int)h, 5);
+    for (int k = 0; k < 3; ++k) {
+        out[k] = 0.35f + 0.65f * rgb[i][k];
+    }
+}
+
+const std::vector<UI::PreviewVertex>& CollisionTris(const ParseResultData& item) {
+    static std::unordered_map<std::string, std::vector<UI::PreviewVertex>> sCache;
+    auto it = sCache.find(item.name);
+    if (it != sCache.end()) {
+        return it->second;
+    }
+
+    std::vector<UI::PreviewVertex> tris;
+    auto collision = std::static_pointer_cast<SM64::Collision>(item.data.value());
+    const auto& verts = collision->mVertices;
+    for (const auto& surface : collision->mSurfaces) {
+        float color[3];
+        SurfaceColor((uint32_t)surface.surfaceType, color);
+        for (const auto& tri : surface.tris) {
+            if (tri.x < 0 || tri.y < 0 || tri.z < 0 || (size_t)tri.x >= verts.size() ||
+                (size_t)tri.y >= verts.size() || (size_t)tri.z >= verts.size()) {
+                continue;
+            }
+            const SM64::CollisionVertex* v[3] = { &verts[tri.x], &verts[tri.y], &verts[tri.z] };
+            const float e1[3] = { (float)(v[1]->x - v[0]->x), (float)(v[1]->y - v[0]->y), (float)(v[1]->z - v[0]->z) };
+            const float e2[3] = { (float)(v[2]->x - v[0]->x), (float)(v[2]->y - v[0]->y), (float)(v[2]->z - v[0]->z) };
+            float n[3] = { e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2],
+                           e1[0] * e2[1] - e1[1] * e2[0] };
+            const float len = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+            float shade = 0.6f;
+            if (len > 0.0001f) {
+                shade = 0.45f + 0.55f * std::max(0.0f, (n[0] * 0.30f + n[1] * 0.85f + n[2] * 0.42f) / len);
+            }
+            for (const auto* cv : v) {
+                UI::PreviewVertex pv{};
+                pv.position[0] = cv->x;
+                pv.position[1] = cv->y;
+                pv.position[2] = cv->z;
+                for (int k = 0; k < 3; ++k) {
+                    pv.color[k] = (unsigned char)std::min(255.0f, color[k] * shade * 255.0f);
+                }
+                pv.color[3] = 255;
+                tris.push_back(pv);
+            }
+        }
+    }
+    return sCache.emplace(item.name, std::move(tris)).first->second;
+}
+
+} // namespace
+
+float SM64::CollisionFactoryUI::GetItemHeight(const ParseResultData&) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 324.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
+}
+
+void SM64::CollisionFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+    if (!item.data.has_value()) {
+        ImGui::TextDisabled("no data");
+        return;
+    }
+    auto collision = std::static_pointer_cast<SM64::Collision>(item.data.value());
+    size_t triCount = 0;
+    for (const auto& surface : collision->mSurfaces) {
+        triCount += surface.tris.size();
+    }
+    ImGui::TextDisabled("collision  \xe2\x80\x94  %zu surfaces, %zu tris, %zu verts", collision->mSurfaces.size(),
+                        triCount, collision->mVertices.size());
+
+    UI::OrbitView& view = sCollisionViews[item.name];
+    const UI::PreviewCanvas canvas = UI::BeginPreviewCanvas("##colview", 320.0f, view);
+    if (canvas.visible) {
+        UI::GetBackend()->DrawTriangles(item.name, CollisionTris(item), canvas.origin, canvas.size, view);
+    }
+}
+#endif // BUILD_UI

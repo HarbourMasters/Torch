@@ -5,6 +5,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -120,8 +121,13 @@ private:
         }
 
         // Submit every row; ImGui clips off-screen widgets and factories gate
-        // their own preview rendering.
+        // their own preview rendering. Skip duplicate names (shared audio
+        // samples get registered once per referencing bank).
+        std::unordered_set<std::string> seen;
         for (size_t i = 0; i < assets->size(); ++i) {
+            if (!seen.insert((*assets)[i].name).second) {
+                continue;
+            }
             ImGui::PushID((int)i);
             DrawAsset((*assets)[i]);
             ImGui::PopID();
