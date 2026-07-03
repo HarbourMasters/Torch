@@ -255,7 +255,11 @@ std::map<std::string, SkelState> sSkelState;
 } // namespace
 
 float SkeletonFactoryUI::GetItemHeight(const ParseResultData& item) {
-    return 60.0f + UI::PreviewBlockHeight(item.name);
+    const float line = ImGui::GetTextLineHeightWithSpacing();
+    const float frame = ImGui::GetFrameHeightWithSpacing();
+    const float sep = ImGui::GetStyle().ItemSpacing.y * 2.0f + 1.0f;
+    // AssetHeader + separator, info line, shade/light row, anim row, then canvas.
+    return line * 2.0f + frame * 2.0f + sep + UI::PreviewBlockHeight(item.name);
 }
 
 void SkeletonFactoryUI::DrawUI(const ParseResultData& item) {

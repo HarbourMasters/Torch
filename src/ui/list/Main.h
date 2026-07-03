@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
 #include <map>
 #include <optional>
@@ -19,6 +20,8 @@
 class MainView : public View {
 public:
     std::optional<std::string> selectedFile = std::nullopt;
+    // When set, the asset panel aggregates every file's assets instead of one.
+    bool allAssets = false;
     std::vector<std::string> files;
     char filter[256] = {};
 
@@ -107,6 +110,12 @@ private:
             ImGui::InputTextWithHint("##filter", "Search files...", filter, sizeof(filter));
             ImGui::Separator();
 
+            if (ImGui::Selectable("All assets", allAssets)) {
+                allAssets = true;
+                selectedFile = std::nullopt;
+            }
+            ImGui::Separator();
+
             ImGui::BeginChild("FilesList");
             DrawTree(tree);
             ImGui::EndChild();
@@ -117,8 +126,12 @@ private:
     void DrawAssetsPanel() {
         ImGui::BeginChild("AssetsPanel", ImVec2(0, 0), true);
         {
-            if (selectedFile.has_value()) {
-                const auto* assets = SelectedAssets();
+            if (allAssets) {
+                ImGui::Text("All files");
+                ImGui::SameLine();
+                ImGui::TextDisabled("(%zu shown across %zu files)", rows.size(), files.size());
+                DrawAssetFilters();
+            } else if (selectedFile.has_value()) {
                 ImGui::Text("%s", fs::path(selectedFile.value()).filename().string().c_str());
                 ImGui::SameLine();
                 ImGui::TextDisabled("(%zu shown)", rows.size());
@@ -152,25 +165,36 @@ private:
     std::string typesFile;
     void RebuildFileTypes() {
         fileTypes.assign(1, "all types");
-        const auto* assets = SelectedAssets();
-        if (assets == nullptr) {
-            return;
-        }
         std::set<std::string> seen;
-        for (const auto& a : *assets) {
-            if (HasUI(a) && seen.insert(a.type).second) {
-                fileTypes.push_back(a.type);
+        const auto collect = [&](const std::vector<ParseResultData>& v) {
+            for (const auto& a : v) {
+                if (HasUI(a) && seen.insert(a.type).second) {
+                    fileTypes.push_back(a.type);
+                }
             }
+        };
+        if (allAssets) {
+            for (const auto& [file, v] : Companion::Instance->GetParseResults()) {
+                collect(v);
+            }
+            std::sort(fileTypes.begin() + 1, fileTypes.end());
+        } else if (const auto* assets = SelectedAssets()) {
+            collect(*assets);
         }
         if (typeFilterIdx >= (int)fileTypes.size()) {
             typeFilterIdx = 0;
         }
     }
 
+    // Key identifying which asset set the type dropdown was built for.
+    std::string TypesKey() const {
+        return allAssets ? std::string("\x01""all") : selectedFile.value_or(std::string());
+    }
+
     // Name search + type dropdown, drawn under the asset-panel header.
     void DrawAssetFilters() {
-        if (typesFile != selectedFile.value()) {
-            typesFile = selectedFile.value();
+        if (typesFile != TypesKey()) {
+            typesFile = TypesKey();
             typeFilterIdx = 0;
             RebuildFileTypes();
         }
@@ -202,11 +226,10 @@ private:
     // get registered once per referencing bank). Rebuilt when the file or the
     // name/type filters change.
     std::string rowsSig;
-    std::vector<size_t> rows;
+    std::vector<const ParseResultData*> rows;
 
     void DrawAssets() {
-        const auto* assets = SelectedAssets();
-        if (assets == nullptr || assets->empty()) {
+        if (!allAssets && (SelectedAssets() == nullptr || SelectedAssets()->empty())) {
             ImGui::TextDisabled("Select a file to inspect its assets.");
             return;
         }
@@ -214,26 +237,36 @@ private:
         const std::string typeSel = typeFilterIdx > 0 && typeFilterIdx < (int)fileTypes.size()
                                          ? fileTypes[typeFilterIdx]
                                          : std::string();
-        const std::string sig = selectedFile.value() + '\n' + typeSel + '\n' + assetSearch;
+        const std::string sig = TypesKey() + '\n' + typeSel + '\n' + assetSearch;
         if (rowsSig != sig) {
             rowsSig = sig;
             rows.clear();
             std::unordered_set<std::string> seen;
             const char* only = std::getenv("TORCH_UI_ONLY");
-            for (size_t i = 0; i < assets->size(); ++i) {
-                const auto& a = (*assets)[i];
-                if (only != nullptr && a.name.find(only) == std::string::npos) {
-                    continue;
+            const auto scan = [&](const std::string& file, const std::vector<ParseResultData>& v) {
+                for (const auto& a : v) {
+                    if (only != nullptr && a.name.find(only) == std::string::npos) {
+                        continue;
+                    }
+                    if (!typeSel.empty() && a.type != typeSel) {
+                        continue;
+                    }
+                    if (!ContainsCI(a.name, assetSearch)) {
+                        continue;
+                    }
+                    // Dedup per file so shared samples (registered once per bank)
+                    // collapse, while same-named assets in different files stay.
+                    if (HasUI(a) && seen.insert(file + '\0' + a.name).second) {
+                        rows.push_back(&a);
+                    }
                 }
-                if (!typeSel.empty() && a.type != typeSel) {
-                    continue;
+            };
+            if (allAssets) {
+                for (const auto& [file, v] : Companion::Instance->GetParseResults()) {
+                    scan(file, v);
                 }
-                if (!ContainsCI(a.name, assetSearch)) {
-                    continue;
-                }
-                if (HasUI(a) && seen.insert(a.name).second) {
-                    rows.push_back(i);
-                }
+            } else {
+                scan(selectedFile.value(), *SelectedAssets());
             }
         }
 
@@ -244,7 +277,7 @@ private:
         float y = 0.0f;
         for (size_t i = 0; i < rows.size(); ++i) {
             offs[i] = y;
-            const auto& a = (*assets)[rows[i]];
+            const auto& a = *rows[i];
             y += (a.data.has_value() ? UIFor(a)->GetItemHeight(a) : ImGui::GetTextLineHeightWithSpacing()) + sepH;
         }
         offs[rows.size()] = y;
@@ -262,8 +295,8 @@ private:
         }
         for (size_t i = first; i < rows.size() && top + offs[i] < scrollY + viewH; ++i) {
             ImGui::SetCursorPosY(top + offs[i]);
-            ImGui::PushID((int)rows[i]);
-            DrawAsset((*assets)[rows[i]]);
+            ImGui::PushID((int)i);
+            DrawAsset(*rows[i]);
             ImGui::PopID();
             ImGui::Separator();
         }
@@ -350,7 +383,9 @@ private:
         }
 
         for (const auto& [name, full] : node.files) {
-            if (filtering && !ContainsCI(name, filter)) {
+            // Match the full path so folder names count too (SM64 has many
+            // identically-named files like geo.yml under different folders).
+            if (filtering && !ContainsCI(full, filter)) {
                 continue;
             }
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen |
@@ -361,6 +396,7 @@ private:
             ImGui::TreeNodeEx(full.c_str(), flags, "%s", name.c_str());
             if (ImGui::IsItemClicked()) {
                 selectedFile = full;
+                allAssets = false;
             }
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("%s", full.c_str());
@@ -370,7 +406,7 @@ private:
 
     bool SubtreeMatches(const FileNode& node) const {
         for (const auto& [name, full] : node.files) {
-            if (ContainsCI(name, filter)) {
+            if (ContainsCI(full, filter)) {
                 return true;
             }
         }
