@@ -42,3 +42,13 @@ public:
         return 8;
     }
 };
+
+#ifdef BUILD_UI
+// Previews the display list as a shaded model via Fast3D. Requires the
+// asset's .o2r archive to be mounted.
+class DListFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif

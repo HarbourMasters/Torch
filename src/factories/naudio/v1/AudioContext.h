@@ -27,6 +27,10 @@ class AudioContext {
 public:
     static std::unordered_map<AudioTableType, TableEntry> tables;
     static NAudioDrivers driver;
+    // Audio spec values the engine timing derives from (AUDIO_SETUP yaml:
+    // `frequency`, `buffers`).
+    static uint32_t sessionFrequency;
+    static uint32_t numBuffers;
     // Key: (sampleBankId << 32) | sampleAddr → canonical archive path.
     // Populated during parse so all dedup decisions are made before any export runs.
     static std::unordered_map<uint64_t, std::string> sampleDedup;

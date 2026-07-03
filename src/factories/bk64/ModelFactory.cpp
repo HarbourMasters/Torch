@@ -240,8 +240,7 @@ ExportResult BK64::ModelBinaryExporter::Export(std::ostream& write, std::shared_
         for (size_t i = 0; i + 1 < model->mRawDLWords.size(); i += 2) {
             uint32_t w0 = model->mRawDLWords[i];
             uint32_t w1 = model->mRawDLWords[i + 1];
-            if (!isFramebufferSubstitutionModel && (w0 >> 24) == 0xFD /* G_SETTIMG */ &&
-                SEGMENT_NUMBER(w1) == 2) {
+            if (!isFramebufferSubstitutionModel && (w0 >> 24) == 0xFD /* G_SETTIMG */ && SEGMENT_NUMBER(w1) == 2) {
                 auto it = imageOffsetToTex.find(SEGMENT_OFFSET(w1));
                 if (it != imageOffsetToTex.end()) {
                     w1 = 0xFF000000u | (it->second & 0x00FFFFFFu);
@@ -850,8 +849,7 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             }
             uint16_t geoCnt = (uint16_t)((segment.data[at + 0x10] << 8) | segment.data[at + 0x11]);
             uint16_t triCnt = (uint16_t)((segment.data[at + 0x14] << 8) | segment.data[at + 0x15]);
-            size_t needed =
-                (size_t)kCollHeaderSize + (size_t)geoCnt * kGeoCubeSize + (size_t)triCnt * kCollTriSize;
+            size_t needed = (size_t)kCollHeaderSize + (size_t)geoCnt * kGeoCubeSize + (size_t)triCnt * kCollTriSize;
             return at + needed <= segment.size;
         };
 

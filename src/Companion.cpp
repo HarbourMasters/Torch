@@ -33,6 +33,7 @@
 
 #ifdef SM64_SUPPORT
 #include "factories/sm64/AnimationFactory.h"
+#include "factories/sm64/TextPreview.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
 #include "factories/sm64/CollisionFactory.h"
 #include "factories/sm64/DialogFactory.h"
@@ -66,6 +67,7 @@
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
 #include "factories/sf64/SkeletonFactory.h"
+#include "factories/sf64/SF64Preview.h"
 #include "factories/sf64/AnimFactory.h"
 #include "factories/sf64/ScriptFactory.h"
 #include "factories/sf64/HitboxFactory.h"
@@ -78,6 +80,8 @@
 #include "factories/pm64/SpriteFactory.h"
 #include "factories/pm64/ShapeFactory.h"
 #include "factories/pm64/BackgroundFactory.h"
+#include "factories/pm64/AudioPreview.h"
+#include "factories/pm64/ImagePreview.h"
 #include "factories/pm64/CollisionFactory.h"
 #include "factories/pm64/MapTextureFactory.h"
 #include "factories/pm64/AudioFactory.h"
@@ -119,6 +123,11 @@
 #include "factories/naudio/v0/BankFactory.h"
 #include "factories/naudio/v0/SampleFactory.h"
 #include "factories/naudio/v0/SequenceFactory.h"
+#ifdef BUILD_UI
+#include "factories/naudio/v0/SequencePlayerV0.h"
+#include "factories/naudio/v1/SequencePlayerV1.h"
+#include "ui/audio/SequenceDriver.h"
+#endif
 
 #include "factories/naudio/v1/AudioContext.h"
 #include "factories/naudio/v1/SoundFontFactory.h"
@@ -217,6 +226,8 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("PM64:SPRITE", std::make_shared<PM64SpriteFactory>());
     this->RegisterFactory("PM64:SHAPE", std::make_shared<PM64ShapeFactory>());
     this->RegisterFactory("PM64:BACKGROUND", std::make_shared<PM64BackgroundFactory>());
+    this->RegisterFactory("PM64:BGM", std::make_shared<PM64BgmFactory>());
+    this->RegisterFactory("PM64:BK_SAMPLE", std::make_shared<PM64BkSampleFactory>());
     this->RegisterFactory("PM64:COLLISION", std::make_shared<PM64CollisionFactory>());
     this->RegisterFactory("PM64:MAP_TEXTURE", std::make_shared<PM64MapTextureFactory>());
     this->RegisterFactory("PM64:AUDIO", std::make_shared<PM64AudioFactory>());
@@ -282,6 +293,67 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
 #endif
+
+#ifdef BUILD_UI
+    // Custom preview renderers; other types fall back to BaseFactoryUI.
+    this->RegisterUIFactory("TEXTURE", std::make_shared<TextureFactoryUI>());
+    this->RegisterUIFactory("VTX", std::make_shared<VtxFactoryUI>());
+    this->RegisterUIFactory("GFX", std::make_shared<DListFactoryUI>());
+    this->RegisterUIFactory("LIGHTS", std::make_shared<LightsFactoryUI>());
+#ifdef SM64_SUPPORT
+    this->RegisterUIFactory("SM64:GEO_LAYOUT", std::make_shared<SM64::GeoLayoutFactoryUI>());
+    this->RegisterUIFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactoryUI>());
+    this->RegisterUIFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactoryUI>());
+    this->RegisterUIFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactoryUI>());
+    this->RegisterUIFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactoryUI>());
+    this->RegisterUIFactory("SM64:TEXT", std::make_shared<SM64::TextFactoryUI>());
+    this->RegisterUIFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactoryUI>());
+    this->RegisterUIFactory("SM64:BEHAVIOR_SCRIPT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:LEVEL_SCRIPT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:MACRO", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:MOVTEX", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:MOVTEX_QUAD", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:PAINTING", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:PAINTING_MAP", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:WATER_DROPLET", std::make_shared<BaseFactoryUI>());
+#endif
+#ifdef PM64_SUPPORT
+    this->RegisterUIFactory("PM64:SHAPE", std::make_shared<PM64ShapeFactoryUI>());
+    this->RegisterUIFactory("PM64:COLLISION", std::make_shared<PM64CollisionFactoryUI>());
+    this->RegisterUIFactory("PM64:BK_SAMPLE", std::make_shared<PM64BkSampleFactoryUI>());
+    this->RegisterUIFactory("PM64:SPRITE", std::make_shared<PM64SpriteFactoryUI>());
+    this->RegisterUIFactory("PM64:MAP_TEXTURE", std::make_shared<PM64MapTextureFactoryUI>());
+    this->RegisterUIFactory("PM64:IMGFX_ANIM", std::make_shared<PM64ImgFXAnimFactoryUI>());
+    this->RegisterUIFactory("PM64:TITLE_DATA", std::make_shared<PM64TitleDataFactoryUI>());
+    this->RegisterUIFactory("PM64:STORY_IMAGE", std::make_shared<PM64StoryImageFactoryUI>());
+    UI::RegisterSequenceDriver("PM64:BGM", std::make_shared<SequencePlayerPM64>());
+    this->RegisterUIFactory("PM64:BGM", std::make_shared<UI::SequencePreviewUI>());
+#endif
+#ifdef NAUDIO_SUPPORT
+    this->RegisterUIFactory("NAUDIO:V0:SAMPLE", std::make_shared<SampleFactoryUI>());
+    UI::RegisterSequenceDriver("NAUDIO:V0:SEQUENCE", std::make_shared<SequencePlayerV0>());
+    this->RegisterUIFactory("NAUDIO:V0:SEQUENCE", std::make_shared<UI::SequencePreviewUI>());
+    UI::RegisterSequenceDriver("NAUDIO:V1:SEQUENCE", std::make_shared<SequencePlayerV1>());
+    this->RegisterUIFactory("NAUDIO:V1:SEQUENCE", std::make_shared<UI::SequencePreviewUI>());
+    this->RegisterUIFactory("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactoryUI>());
+#ifdef SF64_SUPPORT
+    // SF64: 3D skeleton preview, decoded messages, code preview for the rest.
+    this->RegisterUIFactory("SF64:SKELETON", std::make_shared<SF64::SkeletonFactoryUI>());
+    this->RegisterUIFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactoryUI>());
+    // 3D previews for collision meshes and hitbox volumes.
+    this->RegisterUIFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactoryUI>());
+    this->RegisterUIFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactoryUI>());
+    this->RegisterUIFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactoryUI>());
+    // Data/script types use the default code-preview card.
+    this->RegisterUIFactory("SF64:ANIM", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SF64:SCRIPT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SF64:ENVIRONMENT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SF64:OBJECT_INIT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SF64:MSG_TABLE", std::make_shared<BaseFactoryUI>());
+#endif
+#endif
+#endif
+
 #ifndef __EMSCRIPTEN__ // We call this manually
     this->Process(assetCount);
 #endif
@@ -1192,6 +1264,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
 
         this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
         this->gCartridge->Initialize();
+        this->gGameTitle = this->gCartridge->GetGameTitle();
 
         if (!config[this->gCartridge->GetHash()]) {
             bool synthesized = false;
@@ -1229,6 +1302,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                     this->gRomData = CompTool::Decompress(this->gRomData);
                     this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
                     this->gCartridge->Initialize();
+                    this->gGameTitle = this->gCartridge->GetGameTitle();
 
                     auto hash = this->gCartridge->GetHash();
 
@@ -1284,37 +1358,42 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     auto output_path = this->gDestinationDirectory;
 
     this->gConfig.moddingPath = (this->gDestinationDirectory / modding_path).string();
-    switch (this->gConfig.exporterType) {
-        case ExportType::Binary: {
-            std::string extension = "";
-            switch (this->gConfig.otrMode) {
-                case ArchiveType::OTR:
-                    extension = ".otr";
-                    break;
-                case ArchiveType::O2R:
-                    extension = ".o2r";
-                    break;
-                default:
-                    throw std::runtime_error("Invalid archive type for export type Binary");
+    // The output path is only consumed by the exporters. In parse-only mode
+    // (mShouldProcess == false, e.g. the `ui` viewer) nothing is written, so skip
+    // the setup — this also avoids requiring an archive type for Binary parsing.
+    if (this->mShouldProcess) {
+        switch (this->gConfig.exporterType) {
+            case ExportType::Binary: {
+                std::string extension = "";
+                switch (this->gConfig.otrMode) {
+                    case ArchiveType::OTR:
+                        extension = ".otr";
+                        break;
+                    case ArchiveType::O2R:
+                        extension = ".o2r";
+                        break;
+                    default:
+                        throw std::runtime_error("Invalid archive type for export type Binary");
+                }
+                output_path /= opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
+                break;
             }
-            output_path /= opath && opath["binary"] ? opath["binary"].as<std::string>() : ("generic" + extension);
-            break;
+            case ExportType::Header: {
+                output_path /= opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
+                break;
+            }
+            case ExportType::Code: {
+                output_path /= opath && opath["code"] ? opath["code"].as<std::string>() : "code";
+                break;
+            }
+            case ExportType::XML:
+            case ExportType::Modding: {
+                output_path /= modding_path;
+                break;
+            }
         }
-        case ExportType::Header: {
-            output_path /= opath && opath["headers"] ? opath["headers"].as<std::string>() : "headers";
-            break;
-        }
-        case ExportType::Code: {
-            output_path /= opath && opath["code"] ? opath["code"].as<std::string>() : "code";
-            break;
-        }
-        case ExportType::XML:
-        case ExportType::Modding: {
-            output_path /= modding_path;
-            break;
-        }
+        this->gConfig.outputPath = output_path.string();
     }
-    this->gConfig.outputPath = output_path.string();
     if (auto outParent = output_path.parent_path(); !outParent.empty() && !exists(outParent)) {
         create_directories(outParent);
     }
@@ -1350,6 +1429,8 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             this->gConfig.gbi.useFloats = gbi_floats.as<bool>();
         }
     }
+
+    this->gConfig.defaultShading = GetSafeNode<std::string>(cfg, "default_shading", "");
 
     if (auto sort = cfg["sort"]) {
         if (sort.IsSequence()) {
@@ -1788,6 +1869,21 @@ std::optional<std::shared_ptr<BaseFactory>> Companion::GetFactory(const std::str
     return this->gFactories[type];
 }
 
+#ifdef BUILD_UI
+void Companion::RegisterUIFactory(const std::string& type, const std::shared_ptr<BaseFactoryUI>& factory) {
+    this->gUIFactories[type] = factory;
+    SPDLOG_INFO("Registered UI factory for {}", type);
+}
+
+std::optional<std::shared_ptr<BaseFactoryUI>> Companion::GetUIFactory(const std::string& type) {
+    if (!Torch::contains(this->gUIFactories, type)) {
+        return std::nullopt;
+    }
+
+    return this->gUIFactories[type];
+}
+#endif
+
 std::optional<Table> Companion::SearchTable(uint32_t addr) {
     for (auto& table : this->gTables) {
         if (addr >= table.start && addr <= table.end) {
@@ -1883,6 +1979,31 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
     }
 
     return this->gAddrMap[this->gCurrentFile][addr];
+}
+
+std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint32_t addr, const std::string& file) {
+    if (Torch::contains(this->gAddrMap, file) && Torch::contains(this->gAddrMap[file], addr)) {
+        return this->gAddrMap[file][addr];
+    }
+
+    // The external_files context used during parsing is unavailable here, so
+    // approximate it: sibling ymls first, then any file. Segmented addresses
+    // can repeat across groups, so proximity ordering matters.
+    const auto slash = file.find_last_of('/');
+    const std::string dir = slash != std::string::npos ? file.substr(0, slash + 1) : "";
+    if (!dir.empty()) {
+        for (auto& [f, map] : this->gAddrMap) {
+            if (f != file && f.rfind(dir, 0) == 0 && Torch::contains(map, addr)) {
+                return map[addr];
+            }
+        }
+    }
+    for (auto& [f, map] : this->gAddrMap) {
+        if (f != file && Torch::contains(map, addr)) {
+            return map[addr];
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> Companion::GetStringByAddr(const uint32_t addr) {

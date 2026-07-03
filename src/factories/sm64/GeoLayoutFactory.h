@@ -41,6 +41,7 @@ class GeoBinaryExporter : public BaseExporter {
 class GeoLayoutFactory : public BaseFactory {
 public:
     GeoLayoutFactory();
+    bool CanPreviewCode() override { return true; }
 
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
@@ -51,4 +52,14 @@ public:
         };
     }
 };
+
+#ifdef BUILD_UI
+// Previews the geo layout as an assembled model: the node tree is flattened
+// into per-part display lists rendered via Fast3D.
+class GeoLayoutFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif
 }

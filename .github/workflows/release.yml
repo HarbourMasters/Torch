@@ -16,11 +16,13 @@ jobs:
     - name: Install Linux Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake ninja-build libbz2-dev
+        # Includes the libultraship/Fast3D deps for the interactive viewer.
+        sudo apt-get install -y cmake ninja-build libbz2-dev \
+          libsdl2-dev libgl1-mesa-dev libopengl-dev libzip-dev nlohmann-json3-dev
 
     - name: Configure and Build Linux Binaries
       run: |
-        cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
+        cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_UI=ON
         cmake --build build-cmake -j
 
     - name: Publish Linux Release
@@ -72,11 +74,12 @@ jobs:
 
     - name: Install macOS Dependencies
       run: |
-        brew install cmake ninja
+        # Includes the libultraship/Fast3D deps for the interactive viewer.
+        brew install cmake ninja sdl2 glew libzip nlohmann-json
 
     - name: Configure and Build macOS Binaries
       run: |
-        cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
+        cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_UI=ON
         cmake --build build-cmake -j
 
     - name: Publish macOS Release

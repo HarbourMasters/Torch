@@ -660,3 +660,51 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
     return std::make_shared<DListData>(gfxs);
 }
+
+#ifdef BUILD_UI
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <unordered_map>
+
+#include "ui/BaseBackend.h"
+#include "ui/Widgets.h"
+
+namespace {
+std::unordered_map<std::string, UI::OrbitView> sModelViews;
+} // namespace
+
+float DListFactoryUI::GetItemHeight(const ParseResultData& item) {
+    const float line = ImGui::GetTextLineHeightWithSpacing();
+    const float frame = ImGui::GetFrameHeightWithSpacing();
+    const float sep = ImGui::GetStyle().ItemSpacing.y * 2.0f + 1.0f;
+    return line * 2.0f + frame + sep + UI::PreviewBlockHeight(item.name);
+}
+
+void DListFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+    ImGui::TextDisabled("display list  \xe2\x80\x94  drag to orbit, shift+drag to pan");
+
+    static std::unordered_map<std::string, int> sShade;
+    const int cfgShade = UI::ShadeSetupIndexByName(Companion::Instance->GetConfig().defaultShading);
+    int& shadeIdx = sShade.try_emplace(item.name, cfgShade >= 0 ? cfgShade : 0).first->second;
+    UI::ShadeSetupCombo("##dlshade", shadeIdx);
+    ImGui::SameLine();
+    UI::LightingControls();
+
+    UI::OrbitView& view = sModelViews[item.name];
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##modelview", item.name, view);
+    // Only on-screen rows request the offscreen render.
+    if (canvas.visible) {
+        const UI::ShadeSetup shade = UI::ShadeSetupFor(shadeIdx);
+        UI::ModelPart part;
+        part.resource = item.name;
+        static const float kIdentity[4][4] = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
+        std::memcpy(part.mtx, kIdentity, sizeof(kIdentity));
+        part.gameShade = shade.gameShade;
+        part.unlit = shade.unlit;
+        part.fullAmbient = shade.fullAmbient;
+        UI::GetBackend()->DrawModelParts(item.name, { part }, canvas.origin, canvas.size, view);
+    }
+}
+#endif

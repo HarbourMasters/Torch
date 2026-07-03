@@ -101,6 +101,9 @@ struct TorchConfig {
     bool textureDefines;
     bool includeAutogen;
     bool dialogPack = false;
+    // Default model-preview shading mode name (e.g. "textured + lit"); empty
+    // uses each viewer's built-in fallback. See UI::ShadeSetupIndexByName.
+    std::string defaultShading;
 };
 
 struct ParseResultData {
@@ -164,6 +167,8 @@ public:
     bool AddTextureDefines() const { return this->gConfig.textureDefines; }
 
     N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
+    // Survives cartridge teardown so the UI can key game-specific behavior.
+    const std::string& GetGameTitle() const { return this->gGameTitle; }
     std::vector<uint8_t>& GetRomData() { return this->gRomData; }
     std::string GetOutputPath() { return this->gConfig.outputPath; }
     const std::string& GetAssetPath() const { return this->gAssetPath; }
@@ -183,6 +188,9 @@ public:
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
     uint32_t PatchVirtualAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
+    // File-scoped variant for use outside the parse/export passes, where
+    // gCurrentFile no longer points at the owning file.
+    std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr, const std::string& file);
     std::optional<std::string> GetStringByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);
     std::optional<std::string> GetSafeStringByAddr(const uint32_t addr, std::string type);
@@ -227,6 +235,12 @@ public:
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
     void SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);
     bool GetCompressedSegmentOffset(uint32_t* addr);
+
+#ifdef BUILD_UI
+    void RegisterUIFactory(const std::string& type, const std::shared_ptr<BaseFactoryUI>& factory);
+    std::optional<std::shared_ptr<BaseFactoryUI>> GetUIFactory(const std::string& type);
+    const std::unordered_map<std::string, std::vector<ParseResultData>>& GetParseResults() { return this->gParseResults; }
+#endif
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
@@ -242,6 +256,7 @@ private:
     bool gIndividualIncludes = false;
     YAML::Node gHashNode;
     std::shared_ptr<N64::Cartridge> gCartridge;
+    std::string gGameTitle;
     std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
     BinaryWrapper* gCurrentWrapper;
@@ -276,6 +291,9 @@ private:
     std::unordered_map<std::string, std::string> gModdedAssetPaths;
     std::variant<std::vector<std::string>, std::string> gWriteOrder;
     std::unordered_map<std::string, std::shared_ptr<BaseFactory>> gFactories;
+#ifdef BUILD_UI
+    std::unordered_map<std::string, std::shared_ptr<BaseFactoryUI>> gUIFactories;
+#endif
     std::unordered_map<std::string, std::map<std::string, std::vector<WriteEntry>>> gWriteMap;
     std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>> gVirtualAddrMap;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>>> gAddrMap;

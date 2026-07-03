@@ -33,6 +33,17 @@ class PM64ShapeHeaderExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };
 
+#ifdef BUILD_UI
+// Headless build of a shape's parts (diagnostics; no backend required).
+void PM64ShapeDebugBuild(const ParseResultData& item);
+
+class PM64ShapeFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif
+
 class PM64ShapeFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;

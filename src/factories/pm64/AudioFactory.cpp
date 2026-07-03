@@ -1,4 +1,5 @@
 #include "AudioFactory.h"
+#include "AudioPreview.h"
 #include "Companion.h"
 #include "spdlog/spdlog.h"
 #include <set>
@@ -603,6 +604,12 @@ std::optional<std::shared_ptr<IParsedData>> PM64AudioFactory::parse(std::vector<
 
     // Byte-swap for little-endian
     ByteSwapAudioData(audioData.data(), audioData.size());
+
+    // Viewer mode: expose songs and bank instruments as preview assets,
+    // parsed from the untouched big-endian ROM data.
+    if (PM64Audio::PreviewAssets()) {
+        PM64Audio::RegisterPreviewAssets(buffer, offset);
+    }
 
     return std::make_shared<RawBuffer>(audioData);
 }

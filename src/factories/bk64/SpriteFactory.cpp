@@ -418,12 +418,12 @@ std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse_modding(std::ve
         unkA = GetSafeNode<int16_t>(content, "UnkA", positions[0].second);
         YAML::Node fh = frame0["FrameHeader"];
         if (fh) {
-            frameHeaders.push_back({ GetSafeNode<int16_t>(fh, "x", i16(0)), GetSafeNode<int16_t>(fh, "y", i16(0)),
-                                     GetSafeNode<int16_t>(fh, "w", positions[0].first),
-                                     GetSafeNode<int16_t>(fh, "h", positions[0].second),
-                                     GetSafeNode<int16_t>(fh, "unkA", i16(0)), GetSafeNode<int16_t>(fh, "unkC", i16(0)),
-                                     GetSafeNode<int16_t>(fh, "unkE", i16(0)), GetSafeNode<int16_t>(fh, "unk10", i16(0)),
-                                     GetSafeNode<int16_t>(fh, "unk12", i16(0)) });
+            frameHeaders.push_back(
+                { GetSafeNode<int16_t>(fh, "x", i16(0)), GetSafeNode<int16_t>(fh, "y", i16(0)),
+                  GetSafeNode<int16_t>(fh, "w", positions[0].first), GetSafeNode<int16_t>(fh, "h", positions[0].second),
+                  GetSafeNode<int16_t>(fh, "unkA", i16(0)), GetSafeNode<int16_t>(fh, "unkC", i16(0)),
+                  GetSafeNode<int16_t>(fh, "unkE", i16(0)), GetSafeNode<int16_t>(fh, "unk10", i16(0)),
+                  GetSafeNode<int16_t>(fh, "unk12", i16(0)) });
         } else {
             frameHeaders.push_back({ 0, 0, positions[0].first, positions[0].second, 0, 0, 0, 0, 0 });
         }
@@ -431,15 +431,33 @@ std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse_modding(std::ve
 
     std::string format;
     switch (formatCode) {
-        case 0x1: format = "CI4"; break;
-        case 0x4: format = "CI8"; break;
-        case 0x20: format = "I4"; break;
-        case 0x40: format = "I8"; break;
-        case 0x80: format = "IA4"; break;
-        case 0x100: format = "IA8"; break;
-        case 0x400: format = "RGBA16"; break;
-        case 0x800: format = "RGBA32"; break;
-        default: format = "IA8"; break;
+        case 0x1:
+            format = "CI4";
+            break;
+        case 0x4:
+            format = "CI8";
+            break;
+        case 0x20:
+            format = "I4";
+            break;
+        case 0x40:
+            format = "I8";
+            break;
+        case 0x80:
+            format = "IA4";
+            break;
+        case 0x100:
+            format = "IA8";
+            break;
+        case 0x400:
+            format = "RGBA16";
+            break;
+        case 0x800:
+            format = "RGBA32";
+            break;
+        default:
+            format = "IA8";
+            break;
     }
 
     const auto symbol = GetSafeNode<std::string>(node, "symbol");

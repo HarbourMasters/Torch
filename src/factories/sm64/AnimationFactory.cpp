@@ -91,3 +91,22 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
     return std::make_shared<AnimationData>(flags, animYTransDivisor, startFrame, loopStart, loopEnd, unusedBoneCount,
                                            length, indicesData, valuesData);
 }
+#ifdef BUILD_UI
+#include "Companion.h"
+#include "ui/Widgets.h"
+
+void SM64::AnimationFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+    if (!item.data.has_value()) {
+        ImGui::TextDisabled("no data");
+        return;
+    }
+    auto anim = std::static_pointer_cast<SM64::AnimationData>(item.data.value());
+    UI::KV("flags", std::to_string(anim->mFlags));
+    UI::KV("start frame", std::to_string(anim->mStartFrame));
+    UI::KV("loop", std::to_string(anim->mLoopStart) + " - " + std::to_string(anim->mLoopEnd));
+    UI::KV("y-trans divisor", std::to_string(anim->mAnimYTransDivisor));
+    UI::KV("channels", std::to_string(anim->mIndices.size() / 2));
+    UI::KV("values", std::to_string(anim->mEntries.size()));
+}
+#endif // BUILD_UI

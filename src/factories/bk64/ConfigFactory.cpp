@@ -301,9 +301,7 @@ static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outB
         uint32_t unzippedSize = expectedSize;
         try {
             unzipped = bk_unzip(rom.data() + off, &unzippedSize);
-        } catch (...) {
-            continue;
-        }
+        } catch (...) { continue; }
         if (!unzipped || unzippedSize != expectedSize) {
             if (unzipped)
                 free(unzipped);
@@ -327,8 +325,7 @@ static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outB
         std::vector<uint8_t> payload(unzipped, unzipped + unzippedSize);
         free(unzipped);
         uint32_t firstTarget = 0;
-        int jals =
-            CountInternalCustomCodeJals(payload, 0, static_cast<uint32_t>(payload.size()), firstTarget);
+        int jals = CountInternalCustomCodeJals(payload, 0, static_cast<uint32_t>(payload.size()), firstTarget);
         if (jals < CUSTOM_CODE_MIN_INTERNAL_JALS) {
             continue;
         }
@@ -450,8 +447,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
             sectionCount++;
             SPDLOG_INFO("[ConfigFactory] ROM_HASH = {}", romHash);
         } else {
-            SPDLOG_WARN("[ConfigFactory] ROM hash unexpected length {}, skipping ROM_HASH section",
-                        romHash.size());
+            SPDLOG_WARN("[ConfigFactory] ROM hash unexpected length {}, skipping ROM_HASH section", romHash.size());
         }
     }
 
@@ -617,7 +613,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         for (int layer = 0; layer < 3; layer++) {
                             uint32_t base = off + 4 + layer * 12;
                             blob.writeS16(static_cast<int16_t>(readBE16(modF9, base))); // model_id
-                            blob.writeU32(readBE32(modF9, base + 4)); // scale (BE f32 bits -> LE u32)
+                            blob.writeU32(readBE32(modF9, base + 4));                   // scale (BE f32 bits -> LE u32)
                             blob.writeU32(readBE32(modF9, base + 8)); // rotation (BE f32 bits -> LE u32)
                         }
                         count++;
@@ -860,10 +856,10 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
 // Asset-table hashing
 //
 // Lighthouse ships a per-slot SHA-1 of the v1.0 baseline at assets/yaml/<region>/<rev>/hashes.yaml.
-// When extracting a BB romhack, we hash each slot's compressed bytes: a match means the slot is bit-for-bit 
+// When extracting a BB romhack, we hash each slot's compressed bytes: a match means the slot is bit-for-bit
 // vanilla, so skip the factory entirely.
 
-// Walk the BK64 asset table at ROM 0x5E90 and invoke `onSlot(index, sha1Hex)` for every non-empty, 
+// Walk the BK64 asset table at ROM 0x5E90 and invoke `onSlot(index, sha1Hex)` for every non-empty,
 // non-zero-sized slot. Returns the total slot count (including empty slots), or 0 on parse failure.
 static size_t WalkAssetTable(const std::vector<uint8_t>& rom,
                              const std::function<void(uint32_t, const std::string&)>& onSlot) {
@@ -1061,8 +1057,7 @@ bool TrySynthesizeRomConfig(YAML::Node& config, const std::string& cartHash, con
     uint32_t ovlAddr = 0;
     uint8_t* ovl = FindPatchedOverlay(rom, ovlSize, ovlAddr);
     if (ovl == nullptr) {
-        SPDLOG_WARN("[ConfigFactory] {} is >16MB but doesn't look like a BB romhack. Aborting extraction.",
-                    cartHash);
+        SPDLOG_WARN("[ConfigFactory] {} is >16MB but doesn't look like a BB romhack. Aborting extraction.", cartHash);
         return false;
     }
     free(ovl); // we only needed the validation, not the bytes

@@ -101,10 +101,7 @@
 #define G_TEXRECTFLIP 0xe5     /* -27 */
 #define G_TEXRECT 0xe4         /* -28 */
 
-#define gsDPNoParam(cmd)           \
-    {                              \
-        { _SHIFTL(cmd, 24, 8), 0 } \
-    }
+#define gsDPNoParam(cmd) { { _SHIFTL(cmd, 24, 8), 0 } }
 
 #define G_CCMUX_COMBINED 0
 #define G_CCMUX_TEXEL0 1

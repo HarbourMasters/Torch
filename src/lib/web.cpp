@@ -45,14 +45,12 @@ EMSCRIPTEN_BINDINGS(Torch) {
         .constructor<std::vector<uint8_t>, ArchiveType, bool, bool, std::string, std::string>()
         .constructor<std::vector<uint8_t>, ArchiveType, bool, bool, std::string>()
         .constructor<std::vector<uint8_t>, ArchiveType, bool, bool>()
-        .function("Init", optional_override([](Companion& self, ExportType type) {
-            self.Init(type);
-        }))
+        .function("Init", optional_override([](Companion& self, ExportType type) { self.Init(type); }))
         .function("GetCartridge", &Companion::GetCartridge, allow_raw_pointers())
         .function("Process", optional_override([](Companion& self) {
-            std::atomic<size_t> dummy{0};
-            self.Process(dummy);
-        }))
+                      std::atomic<size_t> dummy{ 0 };
+                      self.Process(dummy);
+                  }))
         .function("GetRomData", &Companion::GetRomData, allow_raw_pointers());
 }
 #endif

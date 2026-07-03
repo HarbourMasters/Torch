@@ -168,6 +168,11 @@ void AudioConverter::SampleV1ToAIFC(NSampleData* sample, LUS::BinaryWriter& out)
         std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(sample->loop)->data.value());
     auto book =
         std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(sample->book)->data.value());
+    SampleV1ToAIFC(sample, loop.get(), book.get(), out);
+}
+
+void AudioConverter::SampleV1ToAIFC(NSampleData* sample, const ADPCMLoopData* loop, const ADPCMBookData* book,
+                                    LUS::BinaryWriter& out) {
     auto entry = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
     auto sampleData = entry.buffer.data() + entry.info->entries[sample->sampleBankId].addr + sample->sampleAddr;
     auto aifc = AIFCWriter();
@@ -178,6 +183,11 @@ void AudioConverter::SampleV1ToAIFC(NSampleData* sample, LUS::BinaryWriter& out)
 
     if (sample_rate == 0) {
         sample_rate = 32000 * sample->tuning;
+    }
+    // Explicit yaml entries carry no tuning; a zero rate makes the AIFF
+    // invalid (decoders reject it), so fall back to the mixer reference.
+    if (sample_rate == 0) {
+        sample_rate = 32000;
     }
 
     int16_t num_channels = 1;

@@ -22,7 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: brew install cmake ninja xcodes
+        run: |
+          # Base tools plus the libultraship/Fast3D deps the interactive viewer
+          # (BUILD_UI) needs: SDL2, GLEW, libzip and nlohmann-json. The mac
+          # backend is Metal (metal-cpp is fetched), so no Vulkan is required.
+          brew install cmake ninja xcodes sdl2 glew libzip nlohmann-json
       - name: Download llvm
         if: ${{ matrix.toolchain == 'macos-clang-llvm' }}
         run: |
@@ -35,7 +39,9 @@ jobs:
           echo "/opt/homebrew/opt/gcc/bin" >> $GITHUB_PATH
       - name: Build
         run: |
-          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }}.cmake
+          # Enable the viewer in CI (BUILD_UI is off by default), except on the gcc
+          # toolchain: the Metal backend needs clang/Objective-C++.
+          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DBUILD_UI=${{ matrix.toolchain == 'macos-gnu' && 'OFF' || 'ON' }} -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }}.cmake
           cmake --build build-cmake -j
       - name: Create Package
         if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'macos-clang' }}
