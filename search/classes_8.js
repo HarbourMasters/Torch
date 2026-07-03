@@ -5,7 +5,7 @@ var searchData=
   ['includedata_2',['IncludeData',['../classIncludeData.html',1,'']]],
   ['includefactory_3',['IncludeFactory',['../classIncludeFactory.html',1,'']]],
   ['includeheaderexporter_4',['IncludeHeaderExporter',['../classIncludeHeaderExporter.html',1,'']]],
-  ['instrument_5',['Instrument',['../structFZX_1_1Instrument.html',1,'FZX::Instrument'],['../structInstrument.html',1,'Instrument']]],
+  ['instrument_5',['Instrument',['../structFZX_1_1Instrument.html',1,'FZX::Instrument'],['../structInstrument.html',1,'Instrument'],['../structPM64Audio_1_1Instrument.html',1,'PM64Audio::Instrument']]],
   ['instrumentbinaryexporter_6',['InstrumentBinaryExporter',['../classInstrumentBinaryExporter.html',1,'']]],
   ['instrumentchunk_7',['InstrumentChunk',['../structInstrumentChunk.html',1,'']]],
   ['instrumentcodeexporter_8',['InstrumentCodeExporter',['../classInstrumentCodeExporter.html',1,'']]],

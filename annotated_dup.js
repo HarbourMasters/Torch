@@ -215,6 +215,13 @@ var annotated_dup =
     [ "N64", null, [
       [ "Cartridge", "classN64_1_1Cartridge.html", null ]
     ] ],
+    [ "PM64Audio", null, [
+      [ "Bank", "structPM64Audio_1_1Bank.html", null ],
+      [ "DrumInfo", "structPM64Audio_1_1DrumInfo.html", null ],
+      [ "GlobalData", "structPM64Audio_1_1GlobalData.html", null ],
+      [ "Instrument", "structPM64Audio_1_1Instrument.html", null ],
+      [ "ProgramInfo", "structPM64Audio_1_1ProgramInfo.html", null ]
+    ] ],
     [ "SF64", null, [
       [ "AnimBinaryExporter", "classSF64_1_1AnimBinaryExporter.html", null ],
       [ "AnimCodeExporter", "classSF64_1_1AnimCodeExporter.html", null ],
@@ -358,6 +365,17 @@ var annotated_dup =
       [ "WaterDropletFactory", "classSM64_1_1WaterDropletFactory.html", null ],
       [ "WaterDropletHeaderExporter", "classSM64_1_1WaterDropletHeaderExporter.html", null ]
     ] ],
+    [ "UI", null, [
+      [ "BaseBackend", "classUI_1_1BaseBackend.html", null ],
+      [ "GfxBundle", "structUI_1_1GfxBundle.html", null ],
+      [ "GfxBundleDList", "structUI_1_1GfxBundleDList.html", null ],
+      [ "ModelPart", "structUI_1_1ModelPart.html", null ],
+      [ "OrbitView", "structUI_1_1OrbitView.html", null ],
+      [ "PartTexture", "structUI_1_1PartTexture.html", null ],
+      [ "PreviewAtmosphere", "structUI_1_1PreviewAtmosphere.html", null ],
+      [ "PreviewLighting", "structUI_1_1PreviewLighting.html", null ],
+      [ "PreviewVertex", "structUI_1_1PreviewVertex.html", null ]
+    ] ],
     [ "AdpcmBook", "structAdpcmBook.html", null ],
     [ "ADPCMBookBinaryExporter", "classADPCMBookBinaryExporter.html", null ],
     [ "ADPCMBookCodeExporter", "classADPCMBookCodeExporter.html", null ],
@@ -475,6 +493,7 @@ var annotated_dup =
     [ "LightsFactory", "classLightsFactory.html", null ],
     [ "LightsHeaderExporter", "classLightsHeaderExporter.html", null ],
     [ "Loop", "structLoop.html", null ],
+    [ "MainView", "classMainView.html", "classMainView" ],
     [ "Marker", "structMarker.html", null ],
     [ "Mtx", "unionMtx.html", null ],
     [ "MtxBinaryExporter", "classMtxBinaryExporter.html", null ],
@@ -510,6 +529,12 @@ var annotated_dup =
     [ "PM64BackgroundBinaryExporter", "classPM64BackgroundBinaryExporter.html", null ],
     [ "PM64BackgroundFactory", "classPM64BackgroundFactory.html", null ],
     [ "PM64BackgroundHeaderExporter", "classPM64BackgroundHeaderExporter.html", null ],
+    [ "PM64BgmBinaryExporter", "classPM64BgmBinaryExporter.html", null ],
+    [ "PM64BgmData", "classPM64BgmData.html", null ],
+    [ "PM64BgmFactory", "classPM64BgmFactory.html", null ],
+    [ "PM64BkSampleBinaryExporter", "classPM64BkSampleBinaryExporter.html", null ],
+    [ "PM64BkSampleData", "classPM64BkSampleData.html", null ],
+    [ "PM64BkSampleFactory", "classPM64BkSampleFactory.html", null ],
     [ "PM64CollisionBinaryExporter", "classPM64CollisionBinaryExporter.html", null ],
     [ "PM64CollisionFactory", "classPM64CollisionFactory.html", null ],
     [ "PM64CollisionHeaderExporter", "classPM64CollisionHeaderExporter.html", null ],
@@ -586,6 +611,8 @@ var annotated_dup =
     [ "Vec3sHeaderExporter", "classVec3sHeaderExporter.html", null ],
     [ "Vec4f", "classVec4f.html", null ],
     [ "Vec4s", "classVec4s.html", null ],
+    [ "View", "classView.html", null ],
+    [ "ViewManager", "classViewManager.html", null ],
     [ "ViewportBinaryExporter", "classViewportBinaryExporter.html", null ],
     [ "ViewportCodeExporter", "classViewportCodeExporter.html", null ],
     [ "ViewportFactory", "classViewportFactory.html", null ],

@@ -34,5 +34,6 @@ var searchData=
   ['drumcodeexporter_31',['DrumCodeExporter',['../classDrumCodeExporter.html',1,'']]],
   ['drumdata_32',['DrumData',['../classDrumData.html',1,'']]],
   ['drumfactory_33',['DrumFactory',['../classDrumFactory.html',1,'']]],
-  ['drumheaderexporter_34',['DrumHeaderExporter',['../classDrumHeaderExporter.html',1,'']]]
+  ['drumheaderexporter_34',['DrumHeaderExporter',['../classDrumHeaderExporter.html',1,'']]],
+  ['druminfo_35',['DrumInfo',['../structPM64Audio_1_1DrumInfo.html',1,'PM64Audio']]]
 ];
