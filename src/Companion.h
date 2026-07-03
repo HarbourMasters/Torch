@@ -101,6 +101,9 @@ struct TorchConfig {
     bool textureDefines;
     bool includeAutogen;
     bool dialogPack = false;
+    // Default model-preview shading mode name (e.g. "textured + lit"); empty
+    // uses each viewer's built-in fallback. See UI::ShadeSetupIndexByName.
+    std::string defaultShading;
 };
 
 struct ParseResultData {

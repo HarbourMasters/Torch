@@ -91,8 +91,6 @@ void TextBox(const char* id, const std::string& text, float height) {
 
 } // namespace
 
-// --- dialog -------------------------------------------------------------------
-
 float DialogFactoryUI::GetItemHeight(const ParseResultData&) {
     return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 180.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
 }
@@ -109,8 +107,6 @@ void DialogFactoryUI::DrawUI(const ParseResultData& item) {
     TextBox("##dialogtext", DecodeText(dialog->mText.data(), dialog->mText.size()), 150.0f);
 }
 
-// --- course / menu text -------------------------------------------------------
-
 float TextFactoryUI::GetItemHeight(const ParseResultData&) {
     return ImGui::GetTextLineHeightWithSpacing() + 120.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;
 }
@@ -124,8 +120,6 @@ void TextFactoryUI::DrawUI(const ParseResultData& item) {
     const auto& bytes = std::static_pointer_cast<RawBuffer>(item.data.value())->mBuffer;
     TextBox("##text", DecodeText(bytes.data(), bytes.size()), 100.0f);
 }
-
-// --- compression dictionary ---------------------------------------------------
 
 float DictionaryFactoryUI::GetItemHeight(const ParseResultData&) {
     return ImGui::GetTextLineHeightWithSpacing() * 2.0f + 220.0f + ImGui::GetStyle().ItemSpacing.y * 3.0f;

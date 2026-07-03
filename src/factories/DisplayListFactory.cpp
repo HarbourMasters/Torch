@@ -664,6 +664,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 #ifdef BUILD_UI
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <unordered_map>
 
 #include "ui/BaseBackend.h"
@@ -680,8 +681,12 @@ float DListFactoryUI::GetItemHeight(const ParseResultData& item) {
 
 void DListFactoryUI::DrawUI(const ParseResultData& item) {
     UI::AssetHeader(item.name, item.type);
-    ImGui::TextDisabled(
-        "display list  \xe2\x80\x94  drag to orbit, shift+drag to pan, \xe2\x8c\x98/Ctrl+scroll to zoom");
+    ImGui::TextDisabled("display list  \xe2\x80\x94  drag to orbit, shift+drag to pan");
+
+    static std::unordered_map<std::string, int> sShade;
+    const int cfgShade = UI::ShadeSetupIndexByName(Companion::Instance->GetConfig().defaultShading);
+    int& shadeIdx = sShade.try_emplace(item.name, cfgShade >= 0 ? cfgShade : 0).first->second;
+    UI::ShadeSetupCombo("##dlshade", shadeIdx);
     ImGui::SameLine();
     UI::LightingControls();
 
@@ -689,7 +694,15 @@ void DListFactoryUI::DrawUI(const ParseResultData& item) {
     const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##modelview", item.name, view);
     // Only on-screen rows request the offscreen render.
     if (canvas.visible) {
-        UI::GetBackend()->DrawModel(item.name, canvas.origin, canvas.size, view);
+        const UI::ShadeSetup shade = UI::ShadeSetupFor(shadeIdx);
+        UI::ModelPart part;
+        part.resource = item.name;
+        static const float kIdentity[4][4] = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
+        std::memcpy(part.mtx, kIdentity, sizeof(kIdentity));
+        part.gameShade = shade.gameShade;
+        part.unlit = shade.unlit;
+        part.fullAmbient = shade.fullAmbient;
+        UI::GetBackend()->DrawModelParts(item.name, { part }, canvas.origin, canvas.size, view);
     }
 }
 #endif

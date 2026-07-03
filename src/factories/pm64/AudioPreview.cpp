@@ -346,7 +346,6 @@ std::optional<std::shared_ptr<IParsedData>> PM64BgmFactory::parse(std::vector<ui
     return data;
 }
 
-// --- preview UI + BGM driver -------------------------------------------------
 #ifdef BUILD_UI
 
 #include <map>
@@ -555,8 +554,6 @@ void PM64BkSampleFactoryUI::DrawUI(const ParseResultData& item) {
         UI::GetBackend()->SetAudioVolume(volume);
     }
 }
-
-// --- BGM sequence driver ------------------------------------------------------
 
 namespace {
 
@@ -845,7 +842,7 @@ bool SequencePlayerPM64::Render(const ParseResultData& item, int option, UI::Ren
             continue;
         }
 
-        // --- one tick (au_bgm_player_update_playing) ---
+        // One tick, ported from au_bgm_player_update_playing.
         bool finished = false;
 
         if (tempoTicks != 0) {

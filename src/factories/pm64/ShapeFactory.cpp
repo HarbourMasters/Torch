@@ -923,8 +923,6 @@ void RenderModeFor(uint32_t mode, uint32_t& c1, uint32_t& c2) {
     }
 }
 
-// --- tex archive ------------------------------------------------------------
-
 struct TexEntry {
     uint32_t rasterOff = 0;
     uint32_t palOff = 0;
@@ -1085,8 +1083,6 @@ std::shared_ptr<TexArchive> TexArchiveForShape(const std::string& shapeName) {
     return found;
 }
 
-// --- shape flatten ----------------------------------------------------------
-
 struct ShapeModel {
     std::vector<UI::ModelPart> parts;
     size_t nodeCount = 0;
@@ -1228,8 +1224,6 @@ void WalkNode(WalkCtx& ctx, uint32_t nodeOff, const float parent[4][4]) {
         ctx.depth--;
     }
 }
-
-// --- backgrounds --------------------------------------------------------------
 
 std::string BaseName(const std::string& name) {
     const auto slash = name.find_last_of('/');

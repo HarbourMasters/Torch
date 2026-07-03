@@ -67,6 +67,7 @@
 #include "factories/sf64/MessageFactory.h"
 #include "factories/sf64/MessageLookupFactory.h"
 #include "factories/sf64/SkeletonFactory.h"
+#include "factories/sf64/SF64Preview.h"
 #include "factories/sf64/AnimFactory.h"
 #include "factories/sf64/ScriptFactory.h"
 #include "factories/sf64/HitboxFactory.h"
@@ -335,6 +336,21 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     UI::RegisterSequenceDriver("NAUDIO:V1:SEQUENCE", std::make_shared<SequencePlayerV1>());
     this->RegisterUIFactory("NAUDIO:V1:SEQUENCE", std::make_shared<UI::SequencePreviewUI>());
     this->RegisterUIFactory("NAUDIO:V1:SAMPLE", std::make_shared<NSampleFactoryUI>());
+#ifdef SF64_SUPPORT
+    // SF64: 3D skeleton preview, decoded messages, code preview for the rest.
+    this->RegisterUIFactory("SF64:SKELETON", std::make_shared<SF64::SkeletonFactoryUI>());
+    this->RegisterUIFactory("SF64:MESSAGE", std::make_shared<SF64::MessageFactoryUI>());
+    // 3D previews for collision meshes and hitbox volumes.
+    this->RegisterUIFactory("SF64:HITBOX", std::make_shared<SF64::HitboxFactoryUI>());
+    this->RegisterUIFactory("SF64:COLPOLY", std::make_shared<SF64::ColPolyFactoryUI>());
+    this->RegisterUIFactory("SF64:TRIANGLE", std::make_shared<SF64::TriangleFactoryUI>());
+    // Data/script types use the default code-preview card.
+    this->RegisterUIFactory("SF64:ANIM", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SF64:SCRIPT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SF64:ENVIRONMENT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SF64:OBJECT_INIT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SF64:MSG_TABLE", std::make_shared<BaseFactoryUI>());
+#endif
 #endif
 #endif
 
@@ -1413,6 +1429,8 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             this->gConfig.gbi.useFloats = gbi_floats.as<bool>();
         }
     }
+
+    this->gConfig.defaultShading = GetSafeNode<std::string>(cfg, "default_shading", "");
 
     if (auto sort = cfg["sort"]) {
         if (sort.IsSequence()) {

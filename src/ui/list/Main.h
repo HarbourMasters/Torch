@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -20,6 +21,13 @@ public:
     std::optional<std::string> selectedFile = std::nullopt;
     std::vector<std::string> files;
     char filter[256] = {};
+
+    // Asset-panel filters: name substring + type dropdown (index into
+    // fileTypes; 0 = all). fileTypes lists the distinct UI types in the
+    // selected file.
+    char assetSearch[256] = {};
+    int typeFilterIdx = 0;
+    std::vector<std::string> fileTypes;
 
     // A directory in the file tree: child folders keyed by name, plus the files
     // directly inside it as (filename, full path) pairs.
@@ -113,16 +121,72 @@ private:
                 const auto* assets = SelectedAssets();
                 ImGui::Text("%s", fs::path(selectedFile.value()).filename().string().c_str());
                 ImGui::SameLine();
-                ImGui::TextDisabled("(%zu assets)", rowsFile == selectedFile.value() ? rows.size()
-                                                    : assets != nullptr             ? assets->size()
-                                                                                    : 0);
+                ImGui::TextDisabled("(%zu shown)", rows.size());
+                DrawAssetFilters();
             } else {
                 ImGui::TextDisabled("Assets");
             }
             ImGui::Separator();
+            // Only the asset list scrolls; the header and filters stay pinned.
+            ImGui::BeginChild("AssetList");
             DrawAssets();
+            ImGui::EndChild();
         }
         ImGui::EndChild();
+    }
+
+    // Case-insensitive substring test for the name search.
+    static bool ContainsCI(const std::string& haystack, const char* needle) {
+        if (needle == nullptr || needle[0] == '\0') {
+            return true;
+        }
+        const auto lower = [](unsigned char c) { return (char)std::tolower(c); };
+        std::string h(haystack.size(), '\0');
+        std::transform(haystack.begin(), haystack.end(), h.begin(), lower);
+        std::string n(needle);
+        std::transform(n.begin(), n.end(), n.begin(), lower);
+        return h.find(n) != std::string::npos;
+    }
+
+    // Distinct UI-backed asset types in the selected file; index 0 = "all".
+    std::string typesFile;
+    void RebuildFileTypes() {
+        fileTypes.assign(1, "all types");
+        const auto* assets = SelectedAssets();
+        if (assets == nullptr) {
+            return;
+        }
+        std::set<std::string> seen;
+        for (const auto& a : *assets) {
+            if (HasUI(a) && seen.insert(a.type).second) {
+                fileTypes.push_back(a.type);
+            }
+        }
+        if (typeFilterIdx >= (int)fileTypes.size()) {
+            typeFilterIdx = 0;
+        }
+    }
+
+    // Name search + type dropdown, drawn under the asset-panel header.
+    void DrawAssetFilters() {
+        if (typesFile != selectedFile.value()) {
+            typesFile = selectedFile.value();
+            typeFilterIdx = 0;
+            RebuildFileTypes();
+        }
+        ImGui::SetNextItemWidth(200.0f);
+        ImGui::InputTextWithHint("##assetsearch", "Search by name...", assetSearch, sizeof(assetSearch));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(220.0f);
+        const char* cur = typeFilterIdx < (int)fileTypes.size() ? fileTypes[typeFilterIdx].c_str() : "all types";
+        if (ImGui::BeginCombo("##assettype", cur)) {
+            for (int i = 0; i < (int)fileTypes.size(); ++i) {
+                if (ImGui::Selectable(fileTypes[i].c_str(), i == typeFilterIdx)) {
+                    typeFilterIdx = i;
+                }
+            }
+            ImGui::EndCombo();
+        }
     }
 
     const std::vector<ParseResultData>* SelectedAssets() {
@@ -134,9 +198,10 @@ private:
         return it == results.end() ? nullptr : &it->second;
     }
 
-    // Deduped row indices for the selected file (shared audio samples get
-    // registered once per referencing bank).
-    std::string rowsFile;
+    // Deduped, filtered row indices for the selected file (shared audio samples
+    // get registered once per referencing bank). Rebuilt when the file or the
+    // name/type filters change.
+    std::string rowsSig;
     std::vector<size_t> rows;
 
     void DrawAssets() {
@@ -146,16 +211,27 @@ private:
             return;
         }
 
-        if (rowsFile != selectedFile.value()) {
-            rowsFile = selectedFile.value();
+        const std::string typeSel = typeFilterIdx > 0 && typeFilterIdx < (int)fileTypes.size()
+                                         ? fileTypes[typeFilterIdx]
+                                         : std::string();
+        const std::string sig = selectedFile.value() + '\n' + typeSel + '\n' + assetSearch;
+        if (rowsSig != sig) {
+            rowsSig = sig;
             rows.clear();
             std::unordered_set<std::string> seen;
             const char* only = std::getenv("TORCH_UI_ONLY");
             for (size_t i = 0; i < assets->size(); ++i) {
-                if (only != nullptr && (*assets)[i].name.find(only) == std::string::npos) {
+                const auto& a = (*assets)[i];
+                if (only != nullptr && a.name.find(only) == std::string::npos) {
                     continue;
                 }
-                if (HasUI((*assets)[i]) && seen.insert((*assets)[i].name).second) {
+                if (!typeSel.empty() && a.type != typeSel) {
+                    continue;
+                }
+                if (!ContainsCI(a.name, assetSearch)) {
+                    continue;
+                }
+                if (HasUI(a) && seen.insert(a.name).second) {
                     rows.push_back(i);
                 }
             }

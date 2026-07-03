@@ -70,6 +70,12 @@ struct ModelPart {
     bool billboard = false;
     float anchor[3] = { 0.0f, 0.0f, 0.0f };
     bool unlit = false; // vertex-colored geometry; preview lighting must not apply
+    bool fullAmbient = false; // light with white ambient (bright, for lit previews)
+    // Untextured combine for game DLs that load their own textures (SF64):
+    // 0 = shade only (vertex color), 1 = texture modulate (enables texturing so
+    // the DL's own texture shows), 2 = flat primitive color, 3 = auto (impose no
+    // combine/texture state; the display list renders as authored).
+    uint8_t gameShade = 0;
     std::shared_ptr<PartTexture> texture;
 };
 

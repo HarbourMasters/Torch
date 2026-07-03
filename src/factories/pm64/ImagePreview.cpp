@@ -216,8 +216,6 @@ void ExportPngButton(const std::string& assetName, const std::vector<uint8_t>& p
 
 } // namespace
 
-// --- story images -------------------------------------------------------------
-
 float PM64StoryImageFactoryUI::GetItemHeight(const ParseResultData&) {
     return ImGui::GetTextLineHeightWithSpacing() + 148.0f;
 }
@@ -251,8 +249,6 @@ void PM64StoryImageFactoryUI::DrawUI(const ParseResultData& item) {
     ExportPngButton(item.name, pit->second, w, h);
     ImGui::EndGroup();
 }
-
-// --- title data ----------------------------------------------------------------
 
 namespace {
 
@@ -375,8 +371,6 @@ void PM64TitleDataFactoryUI::DrawUI(const ParseResultData& item) {
     ExportPngButton(item.name, pit->second, layout.w, layout.h);
     ImGui::EndGroup();
 }
-
-// --- map texture archives -------------------------------------------------------
 
 namespace {
 
@@ -509,8 +503,6 @@ void PM64MapTextureFactoryUI::DrawUI(const ParseResultData& item) {
     }
     ImGui::EndChild();
 }
-
-// --- sprites --------------------------------------------------------------------
 
 namespace {
 
@@ -756,8 +748,6 @@ void PM64SpriteFactoryUI::DrawUI(const ParseResultData& item) {
     }
     ImGui::EndChild();
 }
-
-// --- imgfx vertex animations -----------------------------------------------------
 
 namespace {
 

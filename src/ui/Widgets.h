@@ -5,6 +5,7 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 #include <algorithm>
+#include <cctype>
 #include <map>
 #include <string>
 
@@ -47,6 +48,75 @@ inline void KV(const char* label, const std::string& value) {
     ImGui::TextDisabled("%-16s", label);
     ImGui::SameLine();
     ImGui::TextUnformatted(value.c_str());
+}
+
+// Shading setup for game display lists that impose their own render state.
+// Maps a dropdown index to the ModelPart shade fields. "auto" imposes nothing
+// (the DL renders as authored); the others force a combine + lighting.
+struct ShadeSetup {
+    uint8_t gameShade; // 0 shade, 1 texture-modulate, 2 flat prim, 3 auto
+    bool unlit;
+    bool fullAmbient;
+};
+
+inline int ShadeSetupCount() {
+    return 6;
+}
+
+inline const char* ShadeSetupName(int idx) {
+    static const char* kNames[] = { "auto", "textured", "textured + lit", "vertex color", "vertex color + lit",
+                                    "flat" };
+    return kNames[idx >= 0 && idx < ShadeSetupCount() ? idx : 0];
+}
+
+// Maps a config name to a shade-setup index, or -1 if unrecognized. Accepts
+// the display names case-insensitively and with '_' standing in for ' '
+// (e.g. "textured + lit", "textured_lit", "TEXTURED + LIT").
+inline int ShadeSetupIndexByName(const std::string& raw) {
+    if (raw.empty()) {
+        return -1;
+    }
+    std::string s;
+    for (char c : raw) {
+        if (c == '_') {
+            c = ' ';
+        }
+        s.push_back((char)std::tolower((unsigned char)c));
+    }
+    for (int i = 0; i < ShadeSetupCount(); ++i) {
+        if (s == ShadeSetupName(i)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+inline ShadeSetup ShadeSetupFor(int idx) {
+    switch (idx) {
+        case 1: return { 1, true, false };  // textured
+        case 2: return { 1, false, true };  // textured + lit (white ambient)
+        case 3: return { 0, true, false };  // vertex color
+        case 4: return { 0, false, true };  // vertex color + lit
+        case 5: return { 2, true, false };  // flat primitive
+        default: return { 3, false, false }; // auto — no imposed state
+    }
+}
+
+// Dropdown editing a shade-setup index; returns true when changed.
+inline bool ShadeSetupCombo(const char* id, int& idx) {
+    idx = std::clamp(idx, 0, ShadeSetupCount() - 1);
+    bool changed = false;
+    ImGui::SetNextItemWidth(150.0f);
+    if (ImGui::BeginCombo(id, ShadeSetupName(idx))) {
+        for (int i = 0; i < ShadeSetupCount(); ++i) {
+            if (ImGui::Selectable(ShadeSetupName(i), i == idx)) {
+                idx = i;
+                changed = true;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    return changed;
 }
 
 // Button + popup editing the shared preview light.
@@ -132,7 +202,6 @@ inline PreviewCanvas BeginPreviewCanvas(const char* strId, float height, OrbitVi
     return { origin, ImVec2(vw, height), visible };
 }
 
-// --- resizable preview ------------------------------------------------------
 // Preview canvases can be resized vertically by dragging their bottom edge.
 // The width keeps the default cap (it does not grow with the height). Heights
 // are persisted per asset and read back by GetItemHeight so the virtualized

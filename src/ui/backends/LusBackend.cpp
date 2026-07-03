@@ -868,6 +868,9 @@ private:
             mix(part.mtx, sizeof(part.mtx));
             mix(&part.billboard, sizeof(part.billboard));
             mix(part.anchor, sizeof(part.anchor));
+            mix(&part.gameShade, sizeof(part.gameShade));
+            mix(&part.unlit, sizeof(part.unlit));
+            mix(&part.fullAmbient, sizeof(part.fullAmbient));
         }
         // Light edits must re-render every framebuffer.
         const PreviewLighting& light = GetPreviewLighting();
@@ -1314,8 +1317,11 @@ private:
             const float vx = dx * viewF.mf[0][0] + dy * viewF.mf[1][0] + dz * viewF.mf[2][0];
             const float vy = dx * viewF.mf[0][1] + dy * viewF.mf[1][1] + dz * viewF.mf[2][1];
             const float vz = dx * viewF.mf[0][2] + dy * viewF.mf[1][2] + dz * viewF.mf[2][2];
+            const float amb[3] = { part.fullAmbient ? 1.0f : lighting.ambient[0],
+                                   part.fullAmbient ? 1.0f : lighting.ambient[1],
+                                   part.fullAmbient ? 1.0f : lighting.ambient[2] };
             mPartLights[i] = gdSPDefLights1(
-                to8(lighting.ambient[0]), to8(lighting.ambient[1]), to8(lighting.ambient[2]),
+                to8(amb[0]), to8(amb[1]), to8(amb[2]),
                 to8(lighting.color[0] * atten), to8(lighting.color[1] * atten), to8(lighting.color[2] * atten),
                 (int8_t)(vx * 127.0f), (int8_t)(vy * 127.0f), (int8_t)(vz * 127.0f));
         }
@@ -1464,6 +1470,31 @@ private:
             const ModelPart& partRef = *drawable[i].first;
             if (partRef.texture != nullptr && partRef.texture->blob != nullptr) {
                 p = EmitPartTexture(p, *partRef.texture, fog);
+            } else if (partRef.gameShade == 3) {
+                // auto: impose no combine/texture state — the DL renders as
+                // authored (it sets its own texture/combine).
+            } else if (partRef.gameShade == 1) {
+                // Game DL supplies its own texture; enable texturing and
+                // modulate it by shade so the model's textures show.
+                gDPPipeSync(p++);
+                gSPTexture(p++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
+                gDPSetTextureLUT(p++, G_TT_NONE);
+                gDPSetTextureFilter(p++, G_TF_BILERP);
+                if (fog) {
+                    gDPSetCombineMode(p++, G_CC_MODULATERGB, G_CC_PASS2);
+                } else {
+                    gDPSetCombineMode(p++, G_CC_MODULATERGB, G_CC_MODULATERGB);
+                }
+            } else if (partRef.gameShade == 2) {
+                gDPPipeSync(p++);
+                gSPTexture(p++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_OFF);
+                gDPSetTextureLUT(p++, G_TT_NONE);
+                gDPSetPrimColor(p++, 0, 0, 200, 200, 210, 255);
+                if (fog) {
+                    gDPSetCombineMode(p++, G_CC_PRIMITIVE, G_CC_PASS2);
+                } else {
+                    gDPSetCombineMode(p++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
+                }
             } else {
                 gDPPipeSync(p++);
                 gSPTexture(p++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_OFF);
@@ -1494,13 +1525,22 @@ private:
                     p->words.w1 = fogWord;
                     ++p;
                 }
+                const bool partLit = lighting.enabled && !partRef.unlit;
                 if (gameUcode == ucode_f3dex2) {
                     // Geometry-mode bits are stored raw and read per-dialect:
                     // F3D's SMOOTH (0x200) is f3dex2's CULL_FRONT. Re-set the
                     // baseline with f3dex2 values (SMOOTH = 0x200000).
                     p->words.w0 = (uintptr_t)0xD9 << 24; // clear all
-                    p->words.w1 = 0x1 | 0x4 | 0x200000 | (fog ? 0x10000 : 0) |
-                                  (lighting.enabled && !partRef.unlit ? 0x20000 : 0);
+                    p->words.w1 = 0x1 | 0x4 | 0x200000 | (fog ? 0x10000 : 0) | (partLit ? 0x20000 : 0);
+                    ++p;
+                } else {
+                    // f3dex/f3dexb share f3d's geometry bit layout. Re-set per
+                    // part so unlit (vertex-colored) limbs skip lighting.
+                    p->words.w0 = (uintptr_t)0xB6 << 24; // G_CLEARGEOMETRYMODE (all)
+                    p->words.w1 = 0xFFFFFFFF;
+                    ++p;
+                    p->words.w0 = (uintptr_t)0xB7 << 24; // G_SETGEOMETRYMODE
+                    p->words.w1 = 0x1 | 0x4 | 0x200 | 0x2000 | (partLit ? 0x20000 : 0);
                     ++p;
                 }
                 p->words.w0 = (uintptr_t)(gameUcode == ucode_f3dex2 ? 0xDE : 0x06) << 24;
