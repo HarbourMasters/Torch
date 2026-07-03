@@ -152,10 +152,13 @@ void AudioConverter::SampleV0ToAIFC(AudioBankSample* sample, LUS::BinaryWriter& 
         vloops.Write(sample->loop.end);
         vloops.Write(sample->loop.count);
 
-        if (sample->loop.state.has_value()) {
-            for (auto state : sample->loop.state.value()) {
-                vcodes.Write(state);
-            }
+        // The decoder reads back a fixed-size ALADPCMloop whose state is a
+        // 16-entry array; always emit all 16 (zero-filled when absent) so the
+        // chunk is exactly 44 bytes. Note: this must target vloops, not vcodes.
+        const std::vector<int16_t>* state =
+            sample->loop.state.has_value() ? &sample->loop.state.value() : nullptr;
+        for (size_t i = 0; i < 16; i++) {
+            vloops.Write((int16_t)(state != nullptr && i < state->size() ? (*state)[i] : 0));
         }
         aifc.End("APPL", vloops);
     }

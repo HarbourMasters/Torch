@@ -164,16 +164,22 @@ bool DecodeAiffBytes(const std::vector<char>& bytes, std::vector<int16_t>& pcm, 
 }
 
 bool DecodeSampleToPcm(AudioBankSample* sample, std::vector<int16_t>& pcm, int& rate) {
-    LUS::BinaryWriter aifc;
-    AudioConverter::SampleV0ToAIFC(sample, aifc);
-    LUS::BinaryWriter aiff;
-    write_aiff(aifc.ToVector(), aiff);
-    aifc.Close();
-
     DecodedSample decoded;
-    const bool ok = ParseAiff(aiff.ToVector(), decoded);
-    aiff.Close();
-    if (!ok) {
+    try {
+        LUS::BinaryWriter aifc;
+        AudioConverter::SampleV0ToAIFC(sample, aifc);
+        LUS::BinaryWriter aiff;
+        // write_aiff throws std::runtime_error on malformed/truncated sample data.
+        write_aiff(aifc.ToVector(), aiff);
+        aifc.Close();
+
+        const bool ok = ParseAiff(aiff.ToVector(), decoded);
+        aiff.Close();
+        if (!ok) {
+            return false;
+        }
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to decode audio sample: {}", e.what());
         return false;
     }
     // The converter's header overwrites the head of the decoded stream; pad the

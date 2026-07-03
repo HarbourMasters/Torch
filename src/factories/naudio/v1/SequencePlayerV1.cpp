@@ -234,19 +234,25 @@ std::shared_ptr<UI::SynthSample> SynthSampleFor(NSampleData* sample) {
         AudioConverter::SampleV1ToAIFC(sample, lit0->second, bit->second, aifc);
         const auto bytes = aifc.ToVector();
         if (!bytes.empty()) {
-            LUS::BinaryWriter aiff;
-            write_aiff(bytes, aiff);
-            int rate = 0;
-            const bool ok = DecodeAiffBytes(aiff.ToVector(), synth->pcm, rate);
-            if ((!ok || synth->pcm.empty()) && std::getenv("TORCH_SEQ_DEBUG") != nullptr) {
-                printf("[sample] DECODE FAIL addr=0x%X book(order=%d npred=%d coeffs=%zu) loop(%u..%u x%u) aifc=%zu\n",
-                       sample->sampleAddr, bit->second->order, bit->second->numPredictors, bit->second->book.size(),
-                       lit0->second->start, lit0->second->end, lit0->second->count, bytes.size());
-            }
-            aiff.Close();
-            const size_t expected = (size_t)sample->size * 16 / 9;
-            if (synth->pcm.size() < expected) {
-                synth->pcm.insert(synth->pcm.begin(), expected - synth->pcm.size(), 0);
+            try {
+                LUS::BinaryWriter aiff;
+                // write_aiff throws std::runtime_error on malformed/truncated sample data.
+                write_aiff(bytes, aiff);
+                int rate = 0;
+                const bool ok = DecodeAiffBytes(aiff.ToVector(), synth->pcm, rate);
+                if ((!ok || synth->pcm.empty()) && std::getenv("TORCH_SEQ_DEBUG") != nullptr) {
+                    printf("[sample] DECODE FAIL addr=0x%X book(order=%d npred=%d coeffs=%zu) loop(%u..%u x%u) aifc=%zu\n",
+                           sample->sampleAddr, bit->second->order, bit->second->numPredictors, bit->second->book.size(),
+                           lit0->second->start, lit0->second->end, lit0->second->count, bytes.size());
+                }
+                aiff.Close();
+                const size_t expected = (size_t)sample->size * 16 / 9;
+                if (synth->pcm.size() < expected) {
+                    synth->pcm.insert(synth->pcm.begin(), expected - synth->pcm.size(), 0);
+                }
+            } catch (const std::exception& e) {
+                SPDLOG_ERROR("Failed to decode audio sample at addr 0x{:X}: {}", sample->sampleAddr, e.what());
+                synth->pcm.clear();
             }
         }
         aifc.Close();
@@ -1408,11 +1414,17 @@ bool DecodeV1SampleToPcm(const ParseResultData& item, std::vector<int16_t>& pcm,
     if (bytes.empty()) {
         return false;
     }
-    LUS::BinaryWriter aiff;
-    write_aiff(bytes, aiff);
-    const bool ok = DecodeAiffBytes(aiff.ToVector(), pcm, rate);
-    aiff.Close();
-    return ok && !pcm.empty();
+    try {
+        LUS::BinaryWriter aiff;
+        // write_aiff throws std::runtime_error on malformed/truncated sample data.
+        write_aiff(bytes, aiff);
+        const bool ok = DecodeAiffBytes(aiff.ToVector(), pcm, rate);
+        aiff.Close();
+        return ok && !pcm.empty();
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to decode audio sample at addr 0x{:X}: {}", sample->sampleAddr, e.what());
+        return false;
+    }
 }
 
 bool SequencePlayerV1::Render(const ParseResultData& item, int, UI::RenderedAudio& out) {
