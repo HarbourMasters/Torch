@@ -128,12 +128,21 @@ $(function(){initNavTree('AnimationFactory_8h_source.html','',''); });
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    }</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>};</div>
 </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>}</div>
-<div class="ttc" id="aclassBaseExporter_html"><div class="ttname"><a href="classBaseExporter.html">BaseExporter</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:88</div></div>
-<div class="ttc" id="aclassBaseFactory_html"><div class="ttname"><a href="classBaseFactory.html">BaseFactory</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:94</div></div>
-<div class="ttc" id="aclassIParsedData_html"><div class="ttname"><a href="classIParsedData.html">IParsedData</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:80</div></div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="preprocessor">#ifdef BUILD_UI</span></div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span><span class="comment">// Shows the animation header fields.</span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="keyword">class </span>AnimationFactoryUI : <span class="keyword">public</span> BaseFactoryUI {</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordtype">void</span> DrawUI(<span class="keyword">const</span> <a class="code hl_struct" href="structParseResultData.html">ParseResultData</a>&amp; data) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>};</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>}</div>
+<div class="ttc" id="aclassBaseExporter_html"><div class="ttname"><a href="classBaseExporter.html">BaseExporter</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:95</div></div>
+<div class="ttc" id="aclassBaseFactory_html"><div class="ttname"><a href="classBaseFactory.html">BaseFactory</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:101</div></div>
+<div class="ttc" id="aclassIParsedData_html"><div class="ttname"><a href="classIParsedData.html">IParsedData</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:87</div></div>
 <div class="ttc" id="aclassSM64_1_1AnimationBinaryExporter_html"><div class="ttname"><a href="classSM64_1_1AnimationBinaryExporter.html">SM64::AnimationBinaryExporter</a></div><div class="ttdef"><b>Definition</b> AnimationFactory.h:21</div></div>
 <div class="ttc" id="aclassSM64_1_1AnimationFactory_html"><div class="ttname"><a href="classSM64_1_1AnimationFactory.html">SM64::AnimationFactory</a></div><div class="ttdef"><b>Definition</b> AnimationFactory.h:25</div></div>
+<div class="ttc" id="astructParseResultData_html"><div class="ttname"><a href="structParseResultData.html">ParseResultData</a></div><div class="ttdef"><b>Definition</b> Companion.h:109</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->

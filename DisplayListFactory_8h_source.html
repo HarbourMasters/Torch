@@ -143,12 +143,23 @@ $(function(){initNavTree('DisplayListFactory_8h_source.html','',''); });
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    }</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>};</div>
 </div>
-<div class="ttc" id="aclassBaseExporter_html"><div class="ttname"><a href="classBaseExporter.html">BaseExporter</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:88</div></div>
-<div class="ttc" id="aclassBaseFactory_html"><div class="ttname"><a href="classBaseFactory.html">BaseFactory</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:94</div></div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span><span class="preprocessor">#ifdef BUILD_UI</span></div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="comment">// Previews the display list as a shaded model via Fast3D. Requires the</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span><span class="comment">// asset&#39;s .o2r archive to be mounted.</span></div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="keyword">class </span>DListFactoryUI : <span class="keyword">public</span> BaseFactoryUI {</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keywordtype">float</span> GetItemHeight(<span class="keyword">const</span> <a class="code hl_struct" href="structParseResultData.html">ParseResultData</a>&amp; data) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keywordtype">void</span> DrawUI(<span class="keyword">const</span> <a class="code hl_struct" href="structParseResultData.html">ParseResultData</a>&amp; data) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>};</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="preprocessor">#endif</span></div>
+<div class="ttc" id="aclassBaseExporter_html"><div class="ttname"><a href="classBaseExporter.html">BaseExporter</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:95</div></div>
+<div class="ttc" id="aclassBaseFactory_html"><div class="ttname"><a href="classBaseFactory.html">BaseFactory</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:101</div></div>
 <div class="ttc" id="aclassDListBinaryExporter_html"><div class="ttname"><a href="classDListBinaryExporter.html">DListBinaryExporter</a></div><div class="ttdef"><b>Definition</b> DisplayListFactory.h:19</div></div>
 <div class="ttc" id="aclassDListFactory_html"><div class="ttname"><a href="classDListFactory.html">DListFactory</a></div><div class="ttdef"><b>Definition</b> DisplayListFactory.h:29</div></div>
 <div class="ttc" id="aclassDListHeaderExporter_html"><div class="ttname"><a href="classDListHeaderExporter.html">DListHeaderExporter</a></div><div class="ttdef"><b>Definition</b> DisplayListFactory.h:15</div></div>
-<div class="ttc" id="aclassIParsedData_html"><div class="ttname"><a href="classIParsedData.html">IParsedData</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:80</div></div>
+<div class="ttc" id="aclassIParsedData_html"><div class="ttname"><a href="classIParsedData.html">IParsedData</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:87</div></div>
+<div class="ttc" id="astructParseResultData_html"><div class="ttname"><a href="structParseResultData.html">ParseResultData</a></div><div class="ttdef"><b>Definition</b> Companion.h:109</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->

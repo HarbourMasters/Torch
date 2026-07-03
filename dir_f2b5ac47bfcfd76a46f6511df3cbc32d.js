@@ -18,6 +18,7 @@ var dir_f2b5ac47bfcfd76a46f6511df3cbc32d =
     [ "PaintingFactory.h", "PaintingFactory_8h_source.html", null ],
     [ "PaintingMapFactory.h", "PaintingMapFactory_8h_source.html", null ],
     [ "TextFactory.h", "TextFactory_8h_source.html", null ],
+    [ "TextPreview.h", "TextPreview_8h_source.html", null ],
     [ "TrajectoryFactory.h", "TrajectoryFactory_8h_source.html", null ],
     [ "WaterDropletFactory.h", "WaterDropletFactory_8h_source.html", null ]
 ];

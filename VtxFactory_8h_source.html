@@ -147,13 +147,24 @@ $(function(){initNavTree('VtxFactory_8h_source.html','',''); });
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    };</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>};</div>
 </div>
-<div class="ttc" id="aclassBaseExporter_html"><div class="ttname"><a href="classBaseExporter.html">BaseExporter</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:88</div></div>
-<div class="ttc" id="aclassBaseFactory_html"><div class="ttname"><a href="classBaseFactory.html">BaseFactory</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:94</div></div>
-<div class="ttc" id="aclassIParsedData_html"><div class="ttname"><a href="classIParsedData.html">IParsedData</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:80</div></div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span><span class="preprocessor">#ifdef BUILD_UI</span></div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="comment">// Previews the vertices as an interactive 3D point cloud (drag to orbit, scroll</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span><span class="comment">// to zoom). Vtx has no triangle connectivity, so this is points, not a mesh.</span></div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span><span class="keyword">class </span>VtxFactoryUI : <span class="keyword">public</span> BaseFactoryUI {</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keywordtype">float</span> GetItemHeight(<span class="keyword">const</span> <a class="code hl_struct" href="structParseResultData.html">ParseResultData</a>&amp; data) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keywordtype">void</span> DrawUI(<span class="keyword">const</span> <a class="code hl_struct" href="structParseResultData.html">ParseResultData</a>&amp; data) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>};</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span><span class="preprocessor">#endif</span></div>
+<div class="ttc" id="aclassBaseExporter_html"><div class="ttname"><a href="classBaseExporter.html">BaseExporter</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:95</div></div>
+<div class="ttc" id="aclassBaseFactory_html"><div class="ttname"><a href="classBaseFactory.html">BaseFactory</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:101</div></div>
+<div class="ttc" id="aclassIParsedData_html"><div class="ttname"><a href="classIParsedData.html">IParsedData</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:87</div></div>
 <div class="ttc" id="aclassVtxBinaryExporter_html"><div class="ttname"><a href="classVtxBinaryExporter.html">VtxBinaryExporter</a></div><div class="ttdef"><b>Definition</b> VtxFactory.h:23</div></div>
 <div class="ttc" id="aclassVtxCodeExporter_html"><div class="ttname"><a href="classVtxCodeExporter.html">VtxCodeExporter</a></div><div class="ttdef"><b>Definition</b> VtxFactory.h:27</div></div>
 <div class="ttc" id="aclassVtxFactory_html"><div class="ttname"><a href="classVtxFactory.html">VtxFactory</a></div><div class="ttdef"><b>Definition</b> VtxFactory.h:31</div></div>
 <div class="ttc" id="aclassVtxHeaderExporter_html"><div class="ttname"><a href="classVtxHeaderExporter.html">VtxHeaderExporter</a></div><div class="ttdef"><b>Definition</b> VtxFactory.h:19</div></div>
+<div class="ttc" id="astructParseResultData_html"><div class="ttname"><a href="structParseResultData.html">ParseResultData</a></div><div class="ttdef"><b>Definition</b> Companion.h:109</div></div>
 <div class="ttc" id="astructVtxRaw_html"><div class="ttname"><a href="structVtxRaw.html">VtxRaw</a></div><div class="ttdef"><b>Definition</b> VtxFactory.h:5</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
