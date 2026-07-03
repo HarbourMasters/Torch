@@ -79,7 +79,7 @@ struct DecodedSample {
     int rate = 0;
     int channels = 1;
 };
-DecodedSample sDecoded;      // last decoded sample (they can be large)
+DecodedSample sDecoded; // last decoded sample (they can be large)
 std::string sPlayingName;
 std::unordered_map<std::string, float> sSampleSpeeds;
 
@@ -208,8 +208,8 @@ void SampleFactoryUI::DrawUI(const ParseResultData& item) {
         return;
     }
     const auto& sample = std::static_pointer_cast<SampleData>(item.data.value())->mSample;
-    ImGui::TextDisabled("sample  \xe2\x80\x94  %zu bytes vadpcm, loop %u-%u (x%d), book order %d",
-                        sample.data.size(), sample.loop.start, sample.loop.end, sample.loop.count, sample.book.order);
+    ImGui::TextDisabled("sample  \xe2\x80\x94  %zu bytes vadpcm, loop %u-%u (x%d), book order %d", sample.data.size(),
+                        sample.loop.start, sample.loop.end, sample.loop.count, sample.book.order);
 
     auto speedIt = sSampleSpeeds.emplace(item.name, 1.0f).first;
     const bool playingThis = sPlayingName == item.name && UI::GetBackend()->AudioProgress() >= 0.0f;
@@ -229,10 +229,11 @@ void SampleFactoryUI::DrawUI(const ParseResultData& item) {
     if (ImGui::Button("WAV##sampleexp")) {
         if (DecodeSample(item)) {
             const auto path = UI::ExportFilePath(item.name, "wav");
-            UI::NoteExport(item.name, UI::WriteWavFile(path, sDecoded.pcm.data(), sDecoded.pcm.size() / sDecoded.channels,
-                                                   sDecoded.channels, sDecoded.rate)
-                                      ? path.string()
-                                      : "export failed");
+            UI::NoteExport(item.name,
+                           UI::WriteWavFile(path, sDecoded.pcm.data(), sDecoded.pcm.size() / sDecoded.channels,
+                                            sDecoded.channels, sDecoded.rate)
+                               ? path.string()
+                               : "export failed");
         } else {
             UI::NoteExport(item.name, "decode failed");
         }

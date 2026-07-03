@@ -357,9 +357,9 @@ static void ByteSwapModelNode(uint8_t* data, uint32_t offset, size_t size) {
 static uint32_t FindRootNodeOffset(uint8_t* data, size_t size) {
     uint32_t headerRootAddr = BSWAP32(*reinterpret_cast<uint32_t*>(data));
 
-    uint32_t firstValid = 0;        // fallback: behaviour before the disambiguation
-    uint32_t bestExact = 0;         // implied base == 0x80210000 (the known PM64 base)
-    uint32_t bestAligned = 0;       // implied base aligned to 0x10000
+    uint32_t firstValid = 0;  // fallback: behaviour before the disambiguation
+    uint32_t bestExact = 0;   // implied base == 0x80210000 (the known PM64 base)
+    uint32_t bestAligned = 0; // implied base aligned to 0x10000
 
     for (uint32_t offset = 0x20; offset < size - 0x14; offset += 4) {
         int32_t type = static_cast<int32_t>(BSWAP32(*reinterpret_cast<uint32_t*>(data + offset)));
@@ -900,26 +900,54 @@ void RenderModeFor(uint32_t mode, uint32_t& c1, uint32_t& c2) {
         c2 = b;
     };
     switch (mode) {
-        case 0x03: set(PMRM_ZB_OPA_SURF); break;      // OPA_NO_AA
-        case 0x04: set(PMRM_AA_OPA_SURF); break;      // OPA_NO_ZB
-        case 0x05: set(PMRM_AA_ZB_OPA_DECAL); break;  // DECAL_OPA
-        case 0x07: set(PMRM_ZB_OPA_DECAL); break;     // DECAL_OPA_NO_AA
-        case 0x09: set(PMRM_AA_ZB_OPA_INTER); break;  // INTERSECTING
+        case 0x03:
+            set(PMRM_ZB_OPA_SURF);
+            break; // OPA_NO_AA
+        case 0x04:
+            set(PMRM_AA_OPA_SURF);
+            break; // OPA_NO_ZB
+        case 0x05:
+            set(PMRM_AA_ZB_OPA_DECAL);
+            break; // DECAL_OPA
+        case 0x07:
+            set(PMRM_ZB_OPA_DECAL);
+            break; // DECAL_OPA_NO_AA
+        case 0x09:
+            set(PMRM_AA_ZB_OPA_INTER);
+            break; // INTERSECTING
         case 0x0D:
-        case 0x0F: set(PMRM_AA_ZB_TEX_EDGE); break;   // ALPHATEST
-        case 0x10: set(PMRM_AA_TEX_EDGE); break;      // ALPHATEST_NO_ZB
+        case 0x0F:
+            set(PMRM_AA_ZB_TEX_EDGE);
+            break; // ALPHATEST
+        case 0x10:
+            set(PMRM_AA_TEX_EDGE);
+            break; // ALPHATEST_NO_ZB
         case 0x11:
         case 0x16:
         case 0x22:
         case 0x15:
-        case 0x20: set(PMRM_AA_ZB_XLU_SURF); break;   // XLU / SHADOW
-        case 0x13: set(PMRM_ZB_XLU_SURF); break;      // XLU_NO_AA
-        case 0x14: set(PMRM_AA_XLU_SURF); break;      // XLU_NO_ZB
+        case 0x20:
+            set(PMRM_AA_ZB_XLU_SURF);
+            break; // XLU / SHADOW
+        case 0x13:
+            set(PMRM_ZB_XLU_SURF);
+            break; // XLU_NO_AA
+        case 0x14:
+            set(PMRM_AA_XLU_SURF);
+            break; // XLU_NO_ZB
         case 0x1A:
-        case 0x1E: set(PMRM_AA_ZB_XLU_DECAL); break;  // DECAL_XLU
-        case 0x1C: set(PMRM_ZB_OVL_SURF); break;      // DECAL_XLU_NO_AA
-        case 0x26: set(PMRM_AA_ZB_XLU_INTER); break;  // INTERSECTING_XLU
-        default:   set(PMRM_AA_ZB_OPA_SURF); break;   // SURFACE_OPA
+        case 0x1E:
+            set(PMRM_AA_ZB_XLU_DECAL);
+            break; // DECAL_XLU
+        case 0x1C:
+            set(PMRM_ZB_OVL_SURF);
+            break; // DECAL_XLU_NO_AA
+        case 0x26:
+            set(PMRM_AA_ZB_XLU_INTER);
+            break; // INTERSECTING_XLU
+        default:
+            set(PMRM_AA_ZB_OPA_SURF);
+            break; // SURFACE_OPA
     }
 }
 
@@ -928,8 +956,8 @@ struct TexEntry {
     uint32_t palOff = 0;
     uint16_t w = 0, h = 0;
     uint8_t fmt = 0, siz = 0, cmS = 0, cmT = 0;
-    uint8_t extraTiles = 0;  // 1 mipmaps, 2 aux-shared, 3 aux-independent
-    uint8_t combineSub = 0;  // main-only combine subtype (0 mod, 1 blend, 2 decal)
+    uint8_t extraTiles = 0; // 1 mipmaps, 2 aux-shared, 3 aux-independent
+    uint8_t combineSub = 0; // main-only combine subtype (0 mod, 1 blend, 2 decal)
     uint32_t auxRasterOff = 0, auxPalOff = 0;
     uint16_t auxW = 0, auxH = 0;
     uint8_t auxFmt = 0, auxSiz = 0, auxCmS = 0, auxCmT = 0;
@@ -949,10 +977,14 @@ uint32_t TexRasterSize(uint16_t w, uint16_t h, uint8_t siz, uint8_t extraTiles) 
         }
     }
     switch (siz) {
-        case 0: return size / 2;
-        case 2: return size * 2;
-        case 3: return size * 4;
-        default: return size;
+        case 0:
+            return size / 2;
+        case 2:
+            return size * 2;
+        case 3:
+            return size * 4;
+        default:
+            return size;
     }
 }
 
@@ -1074,7 +1106,8 @@ std::shared_ptr<TexArchive> TexArchiveForShape(const std::string& shapeName) {
     if (found != nullptr && std::getenv("TORCH_PM64_DEBUG") != nullptr) {
         printf("[shape] tex archive '%s': %zu entries\n", area.c_str(), found->entries.size());
         for (const auto& [n, e] : found->entries) {
-            printf("[shape]   %-24s %ux%u fmt=%u siz=%u wrap=(%u,%u) raster=0x%X pal=0x%X extra=%u sub=%u aux=%ux%u fmt=%u siz=%u\n",
+            printf("[shape]   %-24s %ux%u fmt=%u siz=%u wrap=(%u,%u) raster=0x%X pal=0x%X extra=%u sub=%u aux=%ux%u "
+                   "fmt=%u siz=%u\n",
                    n.c_str(), e.w, e.h, e.fmt, e.siz, e.cmS, e.cmT, e.rasterOff, e.palOff, e.extraTiles, e.combineSub,
                    e.auxW, e.auxH, e.auxFmt, e.auxSiz);
         }
@@ -1168,14 +1201,13 @@ void WalkNode(WalkCtx& ctx, uint32_t nodeOff, const float parent[4][4]) {
                 RenderModeFor(renderMode, part.renderMode1, part.renderMode2);
                 part.unlit = true; // shape geometry is vertex-colored
                 if (std::getenv("TORCH_PM64_DEBUG") != nullptr) {
-                    const bool found = !texName.empty() && ctx.tex != nullptr &&
-                                       ctx.tex->entries.count(texName) != 0;
+                    const bool found = !texName.empty() && ctx.tex != nullptr && ctx.tex->entries.count(texName) != 0;
                     printf("[shape] %s dl=0x%X rmode=%u tex='%s' %s\n", ctx.itemName.c_str(), dlOff, renderMode,
                            texName.c_str(),
-                           texName.empty()          ? "(untextured)"
-                           : ctx.tex == nullptr     ? "NO ARCHIVE"
-                           : found                  ? "ok"
-                                                    : "NOT FOUND");
+                           texName.empty()      ? "(untextured)"
+                           : ctx.tex == nullptr ? "NO ARCHIVE"
+                           : found              ? "ok"
+                                                : "NOT FOUND");
                 }
                 if (!texName.empty() && ctx.tex != nullptr) {
                     const auto tit = ctx.tex->entries.find(texName);
@@ -1386,8 +1418,8 @@ void PM64ShapeDebugBuild(const ParseResultData& item) {
         return;
     }
     const ShapeModel& model = BuildShapeModel(item);
-    printf("[shape] %s: %zu nodes, %zu parts, %zu textured\n", item.name.c_str(), model.nodeCount,
-           model.parts.size(), model.texturedParts);
+    printf("[shape] %s: %zu nodes, %zu parts, %zu textured\n", item.name.c_str(), model.nodeCount, model.parts.size(),
+           model.texturedParts);
 }
 
 float PM64ShapeFactoryUI::GetItemHeight(const ParseResultData& item) {

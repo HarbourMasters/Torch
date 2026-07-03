@@ -261,7 +261,8 @@ std::shared_ptr<UI::SynthSample> SynthSampleFor(NSampleData* sample) {
     if (std::getenv("TORCH_SEQ_DEBUG") != nullptr) {
         static int sDumped = 0;
         float pk = 0;
-        for (size_t i = 0; i < synth->pcm.size(); ++i) pk = std::max(pk, std::fabs((float)synth->pcm[i]));
+        for (size_t i = 0; i < synth->pcm.size(); ++i)
+            pk = std::max(pk, std::fabs((float)synth->pcm[i]));
         if (sDumped++ < 8) {
             printf("[sample] codec=%u size=%u addr=0x%X bank=%u loop=0x%X book=0x%X tuning=%.3f pcm=%zu peak=%.0f\n",
                    (uint32_t)sample->codec, (uint32_t)sample->size, sample->sampleAddr, sample->sampleBankId,
@@ -357,7 +358,9 @@ struct M64Exec {
         }
         return data[pc++];
     }
-    int8_t S8() { return (int8_t)U8(); }
+    int8_t S8() {
+        return (int8_t)U8();
+    }
     uint16_t U16() {
         const uint16_t hi = U8();
         return (uint16_t)((hi << 8) | U8());
@@ -377,7 +380,9 @@ struct M64Exec {
         active = addr < size;
         failed = false;
     }
-    void End() { active = false; }
+    void End() {
+        active = false;
+    }
 };
 
 struct LayerSt {
@@ -459,7 +464,8 @@ struct SeqRenderer {
     // Channel freq multiplier over time (0xD3/0xDE/0xEE bends on sounding notes).
     UI::PitchAutomation pitchAuto[16];
 
-    SeqRenderer(const std::vector<uint8_t>& b, const FontRef* font) : buf(b), defaultFont(font) {}
+    SeqRenderer(const std::vector<uint8_t>& b, const FontRef* font) : buf(b), defaultFont(font) {
+    }
 
     void PushPitch(int idx) {
         auto& a = pitchAuto[idx];
@@ -1334,7 +1340,8 @@ int SeqIdForItem(const ParseResultData& item) {
     if (it == AudioContext::tables.end() || it->second.info == nullptr) {
         return -1;
     }
-    const uint32_t rel = GetSafeNode<uint32_t>(const_cast<ParseResultData&>(item).node, "offset", 0) - it->second.offset;
+    const uint32_t rel =
+        GetSafeNode<uint32_t>(const_cast<ParseResultData&>(item).node, "offset", 0) - it->second.offset;
     const auto& entries = it->second.info->entries;
     for (size_t i = 0; i < entries.size(); ++i) {
         if (entries[i].addr == rel) {
@@ -1433,8 +1440,8 @@ bool SequencePlayerV1::Render(const ParseResultData& item, int, UI::RenderedAudi
     renderer.seqFonts = seqFonts;
     renderer.Run();
     SPDLOG_INFO("Sequence '{}': font {} ({} insts, {} drums), {} notes, {} fonts indexed, seqFontTable {} bytes",
-                item.name, font->id, font->insts.size(), font->drums.size(), renderer.events.size(),
-                fonts.size(), Assets().seqFontTable.size());
+                item.name, font->id, font->insts.size(), font->drums.size(), renderer.events.size(), fonts.size(),
+                Assets().seqFontTable.size());
     if (renderer.events.empty()) {
         SPDLOG_WARN("Sequence '{}' rendered zero notes", item.name);
         return false;

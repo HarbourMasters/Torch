@@ -156,13 +156,13 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                     continue;
                 }
                 if (sampleOffset == 0 || sampleOffset + 8 > fontBuf.size()) {
-                    SPDLOG_WARN("sampleDedup pre-pop: skipping {} — offset 0x{:X} out of fontBuf bounds (0x{:X})",
-                                path, sampleOffset, fontBuf.size());
+                    SPDLOG_WARN("sampleDedup pre-pop: skipping {} — offset 0x{:X} out of fontBuf bounds (0x{:X})", path,
+                                sampleOffset, fontBuf.size());
                     skippedCount++;
                     continue;
                 }
                 auto sReader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, sampleOffset);
-                sReader.ReadUInt32();  // skip flags
+                sReader.ReadUInt32(); // skip flags
                 uint32_t sampleAddr = sReader.ReadUInt32();
                 if (sampleAddr == 0) {
                     skippedCount++;

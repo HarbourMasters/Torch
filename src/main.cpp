@@ -180,8 +180,8 @@ int main(int argc, char* argv[]) {
 #ifdef BK64_SUPPORT
     /* Emit per-slot SHA-1s of the BK64 asset table */
     std::string hashesOut;
-    const auto hashes = app.add_subcommand(
-        "hashes", "Hashes - Emit per-slot SHA-1 of BK64 asset table for v1.0 baseline\n");
+    const auto hashes =
+        app.add_subcommand("hashes", "Hashes - Emit per-slot SHA-1 of BK64 asset table for v1.0 baseline\n");
 
     hashes->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
     hashes->add_option("-o,--output", hashesOut, "Output yaml path (default: hashes.yaml in cwd)");
@@ -256,8 +256,7 @@ int main(int argc, char* argv[]) {
 
     ui->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
     ui->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
-    ui->add_option("-s,--srcdir", srcdir,
-                   "Set source directory to locate config.yml and asset metadata for processing")
+    ui->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing")
         ->check(CLI::ExistingDirectory);
 
     ui->parse_complete_callback([&] {
@@ -327,11 +326,19 @@ int main(int argc, char* argv[]) {
                             const uint32_t rate = 32000, byteRate = rate * 4;
                             const uint16_t fmt = 1, ch = 2, align = 4, bits = 16;
                             const uint32_t fmtSize = 16;
-                            fwrite("RIFF", 1, 4, f); fwrite(&riffSize, 4, 1, f); fwrite("WAVE", 1, 4, f);
-                            fwrite("fmt ", 1, 4, f); fwrite(&fmtSize, 4, 1, f); fwrite(&fmt, 2, 1, f);
-                            fwrite(&ch, 2, 1, f); fwrite(&rate, 4, 1, f); fwrite(&byteRate, 4, 1, f);
-                            fwrite(&align, 2, 1, f); fwrite(&bits, 2, 1, f);
-                            fwrite("data", 1, 4, f); fwrite(&dataSize, 4, 1, f);
+                            fwrite("RIFF", 1, 4, f);
+                            fwrite(&riffSize, 4, 1, f);
+                            fwrite("WAVE", 1, 4, f);
+                            fwrite("fmt ", 1, 4, f);
+                            fwrite(&fmtSize, 4, 1, f);
+                            fwrite(&fmt, 2, 1, f);
+                            fwrite(&ch, 2, 1, f);
+                            fwrite(&rate, 4, 1, f);
+                            fwrite(&byteRate, 4, 1, f);
+                            fwrite(&align, 2, 1, f);
+                            fwrite(&bits, 2, 1, f);
+                            fwrite("data", 1, 4, f);
+                            fwrite(&dataSize, 4, 1, f);
                             fwrite(out.pcm.data(), 2, out.pcm.size(), f);
                             fclose(f);
                         }

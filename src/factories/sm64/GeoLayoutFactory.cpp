@@ -1066,26 +1066,32 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                         size_t next = 1;
                         switch ((*params & 0x70) >> 4) {
                             case 0:
-                                if (const auto t = ArgVec3s(args, 1)) trans = *t;
-                                if (const auto r = ArgVec3s(args, 2)) rot = *r;
+                                if (const auto t = ArgVec3s(args, 1))
+                                    trans = *t;
+                                if (const auto r = ArgVec3s(args, 2))
+                                    rot = *r;
                                 next = 3;
                                 break;
                             case 1:
-                                if (const auto t = ArgVec3s(args, 1)) trans = *t;
+                                if (const auto t = ArgVec3s(args, 1))
+                                    trans = *t;
                                 next = 2;
                                 break;
                             case 2:
-                                if (const auto r = ArgVec3s(args, 1)) rot = *r;
+                                if (const auto r = ArgVec3s(args, 1))
+                                    rot = *r;
                                 next = 2;
                                 break;
                             case 3:
-                                if (const auto y = ArgS16(args, 1)) rot = Vec3s(0, *y, 0);
+                                if (const auto y = ArgS16(args, 1))
+                                    rot = Vec3s(0, *y, 0);
                                 next = 2;
                                 break;
                         }
                         local = Mat4RotZXYTranslate(trans, rot);
                         if ((*params & 0x80) != 0) {
-                            if (const auto dl = ArgU64(args, next)) dlPtr = *dl;
+                            if (const auto dl = ArgU64(args, next))
+                                dlPtr = *dl;
                             dlLayer = *params & 0x0F;
                         }
                         break;
@@ -1094,10 +1100,12 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                     case GeoOpcode::NodeBillboard: { // billboard: translation here, camera-facing at emit
                         const auto params = ArgU8(args, 0);
                         Vec3s trans{};
-                        if (const auto t = ArgVec3s(args, 1)) trans = *t;
+                        if (const auto t = ArgVec3s(args, 1))
+                            trans = *t;
                         local = Mat4RotZXYTranslate(trans, Vec3s());
                         if (params != nullptr && (*params & 0x80) != 0) {
-                            if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+                            if (const auto dl = ArgU64(args, 2))
+                                dlPtr = *dl;
                             dlLayer = *params & 0x0F;
                         }
                         break;
@@ -1105,10 +1113,12 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                     case GeoOpcode::NodeRotation: {
                         const auto params = ArgU8(args, 0);
                         Vec3s rot{};
-                        if (const auto r = ArgVec3s(args, 1)) rot = *r;
+                        if (const auto r = ArgVec3s(args, 1))
+                            rot = *r;
                         local = Mat4RotZXYTranslate(Vec3s(), rot);
                         if (params != nullptr && (*params & 0x80) != 0) {
-                            if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+                            if (const auto dl = ArgU64(args, 2))
+                                dlPtr = *dl;
                             dlLayer = *params & 0x0F;
                         }
                         break;
@@ -1119,16 +1129,20 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                             local = Mat4Scale((float)*s / 65536.0f);
                         }
                         if (params != nullptr && (*params & 0x80) != 0) {
-                            if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+                            if (const auto dl = ArgU64(args, 2))
+                                dlPtr = *dl;
                             dlLayer = *params & 0x0F;
                         }
                         break;
                     }
                     case GeoOpcode::NodeAnimatedPart: {
                         Vec3s trans{};
-                        if (const auto layer = ArgU8(args, 0)) dlLayer = *layer & 0x0F;
-                        if (const auto t = ArgVec3s(args, 1)) trans = *t;
-                        if (const auto dl = ArgU64(args, 2)) dlPtr = *dl;
+                        if (const auto layer = ArgU8(args, 0))
+                            dlLayer = *layer & 0x0F;
+                        if (const auto t = ArgVec3s(args, 1))
+                            trans = *t;
+                        if (const auto dl = ArgU64(args, 2))
+                            dlPtr = *dl;
 
                         // geo_process_animated_part; bind pose without an anim.
                         float t[3] = { (float)trans.x, (float)trans.y, (float)trans.z };
@@ -1168,8 +1182,10 @@ void WalkGeoCommands(const std::vector<SM64::GeoCommand>& cmds, GeoWalk& ctx) {
                         break;
                     }
                     case GeoOpcode::NodeDisplayList: {
-                        if (const auto layer = ArgU8(args, 0)) dlLayer = *layer & 0x0F;
-                        if (const auto dl = ArgU64(args, 1)) dlPtr = *dl;
+                        if (const auto layer = ArgU8(args, 0))
+                            dlLayer = *layer & 0x0F;
+                        if (const auto dl = ArgU64(args, 1))
+                            dlPtr = *dl;
                         break;
                     }
                     default:
@@ -1288,7 +1304,7 @@ std::vector<UI::ModelPart> FlattenGeoLayout(const ParseResultData& item, const s
         ctx.anim = anim;
         ctx.animFrame = frame;
         const int16_t flags = anim->mFlags;
-        if ((flags & (1 << 3)) != 0) {        // ANIM_FLAG_HOR_TRANS
+        if ((flags & (1 << 3)) != 0) { // ANIM_FLAG_HOR_TRANS
             ctx.animType = GeoWalk::kAnimLateral;
         } else if ((flags & (1 << 4)) != 0) { // ANIM_FLAG_VERT_TRANS
             ctx.animType = GeoWalk::kAnimVertical;
@@ -1337,8 +1353,8 @@ void SM64::GeoLayoutFactoryUI::DrawUI(const ParseResultData& item) {
     if (view.animIndex >= (int)anims.size()) {
         view.animIndex = anims.empty() ? -1 : 0;
     }
-    const AnimEntry* anim = view.animIndex >= 0 && view.animIndex < (int)anims.size() ? &anims[view.animIndex]
-                                                                                      : nullptr;
+    const AnimEntry* anim =
+        view.animIndex >= 0 && view.animIndex < (int)anims.size() ? &anims[view.animIndex] : nullptr;
 
     // Animation picker + frame scrubber.
     const auto shortName = [](const std::string& n) {

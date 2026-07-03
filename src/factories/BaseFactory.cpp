@@ -32,9 +32,7 @@ void BaseFactoryUI::DrawUI(const ParseResultData& item) {
                     text = out.str();
                 } catch (const std::exception& e) {
                     text = std::string("// preview unavailable: ") + e.what();
-                } catch (...) {
-                    text = "// preview unavailable";
-                }
+                } catch (...) { text = "// preview unavailable"; }
             }
         }
 

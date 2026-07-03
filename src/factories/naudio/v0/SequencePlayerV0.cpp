@@ -17,7 +17,6 @@
 
 namespace {
 
-
 constexpr int kMaxTicks = 60000;
 constexpr size_t kMaxEvents = 60000;
 
@@ -45,7 +44,9 @@ struct M64Exec {
         }
         return data[pc++];
     }
-    int8_t S8() { return (int8_t)U8(); }
+    int8_t S8() {
+        return (int8_t)U8();
+    }
     uint16_t U16() {
         const uint16_t hi = U8();
         return (uint16_t)((hi << 8) | U8());
@@ -65,7 +66,9 @@ struct M64Exec {
         active = addr < size;
         failed = false;
     }
-    void End() { active = false; }
+    void End() {
+        active = false;
+    }
 };
 
 struct LayerSt {
@@ -80,12 +83,12 @@ struct LayerSt {
     int portaTarget = 0;
     int portaTime = 0;
     bool continuous = false;
-    int lastEvent = -1;   // events index of the previous note on this layer
+    int lastEvent = -1; // events index of the previous note on this layer
     double lastSlotEnd = 0.0;
     float lastVel = 1.0f;
-    float pan = -1.0f; // <0 = inherit channel
-    int envOverride = -1;  // EU layer 0xCB
-    int releaseRate = -1;  // EU layer 0xCB
+    float pan = -1.0f;    // <0 = inherit channel
+    int envOverride = -1; // EU layer 0xCB
+    int releaseRate = -1; // EU layer 0xCB
     bool ignoreDrumPan = false;
     const Instrument* inst = nullptr; // layer override
     bool drums = false;
@@ -117,7 +120,7 @@ struct ChanSt {
     uint8_t releaseRate = 0x20;
     float sustain = 0.0f;   // fraction of gate-end level (0xD2 / 256)
     float panWeight = 1.0f; // channel share of the pan blend (0xDC / 128)
-    int envOverride = -1; // bank envelope offset from 0xDA
+    int envOverride = -1;   // bank envelope offset from 0xDA
     LayerSt layers[8];
 };
 
@@ -129,7 +132,6 @@ struct SeqSt {
     int8_t value = 0;
     ChanSt chans[16];
 };
-
 
 // EU engines derive their ADSR tick rate from the session frequency
 // (60 fps frames, 192-sample chunks); US SM64 runs a fixed 240 ticks/s.
@@ -173,8 +175,7 @@ std::shared_ptr<UI::SynthSample> SynthSampleFor(AudioBankSample* sample) {
 
 // ADSR envelope to breakpoints: delay in 1/240s updates, level squared;
 // ADSR_GOTO (-2) / ADSR_RESTART (-3) set the loop point.
-template <typename Points>
-void FillEnvelopePoints(UI::SynthNote& ev, const Points& points) {
+template <typename Points> void FillEnvelopePoints(UI::SynthNote& ev, const Points& points) {
     std::vector<int> entryPt;
     double at = 0.0;
     for (const auto& entry : points) {
@@ -306,7 +307,8 @@ struct SeqRenderer {
         return offset >= 0 && offset < (int)buf.size() ? buf[offset] : 0;
     }
 
-    explicit SeqRenderer(const std::vector<uint8_t>& b) : buf(b) {}
+    explicit SeqRenderer(const std::vector<uint8_t>& b) : buf(b) {
+    }
 
     // Enabling a channel keeps its state (instrument, volume, pan, large-note
     // mode); only the script restarts and layers are freed.
@@ -355,7 +357,8 @@ struct SeqRenderer {
         const float layerPan = ly.pan >= 0.0f ? ly.pan : 0.5f;
         ev.pan = ch.pan * ch.panWeight + layerPan * (1.0f - ch.panWeight);
         ev.reverb = (float)ch.reverb / 127.0f;
-        ev.releaseSec = ReleaseSeconds(ly.releaseRate >= 0 ? (uint8_t)ly.releaseRate : ch.releaseRate, euDialect, adsrTick);
+        ev.releaseSec =
+            ReleaseSeconds(ly.releaseRate >= 0 ? (uint8_t)ly.releaseRate : ch.releaseRate, euDialect, adsrTick);
         ev.sustainLevel = ch.sustain;
         const float tick = adsrTick;
         ev.sustainHoldSec = 128.0f / tick;
@@ -413,9 +416,8 @@ struct SeqRenderer {
                     ev.portaRatio = ev.freqScale / targetFreq;
                     ev.freqScale = targetFreq;
                 }
-                ev.portaSec = (float)((ly.portaMode & 0x80) != 0
-                                          ? ev.soundSec * (double)ly.portaTime / 255.0
-                                          : (double)ly.portaTime * secPerTick);
+                ev.portaSec = (float)((ly.portaMode & 0x80) != 0 ? ev.soundSec * (double)ly.portaTime / 255.0
+                                                                 : (double)ly.portaTime * secPerTick);
             }
         }
         ev.freqScale *= freqRatio;
@@ -1128,8 +1130,6 @@ struct SeqRenderer {
     }
 };
 
-
-
 const Bank* FindBankByName(const std::map<uint32_t, Bank>& banks, const std::string& name) {
     const auto lower = [](std::string v) {
         std::transform(v.begin(), v.end(), v.begin(), ::tolower);
@@ -1216,6 +1216,5 @@ bool SequencePlayerV0::Render(const ParseResultData& item, int, UI::RenderedAudi
     out.noteCount = renderer.events.size();
     return !out.pcm.empty();
 }
-
 
 #endif // BUILD_UI

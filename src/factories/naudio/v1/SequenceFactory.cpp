@@ -76,14 +76,15 @@ ExportResult NSequenceBinaryExporter::Export(std::ostream& write, std::shared_pt
     auto& seqTable = AudioContext::tables[AudioTableType::SEQ_TABLE];
     auto it = seqTable.entries.find(offset - seqTable.offset);
     if (it != seqTable.entries.end()) {
-        medium      = (uint8_t)it->second.medium;
+        medium = (uint8_t)it->second.medium;
         cachePolicy = (uint8_t)it->second.cachePolicy;
     }
 
     // Derive seqNumber from the entry's position in the table
     uint32_t idx = 0;
     for (auto& [entryOffset, entry] : seqTable.entries) {
-        if (entryOffset == (offset - seqTable.offset)) break;
+        if (entryOffset == (offset - seqTable.offset))
+            break;
         idx++;
     }
     seqNumber = (uint8_t)idx;

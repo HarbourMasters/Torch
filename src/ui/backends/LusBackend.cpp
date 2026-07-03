@@ -48,13 +48,17 @@ namespace {
 // Hosts the Torch views inside LUS's gui draw loop. Draw() is overridden to
 // drive the active View directly; the View owns its own fullscreen window.
 class ViewHostWindow : public Ship::GuiWindow {
-public:
+  public:
     explicit ViewHostWindow(std::shared_ptr<ViewManager> views)
-        : Ship::GuiWindow("gTorchViewer", true, "Torch"), mViews(std::move(views)) {}
+        : Ship::GuiWindow("gTorchViewer", true, "Torch"), mViews(std::move(views)) {
+    }
 
-    void InitElement() override {}
-    void UpdateElement() override {}
-    void DrawElement() override {}
+    void InitElement() override {
+    }
+    void UpdateElement() override {
+    }
+    void DrawElement() override {
+    }
 
     void Draw() override {
         // Single OS window: no platform viewports or docking.
@@ -64,29 +68,31 @@ public:
         }
     }
 
-private:
+  private:
     std::shared_ptr<ViewManager> mViews;
 };
 
 // Minimal control deck: the viewer takes no game input, but Context requires a
 // non-null deck. WriteToPad is a no-op.
 class ViewerControlDeck final : public Ship::ControlDeck {
-public:
-    ViewerControlDeck()
-        : Ship::ControlDeck({}, std::make_shared<Ship::ControllerDefaultMappings>(), {}) {}
-    void WriteToPad(void*) override {}
+  public:
+    ViewerControlDeck() : Ship::ControlDeck({}, std::make_shared<Ship::ControllerDefaultMappings>(), {}) {
+    }
+    void WriteToPad(void*) override {
+    }
 };
 
 // Suppress Fast3dGui's fullscreen "Main Game" window; there is no game scene
 // and it would cover the viewer.
 class ViewerGui final : public Fast::Fast3dGui {
-public:
+  public:
     using Fast::Fast3dGui::Fast3dGui;
-    void DrawGame() override {}
+    void DrawGame() override {
+    }
 };
 
 class LusBackend final : public BaseBackend {
-public:
+  public:
     void RunViewer(const std::shared_ptr<ViewManager>& views) override {
         auto ctx = Ship::Context::CreateUninitializedInstance("Torch", "torch", "torch.cfg.json");
         ctx->InitConfiguration();
@@ -119,21 +125,18 @@ public:
         loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryDisplayListV0>(),
                                         RESOURCE_FORMAT_BINARY, "DisplayList",
                                         static_cast<uint32_t>(Fast::ResourceType::DisplayList), 0);
-        loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryVertexV0>(),
-                                        RESOURCE_FORMAT_BINARY, "Vertex",
-                                        static_cast<uint32_t>(Fast::ResourceType::Vertex), 0);
+        loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryVertexV0>(), RESOURCE_FORMAT_BINARY,
+                                        "Vertex", static_cast<uint32_t>(Fast::ResourceType::Vertex), 0);
         loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryTextureV0>(),
                                         RESOURCE_FORMAT_BINARY, "Texture",
                                         static_cast<uint32_t>(Fast::ResourceType::Texture), 0);
         loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryTextureV1>(),
                                         RESOURCE_FORMAT_BINARY, "Texture",
                                         static_cast<uint32_t>(Fast::ResourceType::Texture), 1);
-        loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryMatrixV0>(),
-                                        RESOURCE_FORMAT_BINARY, "Matrix",
-                                        static_cast<uint32_t>(Fast::ResourceType::Matrix), 0);
-        loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryLightV0>(),
-                                        RESOURCE_FORMAT_BINARY, "Light",
-                                        static_cast<uint32_t>(Fast::ResourceType::Light), 0);
+        loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryMatrixV0>(), RESOURCE_FORMAT_BINARY,
+                                        "Matrix", static_cast<uint32_t>(Fast::ResourceType::Matrix), 0);
+        loader->RegisterResourceFactory(std::make_shared<Fast::ResourceFactoryBinaryLightV0>(), RESOURCE_FORMAT_BINARY,
+                                        "Light", static_cast<uint32_t>(Fast::ResourceType::Light), 0);
 
         // GuiWindows must be added after InitWindow; their setup dereferences
         // Context::GetWindow().
@@ -213,8 +216,7 @@ public:
         const float r = std::max(std::sqrt(dx * dx + dy * dy + dz * dz) * 0.008f, 1.0f);
 
         static const int kFaces[8][3] = {
-            { 0, 2, 4 }, { 2, 1, 4 }, { 1, 3, 4 }, { 3, 0, 4 },
-            { 2, 0, 5 }, { 1, 2, 5 }, { 3, 1, 5 }, { 0, 3, 5 },
+            { 0, 2, 4 }, { 2, 1, 4 }, { 1, 3, 4 }, { 3, 0, 4 }, { 2, 0, 5 }, { 1, 2, 5 }, { 3, 1, 5 }, { 0, 3, 5 },
         };
         constexpr size_t kMaxPoints = 4000;
         std::vector<PreviewVertex> tris;
@@ -298,9 +300,7 @@ public:
 
         ModelPart part;
         part.resource = key;
-        static const float kIdentity[4][4] = {
-            { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 }
-        };
+        static const float kIdentity[4][4] = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
         std::memcpy(part.mtx, kIdentity, sizeof(kIdentity));
         DrawModelParts(key, { part }, topLeft, size, view);
     }
@@ -308,9 +308,7 @@ public:
     void DrawModel(const std::string& resourceName, const ImVec2& topLeft, const ImVec2& size,
                    const OrbitView& view) override {
         // A single display list is just a one-part model with an identity transform.
-        static const float kIdentity[4][4] = {
-            { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 }
-        };
+        static const float kIdentity[4][4] = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
         ModelPart part;
         part.resource = resourceName;
         std::memcpy(part.mtx, kIdentity, sizeof(kIdentity));
@@ -362,7 +360,8 @@ public:
         // Texel buffers are content-keyed and never freed: the interpreter's
         // texture cache keys on the data address, so reusing one buffer for a
         // different image would serve the stale GPU texture.
-        const uint64_t hash = HashBytes(rgba, (size_t)width * height * 4, 1469598103934665603ull + width * 131 + height);
+        const uint64_t hash =
+            HashBytes(rgba, (size_t)width * height * 4, 1469598103934665603ull + width * 131 + height);
         auto& texels = mBackdropTexelCache[hash];
         if (texels.empty()) {
             // N64 RGBA16 texels (big-endian 5551) for the texture-rectangle strips.
@@ -513,8 +512,7 @@ public:
             return false;
         }
         auto audio = Ship::Context::GetInstance()->GetAudio();
-        if (audio == nullptr || audio->GetAudioPlayer() == nullptr ||
-            !audio->GetAudioPlayer()->IsInitialized()) {
+        if (audio == nullptr || audio->GetAudioPlayer() == nullptr || !audio->GetAudioPlayer()->IsInitialized()) {
             return false;
         }
         mAudioPcm.assign(frames, frames + frameCount * channels);
@@ -560,13 +558,13 @@ public:
         return mAudioSpeed;
     }
 
-private:
+  private:
     // out = a * b in row-vector convention (a applied first).
     static void MulMtxF(MtxF& out, const float a[4][4], const MtxF& b) {
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
-                out.mf[i][j] = a[i][0] * b.mf[0][j] + a[i][1] * b.mf[1][j] + a[i][2] * b.mf[2][j] +
-                               a[i][3] * b.mf[3][j];
+                out.mf[i][j] =
+                    a[i][0] * b.mf[0][j] + a[i][1] * b.mf[1][j] + a[i][2] * b.mf[2][j] + a[i][3] * b.mf[3][j];
             }
         }
     }
@@ -592,21 +590,34 @@ private:
         if (zl == 0.0f) {
             zl = 1.0f;
         }
-        zx /= zl; zy /= zl; zz /= zl;
+        zx /= zl;
+        zy /= zl;
+        zz /= zl;
         // x = up(0,1,0) x z, normalized
         float xx = zz, xy = 0.0f, xz = -zx;
         float xl = std::sqrt(xx * xx + xy * xy + xz * xz);
         if (xl == 0.0f) {
             xl = 1.0f;
         }
-        xx /= xl; xy /= xl; xz /= xl;
+        xx /= xl;
+        xy /= xl;
+        xz /= xl;
         // y = z x x
         const float yx = zy * xz - zz * xy;
         const float yy = zz * xx - zx * xz;
         const float yz = zx * xy - zy * xx;
-        m.mf[0][0] = xx; m.mf[0][1] = yx; m.mf[0][2] = zx; m.mf[0][3] = 0.0f;
-        m.mf[1][0] = xy; m.mf[1][1] = yy; m.mf[1][2] = zy; m.mf[1][3] = 0.0f;
-        m.mf[2][0] = xz; m.mf[2][1] = yz; m.mf[2][2] = zz; m.mf[2][3] = 0.0f;
+        m.mf[0][0] = xx;
+        m.mf[0][1] = yx;
+        m.mf[0][2] = zx;
+        m.mf[0][3] = 0.0f;
+        m.mf[1][0] = xy;
+        m.mf[1][1] = yy;
+        m.mf[1][2] = zy;
+        m.mf[1][3] = 0.0f;
+        m.mf[2][0] = xz;
+        m.mf[2][1] = yz;
+        m.mf[2][2] = zz;
+        m.mf[2][3] = 0.0f;
         m.mf[3][0] = -(xx * ex + xy * ey + xz * ez);
         m.mf[3][1] = -(yx * ex + yy * ey + yz * ez);
         m.mf[3][2] = -(zx * ex + zy * ey + zz * ez);
@@ -631,8 +642,7 @@ private:
             if (!isVtx && !isDl) {
                 continue;
             }
-            const uint64_t hash = ((uint64_t)(uint32_t)instr[i + 1].words.w0 << 32) |
-                                  (uint32_t)instr[i + 1].words.w1;
+            const uint64_t hash = ((uint64_t)(uint32_t)instr[i + 1].words.w0 << 32) | (uint32_t)instr[i + 1].words.w1;
             ++i; // the hash occupies the next Gfx word
             const std::string* path = am ? am->HashToString(hash) : nullptr;
             if (path == nullptr || !visited.insert(*path).second) {
@@ -773,7 +783,7 @@ private:
         uint32_t w = 0, h = 0;
         std::string owner; // model currently rendered into this framebuffer
         Vp vp{};
-        Mtx proj{};        // stable address: key into the Mtx->MtxF replacement map
+        Mtx proj{}; // stable address: key into the Mtx->MtxF replacement map
         // Last rendered state; the framebuffer persists until these change.
         bool rendered = false;
         OrbitView lastView{};
@@ -974,11 +984,11 @@ private:
         // fog the combined color).
         if (aux) {
             if (fog) { // G_CC_INTERFERENCE, PM_CC2_MULTIPLY_SHADE
-                gDPSetCombineLERP(p++, TEXEL0, 0, TEXEL1, 0, TEXEL0, 0, TEXEL1, 0,
-                                  COMBINED, 0, SHADE, 0, 0, 0, 0, COMBINED);
+                gDPSetCombineLERP(p++, TEXEL0, 0, TEXEL1, 0, TEXEL0, 0, TEXEL1, 0, COMBINED, 0, SHADE, 0, 0, 0, 0,
+                                  COMBINED);
             } else { // PM_CC_ALT_INTERFERENCE, G_CC_MODULATEIA2
-                gDPSetCombineLERP(p++, TEXEL1, 0, TEXEL0, 0, TEXEL1, 0, TEXEL0, 0,
-                                  COMBINED, 0, SHADE, 0, COMBINED, 0, SHADE, 0);
+                gDPSetCombineLERP(p++, TEXEL1, 0, TEXEL0, 0, TEXEL1, 0, TEXEL0, 0, COMBINED, 0, SHADE, 0, COMBINED, 0,
+                                  SHADE, 0);
             }
         } else if (t.combine == 1) {
             if (fog) {
@@ -1020,8 +1030,8 @@ private:
         }
         switch (t.siz) {
             case G_IM_SIZ_4b:
-                gDPLoadTextureBlock_4b(p++, raster, t.fmt, t.width, t.height, 0, t.cmS, t.cmT, maskS, maskT,
-                                       G_TX_NOLOD, G_TX_NOLOD);
+                gDPLoadTextureBlock_4b(p++, raster, t.fmt, t.width, t.height, 0, t.cmS, t.cmT, maskS, maskT, G_TX_NOLOD,
+                                       G_TX_NOLOD);
                 break;
             case G_IM_SIZ_8b:
                 gDPLoadTextureBlock(p++, raster, t.fmt, G_IM_SIZ_8b, t.width, t.height, 0, t.cmS, t.cmT, maskS, maskT,
@@ -1283,9 +1293,13 @@ private:
 
         const int16_t vx = (int16_t)(slot.w * 2);
         const int16_t vy = (int16_t)(slot.h * 2);
-        slot.vp.vp.vscale[0] = vx; slot.vp.vp.vscale[1] = vy; slot.vp.vp.vscale[2] = G_MAXZ / 2;
+        slot.vp.vp.vscale[0] = vx;
+        slot.vp.vp.vscale[1] = vy;
+        slot.vp.vp.vscale[2] = G_MAXZ / 2;
         slot.vp.vp.vscale[3] = 0;
-        slot.vp.vp.vtrans[0] = vx; slot.vp.vp.vtrans[1] = vy; slot.vp.vp.vtrans[2] = G_MAXZ / 2;
+        slot.vp.vp.vtrans[0] = vx;
+        slot.vp.vp.vtrans[1] = vy;
+        slot.vp.vp.vtrans[2] = G_MAXZ / 2;
         slot.vp.vp.vtrans[3] = 0;
 
         // Point light approximated per part (the RSP only has directional
@@ -1307,9 +1321,12 @@ private:
             const float distSq = dx * dx + dy * dy + dz * dz;
             const float dlen = std::sqrt(distSq);
             if (dlen > 0.0001f) {
-                dx /= dlen; dy /= dlen; dz /= dlen;
+                dx /= dlen;
+                dy /= dlen;
+                dz /= dlen;
             } else {
-                dy = 1.0f; dx = dz = 0.0f;
+                dy = 1.0f;
+                dx = dz = 0.0f;
             }
             const float radii = b.radius > 0.0001f ? dlen / b.radius : 0.0f;
             const float atten = std::clamp(lighting.intensity / (1.0f + lighting.falloff * radii * radii), 0.0f, 1.0f);
@@ -1320,10 +1337,9 @@ private:
             const float amb[3] = { part.fullAmbient ? 1.0f : lighting.ambient[0],
                                    part.fullAmbient ? 1.0f : lighting.ambient[1],
                                    part.fullAmbient ? 1.0f : lighting.ambient[2] };
-            mPartLights[i] = gdSPDefLights1(
-                to8(amb[0]), to8(amb[1]), to8(amb[2]),
-                to8(lighting.color[0] * atten), to8(lighting.color[1] * atten), to8(lighting.color[2] * atten),
-                (int8_t)(vx * 127.0f), (int8_t)(vy * 127.0f), (int8_t)(vz * 127.0f));
+            mPartLights[i] = gdSPDefLights1(to8(amb[0]), to8(amb[1]), to8(amb[2]), to8(lighting.color[0] * atten),
+                                            to8(lighting.color[1] * atten), to8(lighting.color[2] * atten),
+                                            (int8_t)(vx * 127.0f), (int8_t)(vy * 127.0f), (int8_t)(vz * 127.0f));
         }
 
         const Backdrop* backdrop = nullptr;
@@ -1430,8 +1446,8 @@ private:
         gSPSetGeometryMode(p++, baseGeo | (lighting.enabled ? G_LIGHTING : 0));
         // Per-layer render modes (SM64 renderModeTable_1Cycle, z-buffered).
         static const uint32_t kLayerCycle1[8] = {
-            G_RM_ZB_OPA_SURF,     G_RM_AA_ZB_OPA_SURF,  G_RM_AA_ZB_OPA_DECAL, G_RM_AA_ZB_OPA_INTER,
-            G_RM_AA_ZB_TEX_EDGE,  G_RM_AA_ZB_XLU_SURF,  G_RM_AA_ZB_XLU_DECAL, G_RM_AA_ZB_XLU_INTER,
+            G_RM_ZB_OPA_SURF,    G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_DECAL, G_RM_AA_ZB_OPA_INTER,
+            G_RM_AA_ZB_TEX_EDGE, G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_DECAL, G_RM_AA_ZB_XLU_INTER,
         };
         static const uint32_t kLayerCycle2[8] = {
             G_RM_ZB_OPA_SURF2,    G_RM_AA_ZB_OPA_SURF2, G_RM_AA_ZB_OPA_DECAL2, G_RM_AA_ZB_OPA_INTER2,
@@ -1634,9 +1650,9 @@ private:
         return h;
     }
 
-    std::vector<ModelRequest> mRequests;   // filled this frame, rendered next
-    std::vector<ModelRequest> mRenderList; // snapshot being rendered this frame
-    std::unordered_map<std::string, int> mNameToFb;          // model -> framebuffer id
+    std::vector<ModelRequest> mRequests;            // filled this frame, rendered next
+    std::vector<ModelRequest> mRenderList;          // snapshot being rendered this frame
+    std::unordered_map<std::string, int> mNameToFb; // model -> framebuffer id
     std::unordered_map<std::string, ModelBounds> mBoundsCache;
     std::vector<FbSlot> mFbPool;
     size_t mScanStart = 0; // round-robin cursor for the one-render-per-frame pick
@@ -1660,7 +1676,7 @@ private:
         };
         std::unordered_map<uint32_t, DlMeta> meta;
     };
-    std::unordered_map<void*, std::shared_ptr<GameBundle>> mGameBundles;   // keyed by blob
+    std::unordered_map<void*, std::shared_ptr<GameBundle>> mGameBundles; // keyed by blob
     std::unordered_map<std::string, std::pair<std::shared_ptr<GameBundle>, Gfx*>> mGameGfx;
 
     // Screen-space backdrops (N64 RGBA16 texels) drawn as texture-rectangle

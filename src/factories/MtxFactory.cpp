@@ -112,9 +112,9 @@ ExportResult MtxBinaryExporter::Export(std::ostream& write, std::shared_ptr<IPar
 
     WriteHeader(writer, Torch::ResourceType::Matrix, 0);
 
-    if(floats){
-        for(size_t i = 0; i < 4; i++){
-            for(size_t j = 0; j < 4; j++){
+    if (floats) {
+        for (size_t i = 0; i < 4; i++) {
+            for (size_t j = 0; j < 4; j++) {
                 writer.Write(mtx->mMtxs[0].mtx[i * 4 + j]);
             }
         }
@@ -124,15 +124,15 @@ ExportResult MtxBinaryExporter::Export(std::ostream& write, std::shared_ptr<IPar
         // N64 format: each int32 packs two adjacent columns as (col_even << 16) | col_odd.
         auto& mt = mtx->mMtxs[0].mt;
         // First 8 words: integer parts (4 rows × 2 column-pairs)
-        for(size_t i = 0; i < 4; i++){
-            for(size_t j = 0; j < 2; j++){
+        for (size_t i = 0; i < 4; i++) {
+            for (size_t j = 0; j < 2; j++) {
                 int32_t packed = ((int32_t)mt.intPart[i][j * 2] << 16) | mt.intPart[i][j * 2 + 1];
                 writer.Write(packed);
             }
         }
         // Next 8 words: fractional parts (4 rows × 2 column-pairs)
-        for(size_t i = 0; i < 4; i++){
-            for(size_t j = 0; j < 2; j++){
+        for (size_t i = 0; i < 4; i++) {
+            for (size_t j = 0; j < 2; j++) {
                 int32_t packed = ((int32_t)mt.fracPart[i][j * 2] << 16) | mt.fracPart[i][j * 2 + 1];
                 writer.Write(packed);
             }

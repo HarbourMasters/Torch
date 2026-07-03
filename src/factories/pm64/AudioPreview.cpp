@@ -362,11 +362,11 @@ namespace {
 // Indices 0-79 are the seconds table; 80-93 are N x 5750us audio frames.
 double EnvIntervalSec(uint8_t idx) {
     static const double kSeconds[80] = {
-        60,   55,   50,   45,   40,    35,   30,    27.5, 25,    22.5, 20,   19,   18,   17,   16,   15,
-        14,   13,   12,   11,   10,    9,    8,     7,    6,     5,    4.5,  4,    3.5,  3,    2.75, 2.5,
-        2.25, 2,    1.9,  1.8,  1.7,   1.6,  1.5,   1.4,  1.3,   1.2,  1.1,  1,    0.95, 0.9,  0.85, 0.8,
-        0.75, 0.7,  0.65, 0.6,  0.55,  0.5,  0.45,  0.4,  0.375, 0.35, 0.325, 0.3, 0.29, 0.28, 0.27, 0.26,
-        0.25, 0.24, 0.23, 0.22, 0.21,  0.2,  0.19,  0.18, 0.17,  0.16, 0.15, 0.14, 0.13, 0.12, 0.11, 0.1,
+        60,   55,   50,   45,   40,   35,  30,   27.5, 25,    22.5, 20,    19,   18,   17,   16,   15,
+        14,   13,   12,   11,   10,   9,   8,    7,    6,     5,    4.5,   4,    3.5,  3,    2.75, 2.5,
+        2.25, 2,    1.9,  1.8,  1.7,  1.6, 1.5,  1.4,  1.3,   1.2,  1.1,   1,    0.95, 0.9,  0.85, 0.8,
+        0.75, 0.7,  0.65, 0.6,  0.55, 0.5, 0.45, 0.4,  0.375, 0.35, 0.325, 0.3,  0.29, 0.28, 0.27, 0.26,
+        0.25, 0.24, 0.23, 0.22, 0.21, 0.2, 0.19, 0.18, 0.17,  0.16, 0.15,  0.14, 0.13, 0.12, 0.11, 0.1,
     };
     static const int kUnits[14] = { 16, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
     if (idx < 80) {
@@ -478,8 +478,8 @@ float EnvReleaseSec(const std::vector<uint8_t>& cmds) {
     return std::max((float)t, 0.005f);
 }
 
-const std::vector<uint8_t> kDefaultPress = { 61, 127, 0xFF, 0 };  // 280ms to full
-const std::vector<uint8_t> kDefaultRelease = { 52, 0, 0xFF, 0 };  // 550ms to silence
+const std::vector<uint8_t> kDefaultPress = { 61, 127, 0xFF, 0 }; // 280ms to full
+const std::vector<uint8_t> kDefaultRelease = { 52, 0, 0xFF, 0 }; // 550ms to silence
 
 std::string sPlayingName;
 UI::RenderedAudio sSamplePcm;
@@ -535,10 +535,9 @@ void PM64BkSampleFactoryUI::DrawUI(const ParseResultData& item) {
     if (ImGui::Button("WAV##bksampleexp")) {
         if (DecodeSampleCard(item, rate)) {
             const auto path = UI::ExportFilePath(item.name, "wav");
-            UI::NoteExport(item.name,
-                           UI::WriteWavFile(path, sSamplePcm.pcm.data(), sSamplePcm.pcm.size(), 1, rate)
-                               ? path.string()
-                               : "export failed");
+            UI::NoteExport(item.name, UI::WriteWavFile(path, sSamplePcm.pcm.data(), sSamplePcm.pcm.size(), 1, rate)
+                                          ? path.string()
+                                          : "export failed");
         } else {
             UI::NoteExport(item.name, "decode failed");
         }
@@ -588,7 +587,7 @@ struct BgmTrack {
     int delay = 0;
     uint32_t savedPos = 0; // detour return
     int detourLen = 0;
-    uint32_t prevPos = 0;  // branch return
+    uint32_t prevPos = 0; // branch return
     int voiceCount = 1;
 
     const PM64Audio::Instrument* ins = nullptr;
@@ -796,8 +795,8 @@ bool SequencePlayerPM64::Render(const ParseResultData& item, int option, UI::Ren
                 case 4: // BGM_COMP_WAIT: consume one tick
                     now += tickSec;
                     break;
-                case 5:   // BGM_COMP_END_LOOP
-                case 6:   // conditional variants (flag defaults false -> case 6 loops)
+                case 5: // BGM_COMP_END_LOOP
+                case 6: // conditional variants (flag defaults false -> case 6 loops)
                 case 7: {
                     if ((cmd >> 28) == 7) {
                         break; // loop-if-true with flag false: skip
@@ -1009,8 +1008,8 @@ bool SequencePlayerPM64::Render(const ParseResultData& item, int option, UI::Ren
                         fprintf(stderr,
                                 "[bgm] t=%7.3f trk=%2d pitch=%3d vel=%3d len=%4d cents=%7.0f step=%.4f gain=%.3f "
                                 "rate=%d key=%d env=%zupt rel=%.2f drum=%d\n",
-                                now, ti, pitch, velocity, length, cents, note.freqScale, note.gain,
-                                ins->sampleRate, ins->keyBase, note.envPoints.size(), note.releaseSec, (int)tr.isDrum);
+                                now, ti, pitch, velocity, length, cents, note.freqScale, note.gain, ins->sampleRate,
+                                ins->keyBase, note.envPoints.size(), note.releaseSec, (int)tr.isDrum);
                     }
                     tr.voices[slot].note = (int)notes.size();
                     tr.voices[slot].remain = length;
@@ -1214,8 +1213,8 @@ bool SequencePlayerPM64::Render(const ParseResultData& item, int option, UI::Ren
             snprintf(buf, sizeof(buf), " %04X:%d", bp, count);
             missing += buf;
         }
-        fprintf(stderr, "[bgmstat] %s notes=%zu noIns=%d noDrum=%d missingBank:%s\n", item.name.c_str(),
-                notes.size(), skippedNoIns, skippedDrum, missing.c_str());
+        fprintf(stderr, "[bgmstat] %s notes=%zu noIns=%d noDrum=%d missingBank:%s\n", item.name.c_str(), notes.size(),
+                skippedNoIns, skippedDrum, missing.c_str());
     }
     if (notes.empty()) {
         return false;

@@ -191,8 +191,7 @@ static void RegisterLangInfo(YAML::Node& node) {
 
     if (langNode && langNode.IsSequence()) {
         for (auto entry : langNode) {
-            langs.emplace_back(GetSafeNode<std::string>(entry, "name"),
-                               GetSafeNode<uint32_t>(entry, "index", 0),
+            langs.emplace_back(GetSafeNode<std::string>(entry, "name"), GetSafeNode<uint32_t>(entry, "index", 0),
                                GetSafeNode<uint32_t>(entry, "script", 0));
         }
     } else if (cfg.dialogPack) {
@@ -259,8 +258,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
     RegisterLangInfo(node);
 
     // Resolve the pack's language folder.
-    const std::string langRegion =
-        Companion::Instance->GetConfig().dialogPack ? ResolveLangRegion() : std::string();
+    const std::string langRegion = Companion::Instance->GetConfig().dialogPack ? ResolveLangRegion() : std::string();
 
     // Romhack o2rs overlay the base bk.o2r, whose manifest already lives there: walk the
     // table for side effects (BB config, modified-slot registration) but don't output a
@@ -362,246 +360,245 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
     size_t parseFailures = 0;
 
     for (uint32_t i = 0; i < assetCount - 1; i++) {
-      try {
-        auto assetInfo = assetTableInfo.at(i);
+        try {
+            auto assetInfo = assetTableInfo.at(i);
 
-        // Size is the gap to the next asset's offset.
-        uint32_t assetSize = assetTableInfo.at(i + 1).offset - assetInfo.offset;
+            // Size is the gap to the next asset's offset.
+            uint32_t assetSize = assetTableInfo.at(i + 1).offset - assetInfo.offset;
 
-        // Same offset means an empty slot sits in between; skip ahead until the
-        // offset actually changes to find the real boundary.
-        if (assetSize == 0) {
-            for (uint32_t j = i + 2; j < assetCount; j++) {
-                if (assetTableInfo.at(j).offset != assetInfo.offset) {
-                    assetSize = assetTableInfo.at(j).offset - assetInfo.offset;
-                    break;
-                }
-            }
-        }
-
-        auto assetOffset = dataStartRomOffset + assetInfo.offset;
-        BKAssetType assetType;
-
-        if (assetInfo.tFlag == 4) {
-            continue;
-        }
-
-        if (assetOffset + assetSize > buffer.size()) {
-            SPDLOG_ERROR("Asset {} offset 0x{:X} + size 0x{:X} = 0x{:X} exceeds ROM "
-                         "buffer 0x{:X}",
-                         assetInfo.index, assetOffset, assetSize, assetOffset + assetSize, buffer.size());
-            continue;
-        }
-
-        SPDLOG_TRACE("Parsing asset {} mode={} offset=0x{:X} size=0x{:X} comp={}", assetInfo.index, assetInfo.assetMode,
-                     assetOffset, assetSize, assetInfo.compressionFlag);
-
-        if (romhackMode && assetSize > 0) {
-            const std::string& baselineHash = GetBaselineAssetHash(assetInfo.index);
-            if (!baselineHash.empty()) {
-                if (assetOffset + assetSize <= rom.size()) {
-                    sha1::SHA1 s;
-                    s.processBytes(rom.data() + assetOffset, assetSize);
-                    uint32_t digest[5];
-                    s.getDigest(digest);
-                    char buf[41];
-                    std::snprintf(buf, sizeof(buf), "%08x%08x%08x%08x%08x", digest[0], digest[1], digest[2], digest[3],
-                                  digest[4]);
-                    if (baselineHash == buf) {
-                        skipHits++;
-                        if ((skipHits % 500) == 0) {
-                            SPDLOG_WARN("Romhack hash-skip progress: {} hits, {} misses so far", skipHits, skipMisses);
-                        }
-                        continue;
+            // Same offset means an empty slot sits in between; skip ahead until the
+            // offset actually changes to find the real boundary.
+            if (assetSize == 0) {
+                for (uint32_t j = i + 2; j < assetCount; j++) {
+                    if (assetTableInfo.at(j).offset != assetInfo.offset) {
+                        assetSize = assetTableInfo.at(j).offset - assetInfo.offset;
+                        break;
                     }
-                    skipMisses++;
                 }
             }
-        }
 
-        switch (assetInfo.assetMode) {
-            case 0:
-                assetType = BKAssetType::Animation;
-                break;
-            case 1:
-            case 3:
-            case 7: {
-                uint8_t* dataBuf;
-                if (assetInfo.compressionFlag != 0) {
-                    DataChunk* uncompressedData =
-                        Decompressor::Decode(buffer, assetOffset, CompressionType::BKZIP, assetSize);
-                    dataBuf = uncompressedData->data;
-                } else {
-                    dataBuf = buffer.data() + assetOffset;
-                }
-                if (dataBuf[0] == 0 && dataBuf[1] == 0 && dataBuf[2] == 0 && dataBuf[3] == 11) {
-                    assetType = BKAssetType::Model;
-                } else {
-                    assetType = BKAssetType::Sprite;
-                }
-                break;
-            }
-            case 2:
-                assetType = BKAssetType::Map;
-                break;
-            case 4: {
-                uint8_t* dataBuf;
-                if (assetInfo.compressionFlag != 0) {
-                    DataChunk* uncompressedData =
-                        Decompressor::Decode(buffer, assetOffset, CompressionType::BKZIP, assetSize);
-                    dataBuf = uncompressedData->data;
-                } else {
-                    dataBuf = buffer.data() + assetOffset;
-                }
-                // US headers
-                if (dataBuf[0] == 1 && dataBuf[1] == 1 && dataBuf[2] == 2 && dataBuf[3] == 5 && dataBuf[4] == 0) {
-                    assetType = BKAssetType::QuizQuestion;
-                } else if (dataBuf[0] == 1 && dataBuf[1] == 3 && dataBuf[2] == 0 && dataBuf[3] == 5 &&
-                           dataBuf[4] == 0) {
-                    assetType = BKAssetType::GruntyQuestion;
-                } else if (dataBuf[0] == 1 && dataBuf[1] == 3 && dataBuf[2] == 0) {
-                    assetType = BKAssetType::Dialog;
-                // PAL headers
-                } else if (dataBuf[0] == 3 && dataBuf[1] == 1 && dataBuf[2] == 2) {
-                    assetType = BKAssetType::QuizQuestion;
-                } else if (dataBuf[0] == 3 && dataBuf[1] == 3 && dataBuf[2] == 0) {
-                    assetType = BKAssetType::GruntyQuestion;
-                } else if (dataBuf[0] == 3 && dataBuf[1] == 7 && dataBuf[2] == 0) {
-                    assetType = BKAssetType::Dialog;
-                } else {
-                    assetType = BKAssetType::DemoInput;
-                }
-                break;
-            }
-            case 5:
-                assetType = BKAssetType::Model;
-                break;
-            case 6:
-                assetType = BKAssetType::Midi;
-                break;
-            default:
-                assetType = BKAssetType::Binary;
-                break;
-        }
+            auto assetOffset = dataStartRomOffset + assetInfo.offset;
+            BKAssetType assetType;
 
-        // Dialog-pack mode only wants what actually differs by language: the text
-        // assets, plus the assets a pack may redraw for a new script. The font
-        // masks and the in-world text/sign models apply to any region, so custom
-        // packs (not just the retail JP cart) can carry and replace them.
-        if (Companion::Instance->GetConfig().dialogPack) {
-            const bool isText = assetType == BKAssetType::Dialog ||
-                                assetType == BKAssetType::GruntyQuestion ||
-                                assetType == BKAssetType::QuizQuestion;
-            // Font masks + text-bearing models / signs / overlays a language pack
-            // may relocalize.
-            static const std::unordered_set<uint32_t> kLangAssets = {
-                0x6EB, // SPRITE_DIALOG_FONT_ALPHAMASK (dialog/quiz/grunty text)
-                0x6EC, // SPRITE_BOLD_FONT_LETTERS_ALPHAMASK (world names, headers)
-                0x2EE, // ON_VACATIOIN_SIGN
-                0x46C, // JIGSAW_PUZZLE
-                0x486, // XMAS_TREE_SWITCH
-                0x48B, // JIGGY_PODIUM
-                0x4EA, // RACE_BANNER_FINISH
-                0x4EB, // RACE_BANNER_START
-                0x50A, // SHARKFOOD_ISLAND (model with sign)
-                0x54C, // GAME OVER
-                0x54D, // BANJO_KAZOOIE_SIGN
-                0x54E, // COPYRIGHT_OVERLAY
-                0x55C, // PRESS_START_OVERLAY
-                0x55D, // NO_CONTROLLER_OVERLAY
-                0x563, // LEVEL_ENTRY_SIGNS
-                0x56C, // THE_END_SIGN
-            };
-            const uint32_t idx = assetInfo.index;
-            bool isLangAsset = kLangAssets.count(idx) != 0;
-            // The JP cart additionally carries the kana dialog font and the
-            // pre-rendered kana pause-menu world-name banners.
-            if (auto* cart = Companion::Instance->GetCartridge();
-                cart != nullptr && cart->GetCountry() == N64::CountryCode::Japan) {
-                isLangAsset = isLangAsset || idx == 0x6EA || (idx >= 0xE2C && idx <= 0xE38);
-            }
-            if (!isText && !isLangAsset) {
+            if (assetInfo.tFlag == 4) {
                 continue;
             }
+
+            if (assetOffset + assetSize > buffer.size()) {
+                SPDLOG_ERROR("Asset {} offset 0x{:X} + size 0x{:X} = 0x{:X} exceeds ROM "
+                             "buffer 0x{:X}",
+                             assetInfo.index, assetOffset, assetSize, assetOffset + assetSize, buffer.size());
+                continue;
+            }
+
+            SPDLOG_TRACE("Parsing asset {} mode={} offset=0x{:X} size=0x{:X} comp={}", assetInfo.index,
+                         assetInfo.assetMode, assetOffset, assetSize, assetInfo.compressionFlag);
+
+            if (romhackMode && assetSize > 0) {
+                const std::string& baselineHash = GetBaselineAssetHash(assetInfo.index);
+                if (!baselineHash.empty()) {
+                    if (assetOffset + assetSize <= rom.size()) {
+                        sha1::SHA1 s;
+                        s.processBytes(rom.data() + assetOffset, assetSize);
+                        uint32_t digest[5];
+                        s.getDigest(digest);
+                        char buf[41];
+                        std::snprintf(buf, sizeof(buf), "%08x%08x%08x%08x%08x", digest[0], digest[1], digest[2],
+                                      digest[3], digest[4]);
+                        if (baselineHash == buf) {
+                            skipHits++;
+                            if ((skipHits % 500) == 0) {
+                                SPDLOG_WARN("Romhack hash-skip progress: {} hits, {} misses so far", skipHits,
+                                            skipMisses);
+                            }
+                            continue;
+                        }
+                        skipMisses++;
+                    }
+                }
+            }
+
+            switch (assetInfo.assetMode) {
+                case 0:
+                    assetType = BKAssetType::Animation;
+                    break;
+                case 1:
+                case 3:
+                case 7: {
+                    uint8_t* dataBuf;
+                    if (assetInfo.compressionFlag != 0) {
+                        DataChunk* uncompressedData =
+                            Decompressor::Decode(buffer, assetOffset, CompressionType::BKZIP, assetSize);
+                        dataBuf = uncompressedData->data;
+                    } else {
+                        dataBuf = buffer.data() + assetOffset;
+                    }
+                    if (dataBuf[0] == 0 && dataBuf[1] == 0 && dataBuf[2] == 0 && dataBuf[3] == 11) {
+                        assetType = BKAssetType::Model;
+                    } else {
+                        assetType = BKAssetType::Sprite;
+                    }
+                    break;
+                }
+                case 2:
+                    assetType = BKAssetType::Map;
+                    break;
+                case 4: {
+                    uint8_t* dataBuf;
+                    if (assetInfo.compressionFlag != 0) {
+                        DataChunk* uncompressedData =
+                            Decompressor::Decode(buffer, assetOffset, CompressionType::BKZIP, assetSize);
+                        dataBuf = uncompressedData->data;
+                    } else {
+                        dataBuf = buffer.data() + assetOffset;
+                    }
+                    // US headers
+                    if (dataBuf[0] == 1 && dataBuf[1] == 1 && dataBuf[2] == 2 && dataBuf[3] == 5 && dataBuf[4] == 0) {
+                        assetType = BKAssetType::QuizQuestion;
+                    } else if (dataBuf[0] == 1 && dataBuf[1] == 3 && dataBuf[2] == 0 && dataBuf[3] == 5 &&
+                               dataBuf[4] == 0) {
+                        assetType = BKAssetType::GruntyQuestion;
+                    } else if (dataBuf[0] == 1 && dataBuf[1] == 3 && dataBuf[2] == 0) {
+                        assetType = BKAssetType::Dialog;
+                        // PAL headers
+                    } else if (dataBuf[0] == 3 && dataBuf[1] == 1 && dataBuf[2] == 2) {
+                        assetType = BKAssetType::QuizQuestion;
+                    } else if (dataBuf[0] == 3 && dataBuf[1] == 3 && dataBuf[2] == 0) {
+                        assetType = BKAssetType::GruntyQuestion;
+                    } else if (dataBuf[0] == 3 && dataBuf[1] == 7 && dataBuf[2] == 0) {
+                        assetType = BKAssetType::Dialog;
+                    } else {
+                        assetType = BKAssetType::DemoInput;
+                    }
+                    break;
+                }
+                case 5:
+                    assetType = BKAssetType::Model;
+                    break;
+                case 6:
+                    assetType = BKAssetType::Midi;
+                    break;
+                default:
+                    assetType = BKAssetType::Binary;
+                    break;
+            }
+
+            // Dialog-pack mode only wants what actually differs by language: the text
+            // assets, plus the assets a pack may redraw for a new script. The font
+            // masks and the in-world text/sign models apply to any region, so custom
+            // packs (not just the retail JP cart) can carry and replace them.
+            if (Companion::Instance->GetConfig().dialogPack) {
+                const bool isText = assetType == BKAssetType::Dialog || assetType == BKAssetType::GruntyQuestion ||
+                                    assetType == BKAssetType::QuizQuestion;
+                // Font masks + text-bearing models / signs / overlays a language pack
+                // may relocalize.
+                static const std::unordered_set<uint32_t> kLangAssets = {
+                    0x6EB, // SPRITE_DIALOG_FONT_ALPHAMASK (dialog/quiz/grunty text)
+                    0x6EC, // SPRITE_BOLD_FONT_LETTERS_ALPHAMASK (world names, headers)
+                    0x2EE, // ON_VACATIOIN_SIGN
+                    0x46C, // JIGSAW_PUZZLE
+                    0x486, // XMAS_TREE_SWITCH
+                    0x48B, // JIGGY_PODIUM
+                    0x4EA, // RACE_BANNER_FINISH
+                    0x4EB, // RACE_BANNER_START
+                    0x50A, // SHARKFOOD_ISLAND (model with sign)
+                    0x54C, // GAME OVER
+                    0x54D, // BANJO_KAZOOIE_SIGN
+                    0x54E, // COPYRIGHT_OVERLAY
+                    0x55C, // PRESS_START_OVERLAY
+                    0x55D, // NO_CONTROLLER_OVERLAY
+                    0x563, // LEVEL_ENTRY_SIGNS
+                    0x56C, // THE_END_SIGN
+                };
+                const uint32_t idx = assetInfo.index;
+                bool isLangAsset = kLangAssets.count(idx) != 0;
+                // The JP cart additionally carries the kana dialog font and the
+                // pre-rendered kana pause-menu world-name banners.
+                if (auto* cart = Companion::Instance->GetCartridge();
+                    cart != nullptr && cart->GetCountry() == N64::CountryCode::Japan) {
+                    isLangAsset = isLangAsset || idx == 0x6EA || (idx >= 0xE2C && idx <= 0xE38);
+                }
+                if (!isText && !isLangAsset) {
+                    continue;
+                }
+            }
+
+            std::string assetSymbol;
+            std::string assetIndexStr = std::to_string(assetInfo.index);
+
+            if (symbolMapExists && node["symbol_map"][assetIndexStr]) {
+                assetSymbol = node["symbol_map"][assetIndexStr].as<std::string>();
+            } else {
+                std::stringstream assetStream;
+
+                assetStream << "D_" << sAssetSymbolPrefixes.at(assetType) << "_" << std::to_string(assetInfo.index);
+
+                assetSymbol = assetStream.str();
+            }
+
+            if (Companion::Instance->GetConfig().dialogPack) {
+                assetSymbol = "lang/" + langRegion + "/" + assetSymbol;
+            }
+
+            symbolMap[assetInfo.index] = assetSymbol;
+
+            YAML::Node bkAssetNode;
+            bkAssetNode["offset"] = assetOffset;
+            bkAssetNode["symbol"] = assetSymbol;
+            CompressionType compressionType =
+                (assetInfo.compressionFlag != 0) ? CompressionType::BKZIP : CompressionType::None;
+
+            switch (assetType) {
+                case BKAssetType::Animation:
+                    bkAssetNode["type"] = "BK64:ANIM";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::Binary:
+                    bkAssetNode["type"] = "BLOB";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::DemoInput:
+                    bkAssetNode["type"] = "BK64:DEMO";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::Dialog:
+                    bkAssetNode["type"] = "BK64:DIALOG";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::GruntyQuestion:
+                    bkAssetNode["type"] = "BK64:GRUNTYQ";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::Map:
+                    bkAssetNode["type"] = "BK64:MAP";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::Midi:
+                    bkAssetNode["type"] = "BLOB";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::Model:
+                    bkAssetNode["type"] = "BK64:MODEL";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::QuizQuestion:
+                    bkAssetNode["type"] = "BK64:QUIZQ";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                case BKAssetType::Sprite:
+                    bkAssetNode["type"] = "BK64:SPRITE";
+                    Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
+                    break;
+                default:
+                    // We assigned assetType ourselves, so getting here means a bug.
+                    throw std::runtime_error("Invalid BKAsset Type Found");
+            }
+        } catch (const std::exception& e) {
+            parseFailures++;
+            const auto& bad = assetTableInfo.at(i);
+            SPDLOG_ERROR("[BKAssetFactory] skipping slot {} (compFlag={} tFlag={} mode={} offset=0x{:X}): {}", i,
+                         bad.compressionFlag, bad.tFlag, bad.assetMode, dataStartRomOffset + bad.offset, e.what());
         }
-
-        std::string assetSymbol;
-        std::string assetIndexStr = std::to_string(assetInfo.index);
-
-        if (symbolMapExists && node["symbol_map"][assetIndexStr]) {
-            assetSymbol = node["symbol_map"][assetIndexStr].as<std::string>();
-        } else {
-            std::stringstream assetStream;
-
-            assetStream << "D_" << sAssetSymbolPrefixes.at(assetType) << "_" << std::to_string(assetInfo.index);
-
-            assetSymbol = assetStream.str();
-        }
-
-        if (Companion::Instance->GetConfig().dialogPack) {
-            assetSymbol = "lang/" + langRegion + "/" + assetSymbol;
-        }
-
-        symbolMap[assetInfo.index] = assetSymbol;
-
-        YAML::Node bkAssetNode;
-        bkAssetNode["offset"] = assetOffset;
-        bkAssetNode["symbol"] = assetSymbol;
-        CompressionType compressionType =
-            (assetInfo.compressionFlag != 0) ? CompressionType::BKZIP : CompressionType::None;
-
-        switch (assetType) {
-            case BKAssetType::Animation:
-                bkAssetNode["type"] = "BK64:ANIM";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::Binary:
-                bkAssetNode["type"] = "BLOB";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::DemoInput:
-                bkAssetNode["type"] = "BK64:DEMO";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::Dialog:
-                bkAssetNode["type"] = "BK64:DIALOG";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::GruntyQuestion:
-                bkAssetNode["type"] = "BK64:GRUNTYQ";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::Map:
-                bkAssetNode["type"] = "BK64:MAP";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::Midi:
-                bkAssetNode["type"] = "BLOB";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::Model:
-                bkAssetNode["type"] = "BK64:MODEL";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::QuizQuestion:
-                bkAssetNode["type"] = "BK64:QUIZQ";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            case BKAssetType::Sprite:
-                bkAssetNode["type"] = "BK64:SPRITE";
-                Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
-                break;
-            default:
-                // We assigned assetType ourselves, so getting here means a bug.
-                throw std::runtime_error("Invalid BKAsset Type Found");
-        }
-      } catch (const std::exception& e) {
-        parseFailures++;
-        const auto& bad = assetTableInfo.at(i);
-        SPDLOG_ERROR("[BKAssetFactory] skipping slot {} (compFlag={} tFlag={} mode={} offset=0x{:X}): {}", i,
-                     bad.compressionFlag, bad.tFlag, bad.assetMode,
-                     dataStartRomOffset + bad.offset, e.what());
-      }
     }
 
     if (romhackMode) {
@@ -662,13 +659,12 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
             }
             size_t idStart = 6; // strlen("ASSET_")
             size_t idEnd = stem.find('_', idStart);
-            std::string idHex = (idEnd == std::string::npos) ? stem.substr(idStart) : stem.substr(idStart, idEnd - idStart);
+            std::string idHex =
+                (idEnd == std::string::npos) ? stem.substr(idStart) : stem.substr(idStart, idEnd - idStart);
             uint32_t id = 0;
             try {
                 id = static_cast<uint32_t>(std::stoul(idHex, nullptr, 16));
-            } catch (const std::exception&) {
-                continue;
-            }
+            } catch (const std::exception&) { continue; }
             if (symbolMap.count(id)) {
                 continue; // the base table already covers this slot
             }

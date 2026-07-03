@@ -66,8 +66,8 @@ std::vector<int16_t> Synthesize(const std::vector<SynthNote>& notes, const GainA
             continue;
         }
         const std::vector<int16_t>& pcm = note.sample->pcm;
-        const bool looped = note.sample->looped && note.sample->loopEnd > note.sample->loopStart &&
-                            note.sample->loopEnd <= pcm.size();
+        const bool looped =
+            note.sample->looped && note.sample->loopEnd > note.sample->loopStart && note.sample->loopEnd <= pcm.size();
         const double loopStart = note.sample->loopStart;
         const double loopEnd = note.sample->loopEnd;
 
@@ -159,9 +159,8 @@ std::vector<int16_t> Synthesize(const std::vector<SynthNote>& notes, const GainA
             if ((note.vibRateEndHz > 0.1f || note.vibRateStartHz > 0.1f) && t > note.vibDelaySec) {
                 const double vt = t - note.vibDelaySec;
                 const float rate = note.vibRateRampSec > 0.001f
-                                       ? note.vibRateStartHz +
-                                             (note.vibRateEndHz - note.vibRateStartHz) *
-                                                 (float)std::min(vt / note.vibRateRampSec, 1.0)
+                                       ? note.vibRateStartHz + (note.vibRateEndHz - note.vibRateStartHz) *
+                                                                   (float)std::min(vt / note.vibRateRampSec, 1.0)
                                        : note.vibRateEndHz;
                 vibPhase += 6.2831853 * rate / kSynthRate;
                 const float depth = note.vibRampSec > 0.001f

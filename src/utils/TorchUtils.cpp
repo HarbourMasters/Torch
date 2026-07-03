@@ -10,8 +10,7 @@ namespace fs = std::filesystem;
 uint32_t Torch::translate(const uint32_t offset) {
     // Segment 0 is a raw offset. BK64 also translates segment 1 (it stores assets
     // in compressed segments); other games leave segment 1 raw.
-    const uint32_t firstSegment =
-        Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::BK64 ? 0x00 : 0x01;
+    const uint32_t firstSegment = Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::BK64 ? 0x00 : 0x01;
     if (SEGMENT_NUMBER(offset) > firstSegment) {
         auto segment = SEGMENT_NUMBER(offset);
         const auto addr = Companion::Instance->GetFileOffsetFromSegmentedAddr(segment);

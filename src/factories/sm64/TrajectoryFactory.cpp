@@ -162,8 +162,7 @@ const std::vector<UI::PreviewVertex>& TrajectoryTris(const ParseResultData& item
             u[0] = w;
             u[2] = 0.0f;
         }
-        const float v2[3] = { (d[1] * u[2] - d[2] * u[1]), (d[2] * u[0] - d[0] * u[2]),
-                              (d[0] * u[1] - d[1] * u[0]) };
+        const float v2[3] = { (d[1] * u[2] - d[2] * u[1]), (d[2] * u[0] - d[0] * u[2]), (d[0] * u[1] - d[1] * u[0]) };
 
         const float t = pts.size() > 2 ? (float)i / (float)(pts.size() - 2) : 0.0f;
         const unsigned char color[4] = { (unsigned char)(60 + 195 * t), (unsigned char)(220 - 160 * t), 60, 255 };

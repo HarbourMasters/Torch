@@ -499,9 +499,7 @@ void SurfaceColor(uint32_t type, float out[3]) {
     }
     const float h = std::fmod((float)type * 0.61803f, 1.0f) * 6.0f;
     const float x = 1.0f - std::fabs(std::fmod(h, 2.0f) - 1.0f);
-    const float rgb[6][3] = {
-        { 1, x, 0 }, { x, 1, 0 }, { 0, 1, x }, { 0, x, 1 }, { x, 0, 1 }, { 1, 0, x }
-    };
+    const float rgb[6][3] = { { 1, x, 0 }, { x, 1, 0 }, { 0, 1, x }, { 0, x, 1 }, { x, 0, 1 }, { 1, 0, x } };
     const int i = std::min((int)h, 5);
     for (int k = 0; k < 3; ++k) {
         out[k] = 0.35f + 0.65f * rgb[i][k];
@@ -522,8 +520,8 @@ const std::vector<UI::PreviewVertex>& CollisionTris(const ParseResultData& item)
         float color[3];
         SurfaceColor((uint32_t)surface.surfaceType, color);
         for (const auto& tri : surface.tris) {
-            if (tri.x < 0 || tri.y < 0 || tri.z < 0 || (size_t)tri.x >= verts.size() ||
-                (size_t)tri.y >= verts.size() || (size_t)tri.z >= verts.size()) {
+            if (tri.x < 0 || tri.y < 0 || tri.z < 0 || (size_t)tri.x >= verts.size() || (size_t)tri.y >= verts.size() ||
+                (size_t)tri.z >= verts.size()) {
                 continue;
             }
             const SM64::CollisionVertex* v[3] = { &verts[tri.x], &verts[tri.y], &verts[tri.z] };

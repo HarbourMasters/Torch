@@ -290,9 +290,10 @@ void NSampleFactoryUI::DrawUI(const ParseResultData& item) {
     if (ImGui::Button("WAV##nsampleexp")) {
         if (DecodeNSample(item)) {
             const auto path = UI::ExportFilePath(item.name, "wav");
-            UI::NoteExport(item.name, UI::WriteWavFile(path, sNDecoded.pcm.data(), sNDecoded.pcm.size(), 1, sNDecoded.rate)
-                                      ? path.string()
-                                      : "export failed");
+            UI::NoteExport(item.name,
+                           UI::WriteWavFile(path, sNDecoded.pcm.data(), sNDecoded.pcm.size(), 1, sNDecoded.rate)
+                               ? path.string()
+                               : "export failed");
         } else {
             UI::NoteExport(item.name, "decode failed");
         }

@@ -92,8 +92,8 @@ std::vector<uint8_t> DecodeN64(const uint8_t* raster, const uint8_t* pal, int fm
                 break;
             }
             case 4: { // I
-                const uint8_t in = siz == 1 ? raster[i]
-                                            : (uint8_t)((i % 2 == 0 ? raster[i / 2] >> 4 : raster[i / 2] & 0xF) * 17);
+                const uint8_t in =
+                    siz == 1 ? raster[i] : (uint8_t)((i % 2 == 0 ? raster[i / 2] >> 4 : raster[i / 2] & 0xF) * 17);
                 out.push_back(in);
                 out.push_back(in);
                 out.push_back(in);
@@ -390,10 +390,14 @@ uint32_t MapTexRasterSize(uint16_t w, uint16_t h, uint8_t siz, uint8_t extra) {
         }
     }
     switch (siz) {
-        case 0: return size / 2;
-        case 2: return size * 2;
-        case 3: return size * 4;
-        default: return size;
+        case 0:
+            return size / 2;
+        case 2:
+            return size * 2;
+        case 3:
+            return size * 4;
+        default:
+            return size;
     }
 }
 
@@ -495,8 +499,8 @@ void PM64MapTextureFactoryUI::DrawUI(const ParseResultData& item) {
                                e.w, e.h);
         char info[96];
         static const char* kFmt[] = { "RGBA", "YUV", "CI", "IA", "I" };
-        snprintf(info, sizeof(info), "%s  %ux%u %s%d%s", e.name.c_str(), e.w, e.h,
-                 e.fmt < 5 ? kFmt[e.fmt] : "?", 4 << e.siz, e.extra == 2 || e.extra == 3 ? " +aux" : "");
+        snprintf(info, sizeof(info), "%s  %ux%u %s%d%s", e.name.c_str(), e.w, e.h, e.fmt < 5 ? kFmt[e.fmt] : "?",
+                 4 << e.siz, e.extra == 2 || e.extra == 3 ? " +aux" : "");
         DrawThumb(handle, e.w, e.h, kThumb, info);
         ImGui::EndGroup();
         col = (col + 1) % cols;
@@ -530,7 +534,7 @@ uint32_t BE32(const std::vector<uint8_t>& d, uint64_t off) {
 // offset in the low 5; the header gives the image data segment base.
 struct PlayerRasters {
     std::vector<uint8_t> image;
-    std::vector<uint32_t> sets;  // per-sprite descriptor index ranges
+    std::vector<uint32_t> sets; // per-sprite descriptor index ranges
     std::vector<uint32_t> descs;
     uint32_t imageBase = 0;
     bool valid = false;
@@ -735,10 +739,10 @@ void PM64SpriteFactoryUI::DrawUI(const ParseResultData& item) {
             handle = *cached;
         } else {
             const uint8_t* raster = SpriteRasterPixels(d, r, playerIdx, i);
-            handle = UploadCached(
-                key, raster != nullptr ? DecodeN64(raster, d.data() + info.palettes[pal], 2, 0, r.w, r.h)
-                                       : std::vector<uint8_t>{},
-                r.w, r.h);
+            handle = UploadCached(key,
+                                  raster != nullptr ? DecodeN64(raster, d.data() + info.palettes[pal], 2, 0, r.w, r.h)
+                                                    : std::vector<uint8_t>{},
+                                  r.w, r.h);
         }
         char label[64];
         snprintf(label, sizeof(label), "raster %zu  %ux%u CI4 pal %d", i, r.w, r.h, pal);

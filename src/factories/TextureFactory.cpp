@@ -576,8 +576,8 @@ static UI::TextureHandle GetOrLoadTexture(const ParseResultData& item) {
     if (pixels != nullptr) {
         // Upload is synchronous, so the buffer can be freed right after. Caching
         // a failed kInvalidTexture avoids retrying an undecodable texture.
-        handle = UI::GetBackend()->UploadRGBA8(reinterpret_cast<const uint8_t*>(pixels),
-                                               (int)texture->mWidth, (int)texture->mHeight);
+        handle = UI::GetBackend()->UploadRGBA8(reinterpret_cast<const uint8_t*>(pixels), (int)texture->mWidth,
+                                               (int)texture->mHeight);
         free(pixels);
     }
 
@@ -692,9 +692,7 @@ void TextureFactoryUI::DrawUI(const ParseResultData& item) {
                 YAML::Node copy = YAML::Clone(item.node);
                 exporter.value()->Export(file, item.data.value(), entryName, copy, &replacement);
             }
-        } catch (const std::exception& e) {
-            result = std::string("export failed: ") + e.what();
-        }
+        } catch (const std::exception& e) { result = std::string("export failed: ") + e.what(); }
         UI::NoteExport(item.name, result);
     }
     UI::DrawExportMarker(item.name);

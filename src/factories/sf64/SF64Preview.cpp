@@ -245,7 +245,7 @@ std::vector<AnimEntry> CollectAnims(const std::string& file, size_t limbCount) {
 
 struct SkelState {
     UI::OrbitView view;
-    int setup = -1; // resolved from config on first draw (fallback: textured + lit)
+    int setup = -1;     // resolved from config on first draw (fallback: textured + lit)
     int animIndex = -1; // -1 = bind pose
     float frame = 0.0f;
     bool playing = true;
@@ -258,7 +258,6 @@ float SkeletonFactoryUI::GetItemHeight(const ParseResultData& item) {
     const float line = ImGui::GetTextLineHeightWithSpacing();
     const float frame = ImGui::GetFrameHeightWithSpacing();
     const float sep = ImGui::GetStyle().ItemSpacing.y * 2.0f + 1.0f;
-    // AssetHeader + separator, info line, shade/light row, anim row, then canvas.
     return line * 2.0f + frame * 2.0f + sep + UI::PreviewBlockHeight(item.name);
 }
 
@@ -531,8 +530,8 @@ void TriangleFactoryUI::DrawUI(const ParseResultData& item) {
 namespace {
 
 // Appends a rotated axis-aligned box (12 tris) centered at c with half-extents h.
-void EmitBox(std::vector<UI::PreviewVertex>& out, const float c[3], const float h[3], const float rotDeg[3],
-             float r, float g, float b) {
+void EmitBox(std::vector<UI::PreviewVertex>& out, const float c[3], const float h[3], const float rotDeg[3], float r,
+             float g, float b) {
     const float rx = rotDeg[0] * (float)M_PI / 180.0f;
     const float ry = rotDeg[1] * (float)M_PI / 180.0f;
     const float rz = rotDeg[2] * (float)M_PI / 180.0f;
@@ -557,9 +556,8 @@ void EmitBox(std::vector<UI::PreviewVertex>& out, const float c[3], const float 
         }
     }
     // corner index = (xi<<2)|(yi<<1)|zi with -1->0, +1->1
-    static const int faces[12][3] = { { 0, 1, 3 }, { 0, 3, 2 }, { 4, 7, 5 }, { 4, 6, 7 },
-                                      { 0, 4, 5 }, { 0, 5, 1 }, { 2, 3, 7 }, { 2, 7, 6 },
-                                      { 0, 2, 6 }, { 0, 6, 4 }, { 1, 5, 7 }, { 1, 7, 3 } };
+    static const int faces[12][3] = { { 0, 1, 3 }, { 0, 3, 2 }, { 4, 7, 5 }, { 4, 6, 7 }, { 0, 4, 5 }, { 0, 5, 1 },
+                                      { 2, 3, 7 }, { 2, 7, 6 }, { 0, 2, 6 }, { 0, 6, 4 }, { 1, 5, 7 }, { 1, 7, 3 } };
     for (const auto& f : faces) {
         float p[3][3];
         for (int k = 0; k < 3; ++k) {
@@ -595,7 +593,7 @@ void HitboxFactoryUI::DrawUI(const ParseResultData& item) {
         // stride depends on type (see HitboxData parse).
         size_t idx = 1; // skip count
         static const float kHue[5][3] = {
-            { 0.9f, 0.4f, 0.4f }, { 0.4f, 0.9f, 0.5f }, { 0.5f, 0.6f, 0.95f },
+            { 0.9f, 0.4f, 0.4f },  { 0.4f, 0.9f, 0.5f },  { 0.5f, 0.6f, 0.95f },
             { 0.9f, 0.85f, 0.4f }, { 0.85f, 0.5f, 0.9f },
         };
         for (size_t t = 0; t < data->mTypes.size(); ++t) {
@@ -618,8 +616,8 @@ void HitboxFactoryUI::DrawUI(const ParseResultData& item) {
             if (box + 6 > d.size()) {
                 break;
             }
-            const float c[3] = { d[box + 4], d[box + 2], d[box + 0] };  // x,y,z offset
-            const float h[3] = { d[box + 5], d[box + 3], d[box + 1] };  // x,y,z size
+            const float c[3] = { d[box + 4], d[box + 2], d[box + 0] }; // x,y,z offset
+            const float h[3] = { d[box + 5], d[box + 3], d[box + 1] }; // x,y,z size
             if (h[0] == 0.0f && h[1] == 0.0f && h[2] == 0.0f) {
                 continue;
             }
