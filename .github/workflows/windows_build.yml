@@ -10,6 +10,7 @@ jobs:
   build:
     runs-on: windows-2022
     strategy:
+      fail-fast: false
       matrix:
         config: [Release, Debug]
         toolchain: [windows-msvc, windows-clang-cl]
@@ -33,7 +34,9 @@ jobs:
           # vcpkg to fetch SDL2/GLEW/libzip/nlohmann-json/tinyxml2/spdlog.
           $env:VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT
           cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_TOOLCHAIN_FILE="cmake/toolchain/${{ matrix.toolchain }}.cmake" -DCMAKE_GENERATOR_PLATFORM=${{ matrix.arch }} -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DBUILD_UI=${{ matrix.arch == 'Win32' && 'OFF' || 'ON' }} -DUSE_AUTO_VCPKG=ON -DVCPKG_TARGET_TRIPLET=x64-windows-static
-          cmake --build ./build/${{ matrix.arch }}
+          # Multi-config generator: pass --config, else it builds Debug and the
+          # Release artifact path below finds nothing.
+          cmake --build ./build/${{ matrix.arch }} --config ${{ matrix.config }}
       - name: Setup Variables
         if: ${{ matrix.generate == 'Ninja' }}
         uses: ilammy/msvc-dev-cmd@v1
@@ -54,3 +57,4 @@ jobs:
         with:
           name: torch-windows-${{ matrix.arch }}-${{ matrix.toolchain }}
           path: build/${{ matrix.arch }}/Release/torch.exe
+          if-no-files-found: error
