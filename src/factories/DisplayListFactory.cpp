@@ -675,8 +675,10 @@ std::unordered_map<std::string, UI::OrbitView> sModelViews;
 } // namespace
 
 float DListFactoryUI::GetItemHeight(const ParseResultData& item) {
-    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + UI::PreviewBlockHeight(item.name) + 4.0f +
-           ImGui::GetStyle().ItemSpacing.y * 3.0f;
+    const float line = ImGui::GetTextLineHeightWithSpacing();
+    const float frame = ImGui::GetFrameHeightWithSpacing();
+    const float sep = ImGui::GetStyle().ItemSpacing.y * 2.0f + 1.0f;
+    return line * 2.0f + frame + sep + UI::PreviewBlockHeight(item.name);
 }
 
 void DListFactoryUI::DrawUI(const ParseResultData& item) {
