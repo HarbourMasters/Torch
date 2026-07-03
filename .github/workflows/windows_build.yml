@@ -18,14 +18,11 @@ jobs:
         arch: [x64, Win32]
         isPR:
           - ${{ github.event_name == 'pull_request' }}
-        exclude: 
+        exclude:
           - toolchain: windows-clang-cl
             arch: Win32
           - isPR: true
             standalone: OFF
-        exclude: 
-          - toolchain: windows-clang-cl
-            arch: Win32
     steps:
       - uses: actions/checkout@v4
       - name: Build Visual Studio
