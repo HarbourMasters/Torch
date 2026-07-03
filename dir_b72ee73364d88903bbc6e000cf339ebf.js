@@ -10,6 +10,5 @@ var dir_b72ee73364d88903bbc6e000cf339ebf =
     [ "LoopFactory.h", "LoopFactory_8h_source.html", null ],
     [ "SampleFactory.h", "v1_2SampleFactory_8h_source.html", null ],
     [ "SequenceFactory.h", "naudio_2v1_2SequenceFactory_8h_source.html", null ],
-    [ "SequencePlayerV1.h", "SequencePlayerV1_8h_source.html", null ],
     [ "SoundFontFactory.h", "naudio_2v1_2SoundFontFactory_8h_source.html", null ]
 ];
