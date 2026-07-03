@@ -33,6 +33,7 @@
 
 #ifdef SM64_SUPPORT
 #include "factories/sm64/AnimationFactory.h"
+#include "factories/sm64/TextPreview.h"
 #include "factories/sm64/BehaviorScriptFactory.h"
 #include "factories/sm64/CollisionFactory.h"
 #include "factories/sm64/DialogFactory.h"
@@ -303,6 +304,17 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterUIFactory("SM64:COLLISION", std::make_shared<SM64::CollisionFactoryUI>());
     this->RegisterUIFactory("SM64:TRAJECTORY", std::make_shared<SM64::TrajectoryFactoryUI>());
     this->RegisterUIFactory("SM64:ANIM", std::make_shared<SM64::AnimationFactoryUI>());
+    this->RegisterUIFactory("SM64:DIALOG", std::make_shared<SM64::DialogFactoryUI>());
+    this->RegisterUIFactory("SM64:TEXT", std::make_shared<SM64::TextFactoryUI>());
+    this->RegisterUIFactory("SM64:DICTIONARY", std::make_shared<SM64::DictionaryFactoryUI>());
+    this->RegisterUIFactory("SM64:BEHAVIOR_SCRIPT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:LEVEL_SCRIPT", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:MACRO", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:MOVTEX", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:MOVTEX_QUAD", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:PAINTING", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:PAINTING_MAP", std::make_shared<BaseFactoryUI>());
+    this->RegisterUIFactory("SM64:WATER_DROPLET", std::make_shared<BaseFactoryUI>());
 #endif
 #ifdef PM64_SUPPORT
     this->RegisterUIFactory("PM64:SHAPE", std::make_shared<PM64ShapeFactoryUI>());
