@@ -1,5 +1,8 @@
 #include <iostream>
 #include <memory>
+#include <algorithm>
+#include <atomic>
+#include <filesystem>
 #include "CLI11.hpp"
 #include "Companion.h"
 #ifdef PM64_SUPPORT
@@ -40,6 +43,55 @@ static void LaunchUI() {
     backend->RunViewer(views);
 
     UI::SetBackend(nullptr);
+}
+
+// Default (no-subcommand) flow: list any ROMs in the cwd and ask the user to pick
+// one or type a path. Returns the chosen path, or empty if nothing was given.
+static std::string PromptForRom() {
+    namespace fs = std::filesystem;
+    std::vector<std::string> found;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(fs::current_path(), ec)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+        std::string ext = entry.path().extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+        if (ext == ".z64" || ext == ".n64" || ext == ".v64") {
+            found.push_back(entry.path().filename().string());
+        }
+    }
+    std::sort(found.begin(), found.end());
+
+    if (!found.empty()) {
+        std::cout << "ROMs in this directory:" << std::endl;
+        for (size_t i = 0; i < found.size(); ++i) {
+            std::cout << "  [" << i << "] " << found[i] << std::endl;
+        }
+        std::cout << "Select a ROM by number, or type a path [0]: " << std::flush;
+    } else {
+        std::cout << "Enter the path to a ROM: " << std::flush;
+    }
+
+    std::string line;
+    if (!std::getline(std::cin, line)) {
+        return {};
+    }
+    const auto first = line.find_first_not_of(" \t\r\n");
+    const auto last = line.find_last_not_of(" \t\r\n");
+    line = first == std::string::npos ? std::string() : line.substr(first, last - first + 1);
+
+    if (line.empty()) {
+        return found.empty() ? std::string() : found.front();
+    }
+    // A bare number selects from the list; anything else is treated as a path.
+    if (!found.empty() && line.find_first_not_of("0123456789") == std::string::npos) {
+        const size_t idx = std::stoul(line);
+        if (idx < found.size()) {
+            return found[idx];
+        }
+    }
+    return line;
 }
 #endif
 
@@ -349,6 +401,30 @@ int main(int argc, char* argv[]) {
         }
         LaunchUI();
     });
+#endif
+
+#ifdef BUILD_UI
+    // Default behavior with no subcommand: if the cwd looks like a project (has a
+    // config.yml), open the viewer and prompt for a ROM instead of printing help.
+    if (argc == 1 && std::filesystem::exists("config.yml")) {
+        const std::string rom = PromptForRom();
+        if (rom.empty()) {
+            std::cout << app.help() << std::endl;
+            return 0;
+        }
+        if (!std::filesystem::exists(rom)) {
+            std::cout << "ROM not found: " << rom << std::endl;
+            return 1;
+        }
+        Companion::Instance = new Companion(rom, ArchiveType::None, false, "", "");
+#ifdef PM64_SUPPORT
+        PM64Audio::SetPreviewAssets(true);
+#endif
+        std::atomic<size_t> assetCount{ 0 };
+        Companion::Instance->Init(ExportType::Binary, assetCount, false);
+        LaunchUI();
+        return 0;
+    }
 #endif
 
     try {
