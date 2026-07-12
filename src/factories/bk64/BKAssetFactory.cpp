@@ -704,11 +704,15 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
 }
 
 // Route a dialog-pack build to mods/lang/bk<region>.o2r when no explicit binary name is
-// given. Inert unless the rom config sets dialog_pack, so it's safe to call for any rom.
+// given. Inert unless dialog-pack mode is requested, so it's safe to call for any rom.
 void BKAssetFactory::PreprocessConfig(YAML::Node& cfg, N64::Cartridge* cart) {
-    if (!cfg || !cfg["dialog_pack"] || !cfg["dialog_pack"].as<bool>()) {
+    const bool requested = (cfg && cfg["dialog_pack"] && cfg["dialog_pack"].as<bool>()) ||
+                           (Companion::Instance != nullptr && Companion::Instance->GetConfig().dialogPack);
+    if (!cfg || !requested) {
         return;
     }
+
+    cfg["dialog_pack"] = true;
 
     std::string name;
     if (cfg["output"] && cfg["output"]["binary"]) {
