@@ -376,19 +376,25 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(tinyxml2)
 
 # Link zlib
-set(ZLIB_BUILD_SHARED_LIBS OFF CACHE BOOL "Build zlib as a static library" FORCE)
-set(ZLIB_BUILD_TESTS OFF CACHE BOOL "Disable building zlib tests" FORCE)
-set(SKIP_INSTALL_ALL ON CACHE BOOL "Skip zlib install targets" FORCE)
+if(EMSCRIPTEN)
+    find_package(ZLIB REQUIRED)
+    set(TORCH_ZLIB_TARGET ZLIB::ZLIB)
+else()
+    set(ZLIB_BUILD_SHARED_LIBS OFF CACHE BOOL "Build zlib as a static library" FORCE)
+    set(ZLIB_BUILD_TESTS OFF CACHE BOOL "Disable building zlib tests" FORCE)
+    set(SKIP_INSTALL_ALL ON CACHE BOOL "Skip zlib install targets" FORCE)
 
-FetchContent_Declare(
-    zlib
-    GIT_REPOSITORY https://github.com/madler/zlib.git
-    GIT_TAG v1.3.1
-    OVERRIDE_FIND_PACKAGE
-)
-FetchContent_MakeAvailable(zlib)
+    FetchContent_Declare(
+        zlib
+        GIT_REPOSITORY https://github.com/madler/zlib.git
+        GIT_TAG v1.3.1
+        OVERRIDE_FIND_PACKAGE
+    )
+    FetchContent_MakeAvailable(zlib)
+    set(TORCH_ZLIB_TARGET zlibstatic)
+endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2 zlibstatic yaml-cpp N64Graphics BinaryTools)
+target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2 ${TORCH_ZLIB_TARGET} yaml-cpp N64Graphics BinaryTools)
 
 if(BUILD_UI)
     target_link_libraries(${PROJECT_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,libultraship>")
