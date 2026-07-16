@@ -382,6 +382,7 @@ if(EMSCRIPTEN OR ANDROID)
 else()
     set(ZLIB_BUILD_SHARED_LIBS OFF CACHE BOOL "Build zlib as a static library" FORCE)
     set(ZLIB_BUILD_TESTS OFF CACHE BOOL "Disable building zlib tests" FORCE)
+    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(SKIP_INSTALL_ALL ON CACHE BOOL "Skip zlib install targets" FORCE)
 
     FetchContent_Declare(
