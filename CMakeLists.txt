@@ -376,7 +376,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(tinyxml2)
 
 # Link zlib
-if(EMSCRIPTEN)
+if(EMSCRIPTEN OR ANDROID)
     find_package(ZLIB REQUIRED)
     set(TORCH_ZLIB_TARGET ZLIB::ZLIB)
 else()
