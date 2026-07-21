@@ -443,6 +443,21 @@ RomhackKind ClassifyRomhack(const std::vector<uint8_t>& rom) {
 // Public wrapper: thin bool-returning view used by Lighthouse to gate UI before
 // running the rest of extraction. Same detection logic as DetectCustomCodeBlob
 // above; we discard the returned metadata for callers that just want a yes/no.
+bool GetCustomCodeBlobInfo(const std::vector<uint8_t>& rom, CustomCodeKind& outKind, char outSha1Hex[41]) {
+    uint32_t blobRom = 0, firstTarget = 0, ramBase = 0;
+    int jalCount = 0;
+    uint8_t sha1[20] = {};
+    outKind = CustomCodeKind::NONE;
+    outSha1Hex[0] = '\0';
+    if (!DetectCustomCodeBlob(rom, blobRom, jalCount, firstTarget, ramBase, outKind, sha1)) {
+        return false;
+    }
+    for (int i = 0; i < 20; i++) {
+        std::snprintf(outSha1Hex + i * 2, 3, "%02x", sha1[i]);
+    }
+    return true;
+}
+
 bool HasCustomCodeBlob(const std::vector<uint8_t>& rom) {
     uint32_t blobRom = 0, firstTarget = 0, ramBase = 0;
     int jalCount = 0;
