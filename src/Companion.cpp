@@ -268,6 +268,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("BK64:MAP", std::make_shared<BK64::MapFactory>());
     this->RegisterFactory("BK64:QUIZQ", std::make_shared<BK64::QuizQuestionFactory>());
     this->RegisterFactory("BK64:MODEL", std::make_shared<BK64::ModelFactory>());
+    this->RegisterFactory("BK64:SOUNDFONT_CTL", std::make_shared<BK64::SoundfontCtlFactory>());
     this->RegisterFactory("BK64:SOUNDFONT_TBL", std::make_shared<BK64::SoundfontTblFactory>());
     this->RegisterFactory("BK64:SPRITE", std::make_shared<BK64::SpriteFactory>());
 #endif

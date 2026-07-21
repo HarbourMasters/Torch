@@ -39,11 +39,14 @@ int32_t ReadS32BE(const uint8_t* p) {
 //   ALInstrument:[14] s16 soundCount, [16+] u32 soundOffsets[]
 //   ALSound:     [8] u32 wavetable
 //   ALWaveTable: [0] u32 base, [4] s32 len
-size_t ComputeTblSize(const uint8_t* ctl, size_t ctlSize, uint32_t ctlRomOffset) {
+size_t ComputeTblSize(const uint8_t* ctl, size_t ctlSize, uint32_t ctlRomOffset, bool quiet = false) {
     auto check = [&](uint32_t off, size_t need, const char* what) {
         if ((size_t)off + need > ctlSize) {
-            SPDLOG_ERROR("SoundfontTblFactory: ctl walk OOB reading {} (ctl@0x{:X} size=0x{:X} off=0x{:X} need=0x{:X})",
-                         what, ctlRomOffset, ctlSize, off, need);
+            if (!quiet) {
+                SPDLOG_ERROR(
+                    "SoundfontTblFactory: ctl walk OOB reading {} (ctl@0x{:X} size=0x{:X} off=0x{:X} need=0x{:X})",
+                    what, ctlRomOffset, ctlSize, off, need);
+            }
             throw std::runtime_error("SoundfontTblFactory: ctl walk OOB");
         }
     };
@@ -113,26 +116,107 @@ size_t ComputeTblSize(const uint8_t* ctl, size_t ctlSize, uint32_t ctlRomOffset)
     return (size_t)((maxEnd + 0xF) & ~(uint64_t)0xF);
 }
 
+// AL_BANK_VERSION magic
+constexpr uint16_t kAlBankRevision = 0x4231;
+
+bool ValidateCtl(const uint8_t* ctl, size_t ctlSize) {
+    if (ctlSize < 8) {
+        return false;
+    }
+    if (ReadU16BE(ctl) != kAlBankRevision) {
+        return false;
+    }
+    int16_t bankCount = ReadS16BE(ctl + 2);
+    if (bankCount <= 0 || bankCount > 16) {
+        return false;
+    }
+    uint32_t bank0 = ReadU32BE(ctl + 4);
+    if (bank0 != 0 && (bank0 < 4u + 4u * bankCount || bank0 >= ctlSize)) {
+        return false;
+    }
+    try {
+        ComputeTblSize(ctl, ctlSize, 0, /*quiet=*/true);
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
+
 } // namespace
+
+uint32_t LocateSoundfontCtl(const std::vector<uint8_t>& rom, uint32_t ctlOffset, uint32_t ctlSize) {
+    if ((size_t)ctlOffset + ctlSize <= rom.size() && ValidateCtl(rom.data() + ctlOffset, ctlSize)) {
+        return ctlOffset;
+    }
+
+    // Romhacks can shift the whole audio region; hunt
+    // for the real ALBankFile header instead of failing.
+    std::vector<uint32_t> candidates;
+    for (size_t i = 0; i + 8 <= rom.size(); i += 8) {
+        if (rom[i] != 0x42 || rom[i + 1] != 0x31) {
+            continue;
+        }
+        size_t avail = std::min<size_t>(ctlSize, rom.size() - i);
+        if (ValidateCtl(rom.data() + i, avail)) {
+            candidates.push_back((uint32_t)i);
+        }
+    }
+
+    if (candidates.empty()) {
+        SPDLOG_ERROR("SoundfontCtl: no valid ALBankFile found anywhere in ROM (vanilla ctl@0x{:X} size=0x{:X})",
+                     ctlOffset, ctlSize);
+        throw std::runtime_error("SoundfontCtl: soundfont ctl not found in ROM");
+    }
+
+    uint32_t best = candidates[0];
+    for (uint32_t c : candidates) {
+        auto dist = [&](uint32_t off) { return off > ctlOffset ? off - ctlOffset : ctlOffset - off; };
+        if (dist(c) < dist(best)) {
+            best = c;
+        }
+    }
+
+    SPDLOG_WARN("SoundfontCtl: ctl not at vanilla offset 0x{:X}; relocated to 0x{:X} (delta 0x{:X}, {} candidates)",
+                ctlOffset, best, (uint32_t)(best - ctlOffset), candidates.size());
+    return best;
+}
+
+std::optional<std::shared_ptr<IParsedData>> SoundfontCtlFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    const auto size = GetSafeNode<uint32_t>(node, "size");
+
+    const uint32_t realOffset = LocateSoundfontCtl(buffer, offset, size);
+    if ((size_t)realOffset + size > buffer.size()) {
+        throw std::runtime_error("SoundfontCtlFactory: ctl exceeds ROM size");
+    }
+
+    return std::make_shared<RawBuffer>(buffer.data() + realOffset, size);
+}
 
 std::optional<std::shared_ptr<IParsedData>> SoundfontTblFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     const auto tblOffset = GetSafeNode<uint32_t>(node, "offset");
     const auto ctlOffset = GetSafeNode<uint32_t>(node, "ctl_offset");
     const auto ctlSize = GetSafeNode<uint32_t>(node, "ctl_size");
 
-    if ((size_t)ctlOffset + ctlSize > buffer.size()) {
+    // The tbl sits right after the ctl, so it shifts by
+    // the same delta when a romhack relocates the audio region.
+    const uint32_t realCtlOffset = LocateSoundfontCtl(buffer, ctlOffset, ctlSize);
+    const uint32_t realTblOffset = tblOffset + (realCtlOffset - ctlOffset);
+
+    if ((size_t)realCtlOffset + ctlSize > buffer.size()) {
         throw std::runtime_error("SoundfontTblFactory: ctl_offset + ctl_size exceeds ROM size");
     }
 
-    const size_t tblSize = ComputeTblSize(buffer.data() + ctlOffset, ctlSize, ctlOffset);
+    const size_t tblSize = ComputeTblSize(buffer.data() + realCtlOffset, ctlSize, realCtlOffset);
 
-    if ((size_t)tblOffset + tblSize > buffer.size()) {
+    if ((size_t)realTblOffset + tblSize > buffer.size()) {
         throw std::runtime_error("SoundfontTblFactory: computed tbl size exceeds ROM bounds");
     }
 
-    SPDLOG_INFO("SoundfontTbl: tbl@0x{:X} size 0x{:X} (computed from ctl@0x{:X})", tblOffset, tblSize, ctlOffset);
+    SPDLOG_INFO("SoundfontTbl: tbl@0x{:X} size 0x{:X} (computed from ctl@0x{:X})", realTblOffset, tblSize,
+                realCtlOffset);
 
-    return std::make_shared<RawBuffer>(buffer.data() + tblOffset, tblSize);
+    return std::make_shared<RawBuffer>(buffer.data() + realTblOffset, tblSize);
 }
 
 } // namespace BK64

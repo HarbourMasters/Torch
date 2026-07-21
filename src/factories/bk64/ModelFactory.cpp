@@ -700,7 +700,16 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             // catches the sequential sub-lists; an intra-buffer G_DL can jump to some arbitrary
             // offset that no G_ENDDL precedes.
             if (opCode == GBI(G_DL) && SEGMENT_NUMBER(w1) == 3) {
-                dlOffsets.emplace(SEGMENT_OFFSET(w1));
+                // Some jump targets may be garbage; only split on ones that land
+                // inside the DL section on a command boundary, or the resulting GFX asset
+                // parses off the end of the file.
+                uint32_t target = SEGMENT_OFFSET(w1);
+                if (target < dlCount * GFX_CMD_SIZE && (target % GFX_CMD_SIZE) == 0) {
+                    dlOffsets.emplace(target);
+                } else {
+                    SPDLOG_WARN("[BKModel] {} G_DL target 0x{:X} outside DL section (size 0x{:X}); skipping split",
+                                symbol, target, dlCount * GFX_CMD_SIZE);
+                }
             }
         }
     }

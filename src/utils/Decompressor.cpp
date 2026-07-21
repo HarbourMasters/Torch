@@ -228,7 +228,19 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
             }
 
             auto decoded = Decode(buffer, fileOffset, type, sizeEntry.value());
+            // Rom data can reference offsets past the decoded file; clamp instead of
+            // letting decoded->size - offsetFromFile underflow into a giant bogus segment.
+            if (offsetFromFile > decoded->size) {
+                SPDLOG_WARN("AutoDecode BKZIP: offset 0x{:X} lies past decoded size 0x{:X}; clamping to empty segment",
+                            offsetFromFile, decoded->size);
+                offsetFromFile = decoded->size;
+            }
             auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offsetFromFile);
+            if (size > decoded->size - offsetFromFile) {
+                SPDLOG_WARN("AutoDecode BKZIP: requested size 0x{:X} exceeds available 0x{:X}; reducing", size,
+                            decoded->size - offsetFromFile);
+                size = decoded->size - offsetFromFile;
+            }
             SPDLOG_INFO("AutoDecode BKZIP: offset=0x{:X} fileOffset=0x{:X} offsetFromFile=0x{:X} compSize=0x{:X} "
                         "decodedSize=0x{:X} segSize=0x{:X}",
                         offset, fileOffset, offsetFromFile, sizeEntry.value(), decoded->size, size);
@@ -240,6 +252,13 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         case CompressionType::None: // The data does not have compression
         {
             fileOffset = TranslateAddr(offset, false);
+
+            // An offset past the file must not underflow availableSize.
+            if (fileOffset > buffer.size()) {
+                SPDLOG_WARN("AutoDecode: offset 0x{:X} lies past file size 0x{:X}; clamping to empty segment",
+                            fileOffset, buffer.size());
+                fileOffset = buffer.size();
+            }
 
             auto availableSize = buffer.size() - fileOffset;
             size_t size;
