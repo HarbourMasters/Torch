@@ -64,6 +64,57 @@ std::string OoTTextFactory::ReadMessageText(const uint8_t* rawData, size_t rawSi
     return msg;
 }
 
+bool OoTTextFactory::IsEndOfMessageCodeJapanese(uint16_t c) {
+    return c == 0x8170  // END
+        || c == 0x81CB; // NEW_TEXT_ID (also ends the message)
+}
+
+unsigned int OoTTextFactory::GetTrailingShortsJapanese(uint16_t c) {
+    switch (c) {
+        case 0x000B:
+        case 0x819A:
+        case 0x819E:
+        case 0x81A3:
+        case 0x869F:
+        case 0x86C7:
+        case 0x86C9:
+        case 0x81F3:
+        case 0x81CB: // NEW_TEXT_ID (also ends the message)
+            return 1;
+        case 0x86B3:
+            return 2;
+        default:
+            return 0;
+    }
+}
+
+// Japanese text: two-byte big-endian characters, stored byte-swapped.
+// Control codes have 0-2 trailing shorts that must be included in the output.
+std::string OoTTextFactory::ReadMessageTextJapanese(const uint8_t* rawData, size_t rawSize, uint32_t offset) {
+    std::string msg;
+    uint32_t ptr = offset;
+
+    while (ptr + 2 <= rawSize) {
+        uint16_t c = (rawData[ptr] << 8) | rawData[ptr + 1];
+
+        msg += (char)rawData[ptr + 1];
+        msg += (char)rawData[ptr];
+        ptr += 2;
+
+        // Consume trailing shorts for control codes
+        unsigned int trailing = GetTrailingShortsJapanese(c);
+        for (unsigned int i = 0; i < trailing && ptr + 2 <= rawSize; i++) {
+            msg += (char)rawData[ptr + 1];
+            msg += (char)rawData[ptr];
+            ptr += 2;
+        }
+
+        if (IsEndOfMessageCodeJapanese(c)) break;
+    }
+
+    return msg;
+}
+
 // NTSC: message offset is at bytes 4-7 of the entry
 uint32_t OoTTextFactory::ReadMessageOffsetNTSC(const uint8_t* codeData, uint32_t entryPtr) {
     uint32_t raw = (codeData[entryPtr + 4] << 24) |
@@ -95,7 +146,7 @@ MessageEntry OoTTextFactory::ReadMessageMetadata(const uint8_t* codeData, uint32
     return entry;
 }
 
-std::vector<MessageEntry> OoTTextFactory::ParseMessagesNTSC(const DataChunk& code, uint32_t codeOffset,
+std::vector<MessageEntry> OoTTextFactory::ParseMessagesEnglishNTSC(const DataChunk& code, uint32_t codeOffset,
                                                    const uint8_t* rawData, size_t rawSize) {
     std::vector<MessageEntry> messages;
     uint32_t currentPtr = codeOffset;
@@ -110,6 +161,32 @@ std::vector<MessageEntry> OoTTextFactory::ParseMessagesNTSC(const DataChunk& cod
         uint32_t msgOffset = ReadMessageOffsetNTSC(code.data, currentPtr);
 
         entry.msg = ReadMessageText(rawData, rawSize, msgOffset);
+        messages.push_back(entry);
+
+        // End of message table (0xFFFF) or staff credits (0xFFFC)
+        if (entry.id == 0xFFFC || entry.id == 0xFFFF) break;
+
+        currentPtr += 8;
+    }
+
+    return messages;
+}
+
+std::vector<MessageEntry> OoTTextFactory::ParseMessagesJapaneseNTSC(const DataChunk& code, uint32_t codeOffset,
+                                                   const uint8_t* rawData, size_t rawSize) {
+    std::vector<MessageEntry> messages;
+    uint32_t currentPtr = codeOffset;
+
+    while (true) {
+        // Each message table entry is 8 bytes
+        if (currentPtr + 8 > code.size) break;
+
+        auto entry = ReadMessageMetadata(code.data, currentPtr);
+
+        // NTSC stores the message offset inline at currentPtr + 4
+        uint32_t msgOffset = ReadMessageOffsetNTSC(code.data, currentPtr);
+
+        entry.msg = ReadMessageTextJapanese(rawData, rawSize, msgOffset);
         messages.push_back(entry);
 
         // End of message table (0xFFFF) or staff credits (0xFFFC)
@@ -154,6 +231,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<ui
     auto codeOffset = GetSafeNode<uint32_t>(node, "code_offset");
     uint32_t langOffset = node["lang_offset"] ? node["lang_offset"].as<uint32_t>() : 0;
     bool isPalLang = (langOffset != 0 && langOffset != codeOffset);
+    bool isJapanese = node["language"] && node["language"].as<std::string>() == "Japanese";
 
     // Decompress code segment
     auto* codeChunk = Decompressor::Decode(buffer, codePhysStart, CompressionType::YAZ0);
@@ -173,9 +251,14 @@ std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<ui
     size_t rawSize = buffer.size() - msgSeg.value();
 
     // Parse message entries
-    auto messages = isPalLang
-        ? ParseMessagesPAL(*codeChunk, codeOffset, langOffset, rawData, rawSize)
-        : ParseMessagesNTSC(*codeChunk, codeOffset, rawData, rawSize);
+    std::vector<MessageEntry> messages;
+    if (isPalLang) {
+        messages = ParseMessagesPAL(*codeChunk, codeOffset, langOffset, rawData, rawSize);
+    } else if (isJapanese) {
+        messages = ParseMessagesJapaneseNTSC(*codeChunk, codeOffset, rawData, rawSize);
+    } else {
+        messages = ParseMessagesEnglishNTSC(*codeChunk, codeOffset, rawData, rawSize);
+    }
 
     SPDLOG_INFO("OoTTextFactory: parsed {} messages", messages.size());
 

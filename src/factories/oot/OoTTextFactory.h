@@ -35,11 +35,16 @@ private:
     static bool IsEndOfMessageCode(uint8_t c);
     static unsigned int GetTrailingBytes(uint8_t c);
     static std::string ReadMessageText(const uint8_t* rawData, size_t rawSize, uint32_t offset);
+    static bool IsEndOfMessageCodeJapanese(uint16_t c);
+    static unsigned int GetTrailingShortsJapanese(uint16_t c);
+    static std::string ReadMessageTextJapanese(const uint8_t* rawData, size_t rawSize, uint32_t offset);
     static uint32_t ReadMessageOffsetNTSC(const uint8_t* codeData, uint32_t entryPtr);
     static uint32_t ReadMessageOffsetPAL(const uint8_t* codeData, uint32_t langPtr);
     static MessageEntry ReadMessageMetadata(const uint8_t* codeData, uint32_t ptr);
-    static std::vector<MessageEntry> ParseMessagesNTSC(const DataChunk& code, uint32_t codeOffset,
-                                                       const uint8_t* rawData, size_t rawSize);
+    static std::vector<MessageEntry> ParseMessagesEnglishNTSC(const DataChunk& code, uint32_t codeOffset,
+                                                              const uint8_t* rawData, size_t rawSize);
+    static std::vector<MessageEntry> ParseMessagesJapaneseNTSC(const DataChunk& code, uint32_t codeOffset,
+                                                               const uint8_t* rawData, size_t rawSize);
     static std::vector<MessageEntry> ParseMessagesPAL(const DataChunk& code, uint32_t codeOffset,
                                                       uint32_t langPtr,
                                                       const uint8_t* rawData, size_t rawSize);
