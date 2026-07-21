@@ -351,20 +351,58 @@ static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outB
     return false;
 }
 
+// Decompressed size of the vanilla US rev0 F37F90 code overlay. BB's in-place
+// constant patching never changes it; a different size means the hack rebuilt
+// its code overlay (e.g. decomp-built) and every fixed overlay offset is invalid.
+static constexpr uint32_t VANILLA_OVERLAY_SIZE = 902656;
+static constexpr uint32_t VANILLA_F37F90_OFFSET = 0xF37F90;
+
+RomhackKind ClassifyRomhack(const std::vector<uint8_t>& rom) {
+    if (rom.size() <= 0x1000000) {
+        return RomhackKind::NotRomhack;
+    }
+
+    // No BK boot overlay reachable via the EOR pointers means this probably isn't a
+    // BK-derived ROM at all.
+    uint32_t ovlSize = 0, ovlAddr = 0;
+    uint8_t* ovl = FindPatchedOverlay(rom, ovlSize, ovlAddr);
+    if (ovl == nullptr) {
+        return RomhackKind::UnknownRom;
+    }
+    free(ovl);
+
+    // The patched overlay's decompressed size matches vanilla exactly.
+    if (ovlSize != VANILLA_OVERLAY_SIZE) {
+        return RomhackKind::CustomBuild;
+    }
+
+    // The vanilla sub-16MB region is intact.
+    if (rom.size() < VANILLA_F37F90_OFFSET + 6 || rom[VANILLA_F37F90_OFFSET] != 0x11 ||
+        rom[VANILLA_F37F90_OFFSET + 1] != 0x72 ||
+        readBE32(rom.data(), VANILLA_F37F90_OFFSET + 2) != VANILLA_OVERLAY_SIZE) {
+        return RomhackKind::CustomBuild;
+    }
+
+    return RomhackKind::BBRomhack;
+}
+
 // Public wrapper: thin bool-returning view used by Lighthouse to gate UI before
 // running the rest of extraction. Same detection logic as DetectCustomCodeBlob
 // above; we discard the returned metadata for callers that just want a yes/no.
 bool HasCustomCodeBlob(const std::vector<uint8_t>& rom) {
     uint32_t blobRom = 0, firstTarget = 0;
     int jalCount = 0;
-    return DetectCustomCodeBlob(rom, blobRom, jalCount, firstTarget, nullptr);
+    if (DetectCustomCodeBlob(rom, blobRom, jalCount, firstTarget, nullptr)) {
+        return true;
+    }
+    return ClassifyRomhack(rom) == RomhackKind::CustomBuild;
 }
 
 // Main entry point
 
 std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std::string& romName) {
-    // Only BB-extended ROMs
-    if (rom.size() <= 0x1000000) {
+    const RomhackKind kind = ClassifyRomhack(rom);
+    if (kind == RomhackKind::NotRomhack || kind == RomhackKind::UnknownRom) {
         return {};
     }
 
@@ -390,11 +428,15 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
 
     // Find patched overlay
     uint32_t overlaySize = 0, f37RomAddr = 0;
-    uint8_t* overlay = FindPatchedOverlay(rom, overlaySize, f37RomAddr);
-    if (!overlay)
-        return {};
-
-    SPDLOG_INFO("[ConfigFactory] Found patched overlay at ROM 0x{:X} ({} bytes)", f37RomAddr, overlaySize);
+    uint8_t* overlay = nullptr;
+    if (kind == RomhackKind::BBRomhack) {
+        overlay = FindPatchedOverlay(rom, overlaySize, f37RomAddr);
+        if (!overlay)
+            return {};
+        SPDLOG_INFO("[ConfigFactory] Found patched overlay at ROM 0x{:X} ({} bytes)", f37RomAddr, overlaySize);
+    } else {
+        SPDLOG_WARN("[ConfigFactory] This romhack was not built with Banjo's Backpack and must be hand-ported.");
+    }
 
     BlobWriter blob;
     uint16_t sectionCount = 0;
@@ -452,7 +494,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
     }
 
     // Section: CODE_CONSTANTS
-    {
+    if (overlay != nullptr) {
         size_t secPos = blob.beginSection(ConfigSectionType::CODE_CONSTANTS);
         uint16_t count = 0;
 
@@ -717,7 +759,6 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
             // original ROM location, scan both copies for the ADDIU $a1 dest
             // pattern, and emit diffs.
             {
-                static constexpr uint32_t VANILLA_F37F90_OFFSET = 0xF37F90;
                 static constexpr uint32_t WARP_TABLE_OFF = 0xC3F0; // 50160 decimal
                 static constexpr int WARP_ENTRY_COUNT = 558;       // (52392 - 50160) / 4
                 // BB base: 0x80000000 + 2650000 (Form1.cs line 2538)
@@ -782,7 +823,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
     free(overlay);
 
     // FCF698 sections (lair overlay objects, uncompressed in globalized blob)
-    if (rom.size() > FCF698_ROM_OFFSET + FCF698_SIZE) {
+    if (kind == RomhackKind::BBRomhack && rom.size() > FCF698_ROM_OFFSET + FCF698_SIZE) {
         const uint8_t* fcf = rom.data() + FCF698_ROM_OFFSET;
 
         // Validate: first note door value should be a reasonable u16 (0-10000)
@@ -1044,23 +1085,20 @@ bool TrySynthesizeRomConfig(YAML::Node& config, const std::string& cartHash, con
     if (config[cartHash]) {
         return false;
     }
-    if (!IsRomhack(rom)) {
+
+    // Classification confirms the ROM actually carries a BK boot overlay. An extended
+    // ROM that isn't BK-derived won't match the boot pattern, so we bail instead of
+    // running a BK64 extraction that was never going to work.
+    const RomhackKind kind = ClassifyRomhack(rom);
+    if (kind == RomhackKind::NotRomhack) {
+        return false;
+    }
+    if (kind == RomhackKind::UnknownRom) {
+        SPDLOG_WARN("[ConfigFactory] {} is >16MB but doesn't look like a BK romhack. Aborting extraction.", cartHash);
         return false;
     }
 
-    // The size check above is just the cheap signal. Confirm it's really a BB overlay:
-    // FindPatchedOverlay walks the BK-bootstrap EOR instruction pairs and checks for a
-    // BKZIP overlay at the encoded address. A 64MB ROM that isn't BB (say, a hack of some
-    // other N64 game) won't match the boot pattern, so we bail instead of running a BK64
-    // extraction that was never going to work.
-    uint32_t ovlSize = 0;
-    uint32_t ovlAddr = 0;
-    uint8_t* ovl = FindPatchedOverlay(rom, ovlSize, ovlAddr);
-    if (ovl == nullptr) {
-        SPDLOG_WARN("[ConfigFactory] {} is >16MB but doesn't look like a BB romhack. Aborting extraction.", cartHash);
-        return false;
-    }
-    free(ovl); // we only needed the validation, not the bytes
+    const char* buildType = kind == RomhackKind::BBRomhack ? "Banjo's Backpack" : "custom";
 
     std::string stem = romPath.stem().string();
     std::string slug;
@@ -1084,7 +1122,8 @@ bool TrySynthesizeRomConfig(YAML::Node& config, const std::string& cartHash, con
         slug = cartHash.substr(0, 8);
 
     YAML::Node entry;
-    entry["name"] = "BB Romhack (auto-detected: " + stem + ")";
+    entry["name"] = std::string(kind == RomhackKind::BBRomhack ? "BB Romhack" : "Custom BK Romhack") +
+                    " (auto-detected: " + stem + ")";
     entry["path"] = "assets/yaml/us/rev0";
     YAML::Node entryCfg;
     entryCfg["gbi"] = "F3DEX_BK64";
@@ -1101,7 +1140,8 @@ bool TrySynthesizeRomConfig(YAML::Node& config, const std::string& cartHash, con
     entry["config"] = entryCfg;
     config[cartHash] = entry;
 
-    SPDLOG_INFO("[ConfigFactory] Auto-detected BB romhack {}; routing to mods/~romhacks/{}.o2r", cartHash, slug);
+    SPDLOG_WARN("[ConfigFactory] Auto-detected BK romhack {} (build: {}); routing to mods/~romhacks/{}.o2r", cartHash,
+                buildType, slug);
     return true;
 }
 

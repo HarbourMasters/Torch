@@ -29,7 +29,17 @@ size_t CountModifiedSlots(const std::vector<uint8_t>& rom, const std::filesystem
 // Loaded lazily from gAssetPath/hashes.yaml on the first call, then held for the run.
 const std::string& GetBaselineAssetHash(uint32_t assetId);
 
-// Does the hack ship its own MIPS code?
+// Classification of a >16MB BK ROM.
+enum class RomhackKind {
+    NotRomhack,  // vanilla-sized ROM
+    BBRomhack,   // standard Banjo's Backpack build
+    CustomBuild, // BK boot overlay present, but rebuilt/relocated internals
+    UnknownRom,  // extended ROM with no recognizable BK boot overlay
+};
+
+RomhackKind ClassifyRomhack(const std::vector<uint8_t>& rom);
+
+// True for injected custom-code blobs and for CustomBuild ROMs.
 bool HasCustomCodeBlob(const std::vector<uint8_t>& rom);
 
 // Binary aGameConfig format: 'BKCF' header + typed sections
