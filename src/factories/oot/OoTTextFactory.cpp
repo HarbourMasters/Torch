@@ -233,10 +233,19 @@ std::optional<std::shared_ptr<IParsedData>> OoTTextFactory::parse(std::vector<ui
     bool isPalLang = (langOffset != 0 && langOffset != codeOffset);
     bool isJapanese = node["language"] && node["language"].as<std::string>() == "Japanese";
 
-    // Decompress code segment
-    auto* codeChunk = Decompressor::Decode(buffer, codePhysStart, CompressionType::YAZ0);
+    // Decode the code segment. It is usually YAZ0-compressed, but some ROMs
+    // store it uncompressed, so detect the type rather than assuming YAZ0.
+    DataChunk uncompressedChunk{};
+    DataChunk* codeChunk;
+    auto codeCompression = Decompressor::GetCompressionType(buffer, codePhysStart);
+    if (codeCompression == CompressionType::None) {
+        uncompressedChunk = { buffer.data() + codePhysStart, buffer.size() - codePhysStart };
+        codeChunk = &uncompressedChunk;
+    } else {
+        codeChunk = Decompressor::Decode(buffer, codePhysStart, codeCompression);
+    }
     if (!codeChunk || !codeChunk->data) {
-        SPDLOG_ERROR("OoTTextFactory: failed to decompress code segment");
+        SPDLOG_ERROR("OoTTextFactory: failed to decode code segment");
         return std::nullopt;
     }
 

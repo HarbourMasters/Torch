@@ -608,6 +608,20 @@ void SceneCommandWriter::WriteSetCutscenes(LUS::BinaryWriter& w, uint32_t cmdArg
 }
 
 void SceneCommandWriter::WriteSetAlternateHeaders(LUS::BinaryWriter& w, uint32_t cmdArg2, SceneWriteContext& ctx) {
+    // An uninitialized alt-header pointer with a bogus segment resolves out of
+    // bounds. OTRExporter emits no alternate headers in that case; match it
+    // rather than reading from an invalid address.
+    auto altSegBase = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(cmdArg2));
+    uint32_t altFileOffset = altSegBase.has_value()
+        ? altSegBase.value() + SEGMENT_OFFSET(cmdArg2)
+        : cmdArg2;
+    if (altFileOffset >= ctx.buffer.size()) {
+        SPDLOG_WARN("Scene: skipping alternate headers for {}, unresolvable pointer 0x{:X}",
+                    ctx.entryName, cmdArg2);
+        w.Write(static_cast<uint32_t>(0));
+        return;
+    }
+
     uint32_t maxHeaders = GetNeighborSize(ctx.knownAddrs, cmdArg2, 4);
     if (maxHeaders == 0) maxHeaders = 16;
     auto hdrReader = ReadSubArray(ctx.buffer, cmdArg2, maxHeaders * 4);

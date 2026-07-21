@@ -193,6 +193,16 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         {
             fileOffset = TranslateAddr(offset, false);
 
+            // Guard against out-of-bounds / unresolvable addresses. Without this,
+            // the subtraction below underflows size_t and hands back an
+            // out-of-bounds pointer.
+            if (fileOffset >= buffer.size()) {
+                SPDLOG_WARN("AutoDecode: file offset 0x{:X} out of bounds (buffer size 0x{:X}); "
+                            "returning empty segment",
+                            fileOffset, buffer.size());
+                return { .root = nullptr, .segment = { buffer.data(), 0 } };
+            }
+
             auto availableSize = buffer.size() - fileOffset;
             size_t size;
 
