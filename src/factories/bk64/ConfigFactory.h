@@ -60,6 +60,13 @@ enum class ConfigSectionType : uint16_t {
     WARP_DESTINATIONS = 10,
     CUSTOM_CODE = 11,
     ROM_HASH = 12,
+    CUSTOM_CODE_INFO = 13,
+};
+
+enum class CustomCodeKind : uint16_t {
+    NONE = 0,
+    BB_GLOBALIZATION = 1,
+    BB_INJECTED = 2,
 };
 
 // CODE_CONSTANTS key IDs - they index into the sBBConfigs table.
