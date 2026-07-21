@@ -81,6 +81,7 @@ var annotated_dup =
       [ "QuizQuestionFactory", "classBK64_1_1QuizQuestionFactory.html", null ],
       [ "QuizQuestionHeaderExporter", "classBK64_1_1QuizQuestionHeaderExporter.html", null ],
       [ "QuizQuestionModdingExporter", "classBK64_1_1QuizQuestionModdingExporter.html", null ],
+      [ "SoundfontCtlFactory", "classBK64_1_1SoundfontCtlFactory.html", null ],
       [ "SoundfontTblFactory", "classBK64_1_1SoundfontTblFactory.html", null ],
       [ "SpriteBinaryExporter", "classBK64_1_1SpriteBinaryExporter.html", null ],
       [ "SpriteCodeExporter", "classBK64_1_1SpriteCodeExporter.html", null ],

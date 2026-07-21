@@ -122,62 +122,72 @@ $(function(){initNavTree('ConfigFactory_8h_source.html','',''); });
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="comment">// Loaded lazily from gAssetPath/hashes.yaml on the first call, then held for the run.</span></div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span><span class="keyword">const</span> std::string&amp; GetBaselineAssetHash(uint32_t assetId);</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="comment">// Does the hack ship its own MIPS code?</span></div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="keywordtype">bool</span> HasCustomCodeBlob(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; rom);</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="comment">// Binary aGameConfig format: &#39;BKCF&#39; header + typed sections</span></div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span><span class="keyword">constexpr</span> uint32_t GAMECONFIG_MAGIC = 0x46434B42;</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="keyword">constexpr</span> uint16_t GAMECONFIG_VERSION = 1;</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="comment">// Classification of a &gt;16MB BK ROM.</span></div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span><span class="keyword">enum class</span> RomhackKind {</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    NotRomhack,  <span class="comment">// vanilla-sized ROM</span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    BBRomhack,   <span class="comment">// standard Banjo&#39;s Backpack build</span></div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    CustomBuild, <span class="comment">// BK boot overlay present, but rebuilt/relocated internals</span></div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    UnknownRom,  <span class="comment">// extended ROM with no recognizable BK boot overlay</span></div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>};</div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span><span class="keyword">enum class</span> ConfigSectionType : uint16_t {</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    CODE_CONSTANTS = 1,</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    SCENE_REMAP = 2,</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    RETURN_TO_LAIR = 3,</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    MUSIC = 4,</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    SKYBOX = 5,</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    SCENE_DEF = 6,</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    NOTE_DOORS = 7,</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    JIGGY_PUZZLES = 8,</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    LEVEL_NAMES = 9,</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    WARP_DESTINATIONS = 10,</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    CUSTOM_CODE = 11,</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    ROM_HASH = 12,</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>};</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span><span class="comment">// CODE_CONSTANTS key IDs - they index into the sBBConfigs table.</span></div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="keyword">enum class</span> CodeConstantKey : uint16_t {</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    NEW_GAME_MAP = 0,</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    START_LEVEL_1,</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    START_LEVEL_2,</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    KNOW_ALL_MOVES,</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    MUMBO_COST_TERMITE,</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    MUMBO_COST_CROC,</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    MUMBO_COST_WALRUS,</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    MUMBO_COST_PUMPKIN,</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    MUMBO_COST_BEE,</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    EGGS_NORMAL_MAX,</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    RED_FEATHERS_NORMAL_MAX,</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    GOLD_FEATHERS_NORMAL_MAX,</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    EGGS_CHEATO_MAX,</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    RED_FEATHERS_CHEATO_MAX,</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    GOLD_FEATHERS_CHEATO_MAX,</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    NOTES_MAX,</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    JIGGIES_PER_WORLD,</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    HONEYCOMBS_PER_WORLD,</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    EXTRA_HC_START,</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    WARP_EXIT_BANJOS_HOUSE,</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    WARP_ENTER_LAIR,</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    SPECIAL_LEVEL,</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    HIDE_JIGGIES_LEVEL,</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    HIDE_COLLECTIBLES_LEVEL,</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    COUNT</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>};</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="comment">// Build the binary aGameConfig blob from a BB romhack ROM.</span></div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>std::vector&lt;char&gt; BuildGameConfigBlob(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; rom, <span class="keyword">const</span> std::string&amp; romName);</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>} <span class="comment">// namespace BK64</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>RomhackKind ClassifyRomhack(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; rom);</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="comment">// True for injected custom-code blobs and for CustomBuild ROMs.</span></div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span><span class="keywordtype">bool</span> HasCustomCodeBlob(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; rom);</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span><span class="comment">// Binary aGameConfig format: &#39;BKCF&#39; header + typed sections</span></div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span><span class="keyword">constexpr</span> uint32_t GAMECONFIG_MAGIC = 0x46434B42;</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span><span class="keyword">constexpr</span> uint16_t GAMECONFIG_VERSION = 1;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span><span class="keyword">enum class</span> ConfigSectionType : uint16_t {</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    CODE_CONSTANTS = 1,</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    SCENE_REMAP = 2,</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    RETURN_TO_LAIR = 3,</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    MUSIC = 4,</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    SKYBOX = 5,</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    SCENE_DEF = 6,</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    NOTE_DOORS = 7,</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    JIGGY_PUZZLES = 8,</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    LEVEL_NAMES = 9,</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    WARP_DESTINATIONS = 10,</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    CUSTOM_CODE = 11,</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    ROM_HASH = 12,</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>};</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span><span class="comment">// CODE_CONSTANTS key IDs - they index into the sBBConfigs table.</span></div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span><span class="keyword">enum class</span> CodeConstantKey : uint16_t {</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    NEW_GAME_MAP = 0,</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    START_LEVEL_1,</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    START_LEVEL_2,</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    KNOW_ALL_MOVES,</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    MUMBO_COST_TERMITE,</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    MUMBO_COST_CROC,</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    MUMBO_COST_WALRUS,</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    MUMBO_COST_PUMPKIN,</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    MUMBO_COST_BEE,</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    EGGS_NORMAL_MAX,</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    RED_FEATHERS_NORMAL_MAX,</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    GOLD_FEATHERS_NORMAL_MAX,</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    EGGS_CHEATO_MAX,</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    RED_FEATHERS_CHEATO_MAX,</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    GOLD_FEATHERS_CHEATO_MAX,</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    NOTES_MAX,</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    JIGGIES_PER_WORLD,</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    HONEYCOMBS_PER_WORLD,</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    EXTRA_HC_START,</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    WARP_EXIT_BANJOS_HOUSE,</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    WARP_ENTER_LAIR,</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    SPECIAL_LEVEL,</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    HIDE_JIGGIES_LEVEL,</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    HIDE_COLLECTIBLES_LEVEL,</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    COUNT</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>};</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span> </div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span><span class="comment">// Build the binary aGameConfig blob from a BB romhack ROM.</span></div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>std::vector&lt;char&gt; BuildGameConfigBlob(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; rom, <span class="keyword">const</span> std::string&amp; romName);</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span> </div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>} <span class="comment">// namespace BK64</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->

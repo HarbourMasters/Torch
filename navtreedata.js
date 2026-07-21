@@ -40,9 +40,9 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "AIFCDecode_8h_source.html",
-"classFZX_1_1CourseFactory.html",
-"classSM64_1_1MovtexFactory.html",
-"structDrum.html"
+"classFZX_1_1CourseData.html",
+"classSM64_1_1MovtexData.html",
+"structDecompressedData.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

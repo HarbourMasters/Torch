@@ -1,5 +1,6 @@
 var NAVTREEINDEX3 =
 {
+"structDecompressedData.html":[1,0,75],
 "structDrum.html":[1,0,81],
 "structEntry.html":[1,0,87],
 "structEnvelope.html":[1,0,88],

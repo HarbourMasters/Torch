@@ -303,6 +303,7 @@ var hierarchy =
       [ "BK64::MapFactory", "classBK64_1_1MapFactory.html", null ],
       [ "BK64::ModelFactory", "classBK64_1_1ModelFactory.html", null ],
       [ "BK64::QuizQuestionFactory", "classBK64_1_1QuizQuestionFactory.html", null ],
+      [ "BK64::SoundfontCtlFactory", "classBK64_1_1SoundfontCtlFactory.html", null ],
       [ "BK64::SoundfontTblFactory", "classBK64_1_1SoundfontTblFactory.html", null ],
       [ "BK64::SpriteFactory", "classBK64_1_1SpriteFactory.html", null ],
       [ "BankFactory", "classBankFactory.html", null ],

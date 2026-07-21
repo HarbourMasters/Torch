@@ -1,5 +1,6 @@
 var NAVTREEINDEX1 =
 {
+"classFZX_1_1CourseData.html":[1,0,2,6],
 "classFZX_1_1CourseFactory.html":[1,0,2,7],
 "classFZX_1_1CourseHeaderExporter.html":[1,0,2,8],
 "classFZX_1_1CourseModdingExporter.html":[1,0,2,9],
@@ -248,6 +249,5 @@ var NAVTREEINDEX1 =
 "classSM64_1_1MacroFactory.html":[1,0,8,40],
 "classSM64_1_1MacroHeaderExporter.html":[1,0,8,41],
 "classSM64_1_1MovtexBinaryExporter.html":[1,0,8,43],
-"classSM64_1_1MovtexCodeExporter.html":[1,0,8,44],
-"classSM64_1_1MovtexData.html":[1,0,8,45]
+"classSM64_1_1MovtexCodeExporter.html":[1,0,8,44]
 };
