@@ -189,7 +189,8 @@ static constexpr uint32_t FCF698_SIZE = 9888;
 static constexpr uint32_t FCF698_NOTE_DOORS_OFF = 1996;
 static constexpr uint32_t FCF698_JIGGY_PUZZLES_OFF = 6984;
 
-static int ScanWarpDest(const uint8_t* ovl, uint32_t funcOff, uint32_t ovlSize) {
+static bool ScanWarpDestDiff(const uint8_t* vanOvl, const uint8_t* modOvl, uint32_t funcOff, uint32_t funcLen,
+                             uint32_t ovlSize, int& outVanDest, int& outModDest) {
     static const uint8_t kEpilogue[16] = {
         0x8F, 0xBF, 0x00, 0x14, // LW $ra, 0x14($sp)
         0x27, 0xBD, 0x00, 0x18, // ADDIU $sp, $sp, 0x18
@@ -197,37 +198,61 @@ static int ScanWarpDest(const uint8_t* ovl, uint32_t funcOff, uint32_t ovlSize) 
         0x00, 0x00, 0x00, 0x00  // NOP
     };
 
-    if (funcOff + 200 > ovlSize) {
-        return -1;
+    outVanDest = -1;
+    outModDest = -1;
+    uint32_t limit = std::min<uint32_t>(funcLen, 200);
+    if (funcOff + limit > ovlSize || limit < 20) {
+        return false;
     }
 
-    const uint8_t* func = ovl + funcOff;
-    for (int i = 0; i + 20 <= 200; i += 4) {
-        if (func[i] == 0x24 && func[i + 1] == 0x05 && memcmp(func + i + 4, kEpilogue, 16) == 0) {
-            return (func[i + 2] << 8) | func[i + 3];
+    const uint8_t* van = vanOvl + funcOff;
+    const uint8_t* mod = modOvl + funcOff;
+    for (uint32_t i = 0; i + 20 <= limit; i += 4) {
+        if ((van[i] == 0x24 || van[i] == 0x34) && van[i + 1] == 0x05 &&
+            memcmp(van + i + 4, kEpilogue, 16) == 0) {
+            // Same load must still be present in the modified overlay.
+            if ((mod[i] == 0x24 || mod[i] == 0x34) && mod[i + 1] == 0x05) {
+                int vanDest = (van[i + 2] << 8) | van[i + 3];
+                int modDest = (mod[i + 2] << 8) | mod[i + 3];
+                if (vanDest != modDest) {
+                    outVanDest = vanDest;
+                    outModDest = modDest;
+                    return true;
+                }
+            }
+            i += 16; // skip the epilogue; a conditional warp may have another site after it
+            continue;
+        }
+        // Bare JR $ra outside a matched site: end of this warp stub.
+        if (van[i] == 0x03 && van[i + 1] == 0xE0 && van[i + 2] == 0x00 && van[i + 3] == 0x08) {
+            return false;
         }
     }
-    return -1;
+    return false;
 }
 
 // Custom-code blob detection
 //
 // Some hacks inject their own MIPS code at ROM 0x3F00000; the boot loader copies it up to
-// RAM 0x80780000 and the hack rewrites a few vanilla `jal`s to jump into it. Lighthouse
-// runs the decompiled C, not the original MIPS, so none of that survives at runtime. The
-// hack's scripted behavior just quietly never happens.
+// high RAM (0x80780000 for some hacks, 0x80400000 for others, e.g. The Jiggies of Time)
+// and the hack rewrites a few vanilla `jal`s to jump into it. Lighthouse runs the
+// decompiled C, not the original MIPS, so none of that survives at runtime. The hack's
+// scripted behavior just quietly never happens.
 //
 // We can at least spot it and warn, so users aren't left wondering why a hack feels
 // half-broken on the port. Both signals have to fire; either one alone false-positives on
 // stray data or BB's own overlay relocations:
 //   (a) a believable MIPS prologue (`27BD FFxx`) in the first 0x100 bytes at 0x3F00000, and
-//   (b) a handful of `jal 0x80780000+` self-calls inside the blob - real code calls itself
-//       constantly, random data doesn't.
+//   (b) a handful of `jal` self-calls into [0x80400000, 0x80800000) inside the blob -
+//       real code calls itself constantly, random data doesn't.
+//
+// The blob is stored either rzip-compressed (header `0x11 0x72`) somewhere in high ROM,
+// or as raw uncompressed MIPS at exactly 0x3F00000 that the boot stub DMA-copies verbatim.
 
 static constexpr uint32_t CUSTOM_CODE_ROM_OFFSET = 0x3F00000;
-static constexpr uint32_t CUSTOM_CODE_RAM_BASE = 0x80700000;
+static constexpr uint32_t CUSTOM_CODE_RAM_BASE = 0x80400000;
 static constexpr uint32_t CUSTOM_CODE_RAM_END = 0x80800000;
-static constexpr uint32_t CUSTOM_CODE_SCAN_SIZE = 0x40000; // 256 KB scan window
+static constexpr uint32_t CUSTOM_CODE_RAW_MAX_SIZE = 0x100000; // raw-blob window before 0xFF trim
 static constexpr int CUSTOM_CODE_MIN_INTERNAL_JALS = 4;    // self-call threshold
 
 static bool LooksLikeMipsFunctionPrologue(const uint8_t* p) {
@@ -262,20 +287,59 @@ static int CountInternalCustomCodeJals(const std::vector<uint8_t>& rom, uint32_t
     return count;
 }
 
-// In ROM, the custom-code blob is rzip-compressed (header `0x11 0x72`) and
-// gets decompressed to RAM somewhere in [0x80700000, 0x80800000) by a boot
-// stub. Scanning the raw ROM bytes won't find the jal-to-self pattern; we
-// have to decompress every rzip blob we find in the high-ROM region and
-// check the decompressed payload for internal jal self-references.
-//
+// Run the two custom-code signals against a candidate payload. On a hit, fills the
+// out params (SHA1 over the full payload; ramBase = first internal jal target rounded
+// down to 1 MB, which recovers the boot stub's load address closely enough for logging
+// and identification) and returns true.
+static bool CheckCustomCodePayload(const std::vector<uint8_t>& payload, int& outInternalJalCount,
+                                   uint32_t& outFirstInternalTarget, uint32_t& outRamBase, uint8_t outBlobSha1[20]) {
+    bool hasPrologue = false;
+    uint32_t prologueScan = std::min<uint32_t>(static_cast<uint32_t>(payload.size()), 0x100);
+    for (uint32_t p = 0; p + 4 <= prologueScan; p += 4) {
+        if (LooksLikeMipsFunctionPrologue(payload.data() + p)) {
+            hasPrologue = true;
+            break;
+        }
+    }
+    if (!hasPrologue) {
+        return false;
+    }
+
+    uint32_t firstTarget = 0;
+    int jals = CountInternalCustomCodeJals(payload, 0, static_cast<uint32_t>(payload.size()), firstTarget);
+    if (jals < CUSTOM_CODE_MIN_INTERNAL_JALS) {
+        return false;
+    }
+
+    outInternalJalCount = jals;
+    outFirstInternalTarget = firstTarget;
+    outRamBase = firstTarget & ~0xFFFFFu;
+    if (outBlobSha1) {
+        sha1::SHA1 s;
+        s.processBytes(payload.data(), payload.size());
+        uint32_t digest[5];
+        s.getDigest(digest);
+        for (int i = 0; i < 5; i++) {
+            outBlobSha1[i * 4 + 0] = (digest[i] >> 24) & 0xFF;
+            outBlobSha1[i * 4 + 1] = (digest[i] >> 16) & 0xFF;
+            outBlobSha1[i * 4 + 2] = (digest[i] >> 8) & 0xFF;
+            outBlobSha1[i * 4 + 3] = digest[i] & 0xFF;
+        }
+    }
+    return true;
+}
+
 // On success, also writes the decompressed-payload SHA1 to outBlobSha1.
 // Hash is written to cleanly identify the particular blob so Lighthouse can
 // act on it.
 static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outBlobRomOffset, int& outInternalJalCount,
-                                 uint32_t& outFirstInternalTarget, uint8_t outBlobSha1[20]) {
+                                 uint32_t& outFirstInternalTarget, uint32_t& outRamBase, CustomCodeKind& outKind,
+                                 uint8_t outBlobSha1[20]) {
     outBlobRomOffset = 0;
     outInternalJalCount = 0;
     outFirstInternalTarget = 0;
+    outRamBase = 0;
+    outKind = CustomCodeKind::NONE;
     if (outBlobSha1) {
         std::memset(outBlobSha1, 0, 20);
     }
@@ -308,44 +372,34 @@ static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outB
             continue;
         }
 
-        // Now apply the original two signals against the decompressed payload.
-        bool hasPrologue = false;
-        uint32_t prologueScan = std::min<uint32_t>(unzippedSize, 0x100);
-        for (uint32_t p = 0; p + 4 <= prologueScan; p += 4) {
-            if (LooksLikeMipsFunctionPrologue(unzipped + p)) {
-                hasPrologue = true;
-                break;
-            }
-        }
-        if (!hasPrologue) {
-            free(unzipped);
-            continue;
-        }
-
         std::vector<uint8_t> payload(unzipped, unzipped + unzippedSize);
         free(unzipped);
-        uint32_t firstTarget = 0;
-        int jals = CountInternalCustomCodeJals(payload, 0, static_cast<uint32_t>(payload.size()), firstTarget);
-        if (jals < CUSTOM_CODE_MIN_INTERNAL_JALS) {
+        if (!CheckCustomCodePayload(payload, outInternalJalCount, outFirstInternalTarget, outRamBase, outBlobSha1)) {
             continue;
         }
-
         outBlobRomOffset = off;
-        outInternalJalCount = jals;
-        outFirstInternalTarget = firstTarget;
-        if (outBlobSha1) {
-            sha1::SHA1 s;
-            s.processBytes(payload.data(), payload.size());
-            uint32_t digest[5];
-            s.getDigest(digest);
-            for (int i = 0; i < 5; i++) {
-                outBlobSha1[i * 4 + 0] = (digest[i] >> 24) & 0xFF;
-                outBlobSha1[i * 4 + 1] = (digest[i] >> 16) & 0xFF;
-                outBlobSha1[i * 4 + 2] = (digest[i] >> 8) & 0xFF;
-                outBlobSha1[i * 4 + 3] = digest[i] & 0xFF;
+        outKind = CustomCodeKind::BB_INJECTED;
+        return true;
+    }
+
+    // No compressed blob found; try a raw uncompressed blob at 0x3F00000.
+    if (rom.size() > CUSTOM_CODE_ROM_OFFSET + 4) {
+        uint32_t windowEnd =
+            static_cast<uint32_t>(std::min<size_t>(rom.size(), CUSTOM_CODE_ROM_OFFSET + CUSTOM_CODE_RAW_MAX_SIZE));
+        uint32_t rawSize = windowEnd - CUSTOM_CODE_ROM_OFFSET;
+        while (rawSize > 0 && rom[CUSTOM_CODE_ROM_OFFSET + rawSize - 1] == 0xFF) {
+            rawSize--;
+        }
+        if (rawSize >= 0x4000) {
+            std::vector<uint8_t> payload(rom.begin() + CUSTOM_CODE_ROM_OFFSET,
+                                         rom.begin() + CUSTOM_CODE_ROM_OFFSET + rawSize);
+            if (CheckCustomCodePayload(payload, outInternalJalCount, outFirstInternalTarget, outRamBase,
+                                       outBlobSha1)) {
+                outBlobRomOffset = CUSTOM_CODE_ROM_OFFSET;
+                outKind = CustomCodeKind::BB_GLOBALIZATION;
+                return true;
             }
         }
-        return true;
     }
 
     return false;
@@ -390,10 +444,11 @@ RomhackKind ClassifyRomhack(const std::vector<uint8_t>& rom) {
 // running the rest of extraction. Same detection logic as DetectCustomCodeBlob
 // above; we discard the returned metadata for callers that just want a yes/no.
 bool HasCustomCodeBlob(const std::vector<uint8_t>& rom) {
-    uint32_t blobRom = 0, firstTarget = 0;
+    uint32_t blobRom = 0, firstTarget = 0, ramBase = 0;
     int jalCount = 0;
-    if (DetectCustomCodeBlob(rom, blobRom, jalCount, firstTarget, nullptr)) {
-        return true;
+    CustomCodeKind kind = CustomCodeKind::NONE;
+    if (DetectCustomCodeBlob(rom, blobRom, jalCount, firstTarget, ramBase, kind, nullptr)) {
+        return kind == CustomCodeKind::BB_INJECTED;
     }
     return ClassifyRomhack(rom) == RomhackKind::CustomBuild;
 }
@@ -409,21 +464,29 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
     // Look for injected custom MIPS code.
     uint32_t customCodeBlobRom = 0;
     uint32_t customCodeFirstTarget = 0;
+    uint32_t customCodeRamBase = 0;
     int customCodeJalCount = 0;
+    CustomCodeKind customCodeKind = CustomCodeKind::NONE;
     uint8_t customCodeSha1[20] = {};
-    bool hasCustomCode =
-        DetectCustomCodeBlob(rom, customCodeBlobRom, customCodeJalCount, customCodeFirstTarget, customCodeSha1);
+    bool hasCustomCode = DetectCustomCodeBlob(rom, customCodeBlobRom, customCodeJalCount, customCodeFirstTarget,
+                                              customCodeRamBase, customCodeKind, customCodeSha1);
     if (hasCustomCode) {
         char hex[41];
         for (int i = 0; i < 20; i++) {
             std::snprintf(hex + i * 2, 3, "%02x", customCodeSha1[i]);
         }
-        SPDLOG_WARN("[ConfigFactory] Custom MIPS code detected at ROM 0x{:X}; {} internal jal self-references "
-                    "seen, first target 0x{:08X}; sha1={}.",
-                    customCodeBlobRom, customCodeJalCount, customCodeFirstTarget, hex);
-        SPDLOG_WARN("[ConfigFactory] This romhack ships custom code.  Lighthouse runs the decompiled C "
-                    "source and cannot execute injected code, so scripted behavior driven by that code "
-                    "will be silently absent until a hand-port is implemented.");
+        if (customCodeKind == CustomCodeKind::BB_INJECTED) {
+            SPDLOG_WARN("[ConfigFactory] Injected custom MIPS code detected at ROM 0x{:X}; {} internal jal "
+                        "self-references seen, first target 0x{:08X}; sha1={}.",
+                        customCodeBlobRom, customCodeJalCount, customCodeFirstTarget, hex);
+            SPDLOG_WARN("[ConfigFactory] This romhack ships custom code.  Lighthouse runs the decompiled C "
+                        "source and cannot execute injected code, so scripted behavior driven by that code "
+                        "will be silently absent until a hand-port is implemented.");
+        } else {
+            SPDLOG_INFO("[ConfigFactory] BB globalized-overlay blob at ROM 0x{:X} ({} internal jals, "
+                        "ramBase 0x{:08X}); sha1={}.",
+                        customCodeBlobRom, customCodeJalCount, customCodeRamBase, hex);
+        }
     }
 
     // Find patched overlay
@@ -459,11 +522,18 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
         // entry_count is informational here; the section always carries a single
         // {ramBase, sha1[20]} payload. Use 1 so anyone walking entries lands sanely.
         size_t secPos = blob.beginSection(ConfigSectionType::CUSTOM_CODE);
-        blob.writeU32(CUSTOM_CODE_RAM_BASE);
+        blob.writeU32(customCodeRamBase);
         for (int i = 0; i < 20; i++) {
             blob.writeU8(customCodeSha1[i]);
         }
         blob.patchU16(secPos, 1);
+        sectionCount++;
+
+        // Section: CUSTOM_CODE_INFO
+        size_t infoPos = blob.beginSection(ConfigSectionType::CUSTOM_CODE_INFO);
+        blob.writeU16(static_cast<uint16_t>(customCodeKind));
+        blob.writeU16(0); // pad
+        blob.patchU16(infoPos, 1);
         sectionCount++;
     }
 
@@ -777,6 +847,20 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                     size_t secPos = blob.beginSection(ConfigSectionType::WARP_DESTINATIONS);
                     uint16_t count = 0;
 
+                    // Sorted unique function starts, so each scan can be bounded by the
+                    // next table-referenced function instead of a blind 200-byte window.
+                    std::vector<uint32_t> funcOffs;
+                    funcOffs.reserve(WARP_ENTRY_COUNT);
+                    for (int w = 0; w < WARP_ENTRY_COUNT; w++) {
+                        uint32_t addr = readBE32(vanF9, WARP_TABLE_OFF + w * 4);
+                        if (addr >= N64_OVL_BASE) {
+                            funcOffs.push_back(addr - N64_OVL_BASE);
+                        }
+                    }
+                    std::sort(funcOffs.begin(), funcOffs.end());
+                    funcOffs.erase(std::unique(funcOffs.begin(), funcOffs.end()), funcOffs.end());
+
+                    uint32_t scanSize = std::min(vanOvlSize, overlaySize);
                     for (int w = 0; w < WARP_ENTRY_COUNT; w++) {
                         uint32_t tOff = WARP_TABLE_OFF + w * 4;
                         uint32_t addr = readBE32(vanF9, tOff);
@@ -785,10 +869,11 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         }
                         uint32_t funcOff = addr - N64_OVL_BASE;
 
-                        int vanDest = ScanWarpDest(vanOvl, funcOff, vanOvlSize);
-                        int modDest = ScanWarpDest(overlay, funcOff, overlaySize);
+                        auto next = std::upper_bound(funcOffs.begin(), funcOffs.end(), funcOff);
+                        uint32_t funcLen = (next != funcOffs.end()) ? (*next - funcOff) : 200;
 
-                        if (vanDest >= 0 && modDest >= 0 && vanDest != modDest) {
+                        int vanDest = -1, modDest = -1;
+                        if (ScanWarpDestDiff(vanOvl, overlay, funcOff, funcLen, scanSize, vanDest, modDest)) {
                             blob.writeU16(static_cast<uint16_t>(w));
                             blob.writeU16(static_cast<uint16_t>(modDest));
                             count++;
