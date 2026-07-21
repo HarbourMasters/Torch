@@ -62,7 +62,7 @@ std::optional<std::shared_ptr<IParsedData>> OoTArrayFactory::parse(std::vector<u
     return std::nullopt;
 }
 
-static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArrayData> data) {
+static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArrayData> data, bool zeroFlag) {
     writer.Write(static_cast<uint32_t>(SohArrayType::Vertex));
     writer.Write(static_cast<uint32_t>(data->mVtxs.size()));
 
@@ -70,7 +70,11 @@ static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArra
         writer.Write(v.ob[0]);
         writer.Write(v.ob[1]);
         writer.Write(v.ob[2]);
-        writer.Write(v.flag);
+        // ZAPD zeroes the flag for display-list-discovered vertices
+        // (DisplayListExporter's VTX() text round-trip) but preserves it for
+        // XML-declared arrays. zero_flag (set by zapd_to_torch for supplemental
+        // VTX arrays) selects the discovered behaviour.
+        writer.Write(zeroFlag ? static_cast<uint16_t>(0) : v.flag);
         writer.Write(v.tc[0]);
         writer.Write(v.tc[1]);
         writer.Write(v.cn[0]);
@@ -103,7 +107,8 @@ ExportResult OoTArrayBinaryExporter::Export(std::ostream& write, std::shared_ptr
     WriteHeader(writer, Torch::ResourceType::Array, 0);
 
     if (arrayType == "VTX") {
-        exportVtxArray(writer, std::static_pointer_cast<OoTVtxArrayData>(raw));
+        bool zeroFlag = node["zero_flag"] && node["zero_flag"].as<bool>();
+        exportVtxArray(writer, std::static_pointer_cast<OoTVtxArrayData>(raw), zeroFlag);
     } else if (arrayType == "Vec3s") {
         exportVec3sArray(writer, std::static_pointer_cast<OoTVec3sArrayData>(raw));
     }
