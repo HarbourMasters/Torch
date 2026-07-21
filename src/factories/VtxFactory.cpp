@@ -159,6 +159,15 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
     auto count = GetSafeNode<size_t>(node, "count");
 
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+
+    // Garbage G_VTX commands in DLs can autogen a count that overruns the file;
+    // clamp to what the segment actually holds before the reader copies it.
+    if (count * sizeof(VtxRaw) > segment.size) {
+        SPDLOG_WARN("VTX at 0x{:X}: count {} needs 0x{:X} bytes but segment holds 0x{:X}; clamping to {}",
+                    GetSafeNode<uint32_t>(node, "offset"), count, count * sizeof(VtxRaw), segment.size,
+                    segment.size / sizeof(VtxRaw));
+        count = segment.size / sizeof(VtxRaw);
+    }
     LUS::BinaryReader reader(segment.data, count * sizeof(VtxRaw));
 
     reader.SetEndianness(Torch::Endianness::Big);

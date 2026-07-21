@@ -523,6 +523,16 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
     size_t length = 0;
 
     while (processing) {
+        // Some DLs can jump to offsets that never reach a G_ENDDL; stop at
+        // the buffer edge instead of reading past it and synthesize the terminator.
+        if (reader.GetBaseAddress() + 2 * sizeof(uint32_t) > segment.size) {
+            SPDLOG_WARN("DL at 0x{:X} ran off the end of its buffer without G_ENDDL; truncating",
+                        GetSafeNode<uint32_t>(node, "offset"));
+            gfxs.push_back(static_cast<uint32_t>(GBI(G_ENDDL)) << 24);
+            gfxs.push_back(0);
+            break;
+        }
+
         auto w0 = reader.ReadUInt32();
         auto w1 = reader.ReadUInt32();
 
