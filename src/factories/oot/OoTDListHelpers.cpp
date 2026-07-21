@@ -260,35 +260,15 @@ static void ExportDL(uint32_t& w0, uint32_t& w1, LUS::BinaryWriter& writer) {
     }
 }
 
-static void ExportMoveMem(uint32_t& w0, uint32_t& w1, LUS::BinaryWriter& writer) {
-    auto ptr = w1;
-    uint8_t index = (w0) & 0xFF; // C0(0, 8)
-    uint8_t offset = ((w0 >> 8) & 0xFF) * 8; // C0(8, 8) * 8
-    bool hasOffset = false;
-
-    auto res = Companion::Instance->GetStringByAddr(ptr);
-
-    if (!res.has_value()) {
-        res = Companion::Instance->GetStringByAddr(ptr - 0x8);
-        hasOffset = res.has_value();
-    }
-
-    if (res.has_value()) {
-        uint64_t hash = CRC64(res.value().c_str());
-        SPDLOG_INFO("Found movemem: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, res.value());
-
-        w0 &= 0x00FFFFFF;
-        w0 += G_MOVEMEM_OTR_HASH << 24;
-        w1 = _SHIFTL(index, 24, 8) | _SHIFTL(offset, 16, 8) | _SHIFTL((uint8_t)(hasOffset ? 1 : 0), 8, 8);
-
-        writer.Write(w0);
-        writer.Write(w1);
-
-        w0 = hash >> 32;
-        w1 = hash & 0xFFFFFFFF;
-    } else {
-        SPDLOG_WARN("Could not find light at 0x{:X}", ptr);
-    }
+static void ExportMoveMem(uint32_t& w0, uint32_t& w1) {
+    // OTRExporter has no G_MOVEMEM handler: its DisplayListExporter switch falls
+    // through to the default (undefined-opcode) case, which emits just the opcode
+    // byte with all operands zeroed (w0 = G_MOVEMEM << 24, w1 = 0). Match that
+    // for byte-parity — a single 8-byte command written by the caller. (The
+    // generic DisplayListFactory path keeps the G_MOVEMEM_OTR_HASH form for
+    // other games; OoT follows OTRExporter here.)
+    w0 = F3DEX2_MOVEMEM << 24;
+    w1 = 0;
     // Final w0/w1 written by caller
 }
 
@@ -672,7 +652,7 @@ std::optional<ExportResult> Export(std::ostream& write, std::shared_ptr<IParsedD
         }
 
         if (opcode == F3DEX2_MOVEMEM) {
-            ExportMoveMem(w0, w1, writer);
+            ExportMoveMem(w0, w1);
         }
 
         if (opcode == F3DEX2_SETTIMG) {
