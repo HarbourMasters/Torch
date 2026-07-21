@@ -74,6 +74,13 @@ std::optional<std::shared_ptr<IParsedData>> OoTSceneFactory::parse(std::vector<u
 
     auto scene = std::make_shared<OoTSceneData>();
 
+    // syotes_room_0 (a debug test room) has no valid command list — the data at
+    // offset 0 is a raw mesh header. ZAPD special-cases it by name and emits an
+    // empty room; match that. Its mesh DLs/textures/vtx are declared separately.
+    if (GetSafeNode<std::string>(node, "symbol") == "syotes_room_0") {
+        return scene;
+    }
+
     // Read 8-byte scene commands until EndMarker
     std::vector<std::pair<uint32_t, uint32_t>> rawCmds;
     while (reader.GetBaseAddress() < segment.size - 7) {
