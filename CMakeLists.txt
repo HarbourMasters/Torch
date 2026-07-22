@@ -252,6 +252,10 @@ else()
     if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
         target_link_options(${PROJECT_NAME} PRIVATE /bigobj)
+    else()
+        # clang-cl treats C++11 narrowing as a hard error by default (MSVC and
+        # GCC only warn); mirror the -Wno-narrowing used for non-MSVC builds.
+        target_compile_options(${PROJECT_NAME} PRIVATE -Wno-narrowing)
     endif()
     add_definitions(-DSTORMLIB_NO_AUTO_LINK)
 endif()
