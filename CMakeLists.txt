@@ -338,14 +338,17 @@ if(USE_STANDALONE)
         set(SPDLOG_USE_STD_FORMAT ON)
     endif()
 
-	FetchContent_Declare(
-		spdlog
-		GIT_REPOSITORY https://github.com/gabime/spdlog.git
-		GIT_TAG 79524ddd08a4ec981b7fea76afd08ee05f83755d
-	)
+	find_package(spdlog QUIET)
+	if(NOT spdlog_FOUND)
+		FetchContent_Declare(
+			spdlog
+			GIT_REPOSITORY https://github.com/gabime/spdlog.git
+			GIT_TAG 79524ddd08a4ec981b7fea76afd08ee05f83755d
+		)
 
-	FetchContent_MakeAvailable(spdlog)
-	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+		FetchContent_MakeAvailable(spdlog)
+	endif()
+	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog)
 
 	if (MSVC)
 		FetchContent_Declare(
