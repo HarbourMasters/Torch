@@ -5,7 +5,9 @@
 #include "Companion.h"
 #include <fstream>
 #include "n64/gbi-otr.h"
+#ifdef OOT_SUPPORT
 #include "oot/OoTDListHelpers.h"
+#endif
 
 #ifdef STANDALONE
 #include <gfxd.h>
@@ -196,8 +198,10 @@ void DebugDisplayList(uint32_t w0, uint32_t w1) {
 #endif
 
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
+#ifdef OOT_SUPPORT
     auto result = OoT::DListHelpers::SearchVtx(ptr);
     if (result.has_value()) return result;
+#endif
 
     auto decs = Companion::Instance->GetNodesByType("VTX");
 
@@ -222,8 +226,10 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
 
 ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
                                          YAML::Node& node, std::string* replacement) {
+#ifdef OOT_SUPPORT
     auto ootResult = OoT::DListHelpers::Export(write, raw, entryName, node, replacement);
     if (ootResult.has_value()) return ootResult.value();
+#endif
 
     const auto gbi = Companion::Instance->GetGBIVersion();
     auto cmds = std::static_pointer_cast<DListData>(raw)->mGfxs;
@@ -479,8 +485,10 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
 }
 
 std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint8_t>& raw_buffer, YAML::Node& node) {
+#ifdef OOT_SUPPORT
     auto ootResult = OoT::DListHelpers::Parse(raw_buffer, node);
     if (ootResult.has_value()) return ootResult.value();
+#endif
 
     const auto gbi = Companion::Instance->GetGBIVersion();
 
