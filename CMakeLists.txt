@@ -196,6 +196,9 @@ endif()
 # MSVC static runtime for all targets (must be set before add_subdirectory/FetchContent)
 if (MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    # NOMINMAX: keep windows.h from defining min/max macros that break std::min/std::max.
+    # _USE_MATH_DEFINES: expose M_PI and friends from <cmath>. (Covers clang-cl too.)
+    add_compile_definitions(NOMINMAX _USE_MATH_DEFINES)
 endif()
 
 # Build
