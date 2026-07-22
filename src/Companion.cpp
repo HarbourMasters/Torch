@@ -1359,6 +1359,8 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
 
     this->gConfig.textureDefines = cfg["textures"] && (cfg["textures"].as<std::string>() == "ADDITIONAL_DEFINES");
 
+    this->gConfig.strictDeclarations = GetSafeNode<bool>(cfg, "strict_declarations", false);
+
     this->ParseHash();
 
     SPDLOG_CRITICAL("------------------------------------------------");
@@ -2021,13 +2023,13 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     const auto symbol = GetSafeNode<std::string>(asset, "symbol", "");
     const auto decl = this->GetNodeByAddr(offset);
 
-    // For OoT, all assets should be pre-declared in enriched YAML.
-    // Throw if an undeclared asset is encountered to catch enrichment gaps.
-    if (!decl.has_value() && this->gConfig.gbi.subversion == GBIMinorVersion::OoT) {
+    // With strict_declarations, every asset must be pre-declared in the YAML.
+    // Throw if an undeclared asset is encountered to catch declaration gaps.
+    if (!decl.has_value() && this->gConfig.strictDeclarations) {
         throw std::runtime_error(
             "AddAsset: undeclared " + type + " at " + Torch::to_hex(offset, false) +
             " (symbol: " + symbol + ") in " + this->gCurrentFile +
-            " — YAML enrichment incomplete");
+            " — YAML declarations incomplete");
     }
 
     if (decl.has_value()) {

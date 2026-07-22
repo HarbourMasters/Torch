@@ -108,6 +108,7 @@ struct TorchConfig {
     bool debug;
     bool modding;
     bool textureDefines;
+    bool strictDeclarations;
 };
 
 struct ParseResultData {
