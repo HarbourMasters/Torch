@@ -4,8 +4,13 @@ include(FetchContent)
 
 set(CMAKE_POLICY_VERSION_MINIMUM 3.12)
 
-cmake_policy(SET CMP0091 NEW)
-set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    foreach(flag_var CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+                     CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE)
+        string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+    endforeach()
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -196,9 +201,7 @@ if(ENABLE_ASAN)
     add_link_options(-fsanitize=address)
 endif()
 
-# MSVC static runtime for all targets (must be set before add_subdirectory/FetchContent)
 if (MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     # NOMINMAX: keep windows.h from defining min/max macros that break std::min/std::max.
     # _USE_MATH_DEFINES: expose M_PI and friends from <cmath>. (Covers clang-cl too.)
     add_compile_definitions(NOMINMAX _USE_MATH_DEFINES)
