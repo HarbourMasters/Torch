@@ -41,6 +41,13 @@ type:=debug
 generator:=$(shell if [ -x "$$(which ninja)" ]; then echo "Ninja"; else echo "Unix Makefiles"; fi)
 build_path:=$(shell if [ "$(call to_lower_case,$(generator))" = "xcode" ]; then echo "xcode-build"; else echo "cmake-build-$(call to_lower_case,$(type))"; fi)
 
+# Extra -D options forwarded to CMake configure, e.g. cmake_args="-DBUILD_STORMLIB=ON"
+cmake_args:=
+# Convenience passthrough: `make BUILD_UI=ON` -> `-DBUILD_UI=ON`
+ifdef BUILD_UI
+override cmake_args += -DBUILD_UI=$(BUILD_UI)
+endif
+
 # =============================================================================
 # Constants
 # =============================================================================
@@ -154,11 +161,13 @@ init:
 configure: validate-type validate-generator init
 ifeq ($(cmake_generator_arg), Xcode)
 	@cmake -S . -B $(build_path) \
-		-G "$(cmake_generator_arg)";
+		-G "$(cmake_generator_arg)" \
+		$(cmake_args);
 else
 	@cmake -S . -B $(build_path) \
 		-DCMAKE_BUILD_TYPE=$(cmake_build_type_arg) \
-		-G "$(cmake_generator_arg)";
+		-G "$(cmake_generator_arg)" \
+		$(cmake_args);
 endif
 
 #: Build the project for the selected type and generator

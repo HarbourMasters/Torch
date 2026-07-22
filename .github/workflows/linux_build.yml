@@ -22,10 +22,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get install cmake ninja-build libbz2-dev
+        run: |
+          sudo apt-get update
+          # Base build tools plus the libultraship/Fast3D deps the interactive
+          # viewer (BUILD_UI) needs: SDL2, OpenGL, libzip and nlohmann-json.
+          # (tinyxml2 and spdlog are vendored via FetchContent.)
+          sudo apt-get install -y cmake ninja-build libbz2-dev \
+            libsdl2-dev libgl1-mesa-dev libopengl-dev libzip-dev nlohmann-json3-dev
       - name: Build
         run: |
-          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }}.cmake
+          # Enable the viewer in CI (BUILD_UI is off by default); both Linux
+          # toolchains build the GL backend.
+          cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DBUILD_UI=ON -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }}.cmake
           cmake --build build-cmake -j
       - name: Create Package
         if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'linux-gnu' }}

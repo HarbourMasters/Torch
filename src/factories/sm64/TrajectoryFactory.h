@@ -34,6 +34,7 @@ class TrajectoryCodeExporter : public BaseExporter {
 
 class TrajectoryFactory : public BaseFactory {
 public:
+    bool CanPreviewCode() override { return true; }
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
@@ -43,4 +44,13 @@ public:
         };
     }
 };
+
+#ifdef BUILD_UI
+// Previews the trajectory as a 3D path.
+class TrajectoryFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif
 }

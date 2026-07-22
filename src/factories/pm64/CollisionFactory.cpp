@@ -194,3 +194,128 @@ ExportResult PM64CollisionHeaderExporter::Export(std::ostream& write, std::share
     write << "extern u8 " << symbol << "[];\n";
     return std::nullopt;
 }
+
+#ifdef BUILD_UI
+#include <cmath>
+#include <cstring>
+#include <map>
+#include "imgui.h"
+#include "ui/BaseBackend.h"
+#include "ui/Widgets.h"
+
+namespace {
+
+uint32_t CRD32(const std::vector<uint8_t>& b, uint32_t off) {
+    if (off + 4 > b.size()) {
+        return 0;
+    }
+    uint32_t v;
+    std::memcpy(&v, b.data() + off, 4);
+    return v;
+}
+
+int16_t CRD16(const std::vector<uint8_t>& b, uint32_t off) {
+    if (off + 2 > b.size()) {
+        return 0;
+    }
+    int16_t v;
+    std::memcpy(&v, b.data() + off, 2);
+    return v;
+}
+
+std::map<std::string, std::vector<UI::PreviewVertex>> sHitTris;
+std::map<std::string, UI::OrbitView> sHitViews;
+
+const std::vector<UI::PreviewVertex>& HitTris(const ParseResultData& item) {
+    auto it = sHitTris.find(item.name);
+    if (it != sHitTris.end()) {
+        return it->second;
+    }
+    std::vector<UI::PreviewVertex> tris;
+    const auto& d = std::static_pointer_cast<RawBuffer>(item.data.value())->mBuffer;
+    const uint32_t collisionOff = CRD32(d, 0);
+    if (collisionOff != 0 && collisionOff + 0x18 <= d.size()) {
+        const int16_t numColliders = CRD16(d, collisionOff);
+        const uint32_t collidersOff = CRD32(d, collisionOff + 0x04);
+        const int16_t numVertices = CRD16(d, collisionOff + 0x08);
+        const uint32_t verticesOff = CRD32(d, collisionOff + 0x0C);
+        for (int16_t c = 0; c < numColliders; ++c) {
+            const uint32_t col = collidersOff + (uint32_t)c * 0xC;
+            const int16_t numTris = CRD16(d, col + 0x06);
+            const uint32_t trisOff = CRD32(d, col + 0x08);
+            // Per-collider hue so regions read apart.
+            const float hue = (float)((c * 47) % 360) / 360.0f;
+            const float rr = 0.5f + 0.5f * std::cos(6.2832f * hue);
+            const float gg = 0.5f + 0.5f * std::cos(6.2832f * (hue + 0.33f));
+            const float bb = 0.5f + 0.5f * std::cos(6.2832f * (hue + 0.67f));
+            for (int16_t t = 0; t < numTris; ++t) {
+                const uint32_t packed = CRD32(d, trisOff + (uint32_t)t * 4);
+                const uint32_t idx[3] = { packed & 0x3FF, (packed >> 10) & 0x3FF, (packed >> 20) & 0x3FF };
+                float pos[3][3];
+                bool ok = true;
+                for (int k = 0; k < 3 && ok; ++k) {
+                    if ((int32_t)idx[k] >= numVertices) {
+                        ok = false;
+                        break;
+                    }
+                    const uint32_t v = verticesOff + idx[k] * 6;
+                    pos[k][0] = (float)CRD16(d, v);
+                    pos[k][1] = (float)CRD16(d, v + 2);
+                    pos[k][2] = (float)CRD16(d, v + 4);
+                }
+                if (!ok) {
+                    continue;
+                }
+                // Baked shading from the face normal.
+                const float ux = pos[1][0] - pos[0][0], uy = pos[1][1] - pos[0][1], uz = pos[1][2] - pos[0][2];
+                const float vx = pos[2][0] - pos[0][0], vy = pos[2][1] - pos[0][1], vz = pos[2][2] - pos[0][2];
+                float nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+                const float nl = std::sqrt(nx * nx + ny * ny + nz * nz);
+                if (nl > 0.0001f) {
+                    nx /= nl;
+                    ny /= nl;
+                    nz /= nl;
+                }
+                const float light = 0.55f + 0.45f * std::max(0.0f, nx * 0.3f + ny * 0.8f + nz * 0.52f);
+                for (int k = 0; k < 3; ++k) {
+                    UI::PreviewVertex pv{};
+                    pv.position[0] = pos[k][0];
+                    pv.position[1] = pos[k][1];
+                    pv.position[2] = pos[k][2];
+                    pv.color[0] = (unsigned char)(rr * light * 255.0f);
+                    pv.color[1] = (unsigned char)(gg * light * 255.0f);
+                    pv.color[2] = (unsigned char)(bb * light * 255.0f);
+                    pv.color[3] = 255;
+                    tris.push_back(pv);
+                }
+            }
+        }
+    }
+    return sHitTris.emplace(item.name, std::move(tris)).first->second;
+}
+
+} // namespace
+
+float PM64CollisionFactoryUI::GetItemHeight(const ParseResultData& item) {
+    return 60.0f + UI::PreviewBlockHeight(item.name);
+}
+
+void PM64CollisionFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+    if (!item.data.has_value()) {
+        ImGui::TextDisabled("no data");
+        return;
+    }
+    const auto& tris = HitTris(item);
+    ImGui::TextDisabled("collision  \xe2\x80\x94  %zu tris", tris.size() / 3);
+    if (tris.empty()) {
+        ImGui::TextDisabled("nothing drawable");
+        return;
+    }
+    UI::OrbitView& view = sHitViews[item.name];
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##hitview", item.name, view);
+    if (canvas.visible) {
+        UI::GetBackend()->DrawTriangles(item.name, tris, canvas.origin, canvas.size, view);
+    }
+}
+#endif // BUILD_UI

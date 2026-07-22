@@ -112,7 +112,22 @@ typedef struct {
     s16 state[16];
 } ALADPCMloop;
 
-#define checked_fread(a, b, c, d) d.Read((char*)a, b* c)
+NORETURN
+void fail_parse(const char* fmt, ...);
+
+// Bounds-checked read: refuses to read past the end of the underlying buffer,
+// turning malformed/truncated input into a catchable parse error instead of a
+// heap-buffer-overflow.
+static void checked_read(LUS::BinaryReader& reader, void* dst, size_t len) {
+    size_t pos = reader.GetBaseAddress();
+    size_t length = reader.GetLength();
+    if (pos > length || len > length - pos) {
+        fail_parse("unexpected end of file while reading %zu bytes at offset %zu", len, pos);
+    }
+    reader.Read((char*)dst, (int32_t)len);
+}
+
+#define checked_fread(a, b, c, d) checked_read(d, (void*)(a), (size_t)(b) * (size_t)(c))
 
 NORETURN
 void fail_parse(const char* fmt, ...) {

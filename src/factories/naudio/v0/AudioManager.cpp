@@ -449,6 +449,9 @@ TBLFile AudioManager::parse_tbl(std::vector<uint8_t>& data, std::vector<Entry>& 
 
 void AudioManager::initialize(std::vector<uint8_t>& buffer, YAML::Node& data) {
 
+    this->dialect = GetSafeNode<std::string>(data, "dialect", "");
+    this->sessionFrequency = GetSafeNode<uint32_t>(data, "frequency", 0);
+
     auto ctlOffset = data["ctl"]["offset"].as<size_t>();
     auto ctlSize = data["ctl"]["size"].as<size_t>();
 

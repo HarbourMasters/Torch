@@ -82,6 +82,16 @@ enum class ResourceType {
     OoTBackground = 0x4F424749,      // OBGI
     OoTSceneCommand = 0x4F52434D,    // ORCM
 
+    // BK64
+    BKSprite = 0x424B5350,         // BKSP
+    BKAnimation = 0x424B414E,      // BKAN
+    BKModel = 0x424B4D4F,          // BKMO
+    BKDemoInput = 0x424B4449,      // BKDI
+    BKDialog = 0x424B444C,         // BKDL
+    BKMap = 0x424B4D50,            // BKMP
+    BKGruntyQuestion = 0x424B4751, // BKGQ
+    BKQuizQuestion = 0x424B5151,   // BKQQ
+
     // NAudio v0
     Bank = 0x42414E4B,         // BANK
     Sample = 0x41554643,       // AIFC

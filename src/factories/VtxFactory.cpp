@@ -159,6 +159,15 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
     auto count = GetSafeNode<size_t>(node, "count");
 
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
+
+    // Garbage G_VTX commands in DLs can autogen a count that overruns the file;
+    // clamp to what the segment actually holds before the reader copies it.
+    if (count * sizeof(VtxRaw) > segment.size) {
+        SPDLOG_WARN("VTX at 0x{:X}: count {} needs 0x{:X} bytes but segment holds 0x{:X}; clamping to {}",
+                    GetSafeNode<uint32_t>(node, "offset"), count, count * sizeof(VtxRaw), segment.size,
+                    segment.size / sizeof(VtxRaw));
+        count = segment.size / sizeof(VtxRaw);
+    }
     LUS::BinaryReader reader(segment.data, count * sizeof(VtxRaw));
 
     reader.SetEndianness(Torch::Endianness::Big);
@@ -181,3 +190,44 @@ std::optional<std::shared_ptr<IParsedData>> VtxFactory::parse(std::vector<uint8_
 
     return std::make_shared<VtxData>(vertices);
 }
+
+#ifdef BUILD_UI
+#include <algorithm>
+#include <cmath>
+#include <unordered_map>
+
+#include "ui/BaseBackend.h"
+#include "ui/Widgets.h"
+
+namespace {
+std::unordered_map<std::string, UI::OrbitView> sVtxViews;
+} // namespace
+
+float VtxFactoryUI::GetItemHeight(const ParseResultData& item) {
+    return ImGui::GetTextLineHeightWithSpacing() * 2.0f + UI::PreviewBlockHeight(item.name) + 4.0f +
+           ImGui::GetStyle().ItemSpacing.y * 3.0f;
+}
+
+void VtxFactoryUI::DrawUI(const ParseResultData& item) {
+    const auto vtx = std::static_pointer_cast<VtxData>(item.data.value());
+    UI::AssetHeader(item.name, item.type);
+    ImGui::TextDisabled(
+        "%zu vertices  \xe2\x80\x94  drag to orbit, shift+drag to pan, \xe2\x8c\x98/Ctrl+scroll to zoom",
+        vtx->mVtxs.size());
+
+    UI::OrbitView& view = sVtxViews[item.name];
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##vtxview", item.name, view);
+    if (!canvas.visible) {
+        return;
+    }
+
+    std::vector<UI::PreviewVertex> points;
+    points.reserve(vtx->mVtxs.size());
+    for (const auto& v : vtx->mVtxs) {
+        points.push_back({ { (float)v.ob[0], (float)v.ob[1], (float)v.ob[2] }, { v.cn[0], v.cn[1], v.cn[2], 255 } });
+    }
+
+    const uint64_t id = std::hash<std::string>{}(item.name);
+    UI::GetBackend()->DrawPointCloud(id, points, canvas.origin, canvas.size, view);
+}
+#endif

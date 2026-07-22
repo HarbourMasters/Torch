@@ -1329,6 +1329,7 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
     bool largeNotes = false;
     bool scanPastJump = false;
     bool forceLargeNotes = false;
+    bool envelopeMarkedEnd = false;
     int32_t channel = -1;
     int32_t layer = -1;
     std::deque<SeqLabelInfo> posStack;
@@ -1345,6 +1346,10 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
 
     if (node["force_large_notes"]) {
         forceLargeNotes = GetSafeNode<bool>(node, "force_large_notes");
+    }
+
+    if (node["envelope_end_markers"]) {
+        envelopeMarkedEnd = GetSafeNode<bool>(node, "envelope_end_markers");
     }
 
     while (count < size || !posStack.empty()) {
@@ -2025,8 +2030,14 @@ std::optional<std::shared_ptr<IParsedData>> FZX::SequenceFactory::parse(std::vec
             command.args.emplace_back(arg);
             existingPositions.insert(addr);
             addr += 2 * sizeof(int16_t);
-            if (arg == 0) {
-                break;
+            if (envelopeMarkedEnd) {
+                if (delay == 0xFFFF) {
+                    break;
+                }
+            } else {
+                if (arg == 0) {
+                    break;
+                }
             }
         }
         command.size = addr - envAddr;

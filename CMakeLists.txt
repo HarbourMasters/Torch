@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 project(torch)
 include(FetchContent)
 
+set(CMAKE_POLICY_VERSION_MINIMUM 3.12)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -17,14 +19,16 @@ option(BUILD_MK64 "Build with Mario Kart 64 support" ON)
 option(BUILD_SF64 "Build with Star Fox 64 support" ON)
 option(BUILD_PM64 "Build with Paper Mario support" ON)
 option(BUILD_FZERO "Build with F-Zero X support" ON)
+option(BUILD_BK64 "Build with Banjo Kazooie support" ON)
 option(BUILD_MARIO_ARTIST "Build with Mario Artist support" ON)
 option(BUILD_NAUDIO "Build with NAudio support" ON)
 option(BUILD_OOT "Build with Ocarina of Time support" ON)
 option(PORT_VERSION_ENDIANNESS "Include endianness byte in portVersion file" OFF)
 option(ROM_CRC_BSWAP "Byte-swap the ROM CRC written to the version file" OFF)
 
+option(BUILD_UI "Build with the interactive viewer (libultraship + Fast3D + ImGui)" OFF)
+
 if(EMSCRIPTEN)
-    set(BUILD_SM64 OFF) # TODO: This is broken for some reason
     add_definitions(-D__EMSCRIPTEN__)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --bind -lidbfs.js -s MODULARIZE=1 -s EXPORT_ES6=1 -s NO_DISABLE_EXCEPTION_CATCHING -s ALLOW_MEMORY_GROWTH=1 -s EXPORT_NAME=createModule -s EXPORTED_RUNTIME_METHODS='[\"FS\", \"IDBFS\"]'")
     if(EMSCRIPTEN_PRELOAD)
@@ -67,14 +71,77 @@ if(USE_STANDALONE)
         endforeach()
     endif()
 endif()
+
+# Interactive viewer renderer: libultraship + Fast3D (true N64 rendering). LUS
+# bundles its own ImGui, so it fully replaces the old raylib/rlImGui backend.
+if(BUILD_UI)
+    add_definitions(-DBUILD_UI)
+
+    # libultraship integration. Recipe mirrors the Ghostship port.
+    set(EXCLUDE_MPQ_SUPPORT TRUE CACHE BOOL "")
+    add_compile_definitions(EXCLUDE_MPQ_SUPPORT)
+    set(ENABLE_SCRIPTING OFF CACHE BOOL "" FORCE)
+
+    # tinyxml2 must resolve before LUS's find_package(tinyxml2 REQUIRED).
+    set(tinyxml2_BUILD_TESTING OFF)
+    FetchContent_Declare(
+        tinyxml2
+        GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
+        GIT_TAG 10.0.0
+        OVERRIDE_FIND_PACKAGE
+    )
+    FetchContent_MakeAvailable(tinyxml2)
+
+    FetchContent_Declare(
+        dr_libs
+        GIT_REPOSITORY https://github.com/mackron/dr_libs.git
+        GIT_TAG da35f9d6c7374a95353fd1df1d394d44ab66cf01
+    )
+    FetchContent_MakeAvailable(dr_libs)
+
+    # Kenix3 upstream for now. NOTE: the HM64 ports build against a fork
+    # (KiritoDv/better-mipmaps @ 5959b97) with fixes not on upstream; re-pin here
+    # if upstream proves incompatible.
+    FetchContent_Declare(
+        libultraship
+        GIT_REPOSITORY https://github.com/Kenix3/libultraship.git
+        GIT_TAG main
+    )
+    FetchContent_MakeAvailable(libultraship)
+
+    include_directories(
+        ${libultraship_SOURCE_DIR}/include
+        ${libultraship_SOURCE_DIR}/include/libultraship
+        ${libultraship_SOURCE_DIR}/src
+        ${dr_libs_SOURCE_DIR}
+        ${imgui_SOURCE_DIR}
+    )
+
+    # The Fast3D Metal/GL shaders are loaded as resources ("shaders/...") and must
+    # match THIS libultraship's prism context. Game .o2r archives ship their own
+    # (often fork-modified) shaders, so copy the upstream LUS shaders next to the
+    # build and mount them last (overriding) at runtime. See LusBackend.cpp.
+    file(COPY ${libultraship_SOURCE_DIR}/src/fast/shaders
+         DESTINATION ${CMAKE_BINARY_DIR}/torch-lus-assets)
+    add_compile_definitions(TORCH_LUS_SHADER_DIR="${CMAKE_BINARY_DIR}/torch-lus-assets")
+endif()
+
 # Source files
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp)
+file(GLOB_RECURSE CXX_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/strhash64/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/lib/bk_zip/*.cpp)
 file(GLOB C_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libmio0/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libyay0/*.c ${CMAKE_CURRENT_SOURCE_DIR}/lib/libyaz0/*.c)
-set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES})
+set(SRC_DIR ${CXX_FILES} ${C_FILES} ${LGFXD_FILES} ${UI_FILES})
+
+if(BUILD_UI)
+    # libultraship bundles StringHelper and StrHash64 (shared origin with Torch).
+    # Linking it WHOLE_ARCHIVE pulls those in, so drop our copies and resolve
+    # against LUS's (a superset) to avoid duplicate-symbol link errors.
+    list(FILTER SRC_DIR EXCLUDE REGEX "src/utils/StringHelper.cpp")
+    list(FILTER SRC_DIR EXCLUDE REGEX "lib/strhash64/StrHash64.cpp")
+endif()
 
 if(BUILD_SM64)
     add_definitions(-DSM64_SUPPORT)
@@ -104,6 +171,12 @@ if(BUILD_FZERO)
     add_definitions(-DFZERO_SUPPORT)
 else()
     list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/fzerox/*")
+endif()
+
+if(BUILD_BK64)
+    add_definitions(-DBK64_SUPPORT)
+else()
+    list(FILTER SRC_DIR EXCLUDE REGEX "${CMAKE_CURRENT_SOURCE_DIR}/src/factories/bk64/*")
 endif()
 
 if(BUILD_MARIO_ARTIST)
@@ -137,6 +210,11 @@ if(ENABLE_ASAN)
     add_link_options(-fsanitize=address)
 endif()
 
+# MSVC static runtime for all targets (must be set before add_subdirectory/FetchContent)
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # Build
 if (USE_STANDALONE)
     add_definitions(-DSTANDALONE)
@@ -160,7 +238,7 @@ else()
         $<$<CONFIG:Debug>:
             /w;
             /Od;
-            /ZI;
+            $<IF:$<BOOL:${ENABLE_ASAN}>,/Zi,/ZI>;
             /${LINK_TYPE}d
         >
         $<$<CONFIG:Release>:
@@ -193,7 +271,6 @@ else()
         target_link_options(${PROJECT_NAME} PRIVATE /bigobj)
     endif()
     add_definitions(-DSTORMLIB_NO_AUTO_LINK)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 
@@ -273,6 +350,24 @@ if(USE_STANDALONE)
 
 	FetchContent_MakeAvailable(spdlog)
 	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+
+	if (MSVC)
+		FetchContent_Declare(
+			zlib
+			GIT_REPOSITORY "https://github.com/madler/zlib.git"
+			GIT_TAG v1.3.1
+			FIND_PACKAGE_ARGS NAMES ZLIB
+		)
+		FetchContent_MakeAvailable(zlib)
+		set(ZLIB_INCLUDE_DIRS ${zlib_SOURCE_DIR})
+		set(ZLIB_LIBRARY zlibstatic CACHE STRING "")
+		set(ZLIB_LIBRARIES ${ZLIB_LIBRARY})
+		set(ZLIB_FOUND 1)
+		add_library(ZLIB::ZLIB ALIAS zlibstatic)
+	else ()
+		find_package(ZLIB REQUIRED)
+		target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
+	endif()
 else()
 	find_package(spdlog QUIET)
     if(NOT spdlog_FOUND)
@@ -297,7 +392,32 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tinyxml2)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2 yaml-cpp N64Graphics BinaryTools)
+# Link zlib
+if(EMSCRIPTEN OR ANDROID)
+    find_package(ZLIB REQUIRED)
+    set(TORCH_ZLIB_TARGET ZLIB::ZLIB)
+else()
+    set(ZLIB_BUILD_SHARED_LIBS OFF CACHE BOOL "Build zlib as a static library" FORCE)
+    set(ZLIB_BUILD_TESTS OFF CACHE BOOL "Disable building zlib tests" FORCE)
+    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(SKIP_INSTALL_ALL ON CACHE BOOL "Skip zlib install targets" FORCE)
+
+    FetchContent_Declare(
+        zlib
+        GIT_REPOSITORY https://github.com/madler/zlib.git
+        GIT_TAG v1.3.1
+        OVERRIDE_FIND_PACKAGE
+    )
+    FetchContent_MakeAvailable(zlib)
+    set(TORCH_ZLIB_TARGET zlibstatic)
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE tinyxml2 ${TORCH_ZLIB_TARGET} yaml-cpp N64Graphics BinaryTools)
+
+if(BUILD_UI)
+    target_link_libraries(${PROJECT_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,libultraship>")
+    set_target_properties(${PROJECT_NAME} PROPERTIES ENABLE_EXPORTS TRUE)
+endif()
 
 if(NOT USE_STANDALONE)
     target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

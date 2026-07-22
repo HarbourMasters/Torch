@@ -243,8 +243,8 @@ ExportResult TextureModdingExporter::Export(std::ostream& write, std::shared_ptr
                                        palTexture->mFormat.depth);
                 } else {
                     auto symbol = GetSafeNode<std::string>(node, "symbol");
-                    throw std::runtime_error("Could not convert ci8 '" + symbol +
-                                             "' the tlut symbol name is probably wrong for tlut_symbol node");
+                    throw std::runtime_error("Could not convert ci8 '" + symbol + "' the tlut symbol name " + tlut +
+                                             " is probably wrong for tlut_symbol node");
                 }
                 break;
             }
@@ -420,34 +420,34 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
         }
         case TextureType::Palette8bpp:
         case TextureType::Palette4bpp: {
-            // This implementation is not correct.
-            // The process should be:
-            // png2rgba --> imgpal2rawci
-
-            // todo: Add wheel palette input
-            // Implement so that it works.
-
-            // auto tlut = GetSafeNode<std::string>(node,"tlut_symbol");
-            // auto tlutTextureMap = Companion::Instance->GetTlutTextureMap();
-            // auto palettePtr = tlutTextureMap[tlut];
-
-            // if (palettePtr) {
-
-            //     auto imgi = png2rgba(buffer.data(), buffer.size(), &width, &height);
-            //     auto pal = png2rgba(palettePtr->mBuffer.data(), (palettePtr->mWidth * palettePtr->mWidth *
-            //     palettePtr->mFormat.depth * 2), &width, &height);
-
-            //     size = width * height * fmt.depth / 8;
-            //     raw = new uint8_t[size];
-
-            //     if(imgpal2rawci(raw, imgi, pal, 0, 0, width, height, fmt.depth) <= 0){
-            //         throw std::runtime_error("Failed to convert PNG to texture");
-            //     }
-            // } else {
-
-            // }
-            SPDLOG_ERROR("Unsupported texture format for modding: {}", format);
-            return std::nullopt;
+            // Re-index the edited PNG against this texture's palette to rebuild the
+            // CI4/CI8 data.
+            rgba* img = png2rgba(buffer.data(), buffer.size(), &width, &height);
+            if (img == nullptr) {
+                throw std::runtime_error("Failed to read PNG for CI texture");
+            }
+            rgba* pal = nullptr;
+            int palColors = (fmt.depth == 4) ? 16 : 256;
+            if (node["tlut_symbol"]) {
+                const auto tlut = GetSafeNode<std::string>(node, "tlut_symbol");
+                if (auto palette = Companion::Instance->GetParseDataBySymbol(tlut); palette.has_value()) {
+                    auto palTex = std::static_pointer_cast<TextureData>(palette.value().data.value());
+                    palColors = static_cast<int>(palTex->mWidth);
+                    pal = raw2rgba(palTex->mBuffer.data(), palColors, 1, palTex->mFormat.depth);
+                }
+            }
+            if (pal == nullptr) {
+                SPDLOG_ERROR("CI texture '{}': could not resolve palette '{}' for re-encode",
+                             GetSafeNode<std::string>(node, "symbol", ""),
+                             GetSafeNode<std::string>(node, "tlut_symbol", ""));
+                return std::nullopt;
+            }
+            size = width * height * fmt.depth / 8;
+            raw = new uint8_t[size];
+            if (imgpal2rawci(raw, img, pal, nullptr, size, fmt.depth, width * height, palColors) <= 0) {
+                throw std::runtime_error("Failed to convert PNG to CI texture");
+            }
+            break;
         }
         case TextureType::Grayscale8bpp:
         case TextureType::Grayscale4bpp: {
@@ -483,3 +483,221 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse_modding(std::v
 
     return std::make_shared<TextureData>(fmt, width, height, result);
 }
+
+#ifdef BUILD_UI
+#include <array>
+#include <fstream>
+#include <unordered_map>
+#include "ui/BaseBackend.h"
+#include "ui/ExportUtils.h"
+
+// symbol -> handle, so each texture is decoded and uploaded only once. The
+// backend owns the GPU resources and frees them on shutdown.
+static std::unordered_map<std::string, UI::TextureHandle> sTextureCache = {};
+
+static rgba* DecodeToRGBA(const std::shared_ptr<TextureData>& texture, YAML::Node& node) {
+    const auto format = texture->mFormat;
+    const int w = (int)texture->mWidth;
+    const int h = (int)texture->mHeight;
+    uint8_t* raw = texture->mBuffer.data();
+
+    switch (format.type) {
+        case TextureType::TLUT:
+        case TextureType::RGBA16bpp:
+        case TextureType::RGBA32bpp:
+            return raw2rgba(raw, w, h, format.depth);
+        case TextureType::GrayscaleAlpha16bpp:
+        case TextureType::GrayscaleAlpha8bpp:
+        case TextureType::GrayscaleAlpha4bpp:
+        case TextureType::GrayscaleAlpha1bpp: {
+            ia* img = raw2ia(raw, w, h, format.depth);
+            if (img == nullptr) {
+                return nullptr;
+            }
+            auto* out = (rgba*)malloc(sizeof(rgba) * w * h);
+            for (int i = 0; i < w * h; i++) {
+                out[i] = { img[i].intensity, img[i].intensity, img[i].intensity, img[i].alpha };
+            }
+            free(img);
+            return out;
+        }
+        case TextureType::Grayscale8bpp:
+        case TextureType::Grayscale4bpp: {
+            ia* img = raw2i(raw, w, h, format.depth);
+            if (img == nullptr) {
+                return nullptr;
+            }
+            auto* out = (rgba*)malloc(sizeof(rgba) * w * h);
+            for (int i = 0; i < w * h; i++) {
+                out[i] = { img[i].intensity, img[i].intensity, img[i].intensity, img[i].alpha };
+            }
+            free(img);
+            return out;
+        }
+        case TextureType::Palette8bpp:
+        case TextureType::Palette4bpp: {
+            std::optional<ParseResultData> palette;
+            if (node["tlut_symbol"]) {
+                palette = Companion::Instance->GetParseDataBySymbol(GetSafeNode<std::string>(node, "tlut_symbol"));
+            } else if (node["tlut"]) {
+                palette = Companion::Instance->GetParseDataByAddr(GetSafeNode<uint32_t>(node, "tlut"));
+            }
+            if (!palette.has_value() || !palette->data.has_value()) {
+                return nullptr;
+            }
+            auto palTexture = std::static_pointer_cast<TextureData>(palette->data.value());
+            // CI + palette -> RGBA16 raw, then RGBA16 -> intermediate RGBA.
+            uint8_t* rgba16 = ci2raw(raw, palTexture->mBuffer.data(), w, h, format.depth);
+            if (rgba16 == nullptr) {
+                return nullptr;
+            }
+            rgba* out = raw2rgba(rgba16, w, h, 16);
+            free(rgba16);
+            return out;
+        }
+        default:
+            return nullptr;
+    }
+}
+
+static UI::TextureHandle GetOrLoadTexture(const ParseResultData& item) {
+    auto& node = const_cast<YAML::Node&>(item.node);
+    const auto symbol = GetSafeNode<std::string>(node, "symbol", item.name);
+
+    const auto cached = sTextureCache.find(symbol);
+    if (cached != sTextureCache.end()) {
+        return cached->second;
+    }
+
+    auto texture = std::static_pointer_cast<TextureData>(item.data.value());
+    rgba* pixels = DecodeToRGBA(texture, node);
+
+    UI::TextureHandle handle = UI::kInvalidTexture;
+    if (pixels != nullptr) {
+        // Upload is synchronous, so the buffer can be freed right after. Caching
+        // a failed kInvalidTexture avoids retrying an undecodable texture.
+        handle = UI::GetBackend()->UploadRGBA8(reinterpret_cast<const uint8_t*>(pixels), (int)texture->mWidth,
+                                               (int)texture->mHeight);
+        free(pixels);
+    }
+
+    sTextureCache[symbol] = handle;
+    return handle;
+}
+
+// Checkerboard backdrop so texture transparency reads against the panel.
+static void DrawCheckerboard(ImDrawList* dl, const ImVec2& min, const ImVec2& size) {
+    constexpr float kCell = 8.0f;
+    const ImU32 a = IM_COL32(48, 48, 52, 255);
+    const ImU32 b = IM_COL32(64, 64, 70, 255);
+    dl->AddRectFilled(min, min + size, a);
+    for (float y = 0; y < size.y; y += kCell) {
+        for (float x = 0; x < size.x; x += kCell) {
+            if ((int)((x + y) / kCell) % 2 == 0) {
+                continue;
+            }
+            const ImVec2 c0 = min + ImVec2(x, y);
+            const ImVec2 c1 = c0 + ImVec2(std::min(kCell, size.x - x), std::min(kCell, size.y - y));
+            dl->AddRectFilled(c0, c1, b);
+        }
+    }
+}
+
+float TextureFactoryUI::GetItemHeight(const ParseResultData& item) {
+    return 138.0f;
+}
+
+void TextureFactoryUI::DrawUI(const ParseResultData& item) {
+    auto& node = const_cast<YAML::Node&>(item.node);
+    auto texture = std::static_pointer_cast<TextureData>(item.data.value());
+    const auto format = GetSafeNode<std::string>(node, "format");
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    const UI::TextureHandle handle = GetOrLoadTexture(item);
+
+    constexpr float kThumb = 128.0f;
+    const ImVec2 thumb(kThumb, kThumb);
+
+    ImGui::PushID(item.name.c_str());
+    ImGui::BeginGroup();
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+    DrawCheckerboard(dl, origin, thumb);
+
+    if (handle != UI::kInvalidTexture) {
+        const float aspect = (float)texture->mWidth / (float)texture->mHeight;
+        ImVec2 fit = thumb;
+        if (aspect >= 1.0f) {
+            fit.y = kThumb / aspect;
+        } else {
+            fit.x = kThumb * aspect;
+        }
+        const ImVec2 pad((kThumb - fit.x) * 0.5f, (kThumb - fit.y) * 0.5f);
+        ImGui::SetCursorScreenPos(origin + pad);
+        ImGui::Image(handle, fit);
+
+        // Hover -> larger preview tooltip.
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            constexpr float kBig = 256.0f;
+            ImVec2 big(kBig, kBig);
+            if (aspect >= 1.0f) {
+                big.y = kBig / aspect;
+            } else {
+                big.x = kBig * aspect;
+            }
+            ImGui::Image(handle, big);
+            ImGui::Text("%u x %u  %s", texture->mWidth, texture->mHeight, format.c_str());
+            ImGui::EndTooltip();
+        }
+    } else {
+        const ImVec2 center = origin + thumb * 0.5f;
+        const char* label = "No Preview";
+        dl->AddText(center - ImGui::CalcTextSize(label) * 0.5f, IM_COL32(150, 150, 150, 255), label);
+    }
+    dl->AddRect(origin, origin + thumb, IM_COL32(255, 255, 255, 40), 4.0f);
+
+    // Reserve the full box so SameLine aligns the metadata to its edge.
+    ImGui::SetCursorScreenPos(origin);
+    ImGui::Dummy(thumb);
+    ImGui::EndGroup();
+
+    ImGui::SameLine();
+
+    ImGui::BeginGroup();
+    ImGui::TextUnformatted(item.name.c_str());
+    ImGui::Separator();
+    ImGui::Text("Format      %s (%d bpp)", format.c_str(), texture->mFormat.depth);
+    ImGui::Text("Resolution  %u x %u", texture->mWidth, texture->mHeight);
+    ImGui::Text("Size        %zu bytes", texture->mBuffer.size());
+    ImGui::Text("Offset      %s", Torch::to_hex(offset).c_str());
+    ImGui::Spacing();
+    if (ImGui::SmallButton("Copy symbol")) {
+        ImGui::SetClipboardText(item.name.c_str());
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Export PNG")) {
+        const auto path = UI::ExportFilePath(item.name, "png");
+        std::string result = path.string();
+        try {
+            const auto factory = Companion::Instance->GetFactory(item.type);
+            const auto exporter =
+                factory.has_value() ? factory.value()->GetExporter(ExportType::Modding) : std::nullopt;
+            if (!exporter.has_value()) {
+                result = "no png exporter for this type";
+            } else {
+                std::ofstream file(path, std::ios::binary);
+                std::string entryName = item.name;
+                std::string replacement = item.name;
+                YAML::Node copy = YAML::Clone(item.node);
+                exporter.value()->Export(file, item.data.value(), entryName, copy, &replacement);
+            }
+        } catch (const std::exception& e) { result = std::string("export failed: ") + e.what(); }
+        UI::NoteExport(item.name, result);
+    }
+    UI::DrawExportMarker(item.name);
+    ImGui::EndGroup();
+
+    ImGui::PopID();
+}
+#endif

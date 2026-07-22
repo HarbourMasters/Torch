@@ -199,6 +199,16 @@ std::string LUS::BinaryReader::ReadString() {
     return res;
 }
 
+std::string LUS::BinaryReader::ReadString(size_t length) {
+    std::string res;
+
+    for (int i = 0; i < length; i++) {
+        res += ReadChar();
+    }
+
+    return res;
+}
+
 std::string LUS::BinaryReader::ReadCString() {
     std::string res;
 

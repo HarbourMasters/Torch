@@ -133,6 +133,49 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
     SPDLOG_INFO("medium: {}", bmedium);
     SPDLOG_INFO("addr: {}", baddr);
 
+    // Before the SoundFont cascade begins, pre-populate sampleDedup with every
+    // explicitly-declared NAUDIO:V1:SAMPLE entry so that auto-generated
+    // duplicates (same bankId + sampleAddr, different parent) are suppressed
+    // and don't shadow the explicit canonical entries.
+    if (type == AudioTableType::FONT_TABLE) {
+        auto explicitSamples = Companion::Instance->GetNodesByType("NAUDIO:V1:SAMPLE");
+        if (explicitSamples.has_value()) {
+            auto& fontBuf = AudioContext::tables[AudioTableType::FONT_TABLE].buffer;
+            size_t prePopCount = 0;
+            size_t skippedCount = 0;
+            SPDLOG_INFO("Pre-populating sampleDedup from {} explicit NAUDIO:V1:SAMPLE entries (fontBuf size=0x{:X})",
+                        explicitSamples->size(), fontBuf.size());
+            for (auto& [path, sampleNode] : explicitSamples.value()) {
+                uint32_t sampleOffset = 0, sampleBankId = 0;
+                try {
+                    sampleOffset = GetSafeNode<uint32_t>(sampleNode, "offset");
+                    sampleBankId = GetSafeNode<uint32_t>(sampleNode, "sampleBankId");
+                } catch (...) {
+                    SPDLOG_WARN("sampleDedup pre-pop: skipping {} — missing offset or sampleBankId", path);
+                    skippedCount++;
+                    continue;
+                }
+                if (sampleOffset == 0 || sampleOffset + 8 > fontBuf.size()) {
+                    SPDLOG_WARN("sampleDedup pre-pop: skipping {} — offset 0x{:X} out of fontBuf bounds (0x{:X})", path,
+                                sampleOffset, fontBuf.size());
+                    skippedCount++;
+                    continue;
+                }
+                auto sReader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, sampleOffset);
+                sReader.ReadUInt32(); // skip flags
+                uint32_t sampleAddr = sReader.ReadUInt32();
+                if (sampleAddr == 0) {
+                    skippedCount++;
+                    continue;
+                }
+                uint64_t key = ((uint64_t)sampleBankId << 32) | (uint64_t)sampleAddr;
+                AudioContext::sampleDedup[key] = path;
+                prePopCount++;
+            }
+            SPDLOG_INFO("sampleDedup pre-pop done: {} registered, {} skipped", prePopCount, skippedCount);
+        }
+    }
+
     std::vector<AudioTableEntry> entries;
 
     for (size_t i = 0; i < count; i++) {
@@ -160,9 +203,13 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                 font["sd2"] = (int32_t)sd2;
                 font["sd3"] = (int32_t)sd3;
 
-                Companion::Instance->AddAsset(font);
-                std::string path = font["vpath"].as<std::string>();
-                crc = CRC64(path.c_str());
+                // On re-parse AddAsset returns the already-registered node.
+                auto res = Companion::Instance->AddAsset(font);
+                if (res.has_value() && (*res)["vpath"]) {
+                    crc = CRC64((*res)["vpath"].as<std::string>().c_str());
+                } else if (font["vpath"]) {
+                    crc = CRC64(font["vpath"].as<std::string>().c_str());
+                }
                 break;
             }
             case AudioTableType::SEQ_TABLE: {
@@ -172,9 +219,12 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
                     seq["type"] = "NAUDIO:V1:SEQUENCE";
                     seq["offset"] = parent + addr;
                     seq["size"] = size;
-                    Companion::Instance->AddAsset(seq);
-                    auto path = seq["vpath"].as<std::string>();
-                    crc = CRC64(path.c_str());
+                    auto res = Companion::Instance->AddAsset(seq);
+                    if (res.has_value() && (*res)["vpath"]) {
+                        crc = CRC64((*res)["vpath"].as<std::string>().c_str());
+                    } else if (seq["vpath"]) {
+                        crc = CRC64(seq["vpath"].as<std::string>().c_str());
+                    }
                     break;
                 }
             }

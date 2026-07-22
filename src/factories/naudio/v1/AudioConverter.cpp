@@ -152,10 +152,13 @@ void AudioConverter::SampleV0ToAIFC(AudioBankSample* sample, LUS::BinaryWriter& 
         vloops.Write(sample->loop.end);
         vloops.Write(sample->loop.count);
 
-        if (sample->loop.state.has_value()) {
-            for (auto state : sample->loop.state.value()) {
-                vcodes.Write(state);
-            }
+        // The decoder reads back a fixed-size ALADPCMloop whose state is a
+        // 16-entry array; always emit all 16 (zero-filled when absent) so the
+        // chunk is exactly 44 bytes. Note: this must target vloops, not vcodes.
+        const std::vector<int16_t>* state =
+            sample->loop.state.has_value() ? &sample->loop.state.value() : nullptr;
+        for (size_t i = 0; i < 16; i++) {
+            vloops.Write((int16_t)(state != nullptr && i < state->size() ? (*state)[i] : 0));
         }
         aifc.End("APPL", vloops);
     }
@@ -168,6 +171,11 @@ void AudioConverter::SampleV1ToAIFC(NSampleData* sample, LUS::BinaryWriter& out)
         std::static_pointer_cast<ADPCMLoopData>(Companion::Instance->GetParseDataByAddr(sample->loop)->data.value());
     auto book =
         std::static_pointer_cast<ADPCMBookData>(Companion::Instance->GetParseDataByAddr(sample->book)->data.value());
+    SampleV1ToAIFC(sample, loop.get(), book.get(), out);
+}
+
+void AudioConverter::SampleV1ToAIFC(NSampleData* sample, const ADPCMLoopData* loop, const ADPCMBookData* book,
+                                    LUS::BinaryWriter& out) {
     auto entry = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
     auto sampleData = entry.buffer.data() + entry.info->entries[sample->sampleBankId].addr + sample->sampleAddr;
     auto aifc = AIFCWriter();
@@ -178,6 +186,11 @@ void AudioConverter::SampleV1ToAIFC(NSampleData* sample, LUS::BinaryWriter& out)
 
     if (sample_rate == 0) {
         sample_rate = 32000 * sample->tuning;
+    }
+    // Explicit yaml entries carry no tuning; a zero rate makes the AIFF
+    // invalid (decoders reject it), so fall back to the mixer reference.
+    if (sample_rate == 0) {
+        sample_rate = 32000;
     }
 
     int16_t num_channels = 1;
