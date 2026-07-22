@@ -149,7 +149,8 @@ static void ExportVtx(uint32_t& w0, uint32_t& w1,
 
         auto currentDir = (*replacement).substr(0, (*replacement).rfind('/'));
         auto vtxDir = path.substr(0, path.rfind('/'));
-        if (currentDir != vtxDir) {
+        bool nullCrossFile = ovnode["null_cross_file"] && ovnode["null_cross_file"].as<bool>();
+        if (currentDir != vtxDir && nullCrossFile) {
             SPDLOG_WARN("Cross-file VTX overlap at 0x{:X} (from {}), writing null vtxDecl", ptr, path);
             w0 = G_VTX_OTR_HASH << 24;
             w1 = 0;
@@ -173,17 +174,19 @@ static void ExportVtx(uint32_t& w0, uint32_t& w1,
     // Direct lookup with OOT:ARRAY support
     auto vtxNode = Companion::Instance->GetNodeByAddr(ptr);
     std::optional<std::string> dec = std::nullopt;
+    bool nullCrossFile = false;
     if (vtxNode.has_value()) {
         auto [vpath, vn] = vtxNode.value();
         auto vtype = GetSafeNode<std::string>(vn, "type");
         if (vtype == "VTX" || vtype == "OOT:ARRAY") {
             dec = vpath;
+            nullCrossFile = vn["null_cross_file"] && vn["null_cross_file"].as<bool>();
         }
     }
     if (dec.has_value()) {
         auto currentDir = (*replacement).substr(0, (*replacement).rfind('/'));
         auto vtxDir = dec.value().substr(0, dec.value().rfind('/'));
-        if (currentDir != vtxDir) {
+        if (currentDir != vtxDir && nullCrossFile) {
             SPDLOG_WARN("Cross-file VTX at 0x{:X} (from {}), writing null vtxDecl", ptr, dec.value());
             w0 = G_VTX_OTR_HASH << 24;
             w1 = 0;
