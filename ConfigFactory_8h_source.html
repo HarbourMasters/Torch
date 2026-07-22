@@ -162,39 +162,45 @@ $(function(){initNavTree('ConfigFactory_8h_source.html','',''); });
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    BB_INJECTED = 2,</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>};</div>
 <div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span><span class="comment">// CODE_CONSTANTS key IDs - they index into the sBBConfigs table.</span></div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="keyword">enum class</span> CodeConstantKey : uint16_t {</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    NEW_GAME_MAP = 0,</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    START_LEVEL_1,</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    START_LEVEL_2,</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    KNOW_ALL_MOVES,</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    MUMBO_COST_TERMITE,</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    MUMBO_COST_CROC,</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    MUMBO_COST_WALRUS,</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    MUMBO_COST_PUMPKIN,</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    MUMBO_COST_BEE,</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    EGGS_NORMAL_MAX,</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    RED_FEATHERS_NORMAL_MAX,</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    GOLD_FEATHERS_NORMAL_MAX,</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    EGGS_CHEATO_MAX,</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    RED_FEATHERS_CHEATO_MAX,</div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    GOLD_FEATHERS_CHEATO_MAX,</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    NOTES_MAX,</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    JIGGIES_PER_WORLD,</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    HONEYCOMBS_PER_WORLD,</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    EXTRA_HC_START,</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    WARP_EXIT_BANJOS_HOUSE,</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    WARP_ENTER_LAIR,</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    SPECIAL_LEVEL,</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    HIDE_JIGGIES_LEVEL,</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    HIDE_COLLECTIBLES_LEVEL,</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    COUNT</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>};</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span><span class="comment">// Build the binary aGameConfig blob from a BB romhack ROM.</span></div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>std::vector&lt;char&gt; BuildGameConfigBlob(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; rom, <span class="keyword">const</span> std::string&amp; romName);</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>} <span class="comment">// namespace BK64</span></div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span><span class="comment">// Pre-extraction probe for callers that decide the warning policy themselves</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="comment">// (e.g. the extraction UI checks RomhackTable for hand-ported hashes): reports</span></div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span><span class="comment">// the detected blob&#39;s kind and its SHA1 as 40 lowercase hex chars + NUL.</span></div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span><span class="comment">// Returns false (kind NONE, empty hash) when no blob is found.</span></div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span><span class="keywordtype">bool</span> GetCustomCodeBlobInfo(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; rom, CustomCodeKind&amp; outKind, <span class="keywordtype">char</span> outSha1Hex[41]);</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span><span class="comment">// CODE_CONSTANTS key IDs - they index into the sBBConfigs table.</span></div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span><span class="keyword">enum class</span> CodeConstantKey : uint16_t {</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    NEW_GAME_MAP = 0,</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    START_LEVEL_1,</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    START_LEVEL_2,</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    KNOW_ALL_MOVES,</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    MUMBO_COST_TERMITE,</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    MUMBO_COST_CROC,</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    MUMBO_COST_WALRUS,</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    MUMBO_COST_PUMPKIN,</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    MUMBO_COST_BEE,</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    EGGS_NORMAL_MAX,</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    RED_FEATHERS_NORMAL_MAX,</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    GOLD_FEATHERS_NORMAL_MAX,</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    EGGS_CHEATO_MAX,</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    RED_FEATHERS_CHEATO_MAX,</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    GOLD_FEATHERS_CHEATO_MAX,</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    NOTES_MAX,</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    JIGGIES_PER_WORLD,</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    HONEYCOMBS_PER_WORLD,</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    EXTRA_HC_START,</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    WARP_EXIT_BANJOS_HOUSE,</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    WARP_ENTER_LAIR,</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    SPECIAL_LEVEL,</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    HIDE_JIGGIES_LEVEL,</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    HIDE_COLLECTIBLES_LEVEL,</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    COUNT</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>};</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span><span class="comment">// Build the binary aGameConfig blob from a BB romhack ROM.</span></div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>std::vector&lt;char&gt; BuildGameConfigBlob(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; rom, <span class="keyword">const</span> std::string&amp; romName);</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>} <span class="comment">// namespace BK64</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 </div><!-- container -->
