@@ -70,7 +70,7 @@ enum class CustomCodeKind : uint16_t {
 };
 
 // Pre-extraction probe for callers that decide the warning policy themselves
-// (e.g. the extraction UI checks RomhackTable for hand-ported hashes): reports
+// (e.g. the extraction UI checks RomhackTable for ported hashes): reports
 // the detected blob's kind and its SHA1 as 40 lowercase hex chars + NUL.
 // Returns false (kind NONE, empty hash) when no blob is found.
 bool GetCustomCodeBlobInfo(const std::vector<uint8_t>& rom, CustomCodeKind& outKind, char outSha1Hex[41]);

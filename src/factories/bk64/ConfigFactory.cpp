@@ -98,8 +98,11 @@ static_assert(sizeof(sBBConfigs) / sizeof(sBBConfigs[0]) == static_cast<int>(Cod
 // D_8039347C - note door thresholds (12 doors)
 static const uint16_t sVanillaNoteDoors[12] = { 50, 180, 260, 350, 450, 640, 765, 810, 828, 846, 864, 882 };
 
-// D_803947F8 - jiggy puzzle costs (11 puzzles), first byte of each 4-byte entry
+// D_803947F8 - jiggy puzzles (11 entries, 4 bytes each): { u8 cost; u8 size_bits; u16 progress_flag }.
 static const uint8_t sVanillaJiggyCosts[11] = { 1, 2, 5, 7, 8, 9, 10, 12, 15, 25, 4 };
+static const uint8_t sVanillaJiggySizes[11] = { 1, 2, 3, 3, 4, 4, 4, 4, 4, 5, 3 };
+static const uint16_t sVanillaJiggyFlags[11] = { 0x5D, 0x5E, 0x60, 0x63, 0x66,
+                                                 0x6A, 0x6E, 0x72, 0x76, 0x7A, 0x7F };
 
 // Vanilla level names from D_8036C58C (pause menu display)
 static const char* sVanillaLevelNames[13] = { "GAME TOTAL",          "SPIRAL MOUNTAIN",     "GRUNTILDA'S LAIR",
@@ -496,7 +499,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         customCodeBlobRom, customCodeJalCount, customCodeFirstTarget, hex);
             SPDLOG_WARN("[ConfigFactory] This romhack ships custom code.  Lighthouse runs the decompiled C "
                         "source and cannot execute injected code, so scripted behavior driven by that code "
-                        "will be silently absent until a hand-port is implemented.");
+                        "will be silently absent until a port is implemented.");
         } else {
             SPDLOG_INFO("[ConfigFactory] BB globalized-overlay blob at ROM 0x{:X} ({} internal jals, "
                         "ramBase 0x{:08X}); sha1={}.",
@@ -513,7 +516,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
             return {};
         SPDLOG_INFO("[ConfigFactory] Found patched overlay at ROM 0x{:X} ({} bytes)", f37RomAddr, overlaySize);
     } else {
-        SPDLOG_WARN("[ConfigFactory] This romhack was not built with Banjo's Backpack and must be hand-ported.");
+        SPDLOG_WARN("[ConfigFactory] This romhack was not built with Banjo's Backpack and must be ported.");
     }
 
     BlobWriter blob;
@@ -960,12 +963,20 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
 
                 for (int i = 0; i < 11; i++) {
                     uint8_t cost = fcf[FCF698_JIGGY_PUZZLES_OFF + i * 4];
-                    if (cost != sVanillaJiggyCosts[i]) {
+                    uint8_t size = fcf[FCF698_JIGGY_PUZZLES_OFF + i * 4 + 1];
+                    uint16_t flag = readBE16(fcf, FCF698_JIGGY_PUZZLES_OFF + i * 4 + 2);
+                    if (cost != sVanillaJiggyCosts[i] || size != sVanillaJiggySizes[i] ||
+                        flag != sVanillaJiggyFlags[i]) {
                         blob.writeU8(static_cast<uint8_t>(i));
                         blob.writeU8(cost);
+                        blob.writeU8(size);
+                        blob.writeU8(0); // pad
+                        blob.writeU16(flag);
                         count++;
-                        SPDLOG_INFO("[ConfigFactory] jiggy_puzzle[{}] = {} (vanilla: {})", i, cost,
-                                    sVanillaJiggyCosts[i]);
+                        SPDLOG_INFO("[ConfigFactory] jiggy_puzzle[{}] = cost {} size {} flag {:#x} "
+                                    "(vanilla: {}/{}/{:#x})",
+                                    i, cost, size, flag, sVanillaJiggyCosts[i], sVanillaJiggySizes[i],
+                                    sVanillaJiggyFlags[i]);
                     }
                 }
 
