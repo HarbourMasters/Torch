@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTSceneFactory.h"
 #include "OoTSceneCommandWriter.h"
 #include "OoTSceneUtils.h"
@@ -167,5 +165,3 @@ ExportResult OoTSceneBinaryExporter::Export(std::ostream& write, std::shared_ptr
 }
 
 } // namespace OoT
-
-#endif

@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTCollisionFactory.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -331,5 +329,3 @@ ExportResult OoTCollisionBinaryExporter::Export(std::ostream& write, std::shared
 }
 
 } // namespace OoT
-
-#endif

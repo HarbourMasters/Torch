@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTAudioFontWriter.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -333,5 +331,3 @@ void AudioFontWriter::Extract(YAML::Node& node,
 }
 
 } // namespace OoT
-
-#endif

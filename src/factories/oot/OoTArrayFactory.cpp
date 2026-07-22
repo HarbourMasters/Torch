@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTArrayFactory.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -118,5 +116,3 @@ ExportResult OoTArrayBinaryExporter::Export(std::ostream& write, std::shared_ptr
 }
 
 } // namespace OoT
-
-#endif

@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTCutsceneFactory.h"
 #include "OoTSceneUtils.h"
 #include "spdlog/spdlog.h"
@@ -323,5 +321,3 @@ ExportResult OoTCutsceneBinaryExporter::Export(std::ostream& write, std::shared_
 }
 
 } // namespace OoT
-
-#endif

@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTCurveAnimationFactory.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -134,5 +132,3 @@ ExportResult OoTCurveAnimationBinaryExporter::Export(std::ostream& write, std::s
 }
 
 } // namespace OoT
-
-#endif

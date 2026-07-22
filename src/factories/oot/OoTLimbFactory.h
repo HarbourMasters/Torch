@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "factories/BaseFactory.h"
 #include "OoTSkeletonTypes.h"
 
@@ -39,5 +37,3 @@ private:
 };
 
 } // namespace OoT
-
-#endif

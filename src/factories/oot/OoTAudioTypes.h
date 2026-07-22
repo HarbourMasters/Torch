@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "factories/BaseFactory.h"
 #include <map>
 
@@ -52,5 +50,3 @@ struct AudioParseContext {
 };
 
 } // namespace OoT
-
-#endif

@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "OoTAudioTypes.h"
 
 namespace OoT {
@@ -34,5 +32,3 @@ private:
 };
 
 } // namespace OoT
-
-#endif

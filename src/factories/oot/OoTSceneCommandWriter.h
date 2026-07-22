@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "OoTSceneFactory.h"
 #include "OoTSceneUtils.h"
 #include <set>
@@ -57,5 +55,3 @@ private:
 };
 
 } // namespace OoT
-
-#endif

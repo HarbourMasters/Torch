@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTAudioSampleWriter.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -203,5 +201,3 @@ bool AudioSampleWriter::Extract(std::vector<uint8_t>& buffer, YAML::Node& node,
 }
 
 } // namespace OoT
-
-#endif

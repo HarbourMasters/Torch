@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "factories/BaseFactory.h"
 #include "OoTAnimationTypes.h"
 #include <vector>
@@ -32,5 +30,3 @@ public:
 };
 
 } // namespace OoT
-
-#endif

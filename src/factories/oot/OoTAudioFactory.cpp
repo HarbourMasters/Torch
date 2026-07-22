@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTAudioFactory.h"
 #include "OoTAudioSequenceWriter.h"
 #include "OoTAudioSampleWriter.h"
@@ -132,5 +130,3 @@ ExportResult OoTAudioBinaryExporter::Export(std::ostream& write, std::shared_ptr
 }
 
 } // namespace OoT
-
-#endif

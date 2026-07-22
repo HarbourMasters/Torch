@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "DeferredVtx.h"
 #include "Companion.h"
 #include "factories/DisplayListOverrides.h"
@@ -128,5 +126,3 @@ void EndDefer() {
 }
 
 } // namespace DeferredVtx
-
-#endif

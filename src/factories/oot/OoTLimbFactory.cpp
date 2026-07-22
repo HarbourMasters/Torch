@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTLimbFactory.h"
 #include "OoTSkeletonTypes.h"
 #include "OoTSceneUtils.h"
@@ -272,5 +270,3 @@ ExportResult OoTLimbBinaryExporter::Export(std::ostream& write, std::shared_ptr<
 }
 
 } // namespace OoT
-
-#endif

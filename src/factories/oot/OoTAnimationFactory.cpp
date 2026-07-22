@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTAnimationFactory.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -118,5 +116,3 @@ ExportResult OoTAnimationBinaryExporter::Export(std::ostream& write, std::shared
 }
 
 } // namespace OoT
-
-#endif

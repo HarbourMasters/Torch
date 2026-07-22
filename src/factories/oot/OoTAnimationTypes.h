@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include <cstdint>
 
 namespace OoT {
@@ -26,5 +24,3 @@ struct CurveInterpKnot {
 };
 
 } // namespace OoT
-
-#endif

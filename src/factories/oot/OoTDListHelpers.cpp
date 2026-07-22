@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTDListHelpers.h"
 #include "Companion.h"
 #include "spdlog/spdlog.h"
@@ -759,5 +757,3 @@ std::optional<std::optional<std::shared_ptr<IParsedData>>> Parse(
 
 } // namespace DListHelpers
 } // namespace OoT
-
-#endif

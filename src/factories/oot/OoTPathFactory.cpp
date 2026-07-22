@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTPathFactory.h"
 #include "OoTSceneUtils.h"
 #include "spdlog/spdlog.h"
@@ -49,5 +47,3 @@ ExportResult OoTPathBinaryExporter::Export(std::ostream& write, std::shared_ptr<
 }
 
 } // namespace OoT
-
-#endif

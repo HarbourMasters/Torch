@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "factories/BaseFactory.h"
 #include <vector>
 #include <string>
@@ -98,5 +96,3 @@ std::string ResolveGfxPointer(uint32_t ptr, const std::string& limbSymbol,
                               const std::string& suffix);
 
 } // namespace OoT
-
-#endif

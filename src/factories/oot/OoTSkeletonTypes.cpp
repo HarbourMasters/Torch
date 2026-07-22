@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTSkeletonTypes.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -38,5 +36,3 @@ std::string ResolveGfxPointer(uint32_t ptr, const std::string& limbSymbol,
 }
 
 } // namespace OoT
-
-#endif

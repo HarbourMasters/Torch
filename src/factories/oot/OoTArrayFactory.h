@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "factories/BaseFactory.h"
 #include "factories/VtxFactory.h"
 #include <types/Vec3D.h>
@@ -57,5 +55,3 @@ public:
 };
 
 } // namespace OoT
-
-#endif

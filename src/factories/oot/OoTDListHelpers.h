@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "factories/BaseFactory.h"
 #include <string>
 #include <optional>
@@ -24,5 +22,3 @@ std::optional<std::optional<std::shared_ptr<IParsedData>>> Parse(
 
 } // namespace DListHelpers
 } // namespace OoT
-
-#endif

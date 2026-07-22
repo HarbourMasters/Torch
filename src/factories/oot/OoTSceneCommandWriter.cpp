@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTSceneCommandWriter.h"
 #include "AliasManager.h"
 #include "spdlog/spdlog.h"
@@ -696,5 +694,3 @@ uint32_t SceneCommandWriter::GetNeighborSize(const std::set<uint32_t>& knownAddr
 }
 
 } // namespace OoT
-
-#endif

@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTAudioTypes.h"
 
 namespace OoT {
@@ -34,5 +32,3 @@ float SafeAudioBankReader::ReadFloat(uint32_t offset) {
 }
 
 } // namespace OoT
-
-#endif

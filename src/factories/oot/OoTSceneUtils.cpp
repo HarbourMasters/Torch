@@ -1,5 +1,3 @@
-#ifdef OOT_SUPPORT
-
 #include "OoTSceneUtils.h"
 
 namespace OoT {
@@ -52,5 +50,3 @@ std::vector<char> SerializePathways(std::vector<uint8_t>& buffer,
 }
 
 } // namespace OoT
-
-#endif

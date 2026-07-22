@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -16,5 +14,3 @@ namespace DeferredVtx {
     void AddPending(uint32_t addr, uint32_t count);
     void EndDefer();
 }
-
-#endif

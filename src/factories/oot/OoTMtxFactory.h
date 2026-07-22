@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef OOT_SUPPORT
-
 #include "factories/BaseFactory.h"
 #include <array>
 
@@ -29,5 +27,3 @@ public:
 };
 
 } // namespace OoT
-
-#endif
