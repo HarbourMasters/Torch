@@ -7,7 +7,11 @@ void N64::Cartridge::Initialize() {
     LUS::BinaryReader reader((char*)this->gRomData.data(), this->gRomData.size());
     reader.SetEndianness(Torch::Endianness::Big);
     reader.Seek(0x10, LUS::SeekOffsetType::Start);
+#ifdef ROM_CRC_BSWAP
+    this->gRomCRC = BSWAP32(reader.ReadUInt32());
+#else
     this->gRomCRC = reader.ReadUInt32();
+#endif
     reader.Seek(0x20, LUS::SeekOffsetType::Start);
     this->gGameTitle = std::string(reader.ReadCString());
     this->gGameTitle.pop_back(); // Remove null terminator

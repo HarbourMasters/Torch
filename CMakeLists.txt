@@ -21,6 +21,7 @@ option(BUILD_MARIO_ARTIST "Build with Mario Artist support" ON)
 option(BUILD_NAUDIO "Build with NAudio support" ON)
 option(BUILD_OOT "Build with Ocarina of Time support" ON)
 option(PORT_VERSION_ENDIANNESS "Include endianness byte in portVersion file" OFF)
+option(ROM_CRC_BSWAP "Byte-swap the ROM CRC written to the version file" OFF)
 
 if(EMSCRIPTEN)
     set(BUILD_SM64 OFF) # TODO: This is broken for some reason
@@ -119,6 +120,10 @@ endif()
 
 if(PORT_VERSION_ENDIANNESS)
     add_definitions(-DPORT_VERSION_ENDIANNESS)
+endif()
+
+if(ROM_CRC_BSWAP)
+    add_definitions(-DROM_CRC_BSWAP)
 endif()
 
 if(BUILD_OOT)
