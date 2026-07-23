@@ -22,6 +22,8 @@ jobs:
         exclude:
           - toolchain: windows-clang-cl
             arch: Win32
+          - toolchain: windows-clang-cl
+            generate: Visual Studio 17 2022
           - isPR: true
             standalone: OFF
     steps:
