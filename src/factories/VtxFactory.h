@@ -42,3 +42,13 @@ public:
         return 8;
     };
 };
+
+#ifdef BUILD_UI
+// Previews the vertices as an interactive 3D point cloud (drag to orbit, scroll
+// to zoom). Vtx has no triangle connectivity, so this is points, not a mesh.
+class VtxFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif

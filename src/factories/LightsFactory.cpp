@@ -123,3 +123,28 @@ std::optional<std::shared_ptr<IParsedData>> LightsFactory::parse(std::vector<uin
     reader.Read((char*)&lights, sizeof(Lights1Raw));
     return std::make_shared<LightsData>(lights);
 }
+
+#ifdef BUILD_UI
+#include "ui/Widgets.h"
+
+void LightsFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+    if (!item.data.has_value()) {
+        ImGui::TextDisabled("no data");
+        return;
+    }
+    const auto& lights = std::static_pointer_cast<LightsData>(item.data.value())->mLights;
+    const auto& amb = lights.a.l.col;
+    const auto& dif = lights.l[0].l.col;
+    const auto& dir = lights.l[0].l.dir;
+
+    const ImVec4 ambColor(amb[0] / 255.0f, amb[1] / 255.0f, amb[2] / 255.0f, 1.0f);
+    const ImVec4 difColor(dif[0] / 255.0f, dif[1] / 255.0f, dif[2] / 255.0f, 1.0f);
+    ImGui::ColorButton("##amb", ambColor, ImGuiColorEditFlags_NoTooltip);
+    ImGui::SameLine();
+    ImGui::Text("ambient  #%02X%02X%02X", amb[0], amb[1], amb[2]);
+    ImGui::ColorButton("##dif", difColor, ImGuiColorEditFlags_NoTooltip);
+    ImGui::SameLine();
+    ImGui::Text("diffuse  #%02X%02X%02X   dir (%d, %d, %d)", dif[0], dif[1], dif[2], dir[0], dir[1], dir[2]);
+}
+#endif // BUILD_UI

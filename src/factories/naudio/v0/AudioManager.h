@@ -125,6 +125,13 @@ class AudioManager {
 public:
     static AudioManager* Instance;
     void initialize(std::vector<uint8_t>& buffer, YAML::Node& data);
+
+    // Optional AUDIO_HEADER yaml settings: `dialect` (US/EU opcode set) and
+    // `frequency` (session rate the bank tunings are relative to).
+    const std::string& GetDialect() const { return dialect; }
+    uint32_t GetSessionFrequency() const { return sessionFrequency; }
+    std::string dialect;
+    uint32_t sessionFrequency = 0;
     void bind_sample(YAML::Node& node, const std::string& path);
     std::string& get_sample(uint32_t id);
     AudioBankSample get_aifc(int32_t index);

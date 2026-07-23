@@ -5,7 +5,7 @@ N64Hash:
   name: Game              # The name of the game; you can use any name you want.
   path: assets/example/   # The path to the ymls folder
   config:
-    gbi: F3D              # You can use F3D, F3DEX, F3DEX-MK64, F3DB, F3DEX2, F3DEXB,
+    gbi: F3D              # You can use F3D, F3DEX, F3DEX-MK64, F3DEX_BK64, F3DB, F3DEX2, F3DEXB,
     sort: OFFSET          # This is how the assets are going to be sorted when generating the Header / C files. You can use OFFSET, ROFFSET for a reverse order or even specify a manual order using a list with the types.
     output:
       binary: example.otr # The name of the output binary file

@@ -2,6 +2,7 @@
 #include "TorchUtils.h"
 
 #include <stdexcept>
+#include <mutex>
 #include "spdlog/spdlog.h"
 #include <Companion.h>
 
@@ -13,13 +14,19 @@ extern "C" {
 #include <libmio0/tkmk00.h>
 }
 
+#include <bk_zip/bk_unzip.h>
+
 std::unordered_map<uint32_t, DataChunk*> gCachedChunks;
+std::mutex gDecompCacheMutex;
 
 DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32_t offset, const CompressionType type,
-                                bool ignoreCache) {
+                                const uint32_t in_size, bool ignoreCache) {
 
-    if (!ignoreCache && Torch::contains(gCachedChunks, offset)) {
-        return gCachedChunks[offset];
+    {
+        std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+        if (!ignoreCache && Torch::contains(gCachedChunks, offset)) {
+            return gCachedChunks[offset];
+        }
     }
 
     const unsigned char* in_buf = buffer.data() + offset;
@@ -33,8 +40,11 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 
             const auto decompressed = new uint8_t[head.dest_size];
             mio0_decode(in_buf, decompressed, nullptr);
-            gCachedChunks[offset] = new DataChunk{ decompressed, head.dest_size };
-            return gCachedChunks[offset];
+            {
+                std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+                gCachedChunks[offset] = new DataChunk{ decompressed, head.dest_size };
+                return gCachedChunks[offset];
+            }
         }
         case CompressionType::YAY0: {
             uint32_t size = 0;
@@ -44,8 +54,11 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
                 throw std::runtime_error("Failed to decode YAY0");
             }
 
-            gCachedChunks[offset] = new DataChunk{ decompressed, size };
-            return gCachedChunks[offset];
+            {
+                std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+                gCachedChunks[offset] = new DataChunk{ decompressed, size };
+                return gCachedChunks[offset];
+            }
         }
         case CompressionType::YAY1: {
             uint32_t size = 0;
@@ -55,8 +68,30 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
                 throw std::runtime_error("Failed to decode YAY1");
             }
 
-            gCachedChunks[offset] = new DataChunk{ decompressed, size };
-            return gCachedChunks[offset];
+            {
+                std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+                gCachedChunks[offset] = new DataChunk{ decompressed, size };
+                return gCachedChunks[offset];
+            }
+        }
+        case CompressionType::BKZIP: {
+            uint32_t size = in_size;
+            try {
+                uint8_t* decompressed = BK64::bk_unzip(in_buf, &size);
+
+                if (!decompressed) {
+                    throw std::runtime_error("bk_unzip returned null");
+                }
+
+                {
+                    std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+                    gCachedChunks[offset] = new DataChunk{ decompressed, size };
+                    return gCachedChunks[offset];
+                }
+            } catch (const std::exception& e) {
+                throw std::runtime_error(std::string(e.what()) + " (ROM offset 0x" + Torch::to_hex(offset, false) +
+                                         " compressed size 0x" + Torch::to_hex(in_size, false) + ")");
+            }
         }
         case CompressionType::YAZ0: {
             uint32_t size = 0;
@@ -76,8 +111,11 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
 
 DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const uint32_t offset, const uint32_t size,
                                       const uint32_t alpha) {
-    if (Torch::contains(gCachedChunks, offset)) {
-        return gCachedChunks[offset];
+    {
+        std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+        if (Torch::contains(gCachedChunks, offset)) {
+            return gCachedChunks[offset];
+        }
     }
 
     const uint8_t* in_buf = buffer.data() + offset;
@@ -85,8 +123,11 @@ DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const 
     const auto decompressed = new uint8_t[size];
     const auto rgba = new uint8_t[size];
     tkmk00_decode(in_buf, decompressed, rgba, alpha);
-    gCachedChunks[offset] = new DataChunk{ rgba, size };
-    return gCachedChunks[offset];
+    {
+        std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+        gCachedChunks[offset] = new DataChunk{ rgba, size };
+        return gCachedChunks[offset];
+    }
 }
 
 DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>& buffer,
@@ -96,16 +137,14 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     CompressionType type = Companion::Instance->GetCurrCompressionType();
 
     auto fileOffset = TranslateAddr(offset, true);
+    auto offsetFromFile = TranslateAddr(offset, false) - fileOffset;
 
     // Check if an asset in a yaml file is mio0 compressed and extract.
     if (node["mio0"]) {
         auto assetPtr = ASSET_PTR(offset);
         auto gameSize = Companion::Instance->GetRomData().size();
 
-        auto fileOffset = TranslateAddr(offset, true);
-        offset = ASSET_PTR(offset);
-
-        auto decoded = Decode(buffer, fileOffset + offset, CompressionType::MIO0);
+        auto decoded = Decode(buffer, fileOffset + offsetFromFile, CompressionType::MIO0);
         size_t decodedSize = decoded->size - offset;
         size_t size;
 
@@ -156,7 +195,12 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
                         size, decodedSize, assetPtr);
             size = decodedSize;
         }
-
+        return { .root = decoded, .segment = { decoded->data, size } };
+    }
+    if (node["bkzip"]) {
+        const auto compressedSize = GetSafeNode<uint32_t>(node, "compressed_size");
+        auto decoded = Decode(buffer, fileOffset + offsetFromFile, CompressionType::BKZIP, compressedSize);
+        auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size);
         return { .root = decoded, .segment = { decoded->data, size } };
     }
 
@@ -189,18 +233,41 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
             return { .root = decoded, .segment = { decoded->data + offset, size } };
         }
+        case CompressionType::BKZIP: {
+            const auto sizeEntry = Companion::Instance->GetCurrentCompressedSize();
+
+            if (!sizeEntry.has_value()) {
+                throw std::runtime_error("Auto decode missing file compressed size.");
+            }
+
+            auto decoded = Decode(buffer, fileOffset, type, sizeEntry.value());
+            // Rom data can reference offsets past the decoded file; clamp instead of
+            // letting decoded->size - offsetFromFile underflow into a giant bogus segment.
+            if (offsetFromFile > decoded->size) {
+                SPDLOG_WARN("AutoDecode BKZIP: offset 0x{:X} lies past decoded size 0x{:X}; clamping to empty segment",
+                            offsetFromFile, decoded->size);
+                offsetFromFile = decoded->size;
+            }
+            auto size = node["size"] ? node["size"].as<size_t>() : manualSize.value_or(decoded->size - offsetFromFile);
+            if (size > decoded->size - offsetFromFile) {
+                SPDLOG_WARN("AutoDecode BKZIP: requested size 0x{:X} exceeds available 0x{:X}; reducing", size,
+                            decoded->size - offsetFromFile);
+                size = decoded->size - offsetFromFile;
+            }
+            SPDLOG_INFO("AutoDecode BKZIP: offset=0x{:X} fileOffset=0x{:X} offsetFromFile=0x{:X} compSize=0x{:X} "
+                        "decodedSize=0x{:X} segSize=0x{:X}",
+                        offset, fileOffset, offsetFromFile, sizeEntry.value(), decoded->size, size);
+            return { .root = decoded, .segment = { decoded->data + offsetFromFile, size } };
+        }
         case CompressionType::None: // The data does not have compression
         {
             fileOffset = TranslateAddr(offset, false);
 
-            // Guard against out-of-bounds / unresolvable addresses. Without this,
-            // the subtraction below underflows size_t and hands back an
-            // out-of-bounds pointer.
-            if (fileOffset >= buffer.size()) {
-                SPDLOG_WARN("AutoDecode: file offset 0x{:X} out of bounds (buffer size 0x{:X}); "
-                            "returning empty segment",
+            // An offset past the file must not underflow availableSize.
+            if (fileOffset > buffer.size()) {
+                SPDLOG_WARN("AutoDecode: offset 0x{:X} lies past file size 0x{:X}; clamping to empty segment",
                             fileOffset, buffer.size());
-                return { .root = nullptr, .segment = { buffer.data(), 0 } };
+                fileOffset = buffer.size();
             }
 
             auto availableSize = buffer.size() - fileOffset;
@@ -223,10 +290,9 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
             return { .root = nullptr, .segment = { buffer.data() + fileOffset, size } };
         }
+        default:
+            throw std::runtime_error("Auto decode could not find a supported compression type.");
     }
-
-    throw std::runtime_error("Auto decode could not find a compression type nor uncompressed segment.\nThis is one of "
-                             "those issues that should never really happen.");
 }
 
 DecompressedData Decompressor::AutoDecode(uint32_t offset, std::optional<size_t> size, std::vector<uint8_t>& buffer) {
@@ -240,9 +306,15 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress) {
     if (IS_SEGMENTED(addr) || IS_VIRTUAL_SEGMENT(addr)) {
         const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
         if (!segment.has_value()) {
-            SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}",
-                         SEGMENT_NUMBER(addr));
-            return 0;
+            const auto compressedSegmentPair =
+                Companion::Instance->GetFileOffsetFromCompressedSegmentedAddr(SEGMENT_NUMBER(addr));
+            if (!compressedSegmentPair.has_value()) {
+                SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}",
+                             SEGMENT_NUMBER(addr));
+                return 0;
+            }
+            return compressedSegmentPair.value().first +
+                   (!baseAddress ? (compressedSegmentPair.value().second + SEGMENT_OFFSET(addr)) : 0);
         }
 
         return segment.value() + (!baseAddress ? SEGMENT_OFFSET(addr) : 0);
@@ -254,7 +326,7 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress) {
         const auto vram = vramEntry.value();
 
         if (addr >= vram.addr) {
-            return vram.offset + (addr - vram.addr);
+            return vram.offset + (!baseAddress ? (addr - vram.addr) : 0);
         }
     }
 
@@ -293,11 +365,14 @@ bool Decompressor::IsSegmented(uint32_t addr) {
         const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
 
         if (!segment.has_value()) {
-            SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}",
-                         SEGMENT_NUMBER(addr));
-            return false;
+            const auto compressedSegmentPair =
+                Companion::Instance->GetFileOffsetFromCompressedSegmentedAddr(SEGMENT_NUMBER(addr));
+            if (!compressedSegmentPair.has_value()) {
+                SPDLOG_ERROR("Segment data missing from game config\nPlease add an entry for segment {}",
+                             SEGMENT_NUMBER(addr));
+                return false;
+            }
         }
-
         return true;
     }
 
@@ -305,6 +380,7 @@ bool Decompressor::IsSegmented(uint32_t addr) {
 }
 
 void Decompressor::ClearCache() {
+    std::lock_guard<std::mutex> lock(gDecompCacheMutex);
     for (auto& [key, value] : gCachedChunks) {
         delete[] value->data;
     }

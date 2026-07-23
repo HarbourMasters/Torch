@@ -4,6 +4,7 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include <fstream>
+#include <tuple>
 #include "n64/gbi-otr.h"
 #ifdef OOT_SUPPORT
 #include "oot/OoTDListHelpers.h"
@@ -203,21 +204,32 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
     if (result.has_value()) return result;
 #endif
 
-    auto decs = Companion::Instance->GetNodesByType("VTX");
-
-    if (!decs.has_value()) {
+    const auto* decs = Companion::Instance->GetNodesByTypeRef("VTX", Companion::Instance->GetConfig().includeAutogen);
+    if (decs == nullptr) {
         return std::nullopt;
     }
 
-    for (auto& dec : decs.value()) {
-        auto [name, node] = dec;
+    auto realAddr = ptr;
+    bool hasRealAddr = false;
+    if (IS_SEGMENTED(realAddr) && Companion::Instance->GetCompressedSegmentOffset(&realAddr)) {
+        hasRealAddr = true;
+    }
 
-        auto offset = GetSafeNode<uint32_t>(node, "offset");
-        auto count = GetSafeNode<uint32_t>(node, "count");
+    for (const auto& dec : *decs) {
+        const auto& [name, node] = dec;
+
+        auto offset = GetSafeNode<uint32_t>(const_cast<YAML::Node&>(node), "offset");
+        auto count = GetSafeNode<uint32_t>(const_cast<YAML::Node&>(node), "count");
         auto end = ALIGN16((count * sizeof(N64Vtx_t)));
 
-        if (ptr > offset && ptr < offset + end) {
-            return std::make_tuple(GetSafeNode<std::string>(node, "symbol", name), node);
+        // ptr == offset just means the block's first vertex — still a valid hit.
+        // The old strict > missed it, and that's what spawned every bogus
+        // "_seg1_vtx_0" autogen.
+        if (ptr >= offset && ptr < offset + end) {
+            return std::make_tuple(GetSafeNode<std::string>(const_cast<YAML::Node&>(node), "symbol", name), node);
+        }
+        if (hasRealAddr && realAddr >= offset && realAddr < offset + end) {
+            return std::make_tuple(GetSafeNode<std::string>(const_cast<YAML::Node&>(node), "symbol", name), node);
         }
     }
 
@@ -273,9 +285,17 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                     break;
             }
 
-            auto ptr = w1;
+            auto ptr = Companion::Instance->PatchVirtualAddr(w1);
 
             auto overlap = GFXDOverride::GetVtxOverlap(ptr);
+            if (!overlap.has_value() && IS_SEGMENTED(ptr)) {
+                uint32_t flatPtr = ptr;
+                if (Companion::Instance->GetCompressedSegmentOffset(&flatPtr)) {
+                    overlap = GFXDOverride::GetVtxOverlap(flatPtr);
+                    if (overlap.has_value())
+                        ptr = flatPtr;
+                }
+            }
             if (overlap.has_value()) {
                 auto ovnode = std::get<1>(overlap.value());
                 auto path = Companion::Instance->RelativePath(std::get<0>(overlap.value()));
@@ -338,9 +358,15 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
             // Export displaylist segment addresses as an index into a buffer of gfx
-            value = gsSPDisplayListOTRHash(ptr);
-            w0 = value.words.w0;
-            w1 = value.words.w1;
+            if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) && (SEGMENT_NUMBER(w1) == 0x07)) {
+                value = gsSPDisplayListOTRIndex(w1);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            } else {
+                value = gsSPDisplayListOTRHash(ptr);
+                w0 = value.words.w0;
+                w1 = value.words.w1;
+            }
 
             writer.Write(w0);
             writer.Write(w1);
@@ -426,6 +452,19 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                 uint32_t newW0 = (G_SETTIMG_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
                 writer.Write(newW0);
                 writer.Write(ptr);
+            } else if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) &&
+                       ((SEGMENT_NUMBER(w1) == 0x03) || (SEGMENT_NUMBER(w1) == 0x05))) {
+                // Export texture segment addresses as segmented addresses
+                w1 |= 1;
+                writer.Write(w0);
+                writer.Write(w1);
+                // Segment 4 and 0x0B-0x0F are BK64's runtime animated-texture slots.
+                // Nothing static to resolve, so the segmented address just passes through.
+            } else if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::BK64) &&
+                       (SEGMENT_NUMBER(w1) == 0x04 || (SEGMENT_NUMBER(w1) >= 0x0B && SEGMENT_NUMBER(w1) <= 0x0F))) {
+                w1 |= 1;
+                writer.Write(w0);
+                writer.Write(w1);
             } else {
                 // Export texture segment addresses as segmented addresses
                 N64Gfx value = gsDPSetTextureOTRImage(C0(21, 3), C0(19, 2), C0(0, 10), ptr);
@@ -502,6 +541,16 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
     size_t length = 0;
 
     while (processing) {
+        // Some DLs can jump to offsets that never reach a G_ENDDL; stop at
+        // the buffer edge instead of reading past it and synthesize the terminator.
+        if (reader.GetBaseAddress() + 2 * sizeof(uint32_t) > segment.size) {
+            SPDLOG_WARN("DL at 0x{:X} ran off the end of its buffer without G_ENDDL; truncating",
+                        GetSafeNode<uint32_t>(node, "offset"));
+            gfxs.push_back(static_cast<uint32_t>(GBI(G_ENDDL)) << 24);
+            gfxs.push_back(0);
+            break;
+        }
+
         auto w0 = reader.ReadUInt32();
         auto w1 = reader.ReadUInt32();
 
@@ -610,6 +659,13 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                         SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", adjPtr, lOffset);
                         GFXDOverride::RegisterVTXOverlap(adjPtr, search.value());
                     }
+
+                    if (IS_SEGMENTED(adjPtr) && Companion::Instance->GetCompressedSegmentOffset(&adjPtr)) {
+                        if (adjPtr > lOffset && adjPtr < lOffset + lSize) {
+                            SPDLOG_INFO("Found vtx at 0x{:X} matching last vtx at 0x{:X}", adjPtr, lOffset);
+                            GFXDOverride::RegisterVTXOverlap(adjPtr, search.value());
+                        }
+                    }
                 } else {
                     YAML::Node vtx;
                     vtx["type"] = "VTX";
@@ -618,7 +674,7 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
                     Companion::Instance->AddAsset(vtx);
                 }
             } else {
-                SPDLOG_WARN("Found vtx at 0x{:X}", w1);
+                SPDLOG_INFO("Found registered vtx at 0x{:X}", w1);
             }
         }
 
@@ -632,3 +688,51 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 
     return std::make_shared<DListData>(gfxs);
 }
+
+#ifdef BUILD_UI
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <unordered_map>
+
+#include "ui/BaseBackend.h"
+#include "ui/Widgets.h"
+
+namespace {
+std::unordered_map<std::string, UI::OrbitView> sModelViews;
+} // namespace
+
+float DListFactoryUI::GetItemHeight(const ParseResultData& item) {
+    const float line = ImGui::GetTextLineHeightWithSpacing();
+    const float frame = ImGui::GetFrameHeightWithSpacing();
+    const float sep = ImGui::GetStyle().ItemSpacing.y * 2.0f + 1.0f;
+    return line * 2.0f + frame + sep + UI::PreviewBlockHeight(item.name);
+}
+
+void DListFactoryUI::DrawUI(const ParseResultData& item) {
+    UI::AssetHeader(item.name, item.type);
+    ImGui::TextDisabled("display list  \xe2\x80\x94  drag to orbit, shift+drag to pan");
+
+    static std::unordered_map<std::string, int> sShade;
+    const int cfgShade = UI::ShadeSetupIndexByName(Companion::Instance->GetConfig().defaultShading);
+    int& shadeIdx = sShade.try_emplace(item.name, cfgShade >= 0 ? cfgShade : 0).first->second;
+    UI::ShadeSetupCombo("##dlshade", shadeIdx);
+    ImGui::SameLine();
+    UI::LightingControls();
+
+    UI::OrbitView& view = sModelViews[item.name];
+    const UI::PreviewCanvas canvas = UI::BeginResizableCanvas("##modelview", item.name, view);
+    // Only on-screen rows request the offscreen render.
+    if (canvas.visible) {
+        const UI::ShadeSetup shade = UI::ShadeSetupFor(shadeIdx);
+        UI::ModelPart part;
+        part.resource = item.name;
+        static const float kIdentity[4][4] = { { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 }, { 0, 0, 0, 1 } };
+        std::memcpy(part.mtx, kIdentity, sizeof(kIdentity));
+        part.gameShade = shade.gameShade;
+        part.unlit = shade.unlit;
+        part.fullAmbient = shade.fullAmbient;
+        UI::GetBackend()->DrawModelParts(item.name, { part }, canvas.origin, canvas.size, view);
+    }
+}
+#endif

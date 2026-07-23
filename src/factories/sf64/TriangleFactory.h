@@ -28,6 +28,9 @@ class TriangleCodeExporter : public BaseExporter {
 class TriangleFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
+    bool CanPreviewCode() override {
+        return true;
+    }
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
             REGISTER(Code, TriangleCodeExporter)

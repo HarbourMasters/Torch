@@ -43,3 +43,12 @@ public:
     }
     bool SupportModdedAssets() override { return true; }
 };
+
+#ifdef BUILD_UI
+// Previews the decoded texture alongside its format/resolution/offset metadata.
+class TextureFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif

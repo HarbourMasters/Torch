@@ -3,6 +3,8 @@
 #include "AudioTableFactory.h"
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/BaseFactory.h"
+#include <unordered_map>
+#include <string>
 
 struct TunedSample {
     uint32_t sample;
@@ -25,6 +27,17 @@ class AudioContext {
 public:
     static std::unordered_map<AudioTableType, TableEntry> tables;
     static NAudioDrivers driver;
+    // Audio spec values the engine timing derives from (AUDIO_SETUP yaml:
+    // `frequency`, `buffers`).
+    static uint32_t sessionFrequency;
+    static uint32_t numBuffers;
+    // Key: (sampleBankId << 32) | sampleAddr → canonical archive path.
+    // Populated during parse so all dedup decisions are made before any export runs.
+    static std::unordered_map<uint64_t, std::string> sampleDedup;
+    // Key: ROM offset of a duplicate SampleData struct → canonical archive path.
+    // Used by GetPathByAddr() so instrument/drum export writes the canonical hash
+    // instead of the duplicate's hash, making redirect entries permanently unreferenced.
+    static std::unordered_map<uint32_t, std::string> sampleAddrRemap;
 
     static LUS::BinaryReader MakeReader(AudioTableType type, uint32_t offset);
     static TunedSample LoadTunedSample(LUS::BinaryReader& reader, uint32_t parent, uint32_t sampleBankId);

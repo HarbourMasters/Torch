@@ -29,4 +29,12 @@ public:
         return { REGISTER(Binary, AnimationBinaryExporter) };
     }
 };
+
+#ifdef BUILD_UI
+// Shows the animation header fields.
+class AnimationFactoryUI : public BaseFactoryUI {
+public:
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif
 }

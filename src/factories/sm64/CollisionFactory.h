@@ -70,6 +70,7 @@ class CollisionBinaryExporter : public BaseExporter {
 
 class CollisionFactory : public BaseFactory {
 public:
+    bool CanPreviewCode() override { return true; }
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return {
@@ -79,4 +80,13 @@ public:
         };
     }
 };
+
+#ifdef BUILD_UI
+// Previews the collision mesh, colored per surface type with baked shading.
+class CollisionFactoryUI : public BaseFactoryUI {
+public:
+    float GetItemHeight(const ParseResultData& data) override;
+    void DrawUI(const ParseResultData& data) override;
+};
+#endif
 }
