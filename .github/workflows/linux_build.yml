@@ -25,10 +25,10 @@ jobs:
         run: |
           sudo apt-get update
           # Base build tools plus the libultraship/Fast3D deps the interactive
-          # viewer (BUILD_UI) needs: SDL2, OpenGL, libzip and nlohmann-json.
-          # (tinyxml2 and spdlog are vendored via FetchContent.)
+          # viewer (BUILD_UI) needs: SDL2, OpenGL, libzip, nlohmann-json and spdlog.
+          # (tinyxml2 is vendored via FetchContent.)
           sudo apt-get install -y cmake ninja-build libbz2-dev \
-            libsdl2-dev libgl1-mesa-dev libopengl-dev libzip-dev nlohmann-json3-dev
+            libsdl2-dev libgl1-mesa-dev libopengl-dev libzip-dev zipcmp zipmerge ziptool libspdlog-dev nlohmann-json3-dev
       - name: Build
         run: |
           # Enable the viewer in CI (BUILD_UI is off by default); both Linux

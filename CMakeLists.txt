@@ -4,6 +4,14 @@ include(FetchContent)
 
 set(CMAKE_POLICY_VERSION_MINIMUM 3.12)
 
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    foreach(flag_var CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+                     CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE)
+        string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+    endforeach()
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -193,16 +201,17 @@ if(ENABLE_ASAN)
     add_link_options(-fsanitize=address)
 endif()
 
-# MSVC static runtime for all targets (must be set before add_subdirectory/FetchContent)
 if (MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    # NOMINMAX: keep windows.h from defining min/max macros that break std::min/std::max.
+    # _USE_MATH_DEFINES: expose M_PI and friends from <cmath>. (Covers clang-cl too.)
+    add_compile_definitions(NOMINMAX _USE_MATH_DEFINES)
 endif()
 
 # Build
 if (USE_STANDALONE)
     add_definitions(-DSTANDALONE)
     add_executable(${PROJECT_NAME} ${SRC_DIR})
-	set(LINK_TYPE "MD")
+	set(LINK_TYPE "MT")
 else()
     add_library(${PROJECT_NAME} STATIC ${SRC_DIR})
 	set(LINK_TYPE "MT")
@@ -252,6 +261,10 @@ else()
     if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
         target_link_options(${PROJECT_NAME} PRIVATE /bigobj)
+    else()
+        # clang-cl treats C++11 narrowing as a hard error by default (MSVC and
+        # GCC only warn); mirror the -Wno-narrowing used for non-MSVC builds.
+        target_compile_options(${PROJECT_NAME} PRIVATE -Wno-narrowing)
     endif()
     add_definitions(-DSTORMLIB_NO_AUTO_LINK)
 endif()
@@ -325,14 +338,17 @@ if(USE_STANDALONE)
         set(SPDLOG_USE_STD_FORMAT ON)
     endif()
 
-	FetchContent_Declare(
-		spdlog
-		GIT_REPOSITORY https://github.com/gabime/spdlog.git
-		GIT_TAG 79524ddd08a4ec981b7fea76afd08ee05f83755d
-	)
+	find_package(spdlog QUIET)
+	if(NOT spdlog_FOUND)
+		FetchContent_Declare(
+			spdlog
+			GIT_REPOSITORY https://github.com/gabime/spdlog.git
+			GIT_TAG 79524ddd08a4ec981b7fea76afd08ee05f83755d
+		)
 
-	FetchContent_MakeAvailable(spdlog)
-	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog)
+		FetchContent_MakeAvailable(spdlog)
+	endif()
+	target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog)
 
 	if (MSVC)
 		FetchContent_Declare(
