@@ -39,6 +39,7 @@ enum class GBIMinorVersion {
     Mk64,
     SM64,
     PM64,
+    OoT,
     BK64
 };
 
@@ -57,6 +58,7 @@ struct SegmentConfig {
     std::unordered_map<uint32_t, uint32_t> global;
     std::unordered_map<uint32_t, uint32_t> local;
     std::unordered_map<uint32_t, uint32_t> temporal;
+    std::optional<uint32_t> primaryVirtual;
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::pair<std::uint32_t, std::uint32_t>>> compressed;
 };
 
@@ -71,6 +73,17 @@ struct Table {
 struct VRAMEntry {
     uint32_t addr;
     uint32_t offset;
+};
+
+struct ResolvedAddr {
+    uint32_t addr;
+    enum Kind {
+        Segmented,    // addr has a segment number (e.g. 0x06001CC4)
+        Absolute,     // addr is a physical ROM address (e.g. 0x00D269A0)
+        FileRelative, // addr is a plain offset within the file (e.g. 0x00005CC8)
+        Unknown,      // addr has bit 31 set but we can't determine if it's
+                      // segment-0x80 or VRAM for another file
+    } kind;
 };
 
 struct WriteEntry {
@@ -99,6 +112,7 @@ struct TorchConfig {
     bool debug;
     bool modding;
     bool textureDefines;
+    bool strictDeclarations;
     bool includeAutogen;
     bool dialogPack = false;
     // Default model-preview shading mode name (e.g. "textured + lit"); empty
@@ -187,6 +201,7 @@ public:
     std::optional<std::pair<std::uint32_t, std::uint32_t>> GetFileOffsetFromCompressedSegmentedAddr(uint8_t segment) const;
     std::optional<std::shared_ptr<BaseFactory>> GetFactory(const std::string& type);
     uint32_t PatchVirtualAddr(uint32_t addr);
+    ResolvedAddr ResolveVirtualAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr);
     // File-scoped variant for use outside the parse/export passes, where
     // gCurrentFile no longer points at the owning file.
@@ -233,6 +248,7 @@ public:
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddSubFileAsset(YAML::Node asset, std::string newFileName, CompressionType newCompressionType, uint32_t compressedSize = 0);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
+    std::string GetCurrentDirectory() const { return gCurrentDirectory.string(); }
     void SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);
     bool GetCompressedSegmentOffset(uint32_t* addr);
 
@@ -310,6 +326,8 @@ private:
     void ProcessExportFile();
     void ProcessFile(YAML::Node root);
     void ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount);
+    std::optional<std::tuple<std::string, YAML::Node>> FindNodeInOverlaySegments(uint32_t addr, const std::string& file);
+    std::optional<std::tuple<std::string, YAML::Node>> FindInExternalByVRAM(uint32_t addr, const std::string& file);
     void ParseEnums(std::string& file);
     void ParseHash();
     void ParseModdingConfig();
