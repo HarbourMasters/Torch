@@ -33,7 +33,8 @@ var searchData=
   ['drumbinaryexporter_30',['DrumBinaryExporter',['../classDrumBinaryExporter.html',1,'']]],
   ['drumcodeexporter_31',['DrumCodeExporter',['../classDrumCodeExporter.html',1,'']]],
   ['drumdata_32',['DrumData',['../classDrumData.html',1,'']]],
-  ['drumfactory_33',['DrumFactory',['../classDrumFactory.html',1,'']]],
-  ['drumheaderexporter_34',['DrumHeaderExporter',['../classDrumHeaderExporter.html',1,'']]],
-  ['druminfo_35',['DrumInfo',['../structPM64Audio_1_1DrumInfo.html',1,'PM64Audio']]]
+  ['drumentry_33',['DrumEntry',['../structOoT_1_1DrumEntry.html',1,'OoT']]],
+  ['drumfactory_34',['DrumFactory',['../classDrumFactory.html',1,'']]],
+  ['drumheaderexporter_35',['DrumHeaderExporter',['../classDrumHeaderExporter.html',1,'']]],
+  ['druminfo_36',['DrumInfo',['../structPM64Audio_1_1DrumInfo.html',1,'PM64Audio']]]
 ];

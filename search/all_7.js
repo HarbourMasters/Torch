@@ -12,10 +12,12 @@ var searchData=
   ['floatdata_9',['FloatData',['../classFloatData.html',1,'']]],
   ['floatfactory_10',['FloatFactory',['../classFloatFactory.html',1,'']]],
   ['floatheaderexporter_11',['FloatHeaderExporter',['../classFloatHeaderExporter.html',1,'']]],
-  ['format_12',['Container Format',['../otr_format.html#autotoc_md28',1,'']]],
-  ['format_20specification_13',['Format Specification',['../otr_format.html',1,'OTR File Format Specification'],['../otr_format.html#autotoc_md26',1,'OTR File Format Specification']]],
-  ['formats_14',['File Formats',['../index.html#autotoc_md3',1,'']]],
-  ['formatter_3c_20behavioropcode_20_3e_15',['formatter&lt; BehaviorOpcode &gt;',['../structfmt_1_1formatter_3_01BehaviorOpcode_01_4.html',1,'fmt']]],
-  ['formatter_3c_20geoopcode_20_3e_16',['formatter&lt; GeoOpcode &gt;',['../structfmt_1_1formatter_3_01GeoOpcode_01_4.html',1,'fmt']]],
-  ['formatter_3c_20levelopcode_20_3e_17',['formatter&lt; LevelOpcode &gt;',['../structfmt_1_1formatter_3_01LevelOpcode_01_4.html',1,'fmt']]]
+  ['fontresidue_12',['FontResidue',['../classOoT_1_1FontResidue.html',1,'OoT']]],
+  ['fontwritecontext_13',['FontWriteContext',['../structOoT_1_1FontWriteContext.html',1,'OoT']]],
+  ['format_14',['Container Format',['../otr_format.html#autotoc_md28',1,'']]],
+  ['format_20specification_15',['Format Specification',['../otr_format.html',1,'OTR File Format Specification'],['../otr_format.html#autotoc_md26',1,'OTR File Format Specification']]],
+  ['formats_16',['File Formats',['../index.html#autotoc_md3',1,'']]],
+  ['formatter_3c_20behavioropcode_20_3e_17',['formatter&lt; BehaviorOpcode &gt;',['../structfmt_1_1formatter_3_01BehaviorOpcode_01_4.html',1,'fmt']]],
+  ['formatter_3c_20geoopcode_20_3e_18',['formatter&lt; GeoOpcode &gt;',['../structfmt_1_1formatter_3_01GeoOpcode_01_4.html',1,'fmt']]],
+  ['formatter_3c_20levelopcode_20_3e_19',['formatter&lt; LevelOpcode &gt;',['../structfmt_1_1formatter_3_01LevelOpcode_01_4.html',1,'fmt']]]
 ];

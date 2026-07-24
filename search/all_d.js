@@ -27,7 +27,7 @@ var searchData=
   ['messagebinaryexporter_24',['MessageBinaryExporter',['../classSF64_1_1MessageBinaryExporter.html',1,'SF64']]],
   ['messagecodeexporter_25',['MessageCodeExporter',['../classSF64_1_1MessageCodeExporter.html',1,'SF64']]],
   ['messagedata_26',['MessageData',['../classSF64_1_1MessageData.html',1,'SF64']]],
-  ['messageentry_27',['MessageEntry',['../structSF64_1_1MessageEntry.html',1,'SF64']]],
+  ['messageentry_27',['MessageEntry',['../structOoT_1_1MessageEntry.html',1,'OoT::MessageEntry'],['../structSF64_1_1MessageEntry.html',1,'SF64::MessageEntry']]],
   ['messagefactory_28',['MessageFactory',['../classSF64_1_1MessageFactory.html',1,'SF64']]],
   ['messageheaderexporter_29',['MessageHeaderExporter',['../classSF64_1_1MessageHeaderExporter.html',1,'SF64']]],
   ['messagelookupbinaryexporter_30',['MessageLookupBinaryExporter',['../classSF64_1_1MessageLookupBinaryExporter.html',1,'SF64']]],

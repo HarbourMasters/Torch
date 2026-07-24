@@ -6,7 +6,9 @@ var searchData=
   ['floatdata_3',['FloatData',['../classFloatData.html',1,'']]],
   ['floatfactory_4',['FloatFactory',['../classFloatFactory.html',1,'']]],
   ['floatheaderexporter_5',['FloatHeaderExporter',['../classFloatHeaderExporter.html',1,'']]],
-  ['formatter_3c_20behavioropcode_20_3e_6',['formatter&lt; BehaviorOpcode &gt;',['../structfmt_1_1formatter_3_01BehaviorOpcode_01_4.html',1,'fmt']]],
-  ['formatter_3c_20geoopcode_20_3e_7',['formatter&lt; GeoOpcode &gt;',['../structfmt_1_1formatter_3_01GeoOpcode_01_4.html',1,'fmt']]],
-  ['formatter_3c_20levelopcode_20_3e_8',['formatter&lt; LevelOpcode &gt;',['../structfmt_1_1formatter_3_01LevelOpcode_01_4.html',1,'fmt']]]
+  ['fontresidue_6',['FontResidue',['../classOoT_1_1FontResidue.html',1,'OoT']]],
+  ['fontwritecontext_7',['FontWriteContext',['../structOoT_1_1FontWriteContext.html',1,'OoT']]],
+  ['formatter_3c_20behavioropcode_20_3e_8',['formatter&lt; BehaviorOpcode &gt;',['../structfmt_1_1formatter_3_01BehaviorOpcode_01_4.html',1,'fmt']]],
+  ['formatter_3c_20geoopcode_20_3e_9',['formatter&lt; GeoOpcode &gt;',['../structfmt_1_1formatter_3_01GeoOpcode_01_4.html',1,'fmt']]],
+  ['formatter_3c_20levelopcode_20_3e_10',['formatter&lt; LevelOpcode &gt;',['../structfmt_1_1formatter_3_01LevelOpcode_01_4.html',1,'fmt']]]
 ];
