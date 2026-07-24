@@ -51,6 +51,11 @@ ExportResult BlobBinaryExporter::Export(std::ostream& write, std::shared_ptr<IPa
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
 
+    if (data.empty() && node["size"] && node["size"].as<uint32_t>() == 0) {
+        // YAML explicitly declares size: 0 — write a 0-byte file with no header.
+        return std::nullopt;
+    }
+
     WriteHeader(writer, Torch::ResourceType::Blob, 0);
     writer.Write((uint32_t)data.size());
     writer.Write((char*)data.data(), data.size());

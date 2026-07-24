@@ -10,6 +10,7 @@ extern "C" {
 #include <libmio0/mio0.h>
 #include <libyay0/yay0.h>
 #include <libyay0/yay1.h>
+#include <libyaz0/yaz0.h>
 #include <libmio0/tkmk00.h>
 }
 
@@ -91,6 +92,17 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
                 throw std::runtime_error(std::string(e.what()) + " (ROM offset 0x" + Torch::to_hex(offset, false) +
                                          " compressed size 0x" + Torch::to_hex(in_size, false) + ")");
             }
+        }
+        case CompressionType::YAZ0: {
+            uint32_t size = 0;
+            uint8_t* decompressed = yaz0_decode(in_buf, &size);
+
+            if (!decompressed) {
+                throw std::runtime_error("Failed to decode YAZ0");
+            }
+
+            gCachedChunks[offset] = new DataChunk{ decompressed, size };
+            return gCachedChunks[offset];
         }
         default:
             throw std::runtime_error("Unknown compression type");
@@ -196,7 +208,8 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
     switch (type) {
         case CompressionType::YAY0:
         case CompressionType::YAY1:
-        case CompressionType::MIO0: {
+        case CompressionType::MIO0:
+        case CompressionType::YAZ0: {
             offset = ASSET_PTR(offset);
 
             auto decoded = Decode(buffer, fileOffset, type);
@@ -246,9 +259,6 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
                         offset, fileOffset, offsetFromFile, sizeEntry.value(), decoded->size, size);
             return { .root = decoded, .segment = { decoded->data + offsetFromFile, size } };
         }
-        case CompressionType::YAZ0:
-            throw std::runtime_error(
-                "Found compressed yaz0 segment.\nDecompression of yaz0 has not been implemented yet.");
         case CompressionType::None: // The data does not have compression
         {
             fileOffset = TranslateAddr(offset, false);
@@ -293,7 +303,7 @@ DecompressedData Decompressor::AutoDecode(uint32_t offset, std::optional<size_t>
 }
 
 uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress) {
-    if (IS_SEGMENTED(addr)) {
+    if (IS_SEGMENTED(addr) || IS_VIRTUAL_SEGMENT(addr)) {
         const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
         if (!segment.has_value()) {
             const auto compressedSegmentPair =

@@ -26,6 +26,10 @@ class DListCodeExporter : public BaseExporter {
 };
 #endif
 
+#ifdef OOT_SUPPORT
+#include "oot/DeferredVtx.h"
+#endif
+
 class DListFactory : public BaseFactory {
 public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
