@@ -703,7 +703,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
     return std::make_shared<BKAssetData>(assetTableInfo, symbolMap);
 }
 
-// Route a dialog-pack build to mods/lang/bk<region>.o2r when no explicit binary name is
+// Route a dialog-pack build to mods/~lang/bk<region>.o2r when no explicit binary name is
 // given. Inert unless dialog-pack mode is requested, so it's safe to call for any rom.
 void BKAssetFactory::PreprocessConfig(YAML::Node& cfg, N64::Cartridge* cart) {
     const bool requested = (cfg && cfg["dialog_pack"] && cfg["dialog_pack"].as<bool>()) ||
@@ -738,7 +738,7 @@ void BKAssetFactory::PreprocessConfig(YAML::Node& cfg, N64::Cartridge* cart) {
         name = "bk" + region + ".o2r";
     }
 
-    cfg["output"]["binary"] = "mods/lang/" + name;
+    cfg["output"]["binary"] = "mods/~lang/" + name;
 }
 
 } // namespace BK64
