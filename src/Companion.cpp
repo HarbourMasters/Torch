@@ -536,7 +536,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 auto externalFile = externalFiles[i];
                 if (externalFile.size() == 0) {
                     this->gCurrentExternalFiles.push_back(
-                        (this->gSourceDirectory / externalFile.as<std::string>()).string());
+                        (this->gSourceDirectory / externalFile.as<std::string>()).generic_string());
                 } else {
                     SPDLOG_INFO("External File size {}", externalFile.size());
                     throw std::runtime_error(
@@ -544,9 +544,10 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                         " - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
 
-                std::string externalFileName = (this->gSourceDirectory / externalFile.as<std::string>()).string();
-                if (StringHelper::StartsWith(std::filesystem::relative(externalFileName, this->gAssetPath).string(),
-                                             "../")) {
+                std::string externalFileName =
+                    (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
+                if (StringHelper::StartsWith(
+                        std::filesystem::relative(externalFileName, this->gAssetPath).generic_string(), "../")) {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
                                              this->gAssetPath);
                 } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {

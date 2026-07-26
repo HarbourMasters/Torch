@@ -5,12 +5,23 @@
 #include "spdlog/spdlog.h"
 #include "Companion.h"
 #include "utils/Decompressor.h"
+#include <algorithm>
 #include <sstream>
 
 namespace OoT {
 
-std::vector<AudioTableEntry> OoTAudioFactory::ParseAudioTable(const uint8_t* codeData, uint32_t tableOffset) {
-    LUS::BinaryReader reader((char*)(codeData + tableOffset), 0x10000);
+// BinaryReader copies its whole window up front, so the window must not run past the segment.
+static size_t TableWindow(size_t segmentSize, uint32_t tableOffset) {
+    if (tableOffset >= segmentSize) {
+        throw std::runtime_error("Audio table offset 0x" + fmt::format("{:X}", tableOffset) +
+                                 " is outside the 0x" + fmt::format("{:X}", segmentSize) + " byte code segment");
+    }
+    return std::min<size_t>(segmentSize - tableOffset, 0x10000);
+}
+
+std::vector<AudioTableEntry> OoTAudioFactory::ParseAudioTable(const uint8_t* codeData, size_t segmentSize,
+                                                              uint32_t tableOffset) {
+    LUS::BinaryReader reader((char*)(codeData + tableOffset), TableWindow(segmentSize, tableOffset));
     reader.SetEndianness(Torch::Endianness::Big);
 
     uint16_t numEntries = reader.ReadUInt16();
@@ -36,11 +47,11 @@ std::vector<AudioTableEntry> OoTAudioFactory::ParseAudioTable(const uint8_t* cod
 }
 
 std::vector<std::vector<uint8_t>> OoTAudioFactory::ParseSequenceFontTable(
-    const uint8_t* codeData, uint32_t tableOffset, uint32_t numSequences) {
+    const uint8_t* codeData, size_t segmentSize, uint32_t tableOffset, uint32_t numSequences) {
     std::vector<std::vector<uint8_t>> result;
     result.reserve(numSequences);
 
-    LUS::BinaryReader reader((char*)(codeData + tableOffset), 0x10000);
+    LUS::BinaryReader reader((char*)(codeData + tableOffset), TableWindow(segmentSize, tableOffset));
     reader.SetEndianness(Torch::Endianness::Big);
 
     std::vector<uint16_t> offsets;
@@ -92,10 +103,16 @@ std::optional<std::shared_ptr<IParsedData>> OoTAudioFactory::parse(std::vector<u
         buffer);
 
     // Parse audio tables from code segment at YAML-specified offsets
-    auto seqTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sequence_table_offset"));
-    auto fontTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sound_font_table_offset"));
-    auto sampleBankTable = ParseAudioTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sample_bank_table_offset"));
-    auto seqFontMap = ParseSequenceFontTable(codeDecoded.segment.data, GetSafeNode<uint32_t>(node, "sequence_font_table_offset"), seqTable.size());
+    const size_t codeSize = codeDecoded.segment.size;
+    auto seqTable =
+        ParseAudioTable(codeDecoded.segment.data, codeSize, GetSafeNode<uint32_t>(node, "sequence_table_offset"));
+    auto fontTable =
+        ParseAudioTable(codeDecoded.segment.data, codeSize, GetSafeNode<uint32_t>(node, "sound_font_table_offset"));
+    auto sampleBankTable =
+        ParseAudioTable(codeDecoded.segment.data, codeSize, GetSafeNode<uint32_t>(node, "sample_bank_table_offset"));
+    auto seqFontMap = ParseSequenceFontTable(codeDecoded.segment.data, codeSize,
+                                             GetSafeNode<uint32_t>(node, "sequence_font_table_offset"),
+                                             seqTable.size());
 
     SPDLOG_INFO("OoTAudioFactory: {} sequences, {} fonts, {} sample banks",
                 seqTable.size(), fontTable.size(), sampleBankTable.size());

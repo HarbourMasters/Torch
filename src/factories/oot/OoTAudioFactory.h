@@ -26,8 +26,8 @@ public:
 private:
     std::vector<char> BuildMainAudioHeader();
     std::optional<SafeAudioBankReader> LoadAudioBank(std::vector<uint8_t>& buffer);
-    std::vector<AudioTableEntry> ParseAudioTable(const uint8_t* codeData, uint32_t tableOffset);
-    std::vector<std::vector<uint8_t>> ParseSequenceFontTable(const uint8_t* codeData,
+    std::vector<AudioTableEntry> ParseAudioTable(const uint8_t* codeData, size_t segmentSize, uint32_t tableOffset);
+    std::vector<std::vector<uint8_t>> ParseSequenceFontTable(const uint8_t* codeData, size_t segmentSize,
                                                               uint32_t tableOffset, uint32_t numSequences);
 };
 

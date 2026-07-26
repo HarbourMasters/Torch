@@ -248,7 +248,7 @@ public:
     std::optional<std::tuple<std::string, YAML::Node>> RegisterAsset(const std::string& name, YAML::Node& node);
     std::optional<YAML::Node> AddSubFileAsset(YAML::Node asset, std::string newFileName, CompressionType newCompressionType, uint32_t compressedSize = 0);
     std::optional<YAML::Node> AddAsset(YAML::Node asset);
-    std::string GetCurrentDirectory() const { return gCurrentDirectory.string(); }
+    std::string GetCurrentDirectory() const { return gCurrentDirectory.generic_string(); }
     void SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);
     bool GetCompressedSegmentOffset(uint32_t* addr);
 
