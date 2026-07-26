@@ -124,8 +124,8 @@ $(function(){initNavTree('OoTAudioFactory_8h_source.html','',''); });
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="keyword">private</span>:</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    std::vector&lt;char&gt; BuildMainAudioHeader();</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    std::optional&lt;SafeAudioBankReader&gt; LoadAudioBank(std::vector&lt;uint8_t&gt;&amp; buffer);</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    std::vector&lt;AudioTableEntry&gt; ParseAudioTable(<span class="keyword">const</span> uint8_t* codeData, uint32_t tableOffset);</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    std::vector&lt;std::vector&lt;uint8_t&gt;&gt; ParseSequenceFontTable(<span class="keyword">const</span> uint8_t* codeData,</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    std::vector&lt;AudioTableEntry&gt; ParseAudioTable(<span class="keyword">const</span> uint8_t* codeData, <span class="keywordtype">size_t</span> segmentSize, uint32_t tableOffset);</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    std::vector&lt;std::vector&lt;uint8_t&gt;&gt; ParseSequenceFontTable(<span class="keyword">const</span> uint8_t* codeData, <span class="keywordtype">size_t</span> segmentSize,</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>                                                              uint32_t tableOffset, uint32_t numSequences);</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>};</div>
 </div>

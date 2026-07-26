@@ -358,7 +358,7 @@ $(function(){initNavTree('Companion_8h_source.html','',''); });
 <div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    std::optional&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt; RegisterAsset(<span class="keyword">const</span> std::string&amp; name, YAML::Node&amp; node);</div>
 <div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    std::optional&lt;YAML::Node&gt; AddSubFileAsset(YAML::Node asset, std::string newFileName, CompressionType newCompressionType, uint32_t compressedSize = 0);</div>
 <div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    std::optional&lt;YAML::Node&gt; AddAsset(YAML::Node asset);</div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    std::string GetCurrentDirectory()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> gCurrentDirectory.string(); }</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    std::string GetCurrentDirectory()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> gCurrentDirectory.generic_string(); }</div>
 <div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    <span class="keywordtype">void</span> SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);</div>
 <div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    <span class="keywordtype">bool</span> GetCompressedSegmentOffset(uint32_t* addr);</div>
 <div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span> </div>
