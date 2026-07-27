@@ -52,7 +52,6 @@ enum class ArchiveType {
     None,
     OTR,
     O2R,
-    DIR,
 };
 
 struct SegmentConfig {
