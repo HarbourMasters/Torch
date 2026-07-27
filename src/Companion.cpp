@@ -1297,10 +1297,10 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
 }
 
 std::vector<fs::directory_entry> Companion::GetAssetYMLs(YAML::Node& rom) const {
-    if (!this->gSingleAssetPath.empty()) {
+    if (!this->gSingleYMLPath.empty()) {
         std::vector<fs::directory_entry> single;
         fs::path assetPath = this->gAssetPath;
-        fs::directory_entry a(assetPath / this->gSingleAssetPath);
+        fs::directory_entry a(assetPath / this->gSingleYMLPath);
         single.emplace_back(a);
         return single;
     }

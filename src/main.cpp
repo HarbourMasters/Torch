@@ -126,12 +126,12 @@ int main(int argc, char* argv[]) {
         ->check(CLI::ExistingDirectory);
     otr->add_option("-d,--destdir", destdir, "Set destination directory for export");
     otr->add_option("-S,--single", singlePath,
-                    "Extracts 1 yml rather than everything relative to the srouce directory");
+                    "Extracts 1 yml rather than everything relative to the source directory");
 
     otr->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::OTR, debug, srcdir, destdir);
         if (!singlePath.empty()) {
-            instance->SetSingleAssetPath(singlePath);
+            instance->SetSingleYMLPath(singlePath);
         }
         instance->Init(ExportType::Binary);
     });
@@ -150,14 +150,14 @@ int main(int argc, char* argv[]) {
         ->check(CLI::ExistingFile);
     o2r->add_option("-u,--version", version, "Version to set in the o2r archive");
     o2r->add_option("-S,--single", singlePath,
-                    "Extracts 1 yml rather than everything relative to the srouce directory");
+                    "Extracts 1 yml rather than everything relative to the source directory");
 
     o2r->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::O2R, debug, srcdir, destdir);
         instance->SetAdditionalFiles(additionalFiles);
         instance->SetVersion(version);
         if (!singlePath.empty()) {
-            instance->SetSingleAssetPath(singlePath);
+            instance->SetSingleYMLPath(singlePath);
         }
         instance->Init(ExportType::Binary);
     });
@@ -172,12 +172,12 @@ int main(int argc, char* argv[]) {
         ->check(CLI::ExistingDirectory);
     code->add_option("-d,--destdir", destdir, "Set destination directory to place C code to");
     code->add_option("-S,--single", singlePath,
-                     "Extracts 1 yml rather than everything relative to the srouce directory");
+                     "Extracts 1 yml rather than everything relative to the source directory");
 
     code->parse_complete_callback([&]() {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
         if (!singlePath.empty()) {
-            instance->SetSingleAssetPath(singlePath);
+            instance->SetSingleYMLPath(singlePath);
         }
         instance->Init(ExportType::Code);
     });

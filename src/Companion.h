@@ -252,7 +252,7 @@ public:
     void SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);
     bool GetCompressedSegmentOffset(uint32_t* addr);
 
-    void SetSingleAssetPath(const std::string& path) { this->gSingleAssetPath = path; }
+    void SetSingleYMLPath(const std::string& path) { this->gSingleYMLPath = path; }
 
 #ifdef BUILD_UI
     void RegisterUIFactory(const std::string& type, const std::shared_ptr<BaseFactoryUI>& factory);
@@ -268,7 +268,7 @@ private:
     std::string gCurrentHash;
     std::string gAssetPath;
     std::string gVersion;
-    std::string gSingleAssetPath;
+    std::string gSingleYMLPath;
     std::vector<uint8_t> gRomData;
     std::optional<std::filesystem::path> gRomPath;
     bool gNodeForceProcessing = false;
