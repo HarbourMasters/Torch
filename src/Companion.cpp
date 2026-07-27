@@ -903,7 +903,6 @@ void Companion::ProcessExportFile() {
                             AliasManager::Instance->WriteAliases(result.name, this->gCurrentWrapper, dataVec);
                         }
 
-
                         for (auto& entry : this->gCompanionFiles) {
                             auto output = (this->gCurrentDirectory / entry.first).string();
                             std::replace(output.begin(), output.end(), '\\', '/');
@@ -1297,6 +1296,17 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     ProcessExportFile();
 }
 
+std::vector<fs::directory_entry> Companion::GetAssetYMLs(YAML::Node& rom) const {
+    if (!this->gSingleAssetPath.empty()) {
+        std::vector<fs::directory_entry> single;
+        fs::path assetPath = this->gAssetPath;
+        fs::directory_entry a(assetPath / this->gSingleAssetPath);
+        single.emplace_back(a);
+        return single;
+    }
+    return Torch::getRecursiveEntries(this->gAssetPath);
+}
+
 void Companion::Process(std::atomic<size_t>& assetCount) {
     this->gAssetCounter = &assetCount;
     // gAssetTotal is set by the caller (port-side) if progress reporting is needed
@@ -1623,7 +1633,9 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         vWriter.Write((uint32_t)0);
     }
 
-    for (const auto& entry : Torch::getRecursiveEntries(this->gAssetPath)) {
+    std::vector<fs::directory_entry> entries = GetAssetYMLs(rom);
+
+    for (const auto& entry : entries) {
         if (entry.is_directory()) {
             continue;
         }
@@ -2070,8 +2082,8 @@ uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
 // then scanning all entries in the file for one that resolves to the same address.
 // Used when multiple segments map to the same ROM data, so the same asset may be
 // registered under a different segment number than the one being looked up.
-std::optional<std::tuple<std::string, YAML::Node>> Companion::FindNodeInOverlaySegments(
-        uint32_t addr, const std::string& file) {
+std::optional<std::tuple<std::string, YAML::Node>> Companion::FindNodeInOverlaySegments(uint32_t addr,
+                                                                                        const std::string& file) {
     // Only applies to files with virtual address mappings (overlays).
     if (!Torch::contains(gVirtualAddrMap, file)) {
         return std::nullopt;
@@ -2100,8 +2112,8 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::FindNodeInOverlayS
 // Check if this address is a VRAM pointer belonging to the given external file.
 // If it falls within the file's VRAM range, convert to a virtual segment address
 // and look it up in the file's gAddrMap.
-std::optional<std::tuple<std::string, YAML::Node>> Companion::FindInExternalByVRAM(
-        uint32_t addr, const std::string& file) {
+std::optional<std::tuple<std::string, YAML::Node>> Companion::FindInExternalByVRAM(uint32_t addr,
+                                                                                   const std::string& file) {
     // Can't resolve if the external file doesn't have a virtual address mapping.
     if (!Torch::contains(gVirtualAddrMap, file)) {
         return std::nullopt;
@@ -2506,10 +2518,8 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
     // With strict_declarations, every asset must be pre-declared in the YAML.
     // Throw if an undeclared asset is encountered to catch declaration gaps.
     if (!decl.has_value() && this->gConfig.strictDeclarations) {
-        throw std::runtime_error(
-            "AddAsset: undeclared " + type + " at " + Torch::to_hex(offset, false) +
-            " (symbol: " + symbol + ") in " + this->gCurrentFile +
-            " — YAML declarations incomplete");
+        throw std::runtime_error("AddAsset: undeclared " + type + " at " + Torch::to_hex(offset, false) + " (symbol: " +
+                                 symbol + ") in " + this->gCurrentFile + " — YAML declarations incomplete");
     }
 
     if (decl.has_value()) {
