@@ -105,6 +105,7 @@ int main(int argc, char* argv[]) {
     std::string folder;
     std::string archive;
     std::string version;
+    std::string singlePath;
     ArchiveType otrMode = ArchiveType::None;
     bool otrModeSelected = false;
     bool xmlMode = false;
@@ -124,9 +125,14 @@ int main(int argc, char* argv[]) {
                     "Set source directory to locate config.yml and asset metadata for processing")
         ->check(CLI::ExistingDirectory);
     otr->add_option("-d,--destdir", destdir, "Set destination directory for export");
+    otr->add_option("-S,--single", singlePath,
+                    "Extracts 1 yml rather than everything relative to the source directory");
 
     otr->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::OTR, debug, srcdir, destdir);
+        if (!singlePath.empty()) {
+            instance->SetSingleYMLPath(singlePath);
+        }
         instance->Init(ExportType::Binary);
     });
 
@@ -143,11 +149,16 @@ int main(int argc, char* argv[]) {
                     "Additional files to include in the o2r archive (e.g., mods.toml)")
         ->check(CLI::ExistingFile);
     o2r->add_option("-u,--version", version, "Version to set in the o2r archive");
+    o2r->add_option("-S,--single", singlePath,
+                    "Extracts 1 yml rather than everything relative to the source directory");
 
     o2r->parse_complete_callback([&] {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::O2R, debug, srcdir, destdir);
         instance->SetAdditionalFiles(additionalFiles);
         instance->SetVersion(version);
+        if (!singlePath.empty()) {
+            instance->SetSingleYMLPath(singlePath);
+        }
         instance->Init(ExportType::Binary);
     });
 
@@ -160,9 +171,14 @@ int main(int argc, char* argv[]) {
                      "Set source directory to locate config.yml and asset metadata for processing")
         ->check(CLI::ExistingDirectory);
     code->add_option("-d,--destdir", destdir, "Set destination directory to place C code to");
+    code->add_option("-S,--single", singlePath,
+                     "Extracts 1 yml rather than everything relative to the source directory");
 
     code->parse_complete_callback([&]() {
         const auto instance = Companion::Instance = new Companion(filename, ArchiveType::None, debug, srcdir, destdir);
+        if (!singlePath.empty()) {
+            instance->SetSingleYMLPath(singlePath);
+        }
         instance->Init(ExportType::Code);
     });
 

@@ -252,6 +252,8 @@ public:
     void SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);
     bool GetCompressedSegmentOffset(uint32_t* addr);
 
+    void SetSingleYMLPath(const std::string& path) { this->gSingleYMLPath = path; }
+
 #ifdef BUILD_UI
     void RegisterUIFactory(const std::string& type, const std::shared_ptr<BaseFactoryUI>& factory);
     std::optional<std::shared_ptr<BaseFactoryUI>> GetUIFactory(const std::string& type);
@@ -266,6 +268,7 @@ private:
     std::string gCurrentHash;
     std::string gAssetPath;
     std::string gVersion;
+    std::string gSingleYMLPath;
     std::vector<uint8_t> gRomData;
     std::optional<std::filesystem::path> gRomPath;
     bool gNodeForceProcessing = false;
@@ -336,5 +339,6 @@ private:
     void ExtractNode(YAML::Node& node, std::string& name, BinaryWrapper* binary);
     void ProcessTables(YAML::Node& rom);
     void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
+    std::vector<fs::directory_entry> GetAssetYMLs(YAML::Node& rom) const;
     std::optional<ParseResultData> ParseNode(YAML::Node& node, std::string& name);
 };
