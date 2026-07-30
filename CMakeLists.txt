@@ -113,7 +113,7 @@ if(BUILD_UI)
     FetchContent_Declare(
         libultraship
         GIT_REPOSITORY https://github.com/Kenix3/libultraship.git
-        GIT_TAG main
+        GIT_TAG a3f1e102e1ed50a3f536fbca2e6e412170e7320b
     )
     FetchContent_MakeAvailable(libultraship)
 
