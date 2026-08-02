@@ -9,12 +9,14 @@
 #include "spdlog/spdlog.h"
 #include "TinySHA1.hpp"
 
+#include <algorithm>
 #include <regex>
 #include <fstream>
 #include <iostream>
 #include <filesystem>
 #include <thread>
 #include <mutex>
+#include <map>
 
 #include "factories/GenericArrayFactory.h"
 #include "factories/VtxFactory.h"
@@ -1842,17 +1844,37 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
     SPDLOG_CRITICAL("Scanning {}", folder);
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    std::unordered_map<std::string, std::vector<char>> files;
+    std::map<std::string, std::vector<char>> files;
+    const auto rootPath = fs::path(folder).lexically_normal();
+    const auto canonicalRootPath = fs::canonical(rootPath);
+    const auto isContainedRelativePath = [](const fs::path& path) {
+        return !path.empty() && !path.is_absolute() && !path.has_root_path() &&
+               std::none_of(path.begin(), path.end(), [](const auto& component) { return component == ".."; });
+    };
+    const auto canonicalOutputPath = fs::weakly_canonical(fs::absolute(fs::path(output)));
+    const auto outputRelativePath = canonicalOutputPath.lexically_relative(canonicalRootPath);
+    if (isContainedRelativePath(outputRelativePath)) {
+        throw std::runtime_error("Output archive must be outside the selected input directory: " + output);
+    }
 
     for (const auto& entry : Torch::getRecursiveEntries(folder)) {
         if (entry.is_directory()) {
             continue;
         }
 
+        const auto archivePath = entry.path().lexically_normal().lexically_relative(rootPath);
+        const auto targetPath = fs::canonical(entry.path()).lexically_relative(canonicalRootPath);
+        if (!isContainedRelativePath(archivePath) || !isContainedRelativePath(targetPath)) {
+            throw std::runtime_error("Packed file is outside the selected input directory: " + entry.path().string());
+        }
+
         std::ifstream input(entry.path(), std::ios::binary);
+        if (!input) {
+            throw std::runtime_error("Could not open packed file: " + entry.path().string());
+        }
         auto data = std::vector(std::istreambuf_iterator(input), {});
         input.close();
-        files[entry.path().generic_string()] = data;
+        files[archivePath.generic_string()] = data;
     }
 
     std::unique_ptr<BinaryWrapper> wrapper;
@@ -1869,12 +1891,8 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
     wrapper->CreateArchive();
 
     for (auto& [path, data] : files) {
-        std::string normalized = path;
-        std::replace(normalized.begin(), normalized.end(), '\\', '/');
-        // Remove parent folder
-        normalized = normalized.substr(folder.length() + 1);
-        wrapper->AddFile(normalized, data);
-        SPDLOG_CRITICAL("> Added {}", normalized);
+        wrapper->AddFile(path, data);
+        SPDLOG_CRITICAL("> Added {}", path);
     }
 
     if (!version.empty()) {

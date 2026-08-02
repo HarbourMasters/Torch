@@ -4344,6 +4344,9 @@ mz_bool mz_zip_writer_add_mem_ex(mz_zip_archive *pZip, const char *pArchive_name
     time_t cur_time; time(&cur_time);
     mz_zip_time_to_dos_time(cur_time, &dos_time, &dos_date);
   }
+#else
+  /* DOS epoch: 1980-01-01 00:00:00. */
+  dos_date = (1U << 5U) | 1U;
 #endif // #ifndef MINIZ_NO_TIME
 
   archive_name_size = strlen(pArchive_name);
@@ -5702,6 +5705,7 @@ private:
         result.file_size = static_cast<std::size_t>(stat.m_uncomp_size);
         result.header_offset = static_cast<std::size_t>(stat.m_local_header_ofs);
         result.crc = stat.m_crc32;
+#ifndef MINIZ_NO_TIME
         auto time = detail::safe_localtime(stat.m_time);
         result.date_time.year = 1900 + time.tm_year;
         result.date_time.month = 1 + time.tm_mon;
@@ -5709,6 +5713,14 @@ private:
         result.date_time.hours = time.tm_hour;
         result.date_time.minutes = time.tm_min;
         result.date_time.seconds = time.tm_sec;
+#else
+        result.date_time.year = 1980;
+        result.date_time.month = 1;
+        result.date_time.day = 1;
+        result.date_time.hours = 0;
+        result.date_time.minutes = 0;
+        result.date_time.seconds = 0;
+#endif
         result.flag_bits = stat.m_bit_flag;
         result.internal_attr = stat.m_internal_attr;
         result.external_attr = stat.m_external_attr;

@@ -35,6 +35,12 @@ jobs:
           # toolchains build the GL backend.
           cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DBUILD_UI=ON -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }}.cmake
           cmake --build build-cmake -j
+      - name: Validate deterministic standalone archives
+        if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'linux-gnu' }}
+        run: |
+          python3 test/pack/validate_deterministic_o2r.py \
+            --torch build-cmake/torch \
+            --work-dir "$RUNNER_TEMP/torch-deterministic-pack"
       - name: Create Package
         if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'linux-gnu' }}
         run: |

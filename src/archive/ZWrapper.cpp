@@ -5,6 +5,7 @@
 
 #include "spdlog/spdlog.h"
 #include <Companion.h>
+#define MINIZ_NO_TIME
 #include <miniz/zip_file.hpp>
 
 namespace fs = std::filesystem;

@@ -62,6 +62,13 @@ jobs:
           # CMAKE_VS_PLATFORM_NAME for automate-vcpkg to key off).
           cmake -S . -B "build/${{ matrix.arch }}" -G "${{ matrix.generate }}" -DCMAKE_TOOLCHAIN_FILE="cmake/toolchain/${{ matrix.toolchain }}.cmake" -DCMAKE_BUILD_TYPE:STRING=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DBUILD_UI=${{ matrix.arch == 'Win32' && 'OFF' || 'ON' }} -DUSE_AUTO_VCPKG=ON -DVCPKG_TARGET_TRIPLET=x64-windows-static
           cmake --build ./build/${{ matrix.arch }}
+      - name: Validate deterministic standalone archives
+        if: ${{ matrix.config == 'Release' && matrix.generate == 'Visual Studio 17 2022' && matrix.standalone == 'ON' && matrix.toolchain == 'windows-msvc' && matrix.arch == 'x64' }}
+        shell: pwsh
+        run: |
+          python test/pack/validate_deterministic_o2r.py `
+            --torch build/x64/Release/torch.exe `
+            --work-dir "${{ runner.temp }}/torch-deterministic-pack"
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' && matrix.generate == 'Visual Studio 17 2022' && matrix.standalone == 'ON' }}
         uses: actions/upload-artifact@v4
