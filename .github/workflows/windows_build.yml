@@ -67,5 +67,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: torch-windows-${{ matrix.arch }}-${{ matrix.toolchain }}
-          path: build/${{ matrix.arch }}/Release/torch.exe
+          path: |
+            build/${{ matrix.arch }}/Release/torch.exe
+            build/${{ matrix.arch }}/Release/torch-lus-assets.o2r
           if-no-files-found: error

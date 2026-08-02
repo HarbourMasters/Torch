@@ -48,6 +48,7 @@ jobs:
         run: |
           mkdir torch-release
           mv build-cmake/torch torch-release/
+          mv build-cmake/torch-lus-assets.o2r torch-release/
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'macos-clang' }}
         uses: actions/upload-artifact@v4

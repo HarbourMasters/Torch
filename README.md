@@ -5,6 +5,9 @@ A generic asset processor for games
 `./torch otr baserom.z64`
 `./torch code baserom.z64`
 
+Viewer builds (`-DBUILD_UI=ON`) also produce `torch-lus-assets.o2r`. Keep that
+shader archive beside the Torch executable when copying or packaging it.
+
 # Windows
 
 ## Visual Studio
