@@ -35,6 +35,11 @@ jobs:
           # toolchains build the GL backend.
           cmake -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DUSE_STANDALONE=${{ matrix.standalone }} -DBUILD_UI=ON -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }}.cmake
           cmake --build build-cmake -j
+      - name: Validate Animal Crossing Yaz0 texture factories
+        if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'linux-gnu' }}
+        run: |
+          python3 test/ac/npc_texture_set/validate_npc_texture_set_factory.py --torch build-cmake/torch --work-dir "${{ runner.temp }}/ac-npc-textures"
+          python3 test/ac/item_billboard_texture/validate_item_billboard_texture_factory.py --torch build-cmake/torch --work-dir "${{ runner.temp }}/ac-item-billboards"
       - name: Create Package
         if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'linux-gnu' }}
         run: |
