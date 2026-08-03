@@ -1,5 +1,7 @@
 #include "DialogFactory.h"
 
+#include "BKEmitText.h"
+
 #include "Companion.h"
 #include "spdlog/spdlog.h"
 #include "types/RawBuffer.h"
@@ -142,7 +144,7 @@ ExportResult BK64::DialogModdingExporter::Export(std::ostream& write, std::share
         out << YAML::Flow;
         out << YAML::BeginSeq;
         out << YAML_HEX((uint32_t)cmd);
-        out << str.c_str();
+        EmitText(out, str);
         out << YAML::EndSeq;
     }
     out << YAML::EndSeq;
@@ -155,7 +157,7 @@ ExportResult BK64::DialogModdingExporter::Export(std::ostream& write, std::share
         out << YAML::Flow;
         out << YAML::BeginSeq;
         out << YAML_HEX((uint32_t)cmd);
-        out << str.c_str();
+        EmitText(out, str);
         out << YAML::EndSeq;
     }
     out << YAML::EndSeq;
@@ -313,7 +315,7 @@ std::optional<std::shared_ptr<IParsedData>> DialogFactory::parse_modding(std::ve
     for (YAML::iterator it = bottomNode.begin(); it != bottomNode.end(); ++it) {
         DialogString dialogString;
         dialogString.cmd = (*it)[0].as<uint32_t>();
-        dialogString.str = (*it)[1].as<std::string>();
+        dialogString.str = DecodeText((*it)[1].as<std::string>());
         dialogString.str += '\0';
         bottom.push_back(dialogString);
     }
@@ -321,7 +323,7 @@ std::optional<std::shared_ptr<IParsedData>> DialogFactory::parse_modding(std::ve
     for (YAML::iterator it = topNode.begin(); it != topNode.end(); ++it) {
         DialogString dialogString;
         dialogString.cmd = (*it)[0].as<uint32_t>();
-        dialogString.str = (*it)[1].as<std::string>();
+        dialogString.str = DecodeText((*it)[1].as<std::string>());
         dialogString.str += '\0';
         top.push_back(dialogString);
     }

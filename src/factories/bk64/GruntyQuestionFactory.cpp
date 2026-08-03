@@ -1,5 +1,7 @@
 #include "GruntyQuestionFactory.h"
 
+#include "BKEmitText.h"
+
 #include "Companion.h"
 #include "spdlog/spdlog.h"
 #include "types/RawBuffer.h"
@@ -138,7 +140,7 @@ ExportResult BK64::GruntyQuestionModdingExporter::Export(std::ostream& write, st
         out << YAML::Flow;
         out << YAML::BeginSeq;
         out << YAML_HEX((uint32_t)cmd);
-        out << str.c_str();
+        EmitText(out, str);
         out << YAML::EndSeq;
     }
     out << YAML::EndSeq;
@@ -153,7 +155,7 @@ ExportResult BK64::GruntyQuestionModdingExporter::Export(std::ostream& write, st
         out << YAML_HEX((uint32_t)cmd);
         out << YAML_HEX((uint32_t)unk0);
         out << YAML_HEX((uint32_t)unk1);
-        out << str.c_str();
+        EmitText(out, str);
         out << YAML::EndSeq;
     }
     out << YAML::EndSeq;
@@ -252,7 +254,7 @@ std::optional<std::shared_ptr<IParsedData>> GruntyQuestionFactory::parse_modding
     for (YAML::iterator it = textNode.begin(); it != textNode.end(); ++it) {
         DialogString dialogString;
         dialogString.cmd = (*it)[0].as<uint32_t>();
-        dialogString.str = (*it)[1].as<std::string>();
+        dialogString.str = DecodeText((*it)[1].as<std::string>());
         dialogString.str += '\0';
         text.push_back(dialogString);
     }
@@ -267,7 +269,7 @@ std::optional<std::shared_ptr<IParsedData>> GruntyQuestionFactory::parse_modding
         optionString.cmd = (*it)[0].as<uint32_t>();
         optionString.unk0 = (*it)[1].as<uint32_t>();
         optionString.unk1 = (*it)[2].as<uint32_t>();
-        optionString.str = (*it)[3].as<std::string>();
+        optionString.str = DecodeText((*it)[3].as<std::string>());
         optionString.str += '\0';
         options.push_back(optionString);
         i++;

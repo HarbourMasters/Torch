@@ -1,5 +1,7 @@
 #include "QuizQuestionFactory.h"
 
+#include "BKEmitText.h"
+
 #include "Companion.h"
 #include "spdlog/spdlog.h"
 #include "types/RawBuffer.h"
@@ -135,7 +137,7 @@ ExportResult BK64::QuizQuestionModdingExporter::Export(std::ostream& write, std:
         out << YAML::Flow;
         out << YAML::BeginSeq;
         out << YAML_HEX((uint32_t)cmd);
-        out << str.c_str();
+        EmitText(out, str);
         out << YAML::EndSeq;
     }
     out << YAML::EndSeq;
@@ -148,7 +150,9 @@ ExportResult BK64::QuizQuestionModdingExporter::Export(std::ostream& write, std:
         out << YAML::Flow;
         out << YAML::BeginSeq;
         out << YAML_HEX((uint32_t)cmd);
-        out << str.c_str();
+        out << YAML_HEX((uint32_t)static_cast<uint8_t>(str[0]));
+        out << YAML_HEX((uint32_t)static_cast<uint8_t>(str[1]));
+        EmitText(out, str.substr(2));
         out << YAML::EndSeq;
     }
     out << YAML::EndSeq;
@@ -244,7 +248,7 @@ std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse_modding(s
     for (YAML::iterator it = textNode.begin(); it != textNode.end(); ++it) {
         DialogString dialogString;
         dialogString.cmd = (*it)[0].as<uint32_t>();
-        dialogString.str = (*it)[1].as<std::string>();
+        dialogString.str = DecodeText((*it)[1].as<std::string>());
         dialogString.str += '\0';
         text.push_back(dialogString);
     }
@@ -255,9 +259,14 @@ std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse_modding(s
             SPDLOG_WARN("BK64 QuizQuestion: Only 3 Options Allowed; extra options ignored");
             break;
         }
+        if ((*it).size() != 4) {
+            throw std::runtime_error("BK64 QuizQuestion: option must be [cmd, 0xfd, 0x6c, \"text\"]");
+        }
         DialogString optionString;
         optionString.cmd = (*it)[0].as<uint32_t>();
-        optionString.str = (*it)[1].as<std::string>();
+        optionString.str.push_back(static_cast<char>((*it)[1].as<uint32_t>()));
+        optionString.str.push_back(static_cast<char>((*it)[2].as<uint32_t>()));
+        optionString.str += DecodeText((*it)[3].as<std::string>());
         optionString.str += '\0';
         options.push_back(optionString);
         i++;

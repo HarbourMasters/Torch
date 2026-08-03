@@ -209,12 +209,14 @@ uint8_t* ci2raw(const uint8_t* rawci, const uint8_t* palette, int width, int hei
     }
 
     for (int i = 0; i < width * height; i++) {
-        int pal_idx = rawci[i];
+        int pal_idx;
         if (ci_depth == 4) {
             int byte_idx = i / 2;
             int nibble = 1 - (i % 2);
             int shift = 4 * nibble;
             pal_idx = (rawci[byte_idx] >> shift) & 0xF;
+        } else {
+            pal_idx = rawci[i];
         }
         raw[2 * i] = palette[2 * pal_idx];
         raw[2 * i + 1] = palette[2 * pal_idx + 1];
@@ -825,7 +827,7 @@ int convert_raw_to_ci8(unsigned char **png_output, int *size_output, uint8_t *te
     uint8_t *raw_fmt;
     rgba *imgr;
     ia   *imgi;
-    int res;
+    int res = 0;
 
     raw_fmt = ci2raw(texture, palette, width, height, depth);
     switch (format) {
@@ -843,7 +845,9 @@ int convert_raw_to_ci8(unsigned char **png_output, int *size_output, uint8_t *te
             break;
         default:
             //ERROR("Unsupported palette format: %s\n", format2str(&config.pal_format));
+            free(raw_fmt);
             return EXIT_FAILURE;
     }
     free(raw_fmt);
+    return res;
 }
