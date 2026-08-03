@@ -930,6 +930,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
             if (f9Size > 0x87B0 + 40) {
                 size_t secPos = blob.beginSection(ConfigSectionType::SKYBOX);
                 uint16_t count = 0;
+                std::vector<uint16_t> hackMaps;
 
                 for (uint32_t off = 0x87B0; off + 40 <= f9Size; off += 40) {
                     uint16_t sceneId = readBE16(modF9, off);
@@ -937,6 +938,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         break;
                     if (sceneId == 0)
                         continue;
+                    hackMaps.push_back(sceneId);
 
                     bool differs = memcmp(modF9 + off, vanF9 + off, 40) != 0;
                     if (differs) {
@@ -953,6 +955,28 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         SPDLOG_INFO("[ConfigFactory] skybox: scene 0x{:X} models [{},{},{}]", sceneId,
                                     readBE16(modF9, off + 4), readBE16(modF9, off + 16), readBE16(modF9, off + 28));
                     }
+                }
+
+                // A hack can also *remove* a map from the table (rekeying its slot to
+                // a new map). Diff-only emission would leave the port falling back
+                // to its built-in vanilla table and drawing a sky the hack deleted.
+                // An all-zero entry makes the runtime override resolve to "no skybox".
+                for (uint32_t off = 0x87B0; off + 40 <= f9Size; off += 40) {
+                    uint16_t vanId = readBE16(vanF9, off);
+                    if (vanId == 0 && off > 0x87B0 + 40)
+                        break;
+                    if (vanId == 0)
+                        continue;
+                    if (std::find(hackMaps.begin(), hackMaps.end(), vanId) != hackMaps.end())
+                        continue;
+                    blob.writeU16(vanId);
+                    for (int layer = 0; layer < 3; layer++) {
+                        blob.writeS16(0);
+                        blob.writeU32(0);
+                        blob.writeU32(0);
+                    }
+                    count++;
+                    SPDLOG_INFO("[ConfigFactory] skybox: scene 0x{:X} removed by hack -> none", vanId);
                 }
 
                 if (count > 0) {
