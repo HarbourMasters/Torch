@@ -4,6 +4,7 @@
 #include "spdlog/spdlog.h"
 #include "utils/Decompressor.h"
 #include "TinySHA1.hpp"
+#include <algorithm>
 #include <cstring>
 #include <iomanip>
 #include <thread>
@@ -305,6 +306,34 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
 
     int count = 0;
 
+    // Slot size = gap to the next-higher table offset.
+    std::vector<uint32_t> sortedOffsets;
+    sortedOffsets.reserve(assetTableInfo.size());
+    for (const auto& ai : assetTableInfo) {
+        sortedOffsets.push_back(ai.offset);
+    }
+    std::sort(sortedOffsets.begin(), sortedOffsets.end());
+    sortedOffsets.erase(std::unique(sortedOffsets.begin(), sortedOffsets.end()), sortedOffsets.end());
+    auto slotSize = [&](uint32_t off) -> uint32_t {
+        auto it = std::upper_bound(sortedOffsets.begin(), sortedOffsets.end(), off);
+        if (it != sortedOffsets.end()) {
+            return *it - off;
+        }
+        uint64_t start = static_cast<uint64_t>(dataStartRomOffset) + off;
+        return start < buffer.size() ? static_cast<uint32_t>(buffer.size() - start) : 0;
+    };
+
+    size_t outOfOrder = 0;
+    for (uint32_t i = 0; i + 1 < assetCount; i++) {
+        if (assetTableInfo.at(i + 1).offset < assetTableInfo.at(i).offset) {
+            outOfOrder++;
+        }
+    }
+    if (outOfOrder > 0) {
+        SPDLOG_WARN("Asset table is not monotonic ({} out-of-order entries); sizing slots by next-higher offset",
+                    outOfOrder);
+    }
+
     // Warm the decompressor cache up front, in parallel. The serial parse
     // pass below then mostly hits already-decoded data.
     struct DecompJob {
@@ -316,18 +345,10 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
         auto& ai = assetTableInfo.at(i);
         if (ai.tFlag == 4 || ai.compressionFlag == 0)
             continue;
-        uint32_t sz = assetTableInfo.at(i + 1).offset - ai.offset;
-        if (sz == 0) {
-            for (uint32_t j = i + 2; j < assetCount; j++) {
-                if (assetTableInfo.at(j).offset != ai.offset) {
-                    sz = assetTableInfo.at(j).offset - ai.offset;
-                    break;
-                }
-            }
-        }
-        uint32_t off = dataStartRomOffset + ai.offset;
-        if (off + sz <= buffer.size()) {
-            decompJobs.push_back({ off, sz });
+        uint32_t sz = slotSize(ai.offset);
+        uint64_t off = static_cast<uint64_t>(dataStartRomOffset) + ai.offset;
+        if (sz > 0 && off + sz <= buffer.size()) {
+            decompJobs.push_back({ static_cast<uint32_t>(off), sz });
         }
     }
 
@@ -363,19 +384,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
         try {
             auto assetInfo = assetTableInfo.at(i);
 
-            // Size is the gap to the next asset's offset.
-            uint32_t assetSize = assetTableInfo.at(i + 1).offset - assetInfo.offset;
-
-            // Same offset means an empty slot sits in between; skip ahead until the
-            // offset actually changes to find the real boundary.
-            if (assetSize == 0) {
-                for (uint32_t j = i + 2; j < assetCount; j++) {
-                    if (assetTableInfo.at(j).offset != assetInfo.offset) {
-                        assetSize = assetTableInfo.at(j).offset - assetInfo.offset;
-                        break;
-                    }
-                }
-            }
+            uint32_t assetSize = slotSize(assetInfo.offset);
 
             auto assetOffset = dataStartRomOffset + assetInfo.offset;
             BKAssetType assetType;
@@ -384,7 +393,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
                 continue;
             }
 
-            if (assetOffset + assetSize > buffer.size()) {
+            if (static_cast<uint64_t>(assetOffset) + assetSize > buffer.size()) {
                 SPDLOG_ERROR("Asset {} offset 0x{:X} + size 0x{:X} = 0x{:X} exceeds ROM "
                              "buffer 0x{:X}",
                              assetInfo.index, assetOffset, assetSize, assetOffset + assetSize, buffer.size());
@@ -397,7 +406,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
             if (romhackMode && assetSize > 0) {
                 const std::string& baselineHash = GetBaselineAssetHash(assetInfo.index);
                 if (!baselineHash.empty()) {
-                    if (assetOffset + assetSize <= rom.size()) {
+                    if (static_cast<uint64_t>(assetOffset) + assetSize <= rom.size()) {
                         sha1::SHA1 s;
                         s.processBytes(rom.data() + assetOffset, assetSize);
                         uint32_t digest[5];
