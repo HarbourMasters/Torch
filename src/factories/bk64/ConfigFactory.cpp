@@ -428,15 +428,10 @@ RomhackKind ClassifyRomhack(const std::vector<uint8_t>& rom) {
     }
     free(ovl);
 
-    // The patched overlay's decompressed size matches vanilla exactly.
+    // A vanilla-sized overlay means BB's in-place patching, so fixed offsets are
+    // valid. Don't check where the blob lives; BB relocates it, and some builds
+    // reuse the freed 0xF37F90 region.
     if (ovlSize != VANILLA_OVERLAY_SIZE) {
-        return RomhackKind::CustomBuild;
-    }
-
-    // The vanilla sub-16MB region is intact.
-    if (rom.size() < VANILLA_F37F90_OFFSET + 6 || rom[VANILLA_F37F90_OFFSET] != 0x11 ||
-        rom[VANILLA_F37F90_OFFSET + 1] != 0x72 ||
-        readBE32(rom.data(), VANILLA_F37F90_OFFSET + 2) != VANILLA_OVERLAY_SIZE) {
         return RomhackKind::CustomBuild;
     }
 
