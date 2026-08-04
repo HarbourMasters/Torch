@@ -192,6 +192,32 @@ static constexpr uint32_t FCF698_SIZE = 9888;
 static constexpr uint32_t FCF698_NOTE_DOORS_OFF = 1996;
 static constexpr uint32_t FCF698_JIGGY_PUZZLES_OFF = 6984;
 
+// No-vanilla variant: find the warp stub's destination immediate in a single
+// overlay. Used when the hack overwrote its stock F9CAE0/F37F90 copies, so there
+// is nothing to diff against and every resolvable destination is emitted.
+static bool ScanWarpDestOnly(const uint8_t* ovl, uint32_t funcOff, uint32_t funcLen, uint32_t ovlSize, int& outDest) {
+    static const uint8_t kEpilogue[16] = {
+        0x8F, 0xBF, 0x00, 0x14, 0x27, 0xBD, 0x00, 0x18,
+        0x03, 0xE0, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00
+    };
+    outDest = -1;
+    uint32_t limit = std::min<uint32_t>(funcLen, 200);
+    if (funcOff + limit > ovlSize || limit < 20) {
+        return false;
+    }
+    const uint8_t* f = ovl + funcOff;
+    for (uint32_t i = 0; i + 20 <= limit; i += 4) {
+        if ((f[i] == 0x24 || f[i] == 0x34) && f[i + 1] == 0x05 && memcmp(f + i + 4, kEpilogue, 16) == 0) {
+            outDest = (f[i + 2] << 8) | f[i + 3];
+            return true;
+        }
+        if (f[i] == 0x03 && f[i + 1] == 0xE0 && f[i + 2] == 0x00 && f[i + 3] == 0x08) {
+            return false;
+        }
+    }
+    return false;
+}
+
 static bool ScanWarpDestDiff(const uint8_t* vanOvl, const uint8_t* modOvl, uint32_t funcOff, uint32_t funcLen,
                              uint32_t ovlSize, int& outVanDest, int& outModDest) {
     static const uint8_t kEpilogue[16] = {
@@ -825,8 +851,16 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
             } catch (...) {}
         }
 
-        if (modF9 && vanF9 && modSize == vanSize) {
+        // Some hacks relocate F9CAE0 and overwrite the stock copy,
+        // so there is no vanilla reference in the ROM to diff against.
+        const bool haveVanF9 = (vanF9 != nullptr && modSize == vanSize);
+        if (modF9 && (haveVanF9 || vanF9 == nullptr)) {
             uint32_t f9Size = modSize;
+            if (!haveVanF9) {
+                SPDLOG_WARN("[ConfigFactory] No vanilla F9CAE0 in this ROM (stock copy at 0x{:X} was overwritten); "
+                            "emitting all F9CAE0-derived entries instead of only differing ones.",
+                            VANILLA_F9CAE0);
+            }
 
             // Section 2: SCENE_REMAP (D_8036B810 at offset 0x8288)
             if (f9Size > 0x8288 + 155 * 8) {
@@ -841,8 +875,8 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         continue;
 
                     uint16_t modLevel = readBE16(modF9, off + 2);
-                    uint16_t vanLevel = readBE16(vanF9, off + 2);
-                    if (modLevel != vanLevel) {
+                    uint16_t vanLevel = haveVanF9 ? readBE16(vanF9, off + 2) : 0;
+                    if (!haveVanF9 || modLevel != vanLevel) {
                         blob.writeU16(mapId);
                         blob.writeU16(modLevel);
                         count++;
@@ -868,9 +902,9 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                     uint32_t off = 0x8FD0 + i * 4;
                     uint16_t modMap = readBE16(modF9, off);
                     uint16_t modExit = readBE16(modF9, off + 2);
-                    uint16_t vanMap = readBE16(vanF9, off);
-                    uint16_t vanExit = readBE16(vanF9, off + 2);
-                    if (modMap != vanMap || modExit != vanExit) {
+                    uint16_t vanMap = haveVanF9 ? readBE16(vanF9, off) : 0;
+                    uint16_t vanExit = haveVanF9 ? readBE16(vanF9, off + 2) : 0;
+                    if (!haveVanF9 || modMap != vanMap || modExit != vanExit) {
                         blob.writeU8(static_cast<uint8_t>(i));
                         blob.writeU8(0); // pad
                         blob.writeU16(modMap);
@@ -902,7 +936,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                     if (mapId == 0)
                         continue;
 
-                    bool differs = memcmp(modF9 + off, vanF9 + off, 8) != 0;
+                    bool differs = !haveVanF9 || memcmp(modF9 + off, vanF9 + off, 8) != 0;
                     if (differs) {
                         blob.writeU16(mapId);
                         blob.writeU16(readBE16(modF9, off + 2));
@@ -940,7 +974,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         continue;
                     hackMaps.push_back(sceneId);
 
-                    bool differs = memcmp(modF9 + off, vanF9 + off, 40) != 0;
+                    bool differs = !haveVanF9 || memcmp(modF9 + off, vanF9 + off, 40) != 0;
                     if (differs) {
                         blob.writeU16(sceneId);
                         // 3 layers: model (s16 LE), scale (f32 as u32 LE), rotation (f32 as
@@ -961,7 +995,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                 // a new map). Diff-only emission would leave the port falling back
                 // to its built-in vanilla table and drawing a sky the hack deleted.
                 // An all-zero entry makes the runtime override resolve to "no skybox".
-                for (uint32_t off = 0x87B0; off + 40 <= f9Size; off += 40) {
+                for (uint32_t off = 0x87B0; haveVanF9 && off + 40 <= f9Size; off += 40) {
                     uint16_t vanId = readBE16(vanF9, off);
                     if (vanId == 0 && off > 0x87B0 + 40)
                         break;
@@ -1001,7 +1035,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                     if (sceneId == 0)
                         continue;
 
-                    bool differs = memcmp(modF9 + off, vanF9 + off, 24) != 0;
+                    bool differs = !haveVanF9 || memcmp(modF9 + off, vanF9 + off, 24) != 0;
                     if (differs) {
                         blob.writeU16(sceneId);
                         blob.writeS16(static_cast<int16_t>(readBE16(modF9, off + 2))); // opa
@@ -1088,7 +1122,12 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                     } catch (...) {}
                 }
 
-                if (vanOvl && f9Size > WARP_TABLE_OFF + WARP_ENTRY_COUNT * 4) {
+                // With a vanilla reference we emit only warps whose destination changed.
+                // Without one, the hack's own F9CAE0 still holds a valid warp function
+                // table pointing into its overlay, so resolve and emit them all.
+                const bool warpDiffMode = (haveVanF9 && vanOvl != nullptr);
+                const uint8_t* warpF9 = haveVanF9 ? vanF9 : modF9;
+                if ((warpDiffMode || !haveVanF9) && f9Size > WARP_TABLE_OFF + WARP_ENTRY_COUNT * 4) {
                     size_t secPos = blob.beginSection(ConfigSectionType::WARP_DESTINATIONS);
                     uint16_t count = 0;
 
@@ -1097,7 +1136,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                     std::vector<uint32_t> funcOffs;
                     funcOffs.reserve(WARP_ENTRY_COUNT);
                     for (int w = 0; w < WARP_ENTRY_COUNT; w++) {
-                        uint32_t addr = readBE32(vanF9, WARP_TABLE_OFF + w * 4);
+                        uint32_t addr = readBE32(warpF9, WARP_TABLE_OFF + w * 4);
                         if (addr >= N64_OVL_BASE) {
                             funcOffs.push_back(addr - N64_OVL_BASE);
                         }
@@ -1105,10 +1144,10 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                     std::sort(funcOffs.begin(), funcOffs.end());
                     funcOffs.erase(std::unique(funcOffs.begin(), funcOffs.end()), funcOffs.end());
 
-                    uint32_t scanSize = std::min(vanOvlSize, overlaySize);
+                    uint32_t scanSize = warpDiffMode ? std::min(vanOvlSize, overlaySize) : overlaySize;
                     for (int w = 0; w < WARP_ENTRY_COUNT; w++) {
                         uint32_t tOff = WARP_TABLE_OFF + w * 4;
-                        uint32_t addr = readBE32(vanF9, tOff);
+                        uint32_t addr = readBE32(warpF9, tOff);
                         if (addr < N64_OVL_BASE) {
                             continue;
                         }
@@ -1118,7 +1157,11 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         uint32_t funcLen = (next != funcOffs.end()) ? (*next - funcOff) : 200;
 
                         int vanDest = -1, modDest = -1;
-                        if (ScanWarpDestDiff(vanOvl, overlay, funcOff, funcLen, scanSize, vanDest, modDest)) {
+                        const bool emit = warpDiffMode
+                                              ? ScanWarpDestDiff(vanOvl, overlay, funcOff, funcLen, scanSize, vanDest,
+                                                                 modDest)
+                                              : ScanWarpDestOnly(overlay, funcOff, funcLen, scanSize, modDest);
+                        if (emit) {
                             blob.writeU16(static_cast<uint16_t>(w));
                             blob.writeU16(static_cast<uint16_t>(modDest));
                             count++;
@@ -1132,7 +1175,7 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                     } else {
                         blob.data.resize(secPos - 2);
                     }
-                } else if (!vanOvl) {
+                } else if (warpDiffMode && !vanOvl) {
                     SPDLOG_WARN("[ConfigFactory] Could not decompress vanilla F37F90 overlay for warp diff");
                 }
 
