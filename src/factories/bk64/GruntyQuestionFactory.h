@@ -13,13 +13,28 @@ typedef struct OptionString {
     std::string str;
 } OptionString;
 
+// One language's question: the text entries plus the three answer options.
+typedef struct GruntyQuestionLang {
+    std::vector<DialogString> text;
+    std::vector<OptionString> options;
+} GruntyQuestionLang;
+
 class GruntyQuestionData : public IParsedData {
   public:
+    // Always set. English on PAL, the lone language on US.
     std::vector<DialogString> mText;
     std::vector<OptionString> mOptions;
 
+    // PAL only: index 0=French, 1=German
+    std::vector<GruntyQuestionLang> mExtraLangs;
+
     GruntyQuestionData(std::vector<DialogString> text, std::vector<OptionString> options)
         : mText(std::move(text)), mOptions(std::move(options)) {
+    }
+
+    GruntyQuestionData(std::vector<DialogString> text, std::vector<OptionString> options,
+                       std::vector<GruntyQuestionLang> extraLangs)
+        : mText(std::move(text)), mOptions(std::move(options)), mExtraLangs(std::move(extraLangs)) {
     }
 };
 

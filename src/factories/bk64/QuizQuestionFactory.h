@@ -6,13 +6,28 @@
 
 namespace BK64 {
 
+// One language's question: the text entries plus the three answer options.
+typedef struct QuizQuestionLang {
+    std::vector<DialogString> text;
+    std::vector<DialogString> options;
+} QuizQuestionLang;
+
 class QuizQuestionData : public IParsedData {
   public:
+    // Always set. English on PAL, the lone language on US.
     std::vector<DialogString> mText;
     std::vector<DialogString> mOptions;
 
+    // PAL only: index 0=French, 1=German
+    std::vector<QuizQuestionLang> mExtraLangs;
+
     QuizQuestionData(std::vector<DialogString> text, std::vector<DialogString> options)
         : mText(std::move(text)), mOptions(std::move(options)) {
+    }
+
+    QuizQuestionData(std::vector<DialogString> text, std::vector<DialogString> options,
+                     std::vector<QuizQuestionLang> extraLangs)
+        : mText(std::move(text)), mOptions(std::move(options)), mExtraLangs(std::move(extraLangs)) {
     }
 };
 
