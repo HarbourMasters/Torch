@@ -1,4 +1,5 @@
 #include "SoundfontTblFactory.h"
+#include "BKByteUtils.h"
 
 #include "Companion.h"
 #include "spdlog/spdlog.h"
@@ -14,18 +15,8 @@ namespace BK64 {
 
 namespace {
 
-uint16_t ReadU16BE(const uint8_t* p) {
-    return (uint16_t)((p[0] << 8) | p[1]);
-}
-int16_t ReadS16BE(const uint8_t* p) {
-    return (int16_t)ReadU16BE(p);
-}
-uint32_t ReadU32BE(const uint8_t* p) {
-    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
-}
-int32_t ReadS32BE(const uint8_t* p) {
-    return (int32_t)ReadU32BE(p);
-}
+// AL_BANK_VERSION magic
+constexpr uint16_t kAlBankRevision = 0x4231;
 
 // Walk an N64 ALBankFile binary (big-endian, 32-bit offsets relative to ctl
 // start) and return max(wavetable.base + wavetable.len) over every wavetable
@@ -115,9 +106,6 @@ size_t ComputeTblSize(const uint8_t* ctl, size_t ctlSize, uint32_t ctlRomOffset,
     // Round up to BK's 16-byte ROM alignment.
     return (size_t)((maxEnd + 0xF) & ~(uint64_t)0xF);
 }
-
-// AL_BANK_VERSION magic
-constexpr uint16_t kAlBankRevision = 0x4231;
 
 bool ValidateCtl(const uint8_t* ctl, size_t ctlSize) {
     if (ctlSize < 8) {

@@ -14,6 +14,27 @@
 
 namespace BK64 {
 
+// Font masks + text-bearing models / signs / overlays a language pack
+// may relocalize.
+static const std::unordered_set<uint32_t> kLangAssets = {
+    0x6EB, // SPRITE_DIALOG_FONT_ALPHAMASK
+    0x6EC, // SPRITE_BOLD_FONT_LETTERS_ALPHAMASK
+    0x2EE, // ON_VACATIOIN_SIGN
+    0x46C, // JIGSAW_PUZZLE
+    0x486, // XMAS_TREE_SWITCH
+    0x48B, // JIGGY_PODIUM
+    0x4EA, // RACE_BANNER_FINISH
+    0x4EB, // RACE_BANNER_START
+    0x50A, // SHARKFOOD_ISLAND (model with sign)
+    0x54C, // GAME OVER
+    0x54D, // BANJO_KAZOOIE_SIGN
+    0x54E, // COPYRIGHT_OVERLAY
+    0x55C, // PRESS_START_OVERLAY
+    0x55D, // NO_CONTROLLER_OVERLAY
+    0x563, // LEVEL_ENTRY_SIGNS
+    0x56C, // THE_END_SIGN
+};
+
 static const std::unordered_map<BKAssetType, std::string> sAssetSymbolPrefixes = {
     { BKAssetType::Animation, "ANIM" },
     { BKAssetType::Binary, "BIN" },
@@ -499,26 +520,6 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
             if (Companion::Instance->GetConfig().dialogPack) {
                 const bool isText = assetType == BKAssetType::Dialog || assetType == BKAssetType::GruntyQuestion ||
                                     assetType == BKAssetType::QuizQuestion;
-                // Font masks + text-bearing models / signs / overlays a language pack
-                // may relocalize.
-                static const std::unordered_set<uint32_t> kLangAssets = {
-                    0x6EB, // SPRITE_DIALOG_FONT_ALPHAMASK (dialog/quiz/grunty text)
-                    0x6EC, // SPRITE_BOLD_FONT_LETTERS_ALPHAMASK (world names, headers)
-                    0x2EE, // ON_VACATIOIN_SIGN
-                    0x46C, // JIGSAW_PUZZLE
-                    0x486, // XMAS_TREE_SWITCH
-                    0x48B, // JIGGY_PODIUM
-                    0x4EA, // RACE_BANNER_FINISH
-                    0x4EB, // RACE_BANNER_START
-                    0x50A, // SHARKFOOD_ISLAND (model with sign)
-                    0x54C, // GAME OVER
-                    0x54D, // BANJO_KAZOOIE_SIGN
-                    0x54E, // COPYRIGHT_OVERLAY
-                    0x55C, // PRESS_START_OVERLAY
-                    0x55D, // NO_CONTROLLER_OVERLAY
-                    0x563, // LEVEL_ENTRY_SIGNS
-                    0x56C, // THE_END_SIGN
-                };
                 const uint32_t idx = assetInfo.index;
                 bool isLangAsset = kLangAssets.count(idx) != 0;
                 // The JP cart additionally carries the kana dialog font and the

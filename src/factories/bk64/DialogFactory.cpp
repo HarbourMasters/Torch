@@ -14,22 +14,24 @@
 #define DIALOG_CMD_CLOSE 0x04
 #define DIALOG_TERMINATOR_SIZE 3
 
-#define FORMAT_HEX(x, w) \
-    std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase << std::dec
-#define YAML_HEX(num) YAML::Hex << (num) << YAML::Dec
 
 namespace BK64 {
 
-ExportResult DialogHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
-                                          YAML::Node& node, std::string* replacement) {
-    const auto symbol = GetSafeNode(node, "symbol", entryName);
-
-    if (Companion::Instance->IsOTRMode()) {
-        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return std::nullopt;
+static void WriteLangBlock(LUS::BinaryWriter& writer, const std::vector<DialogString>& bottom,
+                           const std::vector<DialogString>& top) {
+    writer.Write((uint32_t)bottom.size());
+    for (const auto& dialogString : bottom) {
+        writer.Write(dialogString.cmd);
+        writer.Write((uint32_t)dialogString.str.length());
+        writer.Write((char*)dialogString.str.data(), dialogString.str.size());
     }
 
-    return std::nullopt;
+    writer.Write((uint32_t)top.size());
+    for (const auto& dialogString : top) {
+        writer.Write(dialogString.cmd);
+        writer.Write((uint32_t)dialogString.str.length());
+        writer.Write((char*)dialogString.str.data(), dialogString.str.size());
+    }
 }
 
 ExportResult DialogCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
@@ -80,23 +82,6 @@ ExportResult DialogCodeExporter::Export(std::ostream& write, std::shared_ptr<IPa
     write << "};\n\n";
 
     return offset;
-}
-
-static void WriteLangBlock(LUS::BinaryWriter& writer, const std::vector<DialogString>& bottom,
-                           const std::vector<DialogString>& top) {
-    writer.Write((uint32_t)bottom.size());
-    for (const auto& dialogString : bottom) {
-        writer.Write(dialogString.cmd);
-        writer.Write((uint32_t)dialogString.str.length());
-        writer.Write((char*)dialogString.str.data(), dialogString.str.size());
-    }
-
-    writer.Write((uint32_t)top.size());
-    for (const auto& dialogString : top) {
-        writer.Write(dialogString.cmd);
-        writer.Write((uint32_t)dialogString.str.length());
-        writer.Write((char*)dialogString.str.data(), dialogString.str.size());
-    }
 }
 
 ExportResult BK64::DialogBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,

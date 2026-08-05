@@ -14,23 +14,8 @@
 #define QUIZ_QUESTION_HEADER_4 0x05
 #define QUIZ_QUESTION_HEADER_5 0x00
 
-#define FORMAT_HEX(x, w) \
-    std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase << std::dec
-#define YAML_HEX(num) YAML::Hex << (num) << YAML::Dec
 
 namespace BK64 {
-
-ExportResult QuizQuestionHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
-                                                std::string& entryName, YAML::Node& node, std::string* replacement) {
-    const auto symbol = GetSafeNode(node, "symbol", entryName);
-
-    if (Companion::Instance->IsOTRMode()) {
-        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return std::nullopt;
-    }
-
-    return std::nullopt;
-}
 
 ExportResult QuizQuestionCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                               std::string& entryName, YAML::Node& node, std::string* replacement) {

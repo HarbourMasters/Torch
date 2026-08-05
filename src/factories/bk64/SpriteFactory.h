@@ -1,6 +1,7 @@
 #pragma once
 
 #include "factories/BaseFactory.h"
+#include "factories/bk64/BKHeaderExporter.h"
 #include "utils/TextureUtils.h"
 #include <string>
 #include <types/RawBuffer.h>
@@ -56,11 +57,6 @@ class SpriteData : public IParsedData {
     }
 };
 
-class SpriteHeaderExporter : public BaseExporter {
-    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node,
-                        std::string* replacement) override;
-};
-
 class SpriteBinaryExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node,
                         std::string* replacement) override;
@@ -81,7 +77,7 @@ class SpriteFactory : public BaseFactory {
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
-        return { REGISTER(Header, SpriteHeaderExporter) REGISTER(Binary, SpriteBinaryExporter)
+        return { REGISTER(Header, BKHeaderExporter) REGISTER(Binary, SpriteBinaryExporter)
                      REGISTER(Code, SpriteCodeExporter) REGISTER(Modding, SpriteModdingExporter) };
     }
 

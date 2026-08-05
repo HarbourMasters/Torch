@@ -2,6 +2,7 @@
 
 #include "DialogFactory.h"
 #include <factories/BaseFactory.h>
+#include "factories/bk64/BKHeaderExporter.h"
 
 namespace BK64 {
 
@@ -20,11 +21,6 @@ class GruntyQuestionData : public IParsedData {
     GruntyQuestionData(std::vector<DialogString> text, std::vector<OptionString> options)
         : mText(std::move(text)), mOptions(std::move(options)) {
     }
-};
-
-class GruntyQuestionHeaderExporter : public BaseExporter {
-    ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName,
-                        YAML::Node& node, std::string* replacement) override;
 };
 
 class GruntyQuestionBinaryExporter : public BaseExporter {
@@ -47,7 +43,7 @@ class GruntyQuestionFactory : public BaseFactory {
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
-        return { REGISTER(Code, GruntyQuestionCodeExporter) REGISTER(Header, GruntyQuestionHeaderExporter)
+        return { REGISTER(Code, GruntyQuestionCodeExporter) REGISTER(Header, BKHeaderExporter)
                      REGISTER(Binary, GruntyQuestionBinaryExporter) REGISTER(Modding, GruntyQuestionModdingExporter) };
     }
     bool SupportModdedAssets() override {
