@@ -1,4 +1,5 @@
 #include <iostream>
+#include <exception>
 #include <memory>
 #include <algorithm>
 #include <atomic>
@@ -448,6 +449,12 @@ int main(int argc, char* argv[]) {
     } catch (const CLI::ParseError& e) {
         std::cout << app.help() << std::endl;
         return app.exit(e);
+    } catch (const std::exception& e) {
+        std::cerr << "Torch failed: " << e.what() << std::endl;
+        return 1;
+    } catch (...) {
+        std::cerr << "Torch failed: unknown exception" << std::endl;
+        return 1;
     }
 
     // No arguments --> display help.
