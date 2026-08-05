@@ -117,6 +117,8 @@ if(BUILD_UI)
     )
     FetchContent_MakeAvailable(libultraship)
 
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
     include_directories(
         ${libultraship_SOURCE_DIR}/include
         ${libultraship_SOURCE_DIR}/include/libultraship
@@ -127,11 +129,22 @@ if(BUILD_UI)
 
     # The Fast3D Metal/GL shaders are loaded as resources ("shaders/...") and must
     # match THIS libultraship's prism context. Game .o2r archives ship their own
-    # (often fork-modified) shaders, so copy the upstream LUS shaders next to the
-    # build and mount them last (overriding) at runtime. See LusBackend.cpp.
-    file(COPY ${libultraship_SOURCE_DIR}/src/fast/shaders
-         DESTINATION ${CMAKE_BINARY_DIR}/torch-lus-assets)
-    add_compile_definitions(TORCH_LUS_SHADER_DIR="${CMAKE_BINARY_DIR}/torch-lus-assets")
+    # (often fork-modified) shaders, so package the upstream LUS shaders and mount
+    # them last (overriding) at runtime. A file archive also avoids LUS's fragile
+    # Windows folder-archive path handling. See LusBackend.cpp.
+    set(TORCH_LUS_SHADER_ROOT ${libultraship_SOURCE_DIR}/src/fast)
+    set(TORCH_LUS_SHADER_ARCHIVE ${CMAKE_BINARY_DIR}/generated/torch-lus-assets.o2r)
+    file(GLOB_RECURSE TORCH_LUS_SHADER_FILES CONFIGURE_DEPENDS
+         LIST_DIRECTORIES false ${TORCH_LUS_SHADER_ROOT}/shaders/*)
+    add_custom_command(
+        OUTPUT ${TORCH_LUS_SHADER_ARCHIVE}
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/package_lus_shaders.py
+                --source ${TORCH_LUS_SHADER_ROOT}
+                --output ${TORCH_LUS_SHADER_ARCHIVE}
+        DEPENDS ${TORCH_LUS_SHADER_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/package_lus_shaders.py
+        COMMENT "Packaging libultraship shaders"
+        VERBATIM
+    )
 endif()
 
 # Source files
@@ -232,6 +245,21 @@ if (USE_STANDALONE)
 else()
     add_library(${PROJECT_NAME} STATIC ${SRC_DIR})
 	set(LINK_TYPE "MT")
+endif()
+
+if(BUILD_UI)
+    add_custom_target(torch_lus_assets
+        DEPENDS ${TORCH_LUS_SHADER_ARCHIVE}
+    )
+    add_dependencies(${PROJECT_NAME} torch_lus_assets)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${TORCH_LUS_SHADER_ARCHIVE}
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/torch-lus-assets.o2r
+        COMMENT "Installing libultraship shaders next to Torch"
+        VERBATIM
+    )
 endif()
 
 if (BUILD_STORMLIB)

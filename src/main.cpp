@@ -419,35 +419,37 @@ int main(int argc, char* argv[]) {
     });
 #endif
 
+    try {
 #ifdef BUILD_UI
-    // Default behavior with no subcommand: if the cwd looks like a project (has a
-    // config.yml), open the viewer and prompt for a ROM instead of printing help.
-    if (argc == 1 && std::filesystem::exists("config.yml")) {
-        const std::string rom = PromptForRom();
-        if (rom.empty()) {
-            std::cout << app.help() << std::endl;
+        // Default behavior with no subcommand: if the cwd looks like a project (has a
+        // config.yml), open the viewer and prompt for a ROM instead of printing help.
+        if (argc == 1 && std::filesystem::exists("config.yml")) {
+            const std::string rom = PromptForRom();
+            if (rom.empty()) {
+                std::cout << app.help() << std::endl;
+                return 0;
+            }
+            if (!std::filesystem::exists(rom)) {
+                std::cout << "ROM not found: " << rom << std::endl;
+                return 1;
+            }
+            Companion::Instance = new Companion(rom, ArchiveType::None, false, "", "");
+#ifdef PM64_SUPPORT
+            PM64Audio::SetPreviewAssets(true);
+#endif
+            std::atomic<size_t> assetCount{ 0 };
+            Companion::Instance->Init(ExportType::Binary, assetCount, false);
+            LaunchUI();
             return 0;
         }
-        if (!std::filesystem::exists(rom)) {
-            std::cout << "ROM not found: " << rom << std::endl;
-            return 1;
-        }
-        Companion::Instance = new Companion(rom, ArchiveType::None, false, "", "");
-#ifdef PM64_SUPPORT
-        PM64Audio::SetPreviewAssets(true);
 #endif
-        std::atomic<size_t> assetCount{ 0 };
-        Companion::Instance->Init(ExportType::Binary, assetCount, false);
-        LaunchUI();
-        return 0;
-    }
-#endif
-
-    try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError& e) {
         std::cout << app.help() << std::endl;
         return app.exit(e);
+    } catch (const std::exception& e) {
+        std::cerr << "Torch failed: " << e.what() << std::endl;
+        return 1;
     }
 
     // No arguments --> display help.

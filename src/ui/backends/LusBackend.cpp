@@ -3,7 +3,10 @@
 #include "ui/backends/LusBackend.h"
 
 #include <filesystem>
+#include <memory>
+#include <stdexcept>
 #include <vector>
+#include <zip.h>
 
 #include "Companion.h"
 #include "ui/Theme.h"
@@ -87,18 +90,116 @@ class ViewerControlDeck final : public Ship::ControlDeck {
 class ViewerGui final : public Fast::Fast3dGui {
   public:
     using Fast::Fast3dGui::Fast3dGui;
+
+    // This LUS revision destroys its renderer before the base Window destructor
+    // shuts ImGui down. Release the platform/render backends while both the
+    // Context and renderer are still alive; the guarded overrides let the base
+    // destructor finish by destroying only the ImGui context.
+    void PrepareForShutdown() {
+        if (!mBackendsShutDown) {
+            Fast::Fast3dGui::ImGuiWMShutdown();
+            Fast::Fast3dGui::ImGuiBackendShutdown();
+            mBackendsShutDown = true;
+        }
+    }
+
     void DrawGame() override {
     }
+
+  protected:
+    void ImGuiWMShutdown() override {
+        if (!mBackendsShutDown) {
+            Fast::Fast3dGui::ImGuiWMShutdown();
+        }
+    }
+
+    void ImGuiBackendShutdown() override {
+        if (!mBackendsShutDown) {
+            Fast::Fast3dGui::ImGuiBackendShutdown();
+        }
+    }
+
+  private:
+    bool mBackendsShutDown = false;
+};
+
+class ViewerShutdownGuard final {
+  public:
+    explicit ViewerShutdownGuard(std::shared_ptr<ViewerGui> gui) : mGui(std::move(gui)) {
+    }
+
+    ~ViewerShutdownGuard() {
+        mGui->PrepareForShutdown();
+    }
+
+  private:
+    std::shared_ptr<ViewerGui> mGui;
+};
+
+void ValidateShaderArchive(const std::string& path) {
+    int errorCode = 0;
+    std::unique_ptr<zip_t, decltype(&zip_discard)> archive(zip_open(path.c_str(), ZIP_RDONLY, &errorCode),
+                                                           &zip_discard);
+    if (!archive) {
+        throw std::runtime_error("Torch viewer shader archive could not be opened: " + path);
+    }
+
+    constexpr const char* kRequiredShaders[] = {
+        "shaders/directx/default.shader.hlsl",
+        "shaders/metal/default.shader.metal",
+        "shaders/opengl/default.shader.glsl",
+    };
+    for (const char* shader : kRequiredShaders) {
+        if (zip_name_locate(archive.get(), shader, 0) < 0) {
+            throw std::runtime_error("Torch viewer shader archive is incomplete: " + path + " (missing " + shader +
+                                     ")");
+        }
+    }
+}
+
+void AbandonPartiallyInitializedContext(std::shared_ptr<Ship::Context> context) {
+    // This pinned LUS Context destructor assumes a Window exists. A startup
+    // exception is terminal, so retain the incomplete Context until process exit
+    // and let main report the original error instead of crashing in teardown.
+    static auto* abandonedContexts = new std::vector<std::shared_ptr<Ship::Context>>();
+    abandonedContexts->push_back(std::move(context));
+}
+
+class ContextStartupGuard final {
+  public:
+    explicit ContextStartupGuard(std::shared_ptr<Ship::Context>& context) : mContext(context) {
+    }
+
+    ~ContextStartupGuard() {
+        if (mArmed) {
+            AbandonPartiallyInitializedContext(std::move(mContext));
+        }
+    }
+
+    void Release() {
+        mArmed = false;
+    }
+
+  private:
+    std::shared_ptr<Ship::Context>& mContext;
+    bool mArmed = true;
 };
 
 class LusBackend final : public BaseBackend {
   public:
     void RunViewer(const std::shared_ptr<ViewManager>& views) override {
+        const auto shaderArchive = Ship::Context::GetPathRelativeToAppBundle("torch-lus-assets.o2r");
+        if (!std::filesystem::is_regular_file(shaderArchive)) {
+            throw std::runtime_error("Torch viewer shader archive is missing: " + shaderArchive);
+        }
+        ValidateShaderArchive(shaderArchive);
+
         auto ctx = Ship::Context::CreateUninitializedInstance("Torch", "torch", "torch.cfg.json");
-        ctx->InitConfiguration();
-        ctx->InitConsoleVariables();
-        ctx->InitLogging();
-        ctx->InitControlDeck(std::make_shared<ViewerControlDeck>());
+        ContextStartupGuard contextStartupGuard(ctx);
+        if (!ctx->InitConfiguration() || !ctx->InitConsoleVariables() || !ctx->InitLogging() ||
+            !ctx->InitControlDeck(std::make_shared<ViewerControlDeck>())) {
+            throw std::runtime_error("Torch viewer could not initialize its LUS context");
+        }
 
         // Mount the .o2r archives from the working directory so Fast3D can
         // resolve the resources referenced by the previewed assets.
@@ -109,16 +210,15 @@ class LusBackend final : public BaseBackend {
                 archives.push_back(entry.path().string());
             }
         }
-#ifdef TORCH_LUS_SHADER_DIR
         // Mount the upstream LUS shaders last so they override any fork-modified
         // shaders shipped inside the game archives (last archive added wins).
-        if (std::filesystem::exists(TORCH_LUS_SHADER_DIR)) {
-            archives.push_back(TORCH_LUS_SHADER_DIR);
+        archives.push_back(shaderArchive);
+        if (!ctx->InitResourceManager(archives, {}, 1)) {
+            throw std::runtime_error("Torch viewer could not initialize its resource manager");
         }
-#endif
-        ctx->InitResourceManager(archives, {}, 1);
-        ctx->InitConsole();
-        ctx->InitAudio(Ship::AudioSettings{});
+        if (!ctx->InitConsole() || !ctx->InitAudio(Ship::AudioSettings{})) {
+            throw std::runtime_error("Torch viewer could not initialize its LUS services");
+        }
 
         // Fast3D binary resource factories (DisplayList/Vertex/Texture/Matrix/Light).
         auto loader = ctx->GetResourceManager()->GetResourceLoader();
@@ -142,8 +242,14 @@ class LusBackend final : public BaseBackend {
         // Context::GetWindow().
         auto gui = std::make_shared<ViewerGui>(std::vector<std::shared_ptr<Ship::GuiWindow>>{});
         auto window = std::make_shared<Fast::Fast3dWindow>(gui);
-        ctx->InitWindow(window);
-        ctx->InitEventSystem();
+        if (!ctx->InitWindow(window)) {
+            throw std::runtime_error("Torch viewer could not initialize its window");
+        }
+        ViewerShutdownGuard shutdownGuard(gui);
+        contextStartupGuard.Release();
+        if (!ctx->InitEventSystem()) {
+            throw std::runtime_error("Torch viewer could not initialize its event system");
+        }
 
         window->GetGui()->AddGuiWindow(std::make_shared<ViewHostWindow>(views));
 
@@ -159,6 +265,9 @@ class LusBackend final : public BaseBackend {
         static Gfx emptyDl[] = { gsSPEndDisplayList() };
         while (window->IsRunning()) {
             window->HandleEvents();
+            if (!window->IsRunning()) {
+                break;
+            }
             PumpAudio();
 
             // Render the previous frame's preview requests; the gui draw blits

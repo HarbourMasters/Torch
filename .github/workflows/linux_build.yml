@@ -40,6 +40,7 @@ jobs:
         run: |
           mkdir torch-release
           mv build-cmake/torch torch-release/
+          mv build-cmake/torch-lus-assets.o2r torch-release/
           cp "$(ldconfig -p | grep libbz2.so.1.0 | tr ' ' '\n' | grep /| head -n1)" torch-release/
       - name: Publish packaged artifacts
         if: ${{ matrix.config == 'Release' && matrix.standalone == 'ON' && matrix.toolchain == 'linux-gnu' }}
