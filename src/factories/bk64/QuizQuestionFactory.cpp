@@ -1,5 +1,6 @@
 #include "QuizQuestionFactory.h"
 
+#include "BKDialogShared.h"
 #include "BKEmitText.h"
 
 #include "Companion.h"
@@ -14,8 +15,25 @@
 #define QUIZ_QUESTION_HEADER_4 0x05
 #define QUIZ_QUESTION_HEADER_5 0x00
 
-
 namespace BK64 {
+
+namespace {
+
+constexpr int8_t kUsHeader[3] = { QUIZ_QUESTION_HEADER_1, QUIZ_QUESTION_HEADER_2, QUIZ_QUESTION_HEADER_3 };
+constexpr int8_t kPalHeader[3] = { 0x03, 0x01, 0x02 };
+
+// The quiz data itself. Same layout for US and for PAL English. The last three
+// entries are the answer options; their first two bytes are a fixed control pair
+// the game expects, so they stay part of the string.
+std::shared_ptr<QuizQuestionData> ParseQuizBlock(LUS::BinaryReader& reader, const std::string& symbol) {
+    const int textSize = reader.ReadUByte();
+    auto text = ReadDialogStrings(reader, textSize - kQuestionOptionCount, symbol, "QuizQuestion");
+    auto options = ReadDialogStrings(reader, textSize >= kQuestionOptionCount ? kQuestionOptionCount : 0, symbol,
+                                     "QuizQuestion option");
+    return std::make_shared<QuizQuestionData>(text, options);
+}
+
+} // namespace
 
 ExportResult QuizQuestionCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                               std::string& entryName, YAML::Node& node, std::string* replacement) {
@@ -36,35 +54,9 @@ ExportResult QuizQuestionCodeExporter::Export(std::ostream& write, std::shared_p
           << "QUIZ_QUESTION_HEADER_5"
           << ",\n";
     write << fourSpaceTab << "/* QuizQuestion */\n";
-    write << fourSpaceTab << quizQuestion->mText.size() << ",\n";
-    for (const auto [cmd, str] : quizQuestion->mText) {
-        write << fourSpaceTab << "0x" << FORMAT_HEX((uint32_t)cmd, 2) << ", " << str.length();
-        for (auto& c : str) {
-            if (c < ' ') {
-                write << ", 0x" << FORMAT_HEX((uint32_t)c, 2);
-            } else if (c == '\'') {
-                write << ", \'\\" << c << "\'";
-            } else {
-                write << ", \'" << c << "\'";
-            }
-        }
-        write << ",\n";
-    }
+    WriteDialogStringArray(write, quizQuestion->mText);
     write << fourSpaceTab << "/* Options */\n";
-    write << fourSpaceTab << quizQuestion->mOptions.size() << ",\n";
-    for (const auto [cmd, str] : quizQuestion->mOptions) {
-        write << fourSpaceTab << "0x" << FORMAT_HEX((uint32_t)cmd, 2) << ", " << str.length();
-        for (auto& c : str) {
-            if (c < ' ') {
-                write << ", 0x" << FORMAT_HEX((uint32_t)c, 2);
-            } else if (c == '\'') {
-                write << ", \'\\" << c << "\'";
-            } else {
-                write << ", \'" << c << "\'";
-            }
-        }
-        write << ",\n";
-    }
+    WriteDialogStringArray(write, quizQuestion->mOptions);
 
     write << "};\n\n";
 
@@ -79,21 +71,8 @@ ExportResult BK64::QuizQuestionBinaryExporter::Export(std::ostream& write, std::
 
     WriteHeader(writer, Torch::ResourceType::BKQuizQuestion, 0);
 
-    writer.Write((uint32_t)quizQuestion->mText.size());
-    for (const auto& dialogString : quizQuestion->mText) {
-        writer.Write(dialogString.cmd);
-        writer.Write((uint32_t)dialogString.str.length());
-        writer.Write((char*)dialogString.str.data(),
-                     dialogString.str.size()); // [port] Write(string) would prefix the length twice
-    }
-
-    writer.Write((uint32_t)quizQuestion->mOptions.size());
-    for (const auto& optionString : quizQuestion->mOptions) {
-        writer.Write(optionString.cmd);
-        writer.Write((uint32_t)optionString.str.length());
-        writer.Write((char*)optionString.str.data(),
-                     optionString.str.size()); // [port] Write(string) would prefix the length twice
-    }
+    WriteDialogStrings(writer, quizQuestion->mText);
+    WriteDialogStrings(writer, quizQuestion->mOptions);
 
     writer.Finish(write);
     return std::nullopt;
@@ -116,22 +95,15 @@ ExportResult BK64::QuizQuestionModdingExporter::Export(std::ostream& write, std:
     out << YAML::BeginMap;
     out << YAML::Key << "Text";
     out << YAML::Value;
-
-    out << YAML::BeginSeq;
-    for (const auto [cmd, str] : quizQuestion->mText) {
-        out << YAML::Flow;
-        out << YAML::BeginSeq;
-        out << YAML_HEX((uint32_t)cmd);
-        EmitText(out, str);
-        out << YAML::EndSeq;
-    }
-    out << YAML::EndSeq;
+    EmitDialogStringSeq(out, quizQuestion->mText);
 
     out << YAML::Key << "Options";
     out << YAML::Value;
 
+    // Options expose their leading control pair as separate fields so a pack can
+    // edit the text without touching them.
     out << YAML::BeginSeq;
-    for (const auto [cmd, str] : quizQuestion->mOptions) {
+    for (const auto& [cmd, str] : quizQuestion->mOptions) {
         out << YAML::Flow;
         out << YAML::BeginSeq;
         out << YAML_HEX((uint32_t)cmd);
@@ -150,97 +122,32 @@ ExportResult BK64::QuizQuestionModdingExporter::Export(std::ostream& write, std:
     return std::nullopt;
 }
 
-// The quiz data itself. Same layout for US and for PAL English.
-static std::shared_ptr<QuizQuestionData> ParseQuizBlock(LUS::BinaryReader& reader) {
-    std::vector<DialogString> text;
-    std::vector<DialogString> options;
-
-    auto textSize = reader.ReadUByte();
-
-    for (uint8_t i = 0; i < textSize - 3; i++) {
-        DialogString dialogString;
-        dialogString.cmd = reader.ReadUByte();
-        auto strLen = reader.ReadUByte();
-        dialogString.str = reader.ReadString(strLen);
-        text.push_back(dialogString);
-    }
-
-    for (uint8_t i = textSize - 3; i < textSize; i++) {
-        DialogString optionString;
-        optionString.cmd = reader.ReadUByte();
-        auto strLen = reader.ReadUByte();
-        optionString.str = reader.ReadString(strLen);
-        options.push_back(optionString);
-    }
-
-    return std::make_shared<QuizQuestionData>(text, options);
-}
-
 std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);
     const auto symbol = GetSafeNode<std::string>(node, "symbol");
 
-    auto header1 = reader.ReadInt8();
-    auto header2 = reader.ReadInt8();
-    auto header3 = reader.ReadInt8();
-
-    if (header1 == QUIZ_QUESTION_HEADER_1 && header2 == QUIZ_QUESTION_HEADER_2 && header3 == QUIZ_QUESTION_HEADER_3) {
-        // US: 01 01 02 05 00, then quiz data
-        reader.ReadInt8(); // header4 (0x05)
-        reader.ReadInt8(); // header5 (0x00)
-        return ParseQuizBlock(reader);
-    }
-
-    if (header1 == 0x03 && header2 == 0x01 && header3 == 0x02) {
-        // PAL: 03 01 02, then 3 x LE u16 offsets (EN/FR/DE start positions).
-        // The English block lives at the first of those offsets.
-        uint16_t enOffset = reader.ReadUByte() | (reader.ReadUByte() << 8);
-        reader.ReadUByte();
-        reader.ReadUByte(); // skip FR offset
-        reader.ReadUByte();
-        reader.ReadUByte(); // skip DE offset
-        // We're now at byte 9 = enOffset, so just read the English block.
-        return ParseQuizBlock(reader);
-    }
-
-    SPDLOG_ERROR("Invalid Header For BK64 QuizQuestion {}: {:02X} {:02X} {:02X}", symbol, header1, header2, header3);
-    return std::nullopt;
-}
-
-std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse_modding(std::vector<uint8_t>& buffer,
-                                                                               YAML::Node& node) {
-    YAML::Node assetNode;
-
-    try {
-        std::string text((char*)buffer.data(), buffer.size());
-        assetNode = YAML::Load(text.c_str());
-    } catch (YAML::ParserException& e) {
-        SPDLOG_ERROR("Failed to parse message data: {}", e.what());
-        SPDLOG_ERROR("{}", (char*)buffer.data());
+    if (!SeekQuestionBlock(reader, symbol, "QuizQuestion", kUsHeader, kPalHeader)) {
         return std::nullopt;
     }
 
-    const auto info = assetNode.begin()->second;
+    return ParseQuizBlock(reader, symbol);
+}
 
-    std::vector<DialogString> text;
-    std::vector<DialogString> options;
-
-    auto textNode = info["Text"];
-    auto optionsNode = info["Options"];
-
-    for (YAML::iterator it = textNode.begin(); it != textNode.end(); ++it) {
-        DialogString dialogString;
-        dialogString.cmd = (*it)[0].as<uint32_t>();
-        dialogString.str = DecodeText((*it)[1].as<std::string>());
-        dialogString.str += '\0';
-        text.push_back(dialogString);
+std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse_modding(std::vector<uint8_t>& buffer,
+                                                                              YAML::Node& node) {
+    const auto info = LoadModdingRoot(buffer);
+    if (!info.has_value()) {
+        return std::nullopt;
     }
 
-    uint32_t i = 0;
+    auto text = ReadModdingDialogSeq((*info)["Text"]);
+
+    std::vector<DialogString> options;
+    auto optionsNode = (*info)["Options"];
     for (YAML::iterator it = optionsNode.begin(); it != optionsNode.end(); ++it) {
-        if (i >= 3) {
+        if (options.size() >= 3) {
             SPDLOG_WARN("BK64 QuizQuestion: Only 3 Options Allowed; extra options ignored");
             break;
         }
@@ -254,10 +161,9 @@ std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse_modding(s
         optionString.str += DecodeText((*it)[3].as<std::string>());
         optionString.str += '\0';
         options.push_back(optionString);
-        i++;
     }
 
-    if (i != 3) {
+    if (options.size() != 3) {
         throw std::runtime_error("BK64 QuizQuestion: Requires Exactly 3 Options");
     }
 
