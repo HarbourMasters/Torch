@@ -1,5 +1,6 @@
 var NAVTREEINDEX1 =
 {
+"classBlobHeaderExporter.html":[1,0,63],
 "classCompTool.html":[1,0,75],
 "classCompanion.html":[1,0,68],
 "classCompressedTextureBinaryExporter.html":[1,0,69],
@@ -248,6 +249,5 @@ var NAVTREEINDEX1 =
 "classSF64_1_1EnvironmentXMLExporter.html":[1,0,9,16],
 "classSF64_1_1HitboxBinaryExporter.html":[1,0,9,17],
 "classSF64_1_1HitboxCodeExporter.html":[1,0,9,18],
-"classSF64_1_1HitboxData.html":[1,0,9,19],
-"classSF64_1_1HitboxFactory.html":[1,0,9,20]
+"classSF64_1_1HitboxData.html":[1,0,9,19]
 };

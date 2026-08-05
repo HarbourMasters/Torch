@@ -2,6 +2,7 @@ var dir_d042745fb29c7ec84877aa9daeed8a91 =
 [
     [ "AnimFactory.h", "bk64_2AnimFactory_8h_source.html", null ],
     [ "BKAssetFactory.h", "BKAssetFactory_8h_source.html", null ],
+    [ "BKEmitText.h", "BKEmitText_8h_source.html", null ],
     [ "ConfigFactory.h", "ConfigFactory_8h_source.html", null ],
     [ "DemoInputFactory.h", "DemoInputFactory_8h_source.html", null ],
     [ "DialogFactory.h", "bk64_2DialogFactory_8h_source.html", null ],

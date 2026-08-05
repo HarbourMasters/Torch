@@ -1,5 +1,6 @@
 var NAVTREEINDEX2 =
 {
+"classSF64_1_1HitboxFactory.html":[1,0,9,20],
 "classSF64_1_1HitboxHeaderExporter.html":[1,0,9,21],
 "classSF64_1_1LimbData.html":[1,0,9,23],
 "classSF64_1_1MessageBinaryExporter.html":[1,0,9,24],
@@ -248,6 +249,5 @@ var NAVTREEINDEX2 =
 "otr_texture.html#autotoc_md37":[0,3,8,0,0],
 "otr_texture.html#autotoc_md38":[0,3,8,0,1],
 "otr_texture.html#autotoc_md39":[0,3,8,0,2],
-"otr_texture.html#autotoc_md40":[0,3,8,0,2,0],
-"otr_vec3f.html":[0,3,5]
+"otr_texture.html#autotoc_md40":[0,3,8,0,2,0]
 };

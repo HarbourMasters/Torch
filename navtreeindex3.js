@@ -1,5 +1,6 @@
 var NAVTREEINDEX3 =
 {
+"otr_vec3f.html":[0,3,5],
 "otr_vec3f.html#autotoc_md41":[0,3,5,0],
 "otr_vec3f.html#autotoc_md42":[0,3,5,0,0],
 "otr_vec3f.html#autotoc_md43":[0,3,5,0,0,0],
