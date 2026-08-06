@@ -1,5 +1,6 @@
 #include "ConfigFactory.h"
 #include "BKByteUtils.h"
+#include "BKAssetTable.h"
 #include "Companion.h"
 #include "TinySHA1.hpp"
 #include "binarytools/BinaryReader.h"
@@ -237,30 +238,22 @@ static size_t WalkAssetTable(const std::vector<uint8_t>& rom,
         entries[i].tFlag = reader.ReadInt16();
     }
 
+    std::vector<uint32_t> offsets;
+    offsets.reserve(assetCount);
+    for (const auto& e : entries) {
+        offsets.push_back(e.blobOffset);
+    }
+    const SlotSizer slotSize(offsets, dataStart, rom.size());
+
     for (uint32_t i = 0; i < assetCount; i++) {
         const auto& e = entries[i];
-        if (e.tFlag == 4) {
+        if (e.tFlag == 4 || slotSize.IsStray(i)) {
             continue;
         }
 
-        uint32_t endRel = 0;
-        bool haveEnd = false;
-        for (uint32_t j = i + 1; j < assetCount; j++) {
-            if (entries[j].blobOffset != e.blobOffset) {
-                endRel = entries[j].blobOffset;
-                haveEnd = true;
-                break;
-            }
-        }
-        if (!haveEnd) {
-            endRel = static_cast<uint32_t>(rom.size() - dataStart);
-        }
-        if (endRel <= e.blobOffset) {
-            continue;
-        }
         const uint32_t absOff = dataStart + e.blobOffset;
-        const uint32_t size = endRel - e.blobOffset;
-        if (absOff + size > rom.size()) {
+        const uint32_t size = slotSize(e.blobOffset);
+        if (size == 0 || absOff + size > rom.size()) {
             continue;
         }
 
