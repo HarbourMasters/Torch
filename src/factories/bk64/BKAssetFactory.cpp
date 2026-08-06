@@ -1,6 +1,7 @@
 #include "BKAssetFactory.h"
 #include "Companion.h"
 #include "ConfigFactory.h"
+#include "BKAssetTable.h"
 #include "spdlog/spdlog.h"
 #include "utils/Decompressor.h"
 #include "TinySHA1.hpp"
@@ -13,6 +14,27 @@
 #include <yaml-cpp/yaml.h>
 
 namespace BK64 {
+
+// Font masks + text-bearing models / signs / overlays a language pack
+// may relocalize.
+static const std::unordered_set<uint32_t> kLangAssets = {
+    0x6EB, // SPRITE_DIALOG_FONT_ALPHAMASK
+    0x6EC, // SPRITE_BOLD_FONT_LETTERS_ALPHAMASK
+    0x2EE, // ON_VACATIOIN_SIGN
+    0x46C, // JIGSAW_PUZZLE
+    0x486, // XMAS_TREE_SWITCH
+    0x48B, // JIGGY_PODIUM
+    0x4EA, // RACE_BANNER_FINISH
+    0x4EB, // RACE_BANNER_START
+    0x50A, // SHARKFOOD_ISLAND (model with sign)
+    0x54C, // GAME OVER
+    0x54D, // BANJO_KAZOOIE_SIGN
+    0x54E, // COPYRIGHT_OVERLAY
+    0x55C, // PRESS_START_OVERLAY
+    0x55D, // NO_CONTROLLER_OVERLAY
+    0x563, // LEVEL_ENTRY_SIGNS
+    0x56C, // THE_END_SIGN
+};
 
 static const std::unordered_map<BKAssetType, std::string> sAssetSymbolPrefixes = {
     { BKAssetType::Animation, "ANIM" },
@@ -306,32 +328,19 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
 
     int count = 0;
 
-    // Slot size = gap to the next-higher table offset.
-    std::vector<uint32_t> sortedOffsets;
-    sortedOffsets.reserve(assetTableInfo.size());
+    std::vector<uint32_t> offsets;
+    offsets.reserve(assetTableInfo.size());
     for (const auto& ai : assetTableInfo) {
-        sortedOffsets.push_back(ai.offset);
+        offsets.push_back(ai.offset);
     }
-    std::sort(sortedOffsets.begin(), sortedOffsets.end());
-    sortedOffsets.erase(std::unique(sortedOffsets.begin(), sortedOffsets.end()), sortedOffsets.end());
-    auto slotSize = [&](uint32_t off) -> uint32_t {
-        auto it = std::upper_bound(sortedOffsets.begin(), sortedOffsets.end(), off);
-        if (it != sortedOffsets.end()) {
-            return *it - off;
-        }
-        uint64_t start = static_cast<uint64_t>(dataStartRomOffset) + off;
-        return start < buffer.size() ? static_cast<uint32_t>(buffer.size() - start) : 0;
-    };
+    const SlotSizer slotSize(offsets, dataStartRomOffset, buffer.size());
 
-    size_t outOfOrder = 0;
-    for (uint32_t i = 0; i + 1 < assetCount; i++) {
-        if (assetTableInfo.at(i + 1).offset < assetTableInfo.at(i).offset) {
-            outOfOrder++;
+    if (slotSize.StrayCount() > 0) {
+        for (uint32_t i = 0; i < assetCount; i++) {
+            if (slotSize.IsStray(i)) {
+                SPDLOG_WARN("  stray table entry {} at offset 0x{:X}", i, assetTableInfo.at(i).offset);
+            }
         }
-    }
-    if (outOfOrder > 0) {
-        SPDLOG_WARN("Asset table is not monotonic ({} out-of-order entries); sizing slots by next-higher offset",
-                    outOfOrder);
     }
 
     // Warm the decompressor cache up front, in parallel. The serial parse
@@ -390,6 +399,10 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
             BKAssetType assetType;
 
             if (assetInfo.tFlag == 4) {
+                continue;
+            }
+
+            if (assetSize == 0) {
                 continue;
             }
 
@@ -499,26 +512,6 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
             if (Companion::Instance->GetConfig().dialogPack) {
                 const bool isText = assetType == BKAssetType::Dialog || assetType == BKAssetType::GruntyQuestion ||
                                     assetType == BKAssetType::QuizQuestion;
-                // Font masks + text-bearing models / signs / overlays a language pack
-                // may relocalize.
-                static const std::unordered_set<uint32_t> kLangAssets = {
-                    0x6EB, // SPRITE_DIALOG_FONT_ALPHAMASK (dialog/quiz/grunty text)
-                    0x6EC, // SPRITE_BOLD_FONT_LETTERS_ALPHAMASK (world names, headers)
-                    0x2EE, // ON_VACATIOIN_SIGN
-                    0x46C, // JIGSAW_PUZZLE
-                    0x486, // XMAS_TREE_SWITCH
-                    0x48B, // JIGGY_PODIUM
-                    0x4EA, // RACE_BANNER_FINISH
-                    0x4EB, // RACE_BANNER_START
-                    0x50A, // SHARKFOOD_ISLAND (model with sign)
-                    0x54C, // GAME OVER
-                    0x54D, // BANJO_KAZOOIE_SIGN
-                    0x54E, // COPYRIGHT_OVERLAY
-                    0x55C, // PRESS_START_OVERLAY
-                    0x55D, // NO_CONTROLLER_OVERLAY
-                    0x563, // LEVEL_ENTRY_SIGNS
-                    0x56C, // THE_END_SIGN
-                };
                 const uint32_t idx = assetInfo.index;
                 bool isLangAsset = kLangAssets.count(idx) != 0;
                 // The JP cart additionally carries the kana dialog font and the

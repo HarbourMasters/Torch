@@ -1,5 +1,6 @@
 #include "DialogFactory.h"
 
+#include "BKDialogShared.h"
 #include "BKEmitText.h"
 
 #include "Companion.h"
@@ -14,22 +15,13 @@
 #define DIALOG_CMD_CLOSE 0x04
 #define DIALOG_TERMINATOR_SIZE 3
 
-#define FORMAT_HEX(x, w) \
-    std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase << std::dec
-#define YAML_HEX(num) YAML::Hex << (num) << YAML::Dec
 
 namespace BK64 {
 
-ExportResult DialogHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
-                                          YAML::Node& node, std::string* replacement) {
-    const auto symbol = GetSafeNode(node, "symbol", entryName);
-
-    if (Companion::Instance->IsOTRMode()) {
-        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return std::nullopt;
-    }
-
-    return std::nullopt;
+static void WriteLangBlock(LUS::BinaryWriter& writer, const std::vector<DialogString>& bottom,
+                           const std::vector<DialogString>& top) {
+    WriteDialogStrings(writer, bottom);
+    WriteDialogStrings(writer, top);
 }
 
 ExportResult DialogCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
@@ -47,56 +39,13 @@ ExportResult DialogCodeExporter::Export(std::ostream& write, std::shared_ptr<IPa
           << "DIALOG_HEADER_3"
           << ",\n";
     write << fourSpaceTab << "/* Bottom Dialog */\n";
-    write << fourSpaceTab << dialog->mBottom.size() << ",\n";
-    for (const auto [cmd, str] : dialog->mBottom) {
-        write << fourSpaceTab << "0x" << FORMAT_HEX((uint32_t)cmd, 2) << ", " << str.length();
-        for (auto& c : str) {
-            if (c < ' ') {
-                write << ", 0x" << FORMAT_HEX((uint32_t)c, 2);
-            } else if (c == '\'') {
-                write << ", \'\\" << c << "\'";
-            } else {
-                write << ", \'" << c << "\'";
-            }
-        }
-        write << ",\n";
-    }
+    WriteDialogStringArray(write, dialog->mBottom);
     write << fourSpaceTab << "/* Top Dialog */\n";
-    write << fourSpaceTab << dialog->mTop.size() << ",\n";
-    for (const auto [cmd, str] : dialog->mTop) {
-        write << fourSpaceTab << "0x" << FORMAT_HEX((uint32_t)cmd, 2) << ", " << str.length();
-        for (auto& c : str) {
-            if (c < ' ') {
-                write << ", 0x" << FORMAT_HEX((uint32_t)c, 2);
-            } else if (c == '\'') {
-                write << ", \'\\" << c << "\'";
-            } else {
-                write << ", \'" << c << "\'";
-            }
-        }
-        write << ",\n";
-    }
+    WriteDialogStringArray(write, dialog->mTop);
 
     write << "};\n\n";
 
     return offset;
-}
-
-static void WriteLangBlock(LUS::BinaryWriter& writer, const std::vector<DialogString>& bottom,
-                           const std::vector<DialogString>& top) {
-    writer.Write((uint32_t)bottom.size());
-    for (const auto& dialogString : bottom) {
-        writer.Write(dialogString.cmd);
-        writer.Write((uint32_t)dialogString.str.length());
-        writer.Write((char*)dialogString.str.data(), dialogString.str.size());
-    }
-
-    writer.Write((uint32_t)top.size());
-    for (const auto& dialogString : top) {
-        writer.Write(dialogString.cmd);
-        writer.Write((uint32_t)dialogString.str.length());
-        writer.Write((char*)dialogString.str.data(), dialogString.str.size());
-    }
 }
 
 ExportResult BK64::DialogBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
@@ -139,28 +88,12 @@ ExportResult BK64::DialogModdingExporter::Export(std::ostream& write, std::share
     out << YAML::Key << "Bottom";
     out << YAML::Value;
 
-    out << YAML::BeginSeq;
-    for (const auto [cmd, str] : dialog->mBottom) {
-        out << YAML::Flow;
-        out << YAML::BeginSeq;
-        out << YAML_HEX((uint32_t)cmd);
-        EmitText(out, str);
-        out << YAML::EndSeq;
-    }
-    out << YAML::EndSeq;
+    EmitDialogStringSeq(out, dialog->mBottom);
 
     out << YAML::Key << "Top";
     out << YAML::Value;
 
-    out << YAML::BeginSeq;
-    for (const auto [cmd, str] : dialog->mTop) {
-        out << YAML::Flow;
-        out << YAML::BeginSeq;
-        out << YAML_HEX((uint32_t)cmd);
-        EmitText(out, str);
-        out << YAML::EndSeq;
-    }
-    out << YAML::EndSeq;
+    EmitDialogStringSeq(out, dialog->mTop);
 
     out << YAML::EndMap;
     out << YAML::EndMap;
@@ -175,10 +108,6 @@ static void EnsureTerminator(std::vector<DialogString>& box) {
     if (box.empty()) {
         box.push_back({ DIALOG_CMD_CLOSE, std::string(1, '\0') });
     }
-}
-
-static bool HasBytes(LUS::BinaryReader& reader, size_t count) {
-    return reader.GetBaseAddress() + count <= reader.GetLength();
 }
 
 // Read one box's entries. A count byte the blob can't back would otherwise walk the reader off the
@@ -293,40 +222,13 @@ std::optional<std::shared_ptr<IParsedData>> DialogFactory::parse(std::vector<uin
 
 std::optional<std::shared_ptr<IParsedData>> DialogFactory::parse_modding(std::vector<uint8_t>& buffer,
                                                                          YAML::Node& node) {
-    YAML::Node assetNode;
-
-    try {
-        std::string text((char*)buffer.data(), buffer.size());
-        assetNode = YAML::Load(text.c_str());
-    } catch (YAML::ParserException& e) {
-        SPDLOG_ERROR("Failed to parse message data: {}", e.what());
-        SPDLOG_ERROR("{}", (char*)buffer.data());
+    const auto info = LoadModdingRoot(buffer);
+    if (!info.has_value()) {
         return std::nullopt;
     }
 
-    const auto info = assetNode.begin()->second;
-
-    std::vector<DialogString> bottom;
-    std::vector<DialogString> top;
-
-    auto bottomNode = info["Bottom"];
-    auto topNode = info["Top"];
-
-    for (YAML::iterator it = bottomNode.begin(); it != bottomNode.end(); ++it) {
-        DialogString dialogString;
-        dialogString.cmd = (*it)[0].as<uint32_t>();
-        dialogString.str = DecodeText((*it)[1].as<std::string>());
-        dialogString.str += '\0';
-        bottom.push_back(dialogString);
-    }
-
-    for (YAML::iterator it = topNode.begin(); it != topNode.end(); ++it) {
-        DialogString dialogString;
-        dialogString.cmd = (*it)[0].as<uint32_t>();
-        dialogString.str = DecodeText((*it)[1].as<std::string>());
-        dialogString.str += '\0';
-        top.push_back(dialogString);
-    }
+    auto bottom = ReadModdingDialogSeq((*info)["Bottom"]);
+    auto top = ReadModdingDialogSeq((*info)["Top"]);
 
     EnsureTerminator(bottom);
     EnsureTerminator(top);

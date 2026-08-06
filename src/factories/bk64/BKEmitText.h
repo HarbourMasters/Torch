@@ -3,8 +3,14 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
+#include <iomanip>
 #include <string>
 #include <yaml-cpp/yaml.h>
+
+// Shared yaml/text emission formatters
+#define YAML_HEX(num) YAML::Hex << (num) << YAML::Dec
+#define FORMAT_HEX(x, w) \
+    std::hex << std::uppercase << std::setfill('0') << std::setw(w) << x << std::nouppercase << std::dec
 
 namespace BK64 {
 

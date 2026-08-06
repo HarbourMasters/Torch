@@ -8,30 +8,9 @@
 #include <cstring>
 #include <deque>
 
-#define ALIGN8(val) (((val) + 7) & ~7)
-#define YAML_HEX(num) YAML::Hex << (num) << YAML::Dec
+#include "BKEmitText.h"
 
 namespace BK64 {
-
-ExportResult GeoLayoutHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
-                                             std::string& entryName, YAML::Node& node, std::string* replacement) {
-    const auto symbol = GetSafeNode(node, "symbol", entryName);
-
-    if (Companion::Instance->IsOTRMode()) {
-        write << "static const ALIGN_ASSET(2) char " << symbol << "[] = \"__OTR__" << (*replacement) << "\";\n\n";
-        return std::nullopt;
-    }
-
-    return std::nullopt;
-}
-
-ExportResult GeoLayoutCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
-                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
-    auto offset = GetSafeNode<uint32_t>(node, "offset");
-    auto geo = std::static_pointer_cast<GeoLayoutData>(raw);
-
-    return offset;
-}
 
 // Serialized size of one geo command, 8-byte header included.
 static uint32_t GetGeoCommandByteSize(const GeoLayoutCommand& cmd) {
@@ -85,6 +64,14 @@ static uint32_t GetGeoCommandByteSize(const GeoLayoutCommand& cmd) {
             break;
     }
     return 8 + bodySize; // 8 = opcode(4) + cmdLength(4)
+}
+
+ExportResult GeoLayoutCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
+                                           std::string& entryName, YAML::Node& node, std::string* replacement) {
+    auto offset = GetSafeNode<uint32_t>(node, "offset");
+    auto geo = std::static_pointer_cast<GeoLayoutData>(raw);
+
+    return offset;
 }
 
 ExportResult BK64::GeoLayoutBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,

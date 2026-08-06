@@ -8,27 +8,6 @@
 
 namespace BK64 {
 
-// Vanilla BK is exactly 16MB. Anything bigger has been through Banjo's Backpack.
-inline bool IsRomhack(const std::vector<uint8_t>& rom) {
-    return rom.size() > 0x1000000;
-}
-
-// When a romhack, generate a config for it based on us v1.0.
-bool TrySynthesizeRomConfig(YAML::Node& config, const std::string& cartHash, const std::filesystem::path& romPath,
-                            const std::vector<uint8_t>& rom);
-
-// Maintainer tool, creates a hashes.yml.
-void EmitAssetHashes(const std::filesystem::path& romPath, const std::filesystem::path& outputPath);
-
-// How many slots differ from the baseline hashes - a missing baseline entry counts as
-// changed. The port-side extractor uses it to size its progress bar to the real romhack
-// delta instead of every vanilla slot.
-size_t CountModifiedSlots(const std::vector<uint8_t>& rom, const std::filesystem::path& hashesYamlPath);
-
-// Baseline SHA-1 for one slot, or empty if there's no hashes.yaml or no entry for it.
-// Loaded lazily from gAssetPath/hashes.yaml on the first call, then held for the run.
-const std::string& GetBaselineAssetHash(uint32_t assetId);
-
 // Classification of a >16MB BK ROM.
 enum class RomhackKind {
     NotRomhack,  // vanilla-sized ROM
@@ -36,11 +15,6 @@ enum class RomhackKind {
     CustomBuild, // BK boot overlay present, but rebuilt/relocated internals
     UnknownRom,  // extended ROM with no recognizable BK boot overlay
 };
-
-RomhackKind ClassifyRomhack(const std::vector<uint8_t>& rom);
-
-// True for injected custom-code blobs and for CustomBuild ROMs.
-bool HasCustomCodeBlob(const std::vector<uint8_t>& rom);
 
 // Binary aGameConfig format: 'BKCF' header + typed sections
 
@@ -68,12 +42,6 @@ enum class CustomCodeKind : uint16_t {
     BB_GLOBALIZATION = 1,
     BB_INJECTED = 2,
 };
-
-// Pre-extraction probe for callers that decide the warning policy themselves
-// (e.g. the extraction UI checks RomhackTable for ported hashes): reports
-// the detected blob's kind and its SHA1 as 40 lowercase hex chars + NUL.
-// Returns false (kind NONE, empty hash) when no blob is found.
-bool GetCustomCodeBlobInfo(const std::vector<uint8_t>& rom, CustomCodeKind& outKind, char outSha1Hex[41]);
 
 // CODE_CONSTANTS key IDs - they index into the sBBConfigs table.
 enum class CodeConstantKey : uint16_t {
@@ -104,7 +72,44 @@ enum class CodeConstantKey : uint16_t {
     COUNT
 };
 
+// Vanilla BK is exactly 16MB. Anything bigger has been through Banjo's Backpack.
+inline bool IsRomhack(const std::vector<uint8_t>& rom) {
+    return rom.size() > 0x1000000;
+}
+
+RomhackKind ClassifyRomhack(const std::vector<uint8_t>& rom);
+
+// When a romhack, generate a config for it based on us v1.0.
+bool TrySynthesizeRomConfig(YAML::Node& config, const std::string& cartHash, const std::filesystem::path& romPath,
+                            const std::vector<uint8_t>& rom);
+
 // Build the binary aGameConfig blob from a BB romhack ROM.
 std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std::string& romName);
+
+// True for injected custom-code blobs and for CustomBuild ROMs.
+bool HasCustomCodeBlob(const std::vector<uint8_t>& rom);
+
+// Pre-extraction probe for callers that decide the warning policy themselves
+// (e.g. the extraction UI checks RomhackTable for ported hashes): reports
+// the detected blob's kind and its SHA1 as 40 lowercase hex chars + NUL.
+// Returns false (kind NONE, empty hash) when no blob is found.
+bool GetCustomCodeBlobInfo(const std::vector<uint8_t>& rom, CustomCodeKind& outKind, char outSha1Hex[41]);
+
+// Maintainer tool, creates a hashes.yml.
+void EmitAssetHashes(const std::filesystem::path& romPath, const std::filesystem::path& outputPath);
+
+// How many slots differ from the baseline hashes - a missing baseline entry counts as
+// changed. The port-side extractor uses it to size its progress bar to the real romhack
+// delta instead of every vanilla slot.
+size_t CountModifiedSlots(const std::vector<uint8_t>& rom, const std::filesystem::path& hashesYamlPath);
+
+// Baseline SHA-1 for one slot, or empty if there's no hashes.yaml or no entry for it.
+// Loaded lazily from gAssetPath/hashes.yaml on the first call, then held for the run.
+const std::string& GetBaselineAssetHash(uint32_t assetId);
+
+// Vanilla warp destination (MAP << 8 | ENTRY) for a warp-table index, from the
+// `warps:` section of hashes.yaml. Returns -1 if unknown. Loaded lazily like the
+// baseline hashes.
+int GetVanillaWarpDest(uint32_t warpIndex);
 
 } // namespace BK64
