@@ -31,7 +31,7 @@ var searchData=
   ['animcodeexporter_28',['AnimCodeExporter',['../classBK64_1_1AnimCodeExporter.html',1,'BK64::AnimCodeExporter'],['../classSF64_1_1AnimCodeExporter.html',1,'SF64::AnimCodeExporter']]],
   ['animdata_29',['AnimData',['../classBK64_1_1AnimData.html',1,'BK64::AnimData'],['../classSF64_1_1AnimData.html',1,'SF64::AnimData']]],
   ['animfactory_30',['AnimFactory',['../classBK64_1_1AnimFactory.html',1,'BK64::AnimFactory'],['../classSF64_1_1AnimFactory.html',1,'SF64::AnimFactory']]],
-  ['animheaderexporter_31',['AnimHeaderExporter',['../classBK64_1_1AnimHeaderExporter.html',1,'BK64::AnimHeaderExporter'],['../classSF64_1_1AnimHeaderExporter.html',1,'SF64::AnimHeaderExporter']]],
+  ['animheaderexporter_31',['AnimHeaderExporter',['../classSF64_1_1AnimHeaderExporter.html',1,'SF64']]],
   ['animmoddingexporter_32',['AnimModdingExporter',['../classBK64_1_1AnimModdingExporter.html',1,'BK64']]],
   ['animtexture_33',['AnimTexture',['../structBK64_1_1AnimTexture.html',1,'BK64']]],
   ['arraybinaryexporter_34',['ArrayBinaryExporter',['../classArrayBinaryExporter.html',1,'']]],
