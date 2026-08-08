@@ -12,6 +12,7 @@
 #define GFX_HEADER_SIZE 0x8
 #define GFX_CMD_SIZE 0x8
 #define VTX_HEADER_SIZE 0x18
+#define N64_VTX_SIZE 16
 #define ANIM_TEXTURE_LIST_COUNT 4
 
 namespace BK64 {
@@ -641,7 +642,6 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
 
         // The header vtx count lies for some models, so derive the real count from the byte span
         // between the VTX section and whatever section comes next.
-        constexpr uint32_t kVtxRawSize = 16; // sizeof(Vtx) in the ROM
         const uint32_t vtxDataStart = vertexSetupOffset + VTX_HEADER_SIZE;
         uint32_t vtxDataEnd = static_cast<uint32_t>(modelOffsetEnd - modelOffset);
         for (uint32_t candidate : { geoLayoutOffset, static_cast<uint32_t>(textureSetupOffset), displayListSetupOffset,
@@ -651,7 +651,7 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
                 vtxDataEnd = candidate;
             }
         }
-        const uint32_t trueVtxCount = (vtxDataEnd - vtxDataStart) / kVtxRawSize;
+        const uint32_t trueVtxCount = (vtxDataEnd - vtxDataStart) / N64_VTX_SIZE;
         if (trueVtxCount != static_cast<uint32_t>(modelData->mVtxHeader.count)) {
             SPDLOG_DEBUG("[BKModel] {} vtx header count {} vs section-derived "
                          "count {} — using section-derived",
@@ -717,7 +717,6 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
     // That section-boundary heuristic can still undercount, so scan the DL for the highest vertex
     // index it actually touches. That's the count we trust.
     if (modelData->mHasVtx && modelData->mHasDL && !modelData->mRawDLWords.empty()) {
-        constexpr uint32_t kN64VtxSize = 16;
         uint32_t maxVtxNeeded = modelData->mVtxHeader.count;
         for (size_t i = 0; i < modelData->mRawDLWords.size(); i += 2) {
             uint32_t w0 = modelData->mRawDLWords[i];
@@ -726,7 +725,7 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             if (opCode == GBI(G_VTX) && SEGMENT_NUMBER(w1) == 1) {
                 uint32_t n = (w0 >> 10) & 0x3F;
                 uint32_t off = SEGMENT_OFFSET(w1);
-                uint32_t vtxEnd = off / kN64VtxSize + n;
+                uint32_t vtxEnd = off / N64_VTX_SIZE + n;
                 if (vtxEnd > maxVtxNeeded) {
                     maxVtxNeeded = vtxEnd;
                 }
