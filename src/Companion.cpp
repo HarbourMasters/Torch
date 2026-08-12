@@ -1985,18 +1985,18 @@ std::optional<std::string> Companion::GetEnumFromValue(const std::string& key, i
 
 std::optional<std::uint32_t> Companion::GetFileOffsetFromSegmentedAddr(const uint8_t segment) const {
 
-    auto segments = this->gConfig.segment;
+    const auto& segments = this->gConfig.segment;
 
-    if (Torch::contains(segments.temporal, segment)) {
-        return segments.temporal[segment];
+    if (const auto it = segments.temporal.find(segment); it != segments.temporal.end()) {
+        return it->second;
     }
 
-    if (Torch::contains(segments.local, segment)) {
-        return segments.local[segment];
+    if (const auto it = segments.local.find(segment); it != segments.local.end()) {
+        return it->second;
     }
 
-    if (Torch::contains(segments.global, segment)) {
-        return segments.global[segment];
+    if (const auto it = segments.global.find(segment); it != segments.global.end()) {
+        return it->second;
     }
 
     return std::nullopt;
@@ -2065,13 +2065,19 @@ ResolvedAddr Companion::ResolveVirtualAddr(uint32_t addr) {
 std::optional<std::pair<std::uint32_t, std::uint32_t>>
 Companion::GetFileOffsetFromCompressedSegmentedAddr(const uint8_t segment) const {
 
-    auto segments = this->gConfig.segment;
+    const auto& compressed = this->gConfig.segment.compressed;
 
-    if (segments.compressed[this->gCurrentFile].contains(segment)) {
-        return segments.compressed[this->gCurrentFile][segment];
+    const auto file = compressed.find(this->gCurrentFile);
+    if (file == compressed.end()) {
+        return std::nullopt;
     }
 
-    return std::nullopt;
+    const auto entry = file->second.find(segment);
+    if (entry == file->second.end()) {
+        return std::nullopt;
+    }
+
+    return entry->second;
 }
 
 uint32_t Companion::PatchVirtualAddr(uint32_t addr) {
@@ -2531,7 +2537,6 @@ std::optional<YAML::Node> Companion::AddAsset(YAML::Node asset) {
         }
     }
 
-    auto rom = this->GetRomData();
     auto factory = this->GetFactory(type);
 
     if (!factory.has_value()) {
