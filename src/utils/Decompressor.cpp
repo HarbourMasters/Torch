@@ -104,6 +104,54 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
             gCachedChunks[offset] = new DataChunk{ decompressed, size };
             return gCachedChunks[offset];
         }
+        case CompressionType::CMPDMA: {
+            // Majora's Mask CmpDma container, per CmpDma_GetFileInfo in the decomp
+            // (mm/src/code/sys_cmpdma.c):
+            //
+            //   word[0]        dataStart -- size of this table, and where data begins
+            //   word[1..n-1]   start of sub-file 1..n-1, RELATIVE TO dataStart
+            //   word[n]        end of the last sub-file
+            //
+            // Sub-file 0 is implicit at relative 0. Sub-file count is dataStart/4 - 1.
+            // Each sub-file is an independent Yaz0 stream; asset offsets address the
+            // concatenation of all of them, which is what CmpDma_LoadAllFiles builds.
+            const auto readU32 = [&](const size_t index) -> uint32_t {
+                const unsigned char* p = in_buf + index * sizeof(uint32_t);
+                return static_cast<uint32_t>(p[0]) << 24 | static_cast<uint32_t>(p[1]) << 16 |
+                       static_cast<uint32_t>(p[2]) << 8 | static_cast<uint32_t>(p[3]);
+            };
+
+            const uint32_t dataStart = readU32(0);
+            if (dataStart < 2 * sizeof(uint32_t) || dataStart % sizeof(uint32_t) != 0) {
+                throw std::runtime_error("CMPDMA: implausible dataStart 0x" + Torch::to_hex(dataStart, false) +
+                                         " at ROM offset 0x" + Torch::to_hex(offset, false) +
+                                         ". Is this file really a CmpDma container?");
+            }
+            const size_t count = dataStart / sizeof(uint32_t) - 1;
+
+            std::vector<uint8_t> joined;
+            for (size_t i = 0; i < count; i++) {
+                const uint32_t rel = (i == 0) ? 0 : readU32(i);
+                uint32_t subSize = 0;
+                uint8_t* sub = yaz0_decode(in_buf + dataStart + rel, &subSize);
+                if (!sub) {
+                    throw std::runtime_error("CMPDMA: sub-file " + std::to_string(i) + " of " +
+                                             std::to_string(count) + " is not a Yaz0 stream (ROM offset 0x" +
+                                             Torch::to_hex(offset + dataStart + rel, false) + ")");
+                }
+                joined.insert(joined.end(), sub, sub + subSize);
+                free(sub);
+            }
+
+            const auto decompressed = new uint8_t[joined.size()];
+            std::copy(joined.begin(), joined.end(), decompressed);
+
+            {
+                std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+                gCachedChunks[offset] = new DataChunk{ decompressed, joined.size() };
+                return gCachedChunks[offset];
+            }
+        }
         default:
             throw std::runtime_error("Unknown compression type");
     }
@@ -209,6 +257,9 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         case CompressionType::YAY0:
         case CompressionType::YAY1:
         case CompressionType::MIO0:
+        // CMPDMA decodes to the concatenation of its sub-files, and asset offsets
+        // already address that, so it indexes exactly like a single decoded file.
+        case CompressionType::CMPDMA:
         case CompressionType::YAZ0: {
             offset = ASSET_PTR(offset);
 

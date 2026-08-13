@@ -528,6 +528,26 @@ void Companion::ParseModdingConfig() {
     }
 }
 
+// Resolve an explicit `compression:` override from a file's :config:. Formats with
+// no magic of their own (CmpDma containers) cannot be sniffed by
+// GetCompressionType, so a file has to name them. Returns nullopt when the key is
+// absent, leaving auto-detection in charge.
+static std::optional<CompressionType> ExplicitCompressionType(const YAML::Node& config) {
+    if (!config || !config["compression"]) {
+        return std::nullopt;
+    }
+    const auto name = config["compression"].as<std::string>();
+    if (name == "CMPDMA") {
+        return CompressionType::CMPDMA;
+    }
+    if (name == "NONE") {
+        return CompressionType::None;
+    }
+    throw std::runtime_error("Unknown `compression:` value \"" + name +
+                             "\".\n\nSupported: CMPDMA, NONE. Omit the key to auto-detect from the "
+                             "file's magic (MIO0/Yay0/Yay1/Yaz0).");
+}
+
 void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& assetCount) {
     if (node["external_files"]) {
         auto externalFiles = node["external_files"];
@@ -623,6 +643,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 SetSegmentInfo(segments);
 
                 gCurrentCompressionType = Decompressor::GetCompressionType(this->gRomData, gCurrentFileOffset);
+                if (const auto explicitType = ExplicitCompressionType(node)) {
+                    gCurrentCompressionType = *explicitType;
+                }
                 if (node["no_compression"]) {
                     gCurrentCompressionType = CompressionType::None;
                 }
@@ -1222,6 +1245,9 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
                 SetSegmentInfo(segments);
 
                 gCurrentCompressionType = Decompressor::GetCompressionType(this->gRomData, gCurrentFileOffset);
+                if (const auto explicitType = ExplicitCompressionType(root[":config"])) {
+                    gCurrentCompressionType = *explicitType;
+                }
                 if (root[":config"]["no_compression"]) {
                     gCurrentCompressionType = CompressionType::None;
                 }
