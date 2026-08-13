@@ -1,4 +1,5 @@
 #include "OoTSceneCommandWriter.h"
+#include "MMTextureAnimationFactory.h"
 #include "AliasManager.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -784,7 +785,14 @@ void SceneCommandWriter::WriteSetAnimatedMaterialList(LUS::BinaryWriter& w, uint
     // reference is written here.
     uint32_t offset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(cmdArg2));
     std::string symbol = MakeAssetName(ctx.baseName, "TexAnim", offset);
-    w.Write(ctx.currentDir + "/" + symbol);
+    std::string resPath = ctx.currentDir + "/" + symbol;
+    w.Write(resPath);
+
+    auto animData = SerializeTextureAnimation(ctx.buffer, cmdArg2, resPath);
+    if (animData.empty()) {
+        SPDLOG_WARN("Scene: skipping animated material list {} due to parse failure", symbol);
+    }
+    Companion::Instance->RegisterCompanionFile(symbol, animData);
 }
 
 void SceneCommandWriter::WriteSetActorCutsceneList(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2,

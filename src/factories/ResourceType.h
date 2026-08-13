@@ -82,6 +82,9 @@ enum class ResourceType {
     OoTBackground = 0x4F424749,      // OBGI
     OoTSceneCommand = 0x4F52434D,    // ORCM
 
+    // MM
+    MMTextureAnimation = 0x4F54414E, // OTAN
+
     // BK64
     BKSprite = 0x424B5350,         // BKSP
     BKAnimation = 0x424B414E,      // BKAN
