@@ -1323,6 +1323,13 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
             node["path"] = gCurrentVirtualPath;
         }
 
+        // A `duplicate_of` node is a second copy of an asset already declared at
+        // this offset under another name, so it must not claim the address --
+        // pointers to that offset belong to the original.
+        if (node["duplicate_of"]) {
+            continue;
+        }
+
         this->gAddrMap[this->gCurrentFile][offset] = std::make_tuple(output, node);
     }
 

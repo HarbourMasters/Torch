@@ -688,7 +688,11 @@ std::optional<ExportResult> Export(std::ostream& write, std::shared_ptr<IParsedD
     while (writer.GetBaseAddress() % 8 != 0)
         writer.Write(static_cast<int8_t>(0xFF));
 
-    auto bhash = CRC64((*replacement).c_str());
+    // A display list identifies itself by hashing its own path. ZAPD emits a few
+    // lists twice under two names (object_horse_link_child's skin-limb DL is one)
+    // and the copy carries the original's hash, not its own.
+    auto selfPath = node["duplicate_of"] ? node["duplicate_of"].as<std::string>() : *replacement;
+    auto bhash = CRC64(selfPath.c_str());
     writer.Write(static_cast<uint32_t>((G_MARKER << 24)));
     writer.Write(0xBEEFBEEF);
     writer.Write(static_cast<uint32_t>(bhash >> 32));
