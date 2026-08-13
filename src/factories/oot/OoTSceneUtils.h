@@ -17,6 +17,9 @@ inline uint32_t CS_CMD_BBH(int8_t a, int8_t b, int16_t c) {
 inline uint32_t CS_CMD_HBB(uint16_t a, uint8_t b, uint8_t c) {
     return (uint32_t)a | ((uint32_t)b << 16) | ((uint32_t)c << 24);
 }
+inline uint32_t CS_CMD_BBBB(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    return (uint32_t)a | ((uint32_t)b << 8) | ((uint32_t)c << 16) | ((uint32_t)d << 24);
+}
 
 // Helper to read a sub-array from ROM given a segmented pointer
 LUS::BinaryReader ReadSubArray(std::vector<uint8_t>& buffer, uint32_t segAddr, uint32_t size);
@@ -27,15 +30,29 @@ std::string ResolvePointer(uint32_t ptr);
 // Build a scene-relative asset name from offset
 std::string MakeAssetName(const std::string& baseName, const std::string& suffix, uint32_t offset);
 
+// One entry of a scene's pathway list. The rom struct is 8 bytes:
+//   numPoints (u8), unk1 (s8), unk2 (s16), pointsAddr (u32)
+// OoT ignores unk1/unk2 as padding; MM carries them into the exported asset.
+struct Pathway {
+    uint8_t numPoints;
+    int8_t unk1;
+    int16_t unk2;
+    uint32_t pointsAddr;
+};
+
 // Serialize pathway data into OoTPath binary format.
-std::vector<char> SerializePathways(std::vector<uint8_t>& buffer,
-                                    const std::vector<std::pair<uint8_t, uint32_t>>& pathways,
+std::vector<char> SerializePathways(std::vector<uint8_t>& buffer, const std::vector<Pathway>& pathways,
                                     uint32_t writeCount, uint32_t repeats);
 
 class CutsceneSerializer {
 public:
     static std::vector<char> Serialize(std::vector<uint8_t>& buffer, uint32_t segAddr);
+
+    // Majora's Mask has its own command set; see CutsceneMM_Commands in ZAPD and
+    // OTRExporter_Cutscene::SaveMM.
+    static std::vector<char> SerializeMM(std::vector<uint8_t>& buffer, uint32_t segAddr);
 private:
+    static uint32_t CalculateSizeMM(std::vector<uint8_t>& buffer, uint32_t segAddr);
     static uint32_t CalculateSize(std::vector<uint8_t>& buffer, uint32_t segAddr);
     static std::vector<char> Write(std::vector<uint8_t>& buffer, uint32_t segAddr, uint32_t size);
     static void WriteCameraCmd(LUS::BinaryReader& reader, LUS::BinaryWriter& w);

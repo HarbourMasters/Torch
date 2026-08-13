@@ -218,7 +218,303 @@ void CutsceneSerializer::WriteEntryCountCmd(uint32_t cid, LUS::BinaryReader& rea
     }
 }
 
+namespace {
+
+// Majora's Mask cutscene command classification, from ZCutscene::GetCommandMM.
+// Everything funnels into a handful of shapes; the id ranges are the awkward part.
+constexpr uint32_t MM_CS_TEXT = 10;                 // 0x00A
+constexpr uint32_t MM_CS_CAMERA_SPLINE = 90;        // 0x05A
+constexpr uint32_t MM_CS_TRANSITION_GENERAL = 155;  // 0x09B
+constexpr uint32_t MM_CS_FADE_OUT_SEQ = 156;        // 0x09C
+constexpr uint32_t MM_CS_TIME = 157;                // 0x09D
+constexpr uint32_t MM_CS_PLAYER_CUE = 200;          // 0x0C8
+constexpr uint32_t MM_CS_RUMBLE = 400;              // 0x190
+
+// Actor cues share the player cue's 0x30-byte layout. The ranges are from the
+// goto in OTRExporter_Cutscene::SaveMM.
+bool MMIsActorCue(uint32_t id) {
+    return (id >= 100 && id <= 149) || id == 201 || (id >= 450 && id <= 599) || id == MM_CS_PLAYER_CUE;
+}
+
+// Bytes per entry in the rom.
+uint32_t MMEntryRawSize(uint32_t id) {
+    if (MMIsActorCue(id)) {
+        return 0x30;
+    }
+    switch (id) {
+        case MM_CS_TEXT:
+        case MM_CS_TRANSITION_GENERAL:
+        case MM_CS_FADE_OUT_SEQ:
+        case MM_CS_TIME:
+        case MM_CS_RUMBLE:
+            return 0x0C;
+        default:
+            return 0x08;
+    }
+}
+
+} // namespace
+
+// Walk the rom commands to find the cutscene's total byte length. Mirrors
+// ZCutscene::ParseRawData: read the id, hand the rest to the command, then
+// advance by its size less the four bytes already consumed.
+uint32_t CutsceneSerializer::CalculateSizeMM(std::vector<uint8_t>& buffer, uint32_t segAddr) {
+    auto probe = ReadSubArray(buffer, segAddr, 8);
+    if (probe.GetLength() < 8) {
+        return 0;
+    }
+    uint32_t numCommands = probe.ReadUInt32();
+    if (numCommands > 0x1000) {
+        return 0;
+    }
+
+    uint32_t pos = 8;
+    for (uint32_t i = 0; i < numCommands; i++) {
+        auto head = ReadSubArray(buffer, segAddr + pos, 8);
+        if (head.GetLength() < 8) {
+            return 0;
+        }
+        uint32_t id = head.ReadUInt32();
+        uint32_t numEntries = head.ReadUInt32();
+        pos += 4;
+
+        // A wild entry count would send pos far outside the file, and ReadSubArray
+        // is not safe at an arbitrary address. Treat it as unparseable instead.
+        if (numEntries > 0x4000 || pos > 0x200000) {
+            return 0;
+        }
+
+        if (id == MM_CS_CAMERA_SPLINE) {
+            // Headers run until a 0xFFFF marker; each is followed by two groups of
+            // numEntries camera points and one group of misc points.
+            uint32_t numHeaders = 0, totalCommands = 0;
+            uint32_t p = pos + 4;
+            for (;;) {
+                auto hdr = ReadSubArray(buffer, segAddr + p, 8);
+                if (hdr.GetLength() < 8) {
+                    return 0;
+                }
+                uint16_t first = hdr.ReadUInt16();
+                if (first == 0xFFFF) {
+                    break;
+                }
+                numHeaders++;
+                totalCommands += first;
+                p += 8 + first * 0x0C * 2 + first * 0x08;
+                if (p > 0x200000) {
+                    return 0;
+                }
+                if (numHeaders > 0x400) {
+                    return 0;
+                }
+            }
+            pos += (8 + 8 * numHeaders + (totalCommands * 2) * 0x0C + totalCommands * 8 + 4) - 4;
+        } else {
+            pos += (8 + numEntries * MMEntryRawSize(id)) - 4;
+        }
+    }
+    return pos + 8;
+}
+
+std::vector<char> CutsceneSerializer::SerializeMM(std::vector<uint8_t>& buffer, uint32_t segAddr) {
+    uint32_t size = CalculateSizeMM(buffer, segAddr);
+    if (size == 0) {
+        return {};
+    }
+
+    auto r = ReadSubArray(buffer, segAddr, size);
+    // ReadSubArray clamps to what the file actually holds. If it came up short the
+    // walk below would read past the end, so bail rather than run off.
+    if (r.GetLength() < size) {
+        SPDLOG_WARN("MM cutscene at 0x{:X}: wanted 0x{:X} bytes, got 0x{:X}", segAddr, size, r.GetLength());
+        return {};
+    }
+
+    LUS::BinaryWriter w;
+    BaseExporter::WriteHeader(w, Torch::ResourceType::OoTCutscene, 0);
+
+    uint32_t wordCountPos = w.GetStream()->GetLength();
+    w.Write(static_cast<uint32_t>(0));
+    uint32_t dataStartPos = w.GetStream()->GetLength();
+
+    uint32_t numCommands = r.ReadUInt32();
+    uint32_t endFrame = r.ReadUInt32();
+    w.Write(numCommands);
+    w.Write(endFrame);
+
+    // These never fire on the retail rom, but a layout mistake in a command below
+    // would otherwise walk off the end of the sub-array. Log and skip instead.
+    const auto overrun = [&](const char* what, uint32_t i, uint32_t id, uint32_t need) {
+        SPDLOG_ERROR("MM cutscene 0x{:X}: {} overran at command {}/{} (id {}), pos 0x{:X} + 0x{:X} > len 0x{:X}",
+                     segAddr, what, i, numCommands, id, r.GetBaseAddress(), need, r.GetLength());
+    };
+
+    for (uint32_t i = 0; i < numCommands; i++) {
+        if (r.GetBaseAddress() + 8 > r.GetLength()) {
+            overrun("command header", i, 0, 8);
+            return {};
+        }
+        uint32_t id = r.ReadUInt32();
+        w.Write(id);
+
+        if (id == MM_CS_CAMERA_SPLINE) {
+            // The count here is a byte length, not an entry count.
+            uint32_t byteLength = r.ReadUInt32();
+            w.Write(byteLength);
+            for (uint32_t guard = 0;; guard++) {
+                if (guard > 0x400) {
+                    SPDLOG_WARN("MM cutscene at 0x{:X}: spline list did not terminate", segAddr);
+                    return {};
+                }
+                if (r.GetBaseAddress() + 8 > r.GetLength()) {
+                    overrun("spline header", i, id, 8);
+                    return {};
+                }
+                uint16_t numEntries = r.ReadUInt16();
+                if (numEntries == 0xFFFF) {
+                    // Footer: the remaining half word belongs to it.
+                    r.ReadUInt16();
+                    w.Write(static_cast<uint16_t>(0xFFFF));
+                    w.Write(static_cast<uint16_t>(0x0004));
+                    break;
+                }
+                uint16_t unused0 = r.ReadUInt16();
+                uint16_t unused1 = r.ReadUInt16();
+                uint16_t duration = r.ReadUInt16();
+                w.Write(CS_CMD_HH(numEntries, unused0));
+                w.Write(CS_CMD_HH(unused1, duration));
+
+                for (uint32_t k = 0; k < numEntries * 2u; k++) {
+                    uint8_t interpType = r.ReadUByte();
+                    uint8_t weight = r.ReadUByte();
+                    uint16_t dur = r.ReadUInt16();
+                    uint16_t posX = r.ReadUInt16();
+                    uint16_t posY = r.ReadUInt16();
+                    uint16_t posZ = r.ReadUInt16();
+                    uint16_t relTo = r.ReadUInt16();
+                    w.Write(CS_CMD_BBH(interpType, weight, dur));
+                    w.Write(CS_CMD_HH(posX, posY));
+                    w.Write(CS_CMD_HH(posZ, relTo));
+                }
+                for (uint32_t k = 0; k < numEntries; k++) {
+                    uint16_t u0 = r.ReadUInt16();
+                    uint16_t roll = r.ReadUInt16();
+                    uint16_t fov = r.ReadUInt16();
+                    uint16_t u1 = r.ReadUInt16();
+                    w.Write(CS_CMD_HH(u0, roll));
+                    w.Write(CS_CMD_HH(fov, u1));
+                }
+            }
+            continue;
+        }
+
+        uint32_t count = r.ReadUInt32();
+        w.Write(count);
+
+        if (r.GetBaseAddress() + count * MMEntryRawSize(id) > r.GetLength()) {
+            overrun("entries", i, id, count * MMEntryRawSize(id));
+            return {};
+        }
+
+        for (uint32_t e = 0; e < count; e++) {
+            uint16_t base = r.ReadUInt16();
+            uint16_t startFrame = r.ReadUInt16();
+            uint16_t endF = r.ReadUInt16();
+
+            if (MMIsActorCue(id)) {
+                uint16_t rotX = r.ReadUInt16();
+                uint16_t rotY = r.ReadUInt16();
+                uint16_t rotZ = r.ReadUInt16();
+                w.Write(CS_CMD_HH(base, startFrame));
+                w.Write(CS_CMD_HH(endF, rotX));
+                w.Write(CS_CMD_HH(rotY, rotZ));
+                for (int j = 0; j < 6; j++) { // start/end positions
+                    w.Write(r.ReadUInt32());
+                }
+                for (int j = 0; j < 3; j++) { // normal
+                    w.Write(r.ReadUInt32());
+                }
+                continue;
+            }
+
+            switch (id) {
+                case MM_CS_TEXT: {
+                    uint16_t type = r.ReadUInt16();
+                    uint16_t textId1 = r.ReadUInt16();
+                    uint16_t textId2 = r.ReadUInt16();
+                    w.Write(CS_CMD_HH(base, startFrame));
+                    w.Write(CS_CMD_HH(endF, type));
+                    w.Write(CS_CMD_HH(textId1, textId2));
+                    break;
+                }
+                case MM_CS_TRANSITION_GENERAL: {
+                    uint8_t unk06 = r.ReadUByte();
+                    uint8_t unk07 = r.ReadUByte();
+                    uint8_t unk08 = r.ReadUByte();
+                    r.ReadUByte();
+                    r.ReadUInt16();
+                    w.Write(CS_CMD_HH(base, startFrame));
+                    w.Write(CS_CMD_HBB(endF, unk06, unk07));
+                    w.Write(CS_CMD_BBBB(unk08, 0, 0, 0));
+                    break;
+                }
+                case MM_CS_FADE_OUT_SEQ: {
+                    uint16_t pad = r.ReadUInt16();
+                    r.ReadUInt32();
+                    w.Write(CS_CMD_HH(base, startFrame));
+                    w.Write(CS_CMD_HH(endF, pad));
+                    w.Write(static_cast<uint32_t>(0));
+                    break;
+                }
+                case MM_CS_TIME: {
+                    uint8_t hour = r.ReadUByte();
+                    uint8_t minute = r.ReadUByte();
+                    r.ReadUInt32();
+                    w.Write(CS_CMD_HH(base, startFrame));
+                    w.Write(CS_CMD_HBB(endF, hour, minute));
+                    w.Write(static_cast<uint32_t>(0));
+                    break;
+                }
+                case MM_CS_RUMBLE: {
+                    uint8_t intensity = r.ReadUByte();
+                    uint8_t decayTimer = r.ReadUByte();
+                    uint8_t decayStep = r.ReadUByte();
+                    r.ReadUByte();
+                    r.ReadUInt16();
+                    w.Write(CS_CMD_HH(base, startFrame));
+                    w.Write(CS_CMD_HBB(endF, intensity, decayTimer));
+                    w.Write(CS_CMD_BBBB(decayStep, 0, 0, 0));
+                    break;
+                }
+                default: {
+                    uint16_t pad = r.ReadUInt16();
+                    w.Write(CS_CMD_HH(base, startFrame));
+                    w.Write(CS_CMD_HH(endF, pad));
+                    break;
+                }
+            }
+        }
+    }
+
+    w.Write(static_cast<uint32_t>(0xFFFFFFFF));
+    w.Write(static_cast<uint32_t>(0));
+
+    uint32_t endPos = w.GetStream()->GetLength();
+    w.Seek(wordCountPos, LUS::SeekOffsetType::Start);
+    w.Write(static_cast<uint32_t>((endPos - dataStartPos) / 4));
+    w.Seek(endPos, LUS::SeekOffsetType::Start);
+
+    std::stringstream ss;
+    w.Finish(ss);
+    auto str = ss.str();
+    return std::vector<char>(str.begin(), str.end());
+}
+
 std::vector<char> CutsceneSerializer::Serialize(std::vector<uint8_t>& buffer, uint32_t segAddr) {
+    if (Companion::Instance->IsMajorasMask()) {
+        return SerializeMM(buffer, segAddr);
+    }
+
     auto size = CalculateSize(buffer, segAddr);
 
     // Size of 0 means corrupt or empty cutscene data

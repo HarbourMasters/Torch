@@ -170,6 +170,13 @@ _DW({                                                                           
             (uint32_t)((SEGMENT_NUMBER(dl) << 24) | ((SEGMENT_OFFSET(dl) / 8) & 0x00FFFFFF))	\
     }}
 
+#define gsSPBranchListOTRIndex(dl) \
+    {{                                  \
+        (_SHIFTL((G_DL_OTR_INDEX), 24, 8) | _SHIFTL((0x01), 16, 8) | 			\
+         _SHIFTL((0), 0, 16)), 						\
+            (uint32_t)((SEGMENT_NUMBER(dl) << 24) | ((SEGMENT_OFFSET(dl) / 8) & 0x00FFFFFF))	\
+    }}
+
 #define gsSPDisplayListOTRFilePath(dl) \
     {{									\
         (_SHIFTL((G_DL_OTR_FILEPATH), 24, 8) | _SHIFTL((0x00), 16, 8) | 			\

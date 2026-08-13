@@ -101,8 +101,18 @@ struct GBIConfig {
     bool useFloats = false;
 };
 
+// Which Zelda 64 title a rom is. Ocarina of Time and Majora's Mask run on the same
+// engine and share most asset formats, but a few structures carry extra fields in
+// MM -- pathways, for one -- so shared code has to be able to tell them apart.
+// Declared per rom with `game: MM` in its config; defaults to OoT.
+enum class Zelda64Game {
+    OoT,
+    MM,
+};
+
 struct TorchConfig {
     GBIConfig gbi;
+    Zelda64Game zelda64Game = Zelda64Game::OoT;
     SegmentConfig segment;
     std::string outputPath;
     std::string moddingPath;
@@ -189,6 +199,8 @@ public:
     std::string GetDestRelativeOutputPath() { return RelativePathToDestDir(GetOutputPath()); }
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
+    Zelda64Game GetZelda64Game() const { return this->gConfig.zelda64Game; }
+    bool IsMajorasMask() const { return this->gConfig.zelda64Game == Zelda64Game::MM; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
     std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
@@ -217,8 +229,9 @@ public:
     const std::vector<std::tuple<std::string, YAML::Node>>* GetNodesByTypeRef(const std::string& type, bool includeAutogen = false);
     std::string GetSymbolFromAddr(uint32_t addr, bool validZero = false);
 
-    std::optional<std::uint32_t> GetFileOffset(void) const { return this->gCurrentFileOffset; };
-    std::optional<std::uint32_t> GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
+    std::string GetCurrentFile(void) { return this->gCurrentFile; }
+    std::optional<std::uint32_t> GetFileOffsetFromName(void) const { return this->gCurrentFileOffset; };
+    std::uint32_t GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     std::optional<std::uint32_t> GetCurrentCompressedSize(void) const { return this->gCurrentCompressedSize; };
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
@@ -253,6 +266,7 @@ public:
     bool GetCompressedSegmentOffset(uint32_t* addr);
 
     void SetSingleYMLPath(const std::string& path) { this->gSingleYMLPath = path; }
+    uint32_t GetFileOffsetFromName(const std::string& file) const { return this->gFileOffsets.at(file); }
 
 #ifdef BUILD_UI
     void RegisterUIFactory(const std::string& type, const std::shared_ptr<BaseFactoryUI>& factory);
@@ -301,6 +315,7 @@ private:
     std::vector<std::string> gCurrentExternalFiles;
     std::unordered_map<int, std::string> gManualSegments;
     std::unordered_set<std::string> gProcessedFiles;
+    std::unordered_map<std::string, uint32_t> gFileOffsets;
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
     std::vector<std::pair<std::string, std::vector<char>>> gArchiveFiles;
@@ -341,4 +356,7 @@ private:
     void LoadYAMLRecursively(const std::string &dirPath, std::vector<YAML::Node> &result, bool skipRoot);
     std::vector<fs::directory_entry> GetAssetYMLs(YAML::Node& rom) const;
     std::optional<ParseResultData> ParseNode(YAML::Node& node, std::string& name);
+    void ParseFilelist(const std::string& filelistPath);
+    void SetSegmentInfo(const YAML::Node& segments);
+    uint32_t GetFileOffsetFromNodeStr(const std::string& str) const;
 };

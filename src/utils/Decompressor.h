@@ -15,6 +15,11 @@ enum class CompressionType {
     YAY1,
     YAZ0,
     BKZIP,
+    // Majora's Mask CmpDma container: a table of big-endian u32 offsets followed
+    // by one independent Yaz0 stream per sub-file. Decoding concatenates them.
+    // Has no magic of its own, so it is never auto-detected -- a file must opt in
+    // with `compression: CMPDMA` in its :config:.
+    CMPDMA,
 };
 
 

@@ -15,22 +15,22 @@ std::optional<std::shared_ptr<IParsedData>> OoTPathFactory::parse(std::vector<ui
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     uint32_t numPaths = node["num_paths"] ? node["num_paths"].as<uint32_t>() : 1;
 
-    // Each path entry is 8 bytes: numPoints (u8), padding (3 bytes), pointsAddr (u32)
+    // Each path entry is 8 bytes: numPoints (u8), unk1 (s8), unk2 (s16), pointsAddr (u32).
+    // OoT ignores unk1/unk2; MM exports them.
     auto pathReader = ReadSubArray(buffer, offset, numPaths * 8);
 
-    // {numPoints, pointsAddr}
-    std::vector<std::pair<uint8_t, uint32_t>> pathways;
+    std::vector<Pathway> pathways;
 
     for (uint32_t i = 0; i < numPaths; i++) {
-        uint8_t numPoints = pathReader.ReadUByte();
-        pathReader.ReadUByte(); // padding
-        pathReader.ReadUByte();
-        pathReader.ReadUByte();
-        uint32_t pointsAddr = pathReader.ReadUInt32();
+        Pathway path{};
+        path.numPoints = pathReader.ReadUByte();
+        path.unk1 = static_cast<int8_t>(pathReader.ReadUByte());
+        path.unk2 = pathReader.ReadInt16();
+        path.pointsAddr = pathReader.ReadUInt32();
 
-        if (pointsAddr == 0) break;
+        if (path.pointsAddr == 0) break;
 
-        pathways.push_back({numPoints, pointsAddr});
+        pathways.push_back(path);
     }
 
     if (pathways.empty()) return std::nullopt;

@@ -16,6 +16,9 @@ struct SceneWriteContext {
     const std::string& assetType;
     bool isAltHeader;
     std::vector<PendingAltHeader>& pendingAltHeaders;
+    // Set by SetRoomList; MM's SetMinimapList has one entry per room and carries
+    // no count of its own.
+    uint32_t roomCount = 0;
 };
 
 class SceneCommandWriter {
@@ -41,6 +44,11 @@ private:
     void WriteSetLightList(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2, SceneWriteContext& ctx);
     void WriteSetExitList(LUS::BinaryWriter& w, uint32_t cmdArg2, SceneWriteContext& ctx);
     void WriteSetRoomList(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2, SceneWriteContext& ctx);
+    void WriteSetCutscenesMM(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2, SceneWriteContext& ctx);
+    void WriteSetAnimatedMaterialList(LUS::BinaryWriter& w, uint32_t cmdArg2, SceneWriteContext& ctx);
+    void WriteSetActorCutsceneList(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2, SceneWriteContext& ctx);
+    void WriteSetMinimapList(LUS::BinaryWriter& w, uint32_t cmdArg2, SceneWriteContext& ctx);
+    void WriteSetMinimapChests(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2, SceneWriteContext& ctx);
     void WriteSetCollisionHeader(LUS::BinaryWriter& w, uint32_t cmdArg2);
     void WriteSetMesh(LUS::BinaryWriter& w, uint32_t cmdArg2, SceneWriteContext& ctx);
     void WriteSetCsCamera(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2, SceneWriteContext& ctx);

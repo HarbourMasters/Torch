@@ -56,11 +56,44 @@ std::optional<std::shared_ptr<IParsedData>> OoTArrayFactory::parse(std::vector<u
         return parseVec3sArray(segment, count);
     }
 
+    if (arrayType == "Scalar") {
+        // ZScalarType, from ZScalar.h: S8 1, U8 2, X8 3, S16 4, U16 5, X16 6,
+        // S32 7, U32 8, X32 9.
+        const auto scalarType = GetSafeNode<uint32_t>(node, "scalar_type");
+        uint32_t width = 1;
+        if (scalarType >= 4 && scalarType <= 6) {
+            width = 2;
+        } else if (scalarType >= 7 && scalarType <= 9) {
+            width = 4;
+        } else if (scalarType > 9) {
+            SPDLOG_ERROR("Unsupported scalar array type {}", scalarType);
+            return std::nullopt;
+        }
+
+        LUS::BinaryReader reader(segment.data, segment.size);
+        reader.SetEndianness(Torch::Endianness::Big);
+        std::vector<uint64_t> values;
+        for (size_t i = 0; i < count; i++) {
+            switch (width) {
+                case 2: values.push_back(reader.ReadUInt16()); break;
+                case 4: values.push_back(reader.ReadUInt32()); break;
+                default: values.push_back(reader.ReadUByte()); break;
+            }
+        }
+        return std::make_shared<OoTScalarArrayData>(scalarType, std::move(values));
+    }
+
+    if (arrayType == "CollisionPoly" || arrayType == "Pointer") {
+        const auto type = arrayType == "CollisionPoly" ? SohArrayType::CollisionPoly : SohArrayType::Pointer;
+        return std::make_shared<OoTUntypedArrayData>(static_cast<uint32_t>(type), count);
+    }
+
     SPDLOG_ERROR("Unknown OoT Array type '{}'", arrayType);
     return std::nullopt;
 }
 
-static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArrayData> data, bool zeroFlag) {
+static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArrayData> data, bool zeroFlag,
+                           bool sunTc) {
     writer.Write(static_cast<uint32_t>(SohArrayType::Vertex));
     writer.Write(static_cast<uint32_t>(data->mVtxs.size()));
 
@@ -74,11 +107,54 @@ static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArra
         // VTX arrays) selects the discovered behaviour.
         writer.Write(zeroFlag ? static_cast<uint16_t>(0) : v.flag);
         writer.Write(v.tc[0]);
-        writer.Write(v.tc[1]);
+        // MM's sun textures are one 64x64 image the rom stores in pieces, which
+        // ZAPD cannot extract whole (gameplay_keep.xml says so above gSunSunsetTex).
+        // It compensates by rewriting the t coordinates of the vertices gSunDL
+        // loads -- ZDisplayList.cpp, GfxdCallback_Vtx:
+        //
+        //     if (self->GetName() == "gSunDL")
+        //         vtx.t = (((vtx.t >> 5) - 1) / 2) << 5;
+        //
+        // so the exported array does not match the rom. Reproduced verbatim,
+        // integer division and all.
+        if (sunTc) {
+            const int32_t t = v.tc[1];
+            writer.Write(static_cast<int16_t>((((t >> 5) - 1) / 2) << 5));
+        } else {
+            writer.Write(v.tc[1]);
+        }
         writer.Write(v.cn[0]);
         writer.Write(v.cn[1]);
         writer.Write(v.cn[2]);
         writer.Write(v.cn[3]);
+    }
+}
+
+static void exportScalarArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTScalarArrayData> data) {
+    writer.Write(static_cast<uint32_t>(SohArrayType::Scalar));
+    writer.Write(static_cast<uint32_t>(data->mValues.size()));
+
+    // Each element repeats its type tag, then the value at that type's width.
+    for (const auto v : data->mValues) {
+        writer.Write(data->mScalarType);
+        if (data->mScalarType >= 7 && data->mScalarType <= 9) {
+            writer.Write(static_cast<uint32_t>(v));
+        } else if (data->mScalarType >= 4 && data->mScalarType <= 6) {
+            writer.Write(static_cast<uint16_t>(v));
+        } else {
+            writer.Write(static_cast<uint8_t>(v));
+        }
+    }
+}
+
+static void exportUntypedArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTUntypedArrayData> data) {
+    writer.Write(data->mArrayType);
+    writer.Write(static_cast<uint32_t>(data->mCount));
+
+    // ArrayExporter has no writer for these element kinds, so each element is a
+    // lone type word of NONE with no payload.
+    for (size_t i = 0; i < data->mCount; i++) {
+        writer.Write(static_cast<uint32_t>(SohScalarType::ZSCALAR_NONE));
     }
 }
 
@@ -106,9 +182,14 @@ ExportResult OoTArrayBinaryExporter::Export(std::ostream& write, std::shared_ptr
 
     if (arrayType == "VTX") {
         bool zeroFlag = node["zero_flag"] && node["zero_flag"].as<bool>();
-        exportVtxArray(writer, std::static_pointer_cast<OoTVtxArrayData>(raw), zeroFlag);
+        bool sunTc = node["sun_tc"] && node["sun_tc"].as<bool>();
+        exportVtxArray(writer, std::static_pointer_cast<OoTVtxArrayData>(raw), zeroFlag, sunTc);
     } else if (arrayType == "Vec3s") {
         exportVec3sArray(writer, std::static_pointer_cast<OoTVec3sArrayData>(raw));
+    } else if (arrayType == "Scalar") {
+        exportScalarArray(writer, std::static_pointer_cast<OoTScalarArrayData>(raw));
+    } else if (arrayType == "CollisionPoly" || arrayType == "Pointer") {
+        exportUntypedArray(writer, std::static_pointer_cast<OoTUntypedArrayData>(raw));
     }
 
     writer.Finish(write);

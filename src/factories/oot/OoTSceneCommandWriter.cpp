@@ -1,4 +1,5 @@
 #include "OoTSceneCommandWriter.h"
+#include "MMTextureAnimationFactory.h"
 #include "AliasManager.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
@@ -48,8 +49,28 @@ SceneCommand SceneCommandWriter::Write(uint32_t w0, uint32_t w1, SceneWriteConte
             WriteSetRoomBehavior(cmdWriter, cmdArg1, cmdArg2);
             break;
         }
-        case SetCameraSettings: {
-            WriteSetCameraSettings(cmdWriter, cmdArg1, cmdArg2);
+        case SetCameraSettings: { // 0x19; SetWorldMapVisited in MM
+            // MM's SetWorldMapVisited writes no body at all -- see RoomExporter.cpp,
+            // where the 0x19 case is guarded by `game != MM_RETAIL`.
+            if (!Companion::Instance->IsMajorasMask()) {
+                WriteSetCameraSettings(cmdWriter, cmdArg1, cmdArg2);
+            }
+            break;
+        }
+        case SetAnimatedMaterialList: {
+            WriteSetAnimatedMaterialList(cmdWriter, cmdArg2, ctx);
+            break;
+        }
+        case SetActorCutsceneList: {
+            WriteSetActorCutsceneList(cmdWriter, cmdArg1, cmdArg2, ctx);
+            break;
+        }
+        case SetMinimapList: {
+            WriteSetMinimapList(cmdWriter, cmdArg2, ctx);
+            break;
+        }
+        case SetMinimapChests: {
+            WriteSetMinimapChests(cmdWriter, cmdArg1, cmdArg2, ctx);
             break;
         }
         case SetSpecialObjects: {
@@ -109,7 +130,14 @@ SceneCommand SceneCommandWriter::Write(uint32_t w0, uint32_t w1, SceneWriteConte
             break;
         }
         case SetCutscenes: {
-            WriteSetCutscenes(cmdWriter, cmdArg2, ctx);
+            // MM's cutscene command is a list, and ZAPD rewrites the opcode to 0x1F
+            // when exporting it. Match both.
+            if (Companion::Instance->IsMajorasMask()) {
+                cmd.cmdID = SetCutscenesMM;
+                WriteSetCutscenesMM(cmdWriter, cmdArg1, cmdArg2, ctx);
+            } else {
+                WriteSetCutscenes(cmdWriter, cmdArg2, ctx);
+            }
             break;
         }
         case SetAlternateHeaders: {
@@ -210,7 +238,20 @@ void SceneCommandWriter::WriteSetSkyboxSettings(LUS::BinaryWriter& w, uint8_t cm
 
 void SceneCommandWriter::WriteSetRoomBehavior(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2) {
     w.Write(static_cast<uint8_t>(cmdArg1)); // gameplayFlags
-    w.Write(cmdArg2);                        // gameplayFlags2
+
+    // OoT writes gameplayFlags2 whole; MM unpacks it into the individual fields it
+    // encodes, six bytes in place of OoT's five. The bit positions are from
+    // SetRoomBehavior::ParseRawData in ZAPD.
+    if (Companion::Instance->IsMajorasMask()) {
+        w.Write(static_cast<uint8_t>(cmdArg2 & 0xFF));       // currRoomUnk2
+        w.Write(static_cast<uint8_t>((cmdArg2 >> 8) & 1));   // currRoomUnk5
+        w.Write(static_cast<uint8_t>((cmdArg2 >> 10) & 1));  // msgCtxUnk
+        w.Write(static_cast<uint8_t>((cmdArg2 >> 11) & 1));  // enablePosLights
+        w.Write(static_cast<uint8_t>((cmdArg2 >> 12) & 1));  // kankyoContextUnkE2
+        return;
+    }
+
+    w.Write(cmdArg2); // gameplayFlags2
 }
 
 void SceneCommandWriter::WriteSetCameraSettings(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2) {
@@ -282,8 +323,13 @@ void SceneCommandWriter::WriteSetLightList(LUS::BinaryWriter& w, uint8_t cmdArg1
     uint32_t count = cmdArg1;
     auto sub = ReadSubArray(ctx.buffer, cmdArg2, count * 14);
     w.Write(static_cast<uint32_t>(count));
+    // The rom struct is 14 bytes with a pad byte after type: type @0, x @2, y @4,
+    // z @6, r @8, g @9, b @10, drawGlow @11, radius @12 -- see LightInfo in ZAPD's
+    // SetLightList.cpp. Reading the fields back to back shifts everything after
+    // type by one byte.
     for (uint32_t i = 0; i < count; i++) {
         w.Write(sub.ReadUByte());  // type
+        sub.ReadUByte();           // padding
         w.Write(sub.ReadInt16());  // x
         w.Write(sub.ReadInt16());  // y
         w.Write(sub.ReadInt16());  // z
@@ -310,6 +356,8 @@ void SceneCommandWriter::WriteSetRoomList(LUS::BinaryWriter& w, uint8_t cmdArg1,
     uint32_t count = cmdArg1;
     auto sub = ReadSubArray(ctx.buffer, cmdArg2, count * 8);
     w.Write(static_cast<uint32_t>(count));
+    // SetMinimapList takes its entry count from the scene's room count.
+    ctx.roomCount = count;
 
     // Derive scene base name from current directory (e.g. "scenes/nonmq/bdan_scene" → "bdan")
     std::string sceneBase;
@@ -320,8 +368,15 @@ void SceneCommandWriter::WriteSetRoomList(LUS::BinaryWriter& w, uint8_t cmdArg1,
         roomBase = roomBase.substr(0, roomBase.size() - 6);
     }
 
+    // OoT numbers rooms plainly; MM zero-pads to two digits (_room_00), which is
+    // also how its XML names the room files.
+    const bool isMM = Companion::Instance->IsMajorasMask();
     for (uint32_t i = 0; i < count; i++) {
-        std::string roomName = ctx.currentDir + "/" + roomBase + "_room_" + std::to_string(i);
+        std::string index = std::to_string(i);
+        if (isMM && index.size() < 2) {
+            index.insert(index.begin(), '0');
+        }
+        std::string roomName = ctx.currentDir + "/" + roomBase + "_room_" + index;
         w.Write(roomName);
         w.Write(sub.ReadUInt32()); // virtualAddressStart
         w.Write(sub.ReadUInt32()); // virtualAddressEnd
@@ -541,22 +596,28 @@ void SceneCommandWriter::WriteSetPathways(LUS::BinaryWriter& w, uint32_t cmdArg2
     uint32_t maxPaths = GetNeighborSize(ctx.knownAddrs, cmdArg2, 8);
     if (maxPaths == 0) maxPaths = 256;
     auto pathReader = ReadSubArray(ctx.buffer, cmdArg2, maxPaths * 8);
-    std::vector<std::pair<uint8_t, uint32_t>> pathways;
+    std::vector<Pathway> pathways;
     for (uint32_t i = 0; i < maxPaths; i++) {
-        uint8_t np = pathReader.ReadUByte();
-        pathReader.ReadUByte(); pathReader.ReadUByte(); pathReader.ReadUByte();
-        uint32_t ptsAddr = pathReader.ReadUInt32();
-        if (ptsAddr == 0 || !IS_SEGMENTED(ptsAddr) || ((ptsAddr >> 24) & 0xFF) != pathSeg) {
+        Pathway path{};
+        path.numPoints = pathReader.ReadUByte();
+        path.unk1 = static_cast<int8_t>(pathReader.ReadUByte());
+        path.unk2 = pathReader.ReadInt16();
+        path.pointsAddr = pathReader.ReadUInt32();
+        if (path.pointsAddr == 0 || !IS_SEGMENTED(path.pointsAddr) ||
+            ((path.pointsAddr >> 24) & 0xFF) != pathSeg) {
             break;
         }
-        pathways.push_back({np, ptsAddr});
+        pathways.push_back(path);
     }
-    if (pathways.empty()) pathways.push_back({0, 0});
-
+    if (pathways.empty()) pathways.push_back(Pathway{});
     auto existingPath = ResolvePointer(cmdArg2);
     bool hasPreExistingResource = !existingPath.empty();
 
-    if (!hasPreExistingResource && ctx.isAltHeader && pathways.size() > 1) {
+    // OoT's alternate headers export only the first pathway of a shared list.
+    // MM exports all of them -- truncating there costs 19 paths, one per
+    // alt-header path command in the game.
+    if (!hasPreExistingResource && ctx.isAltHeader && pathways.size() > 1 &&
+        !Companion::Instance->IsMajorasMask()) {
         pathways.erase(pathways.begin() + 1, pathways.end());
     }
     bool doubled = hasPreExistingResource && (pathways.size() > 1);
@@ -567,8 +628,7 @@ void SceneCommandWriter::WriteSetPathways(LUS::BinaryWriter& w, uint32_t cmdArg2
     uint32_t repeats = doubled ? 2 : 1;
     for (uint32_t r = 0; r < repeats; r++) {
         for (uint32_t i = 0; i < pathways.size(); i++) {
-            auto [np, ptsAddr] = pathways[i];
-            uint32_t pointOffset = SEGMENT_OFFSET(ptsAddr);
+            uint32_t pointOffset = SEGMENT_OFFSET(pathways[i].pointsAddr);
             std::string pathSymbol = MakeAssetName(ctx.baseName, "PathwayList", pointOffset);
             std::string pathPath = ctx.currentDir + "/" + pathSymbol;
             w.Write(pathPath);
@@ -576,8 +636,7 @@ void SceneCommandWriter::WriteSetPathways(LUS::BinaryWriter& w, uint32_t cmdArg2
     }
 
     for (uint32_t i = 0; i < pathways.size(); i++) {
-        auto [np, ptsAddr] = pathways[i];
-        uint32_t pointOffset = SEGMENT_OFFSET(ptsAddr);
+        uint32_t pointOffset = SEGMENT_OFFSET(pathways[i].pointsAddr);
         std::string pathSymbol = MakeAssetName(ctx.baseName, "PathwayList", pointOffset);
         auto pathData = SerializePathways(ctx.buffer, pathways, writeCount, repeats);
         Companion::Instance->RegisterCompanionFile(pathSymbol, pathData);
@@ -681,6 +740,127 @@ std::string SceneCommandWriter::ResolveGfxWithAlias(uint32_t ptr, const std::str
         AliasManager::Instance->Register(path, expectedPath);
     }
     return path;
+}
+
+// --- Majora's Mask only commands ---
+
+void SceneCommandWriter::WriteSetCutscenesMM(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2,
+                                            SceneWriteContext& ctx) {
+    uint32_t count = cmdArg1;
+    auto sub = ReadSubArray(ctx.buffer, cmdArg2, count * 8);
+    w.Write(static_cast<uint8_t>(count));
+
+    // 8 bytes per entry: segmentPtr (u32), exit (u16), entrance (u8), flag (u8).
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t segPtr = sub.ReadUInt32();
+        uint16_t exit = sub.ReadUInt16();
+        uint8_t entrance = sub.ReadUByte();
+        uint8_t flag = sub.ReadUByte();
+
+        // A cutscene that is declared somewhere keeps its declared name; only
+        // undeclared ones get a synthesized one, off the scene's base name rather
+        // than the current header's -- an alternate header's cutscenes still belong
+        // to the scene.
+        std::string csSymbol;
+        auto resolved = ResolvePointer(segPtr);
+        if (resolved.empty()) {
+            uint32_t csOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(segPtr));
+            csSymbol = MakeAssetName(ctx.baseName, "CutsceneData", csOffset);
+            resolved = ctx.currentDir + "/" + csSymbol;
+        } else {
+            csSymbol = resolved.substr(resolved.rfind('/') + 1);
+        }
+        w.Write(resolved);
+        w.Write(exit);
+        w.Write(entrance);
+        w.Write(flag);
+
+        auto csData = CutsceneSerializer::Serialize(ctx.buffer, segPtr);
+        if (csData.empty()) {
+            SPDLOG_WARN("Scene: Skipping cutscene {} due to parse failure", csSymbol);
+        }
+        Companion::Instance->RegisterCompanionFile(csSymbol, csData);
+    }
+}
+
+void SceneCommandWriter::WriteSetAnimatedMaterialList(LUS::BinaryWriter& w, uint32_t cmdArg2,
+                                                      SceneWriteContext& ctx) {
+    // The body is just the path of the animated material list. The list itself is a
+    // separate OTAN resource, which torch has no factory for yet, so only the
+    // reference is written here.
+    uint32_t offset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(cmdArg2));
+    std::string symbol = MakeAssetName(ctx.baseName, "TexAnim", offset);
+    std::string resPath = ctx.currentDir + "/" + symbol;
+    w.Write(resPath);
+
+    auto animData = SerializeTextureAnimation(ctx.buffer, cmdArg2, resPath);
+    if (animData.empty()) {
+        SPDLOG_WARN("Scene: skipping animated material list {} due to parse failure", symbol);
+    }
+    Companion::Instance->RegisterCompanionFile(symbol, animData);
+}
+
+void SceneCommandWriter::WriteSetActorCutsceneList(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2,
+                                                   SceneWriteContext& ctx) {
+    uint32_t count = cmdArg1;
+    auto sub = ReadSubArray(ctx.buffer, cmdArg2, count * 16);
+    w.Write(static_cast<uint32_t>(count));
+
+    // 16 bytes per entry; field order and offsets from CutsceneEntry in ZAPD.
+    for (uint32_t i = 0; i < count; i++) {
+        int16_t priority = sub.ReadInt16();
+        int16_t length = sub.ReadInt16();
+        int16_t csCamId = sub.ReadInt16();
+        int16_t scriptIndex = sub.ReadInt16();
+        int16_t additionalCsId = sub.ReadInt16();
+        uint8_t endSfx = sub.ReadUByte();
+        uint8_t customValue = sub.ReadUByte();
+        int16_t hudVisibility = sub.ReadInt16();
+        uint8_t endCam = sub.ReadUByte();
+        uint8_t letterboxSize = sub.ReadUByte();
+
+        w.Write(priority);
+        w.Write(length);
+        w.Write(csCamId);
+        w.Write(scriptIndex);
+        w.Write(additionalCsId);
+        w.Write(endSfx);
+        w.Write(customValue);
+        w.Write(hudVisibility);
+        w.Write(endCam);
+        w.Write(letterboxSize);
+    }
+}
+
+void SceneCommandWriter::WriteSetMinimapList(LUS::BinaryWriter& w, uint32_t cmdArg2, SceneWriteContext& ctx) {
+    // The command points at a struct holding the entry list address and a scale; the
+    // entry count is the scene's room count, which SetRoomList recorded.
+    auto header = ReadSubArray(ctx.buffer, cmdArg2, 8);
+    uint32_t listAddr = header.ReadUInt32();
+    int16_t scale = header.ReadInt16();
+
+    uint32_t count = ctx.roomCount;
+    w.Write(static_cast<uint32_t>(count));
+    w.Write(scale);
+
+    auto sub = ReadSubArray(ctx.buffer, listAddr, count * 10);
+    for (uint32_t i = 0; i < count; i++) {
+        for (int f = 0; f < 5; f++) {
+            w.Write(sub.ReadUInt16());
+        }
+    }
+}
+
+void SceneCommandWriter::WriteSetMinimapChests(LUS::BinaryWriter& w, uint8_t cmdArg1, uint32_t cmdArg2,
+                                               SceneWriteContext& ctx) {
+    uint32_t count = cmdArg1;
+    auto sub = ReadSubArray(ctx.buffer, cmdArg2, count * 10);
+    w.Write(static_cast<uint32_t>(count));
+    for (uint32_t i = 0; i < count; i++) {
+        for (int f = 0; f < 5; f++) {
+            w.Write(sub.ReadUInt16());
+        }
+    }
 }
 
 uint32_t SceneCommandWriter::GetNeighborSize(const std::set<uint32_t>& knownAddrs, uint32_t segAddr,

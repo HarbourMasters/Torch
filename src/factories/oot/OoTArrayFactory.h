@@ -10,8 +10,11 @@ namespace OoT {
 
 // Shipwright's ArrayResourceType enum values (must match reference O2R format)
 enum class SohArrayType : uint32_t {
+    Scalar = 16,
     Vector = 24,
     Vertex = 25,
+    CollisionPoly = 28,
+    Pointer = 29,
 };
 
 // Shipwright's ZScalarType enum values (from ZAPDTR/ZAPD/ZScalar.h)
@@ -32,6 +35,26 @@ public:
 };
 
 // Parsed data for OoT Array (Vec3s variant)
+// An array of bare scalars. Each element carries its own type tag in the output,
+// which is what OTRExporter's ArrayExporter writes.
+class OoTScalarArrayData : public IParsedData {
+public:
+    uint32_t mScalarType;
+    std::vector<uint64_t> mValues;
+    OoTScalarArrayData(uint32_t type, std::vector<uint64_t> values)
+        : mScalarType(type), mValues(std::move(values)) {}
+};
+
+// An array whose element kind ArrayExporter has no writer for -- CollisionPoly
+// and Pointer. It writes one type word per element and no payload, so the
+// contents are fully determined by the count.
+class OoTUntypedArrayData : public IParsedData {
+public:
+    uint32_t mArrayType;
+    size_t mCount;
+    OoTUntypedArrayData(uint32_t arrayType, size_t count) : mArrayType(arrayType), mCount(count) {}
+};
+
 class OoTVec3sArrayData : public IParsedData {
 public:
     std::vector<Vec3s> mVecs;

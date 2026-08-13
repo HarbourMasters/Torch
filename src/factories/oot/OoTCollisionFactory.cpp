@@ -201,16 +201,28 @@ std::optional<std::shared_ptr<IParsedData>> OoTCollisionFactory::parse(std::vect
         }
     }
 
-    // Read surface types: count = highest polygon type + 1
-    if (polyTypeDefAddr != 0 && !col->polygons.empty()) {
+    // Read surface types: count = highest polygon type + 1.
+    //
+    // ZAPD's loop runs highestPolyType + 1 times unconditionally (ZCollision.cpp),
+    // so there is always at least one -- including when the header declares no
+    // polygons, and including when polyTypeDefAddress is null, in which case it
+    // reads from segment offset 0. Both cases occur in MM: guarding on a non-empty
+    // polygon list, or on a non-null address, wrote an empty list and dropped its
+    // eight bytes.
+    {
         uint16_t highestType = 0;
         for (const auto& p : col->polygons) {
             if (p.type > highestType) highestType = p.type;
         }
         uint32_t numSurfaceTypes = highestType + 1;
 
+        uint32_t surfaceTypeAddr = polyTypeDefAddr;
+        if (surfaceTypeAddr == 0) {
+            surfaceTypeAddr = Companion::Instance->GetCurrSegmentNumber() << 24;
+        }
+
         YAML::Node stNode;
-        stNode["offset"] = polyTypeDefAddr;
+        stNode["offset"] = surfaceTypeAddr;
         auto stRaw = Decompressor::AutoDecode(stNode, buffer, numSurfaceTypes * 8);
         LUS::BinaryReader stReader(stRaw.segment.data, stRaw.segment.size);
         stReader.SetEndianness(Torch::Endianness::Big);
