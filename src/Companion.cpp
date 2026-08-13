@@ -628,8 +628,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 }
             } else {
                 throw std::runtime_error(
-                    "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
-                    "<file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
+                "<file_offset>] or - [<segment>, "
+                "<file_name>] \n\nLike so:\nsegments:\n  - [0x06, 0x821D10] or [0x06, object_jya_obj");
             }
         }
 
@@ -644,7 +645,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
             } else {
                 throw std::runtime_error(
                     "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
-                    "<file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                    "<file_offset>] or - [<segment>, "
+                    "<file_name>] \n\nLike so:\nsegments:\n  - [0x06, 0x821D10] or [0x06, object_jya_obj");
             }
         }
     }
@@ -1223,7 +1225,8 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
             } else {
                 throw std::runtime_error(
                     "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
-                    "<file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                    "<file_offset>] or - [<segment>, "
+                    "<file_name>] \n\nLike so:\nsegments:\n  - [0x06, 0x821D10] or [0x06, object_jya_obj");
             }
         }
     }

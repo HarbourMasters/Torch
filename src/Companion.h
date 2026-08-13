@@ -220,7 +220,6 @@ public:
     std::string GetCurrentFile(void) { return this->gCurrentFile; }
     std::optional<std::uint32_t> GetFileOffsetFromName(void) const { return this->gCurrentFileOffset; };
     std::uint32_t GetCurrSegmentNumber(void) const { return this->gCurrentSegmentNumber; };
-    std::uint32_t GetFileSegmentNumber(const std::string& file) const { return this->gFileSegMap.at(file); }
     CompressionType GetCurrCompressionType(void) const { return this->gCurrentCompressionType; };
     std::optional<std::uint32_t> GetCurrentCompressedSize(void) const { return this->gCurrentCompressedSize; };
     std::optional<VRAMEntry> GetCurrentVRAM(void) const { return this->gCurrentVram; };
