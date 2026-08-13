@@ -56,6 +56,33 @@ std::optional<std::shared_ptr<IParsedData>> OoTArrayFactory::parse(std::vector<u
         return parseVec3sArray(segment, count);
     }
 
+    if (arrayType == "Scalar") {
+        // ZScalarType, from ZScalar.h: S8 1, U8 2, X8 3, S16 4, U16 5, X16 6,
+        // S32 7, U32 8, X32 9.
+        const auto scalarType = GetSafeNode<uint32_t>(node, "scalar_type");
+        uint32_t width = 1;
+        if (scalarType >= 4 && scalarType <= 6) {
+            width = 2;
+        } else if (scalarType >= 7 && scalarType <= 9) {
+            width = 4;
+        } else if (scalarType > 9) {
+            SPDLOG_ERROR("Unsupported scalar array type {}", scalarType);
+            return std::nullopt;
+        }
+
+        LUS::BinaryReader reader(segment.data, segment.size);
+        reader.SetEndianness(Torch::Endianness::Big);
+        std::vector<uint64_t> values;
+        for (size_t i = 0; i < count; i++) {
+            switch (width) {
+                case 2: values.push_back(reader.ReadUInt16()); break;
+                case 4: values.push_back(reader.ReadUInt32()); break;
+                default: values.push_back(reader.ReadUByte()); break;
+            }
+        }
+        return std::make_shared<OoTScalarArrayData>(scalarType, std::move(values));
+    }
+
     SPDLOG_ERROR("Unknown OoT Array type '{}'", arrayType);
     return std::nullopt;
 }
@@ -79,6 +106,23 @@ static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArra
         writer.Write(v.cn[1]);
         writer.Write(v.cn[2]);
         writer.Write(v.cn[3]);
+    }
+}
+
+static void exportScalarArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTScalarArrayData> data) {
+    writer.Write(static_cast<uint32_t>(SohArrayType::Scalar));
+    writer.Write(static_cast<uint32_t>(data->mValues.size()));
+
+    // Each element repeats its type tag, then the value at that type's width.
+    for (const auto v : data->mValues) {
+        writer.Write(data->mScalarType);
+        if (data->mScalarType >= 7 && data->mScalarType <= 9) {
+            writer.Write(static_cast<uint32_t>(v));
+        } else if (data->mScalarType >= 4 && data->mScalarType <= 6) {
+            writer.Write(static_cast<uint16_t>(v));
+        } else {
+            writer.Write(static_cast<uint8_t>(v));
+        }
     }
 }
 
@@ -109,6 +153,8 @@ ExportResult OoTArrayBinaryExporter::Export(std::ostream& write, std::shared_ptr
         exportVtxArray(writer, std::static_pointer_cast<OoTVtxArrayData>(raw), zeroFlag);
     } else if (arrayType == "Vec3s") {
         exportVec3sArray(writer, std::static_pointer_cast<OoTVec3sArrayData>(raw));
+    } else if (arrayType == "Scalar") {
+        exportScalarArray(writer, std::static_pointer_cast<OoTScalarArrayData>(raw));
     }
 
     writer.Finish(write);

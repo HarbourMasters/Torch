@@ -10,6 +10,7 @@ namespace OoT {
 
 // Shipwright's ArrayResourceType enum values (must match reference O2R format)
 enum class SohArrayType : uint32_t {
+    Scalar = 16,
     Vector = 24,
     Vertex = 25,
 };
@@ -32,6 +33,16 @@ public:
 };
 
 // Parsed data for OoT Array (Vec3s variant)
+// An array of bare scalars. Each element carries its own type tag in the output,
+// which is what OTRExporter's ArrayExporter writes.
+class OoTScalarArrayData : public IParsedData {
+public:
+    uint32_t mScalarType;
+    std::vector<uint64_t> mValues;
+    OoTScalarArrayData(uint32_t type, std::vector<uint64_t> values)
+        : mScalarType(type), mValues(std::move(values)) {}
+};
+
 class OoTVec3sArrayData : public IParsedData {
 public:
     std::vector<Vec3s> mVecs;
