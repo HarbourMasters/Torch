@@ -323,8 +323,13 @@ void SceneCommandWriter::WriteSetLightList(LUS::BinaryWriter& w, uint8_t cmdArg1
     uint32_t count = cmdArg1;
     auto sub = ReadSubArray(ctx.buffer, cmdArg2, count * 14);
     w.Write(static_cast<uint32_t>(count));
+    // The rom struct is 14 bytes with a pad byte after type: type @0, x @2, y @4,
+    // z @6, r @8, g @9, b @10, drawGlow @11, radius @12 -- see LightInfo in ZAPD's
+    // SetLightList.cpp. Reading the fields back to back shifts everything after
+    // type by one byte.
     for (uint32_t i = 0; i < count; i++) {
         w.Write(sub.ReadUByte());  // type
+        sub.ReadUByte();           // padding
         w.Write(sub.ReadInt16());  // x
         w.Write(sub.ReadInt16());  // y
         w.Write(sub.ReadInt16());  // z
