@@ -1193,7 +1193,7 @@ void Companion::SetSegmentInfo(const YAML::Node& segments) {
 }
 
 uint32_t Companion::GetFileOffsetFromNodeStr(const std::string& str) const {
-    if (StringHelper::IsValidHex(str))
+    if (StringHelper::IsValidOffset(str))
         return strtoul(str.c_str(), nullptr, 16);
     return GetFileOffsetFromName(str);
 }
