@@ -9,6 +9,24 @@
 #include <sstream>
 #include "n64/gbi-otr.h"
 #include "strhash64/StrHash64.h"
+#include <algorithm>
+
+// These helpers are shared between Ocarina of Time and Majora's Mask, which run on
+// the same engine and declare the same asset formats under their own type
+// prefixes. Look-ups therefore have to accept either prefix -- a display list does
+// not care which game's array it found, only that the vertex data is there.
+static const char* kArrayTypes[] = { "VTX", "OOT:ARRAY", "MM:ARRAY" };
+static const char* kMtxTypes[] = { "OOT:MTX", "MM:MTX", "MTX" };
+
+static bool IsArrayType(const std::string& type) {
+    for (const auto* candidate : kArrayTypes) {
+        if (type == candidate) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 #define C0(pos, width) ((w0 >> (pos)) & ((1U << width) - 1))
 #define ALIGN16(val) (((val) + 0xF) & ~0xF)
@@ -176,7 +194,7 @@ static void ExportVtx(uint32_t& w0, uint32_t& w1,
     if (vtxNode.has_value()) {
         auto [vpath, vn] = vtxNode.value();
         auto vtype = GetSafeNode<std::string>(vn, "type");
-        if (vtype == "VTX" || vtype == "OOT:ARRAY") {
+        if (IsArrayType(vtype)) {
             dec = vpath;
             nullCrossFile = vn["null_cross_file"] && vn["null_cross_file"].as<bool>();
         }
@@ -331,17 +349,38 @@ static void ExportGSunDLTextureFixup(uint8_t opcode, uint32_t& w0, uint32_t& w1,
 
 static void ExportMtx(uint32_t& w0, uint32_t& w1, LUS::BinaryWriter& writer) {
     auto ptr = w1;
-    auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "OOT:MTX");
+
+    // GetSafeStringByAddr throws when a node exists but carries a different type,
+    // so it cannot be used to probe candidates. Resolve the node once and accept
+    // any of the matrix type names instead.
+    const auto matrixPathAt = [](uint32_t addr) -> std::optional<std::string> {
+        auto node = Companion::Instance->GetNodeByAddr(addr);
+        if (!node.has_value()) {
+            return std::nullopt;
+        }
+        auto [path, n] = node.value();
+        auto type = GetSafeNode<std::string>(n, "type");
+        std::transform(type.begin(), type.end(), type.begin(), ::toupper);
+        for (const auto* candidate : kMtxTypes) {
+            if (type == candidate) {
+                return path;
+            }
+        }
+        return std::nullopt;
+    };
+
+    std::optional<std::string> dec = matrixPathAt(ptr);
     if (!dec.has_value()) {
-        dec = Companion::Instance->GetSafeStringByAddr(ptr, "MTX");
-    }
-    if (!dec.has_value()) {
-        auto remapped = RemapSegmentedAddr(ptr, "OOT:MTX");
-        if (remapped == ptr) remapped = RemapSegmentedAddr(ptr, "MTX");
-        if (remapped != ptr) {
-            dec = Companion::Instance->GetSafeStringByAddr(remapped, "OOT:MTX");
-            if (!dec.has_value()) dec = Companion::Instance->GetSafeStringByAddr(remapped, "MTX");
-            if (dec.has_value()) ptr = remapped;
+        for (const auto* type : kMtxTypes) {
+            auto remapped = RemapSegmentedAddr(ptr, type);
+            if (remapped == ptr) {
+                continue;
+            }
+            dec = matrixPathAt(remapped);
+            if (dec.has_value()) {
+                ptr = remapped;
+                break;
+            }
         }
     }
 
@@ -571,7 +610,7 @@ static void FlushVtx(YAML::Node& node) {
 std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
     if (Companion::Instance->GetGBIMinorVersion() != GBIMinorVersion::OoT) return std::nullopt;
 
-    std::vector<std::string> vtxTypes = {"VTX", "OOT:ARRAY"};
+    std::vector<std::string> vtxTypes = { "VTX", "OOT:ARRAY", "MM:ARRAY" };
 
     uint32_t absPtr = ptr;
     if (IS_SEGMENTED(ptr)) {
@@ -589,7 +628,7 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
         for (auto& dec : decs.value()) {
             auto [name, node] = dec;
 
-            if (type == "OOT:ARRAY") {
+            if (type == "OOT:ARRAY" || type == "MM:ARRAY") {
                 auto arrayType = GetSafeNode<std::string>(node, "array_type", "");
                 if (arrayType != "VTX") continue;
             }

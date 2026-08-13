@@ -327,6 +327,29 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("OOT:CUTSCENE", std::make_shared<OoT::OoTCutsceneFactory>());
     this->RegisterFactory("OOT:PATH", std::make_shared<OoT::OoTPathFactory>());
     this->RegisterFactory("OOT:AUDIO", std::make_shared<OoT::OoTAudioFactory>());
+
+    // Majora's Mask runs on the same engine and shares most asset formats with
+    // Ocarina of Time, so MM: names resolve to the OoT factories for now. Which of
+    // these actually produce byte-identical output is being measured type by type;
+    // the ones that do are what moves to a shared zelda64/ namespace, and the ones
+    // that don't get real MM implementations.
+    //
+    // MM-only types with no OoT counterpart -- TEXTURE_ANIMATION, KEYFRAME_ANIMATION,
+    // KEYFRAME_SKELETON -- are deliberately absent: nothing here can serve them.
+    this->RegisterFactory("MM:ARRAY", std::make_shared<OoT::OoTArrayFactory>());
+    this->RegisterFactory("MM:MTX", std::make_shared<OoT::OoTMtxFactory>());
+    this->RegisterFactory("MM:SKELETON", std::make_shared<OoT::OoTSkeletonFactory>());
+    this->RegisterFactory("MM:LIMB", std::make_shared<OoT::OoTLimbFactory>());
+    this->RegisterFactory("MM:ANIMATION", std::make_shared<OoT::OoTAnimationFactory>());
+    this->RegisterFactory("MM:CURVE_ANIMATION", std::make_shared<OoT::OoTCurveAnimationFactory>());
+    this->RegisterFactory("MM:PLAYER_ANIMATION", std::make_shared<OoT::OoTPlayerAnimationHeaderFactory>());
+    this->RegisterFactory("MM:PLAYER_ANIMATION_DATA", std::make_shared<OoT::OoTPlayerAnimationDataFactory>());
+    this->RegisterFactory("MM:COLLISION", std::make_shared<OoT::OoTCollisionFactory>());
+    this->RegisterFactory("MM:TEXT", std::make_shared<OoT::OoTTextFactory>());
+    this->RegisterFactory("MM:SCENE", std::make_shared<OoT::OoTSceneFactory>());
+    this->RegisterFactory("MM:ROOM", std::make_shared<OoT::OoTSceneFactory>());
+    this->RegisterFactory("MM:CUTSCENE", std::make_shared<OoT::OoTCutsceneFactory>());
+    this->RegisterFactory("MM:AUDIO", std::make_shared<OoT::OoTAudioFactory>());
 #endif
 
 #ifdef BUILD_UI
