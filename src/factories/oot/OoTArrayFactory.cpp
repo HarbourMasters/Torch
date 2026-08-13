@@ -83,6 +83,11 @@ std::optional<std::shared_ptr<IParsedData>> OoTArrayFactory::parse(std::vector<u
         return std::make_shared<OoTScalarArrayData>(scalarType, std::move(values));
     }
 
+    if (arrayType == "CollisionPoly" || arrayType == "Pointer") {
+        const auto type = arrayType == "CollisionPoly" ? SohArrayType::CollisionPoly : SohArrayType::Pointer;
+        return std::make_shared<OoTUntypedArrayData>(static_cast<uint32_t>(type), count);
+    }
+
     SPDLOG_ERROR("Unknown OoT Array type '{}'", arrayType);
     return std::nullopt;
 }
@@ -126,6 +131,17 @@ static void exportScalarArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTScal
     }
 }
 
+static void exportUntypedArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTUntypedArrayData> data) {
+    writer.Write(data->mArrayType);
+    writer.Write(static_cast<uint32_t>(data->mCount));
+
+    // ArrayExporter has no writer for these element kinds, so each element is a
+    // lone type word of NONE with no payload.
+    for (size_t i = 0; i < data->mCount; i++) {
+        writer.Write(static_cast<uint32_t>(SohScalarType::ZSCALAR_NONE));
+    }
+}
+
 static void exportVec3sArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVec3sArrayData> data) {
     writer.Write(static_cast<uint32_t>(SohArrayType::Vector));
     writer.Write(static_cast<uint32_t>(data->mVecs.size()));
@@ -155,6 +171,8 @@ ExportResult OoTArrayBinaryExporter::Export(std::ostream& write, std::shared_ptr
         exportVec3sArray(writer, std::static_pointer_cast<OoTVec3sArrayData>(raw));
     } else if (arrayType == "Scalar") {
         exportScalarArray(writer, std::static_pointer_cast<OoTScalarArrayData>(raw));
+    } else if (arrayType == "CollisionPoly" || arrayType == "Pointer") {
+        exportUntypedArray(writer, std::static_pointer_cast<OoTUntypedArrayData>(raw));
     }
 
     writer.Finish(write);
