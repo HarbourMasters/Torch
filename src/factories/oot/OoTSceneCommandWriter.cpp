@@ -751,12 +751,20 @@ void SceneCommandWriter::WriteSetCutscenesMM(LUS::BinaryWriter& w, uint8_t cmdAr
         uint8_t entrance = sub.ReadUByte();
         uint8_t flag = sub.ReadUByte();
 
-        // Each entry names its own cutscene, off the scene's base name rather than
-        // the current header's -- an alternate header's cutscenes still belong to
-        // the scene.
-        uint32_t csOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(segPtr));
-        std::string csSymbol = MakeAssetName(ctx.baseName, "CutsceneData", csOffset);
-        w.Write(ctx.currentDir + "/" + csSymbol);
+        // A cutscene that is declared somewhere keeps its declared name; only
+        // undeclared ones get a synthesized one, off the scene's base name rather
+        // than the current header's -- an alternate header's cutscenes still belong
+        // to the scene.
+        std::string csSymbol;
+        auto resolved = ResolvePointer(segPtr);
+        if (resolved.empty()) {
+            uint32_t csOffset = SEGMENT_OFFSET(Companion::Instance->PatchVirtualAddr(segPtr));
+            csSymbol = MakeAssetName(ctx.baseName, "CutsceneData", csOffset);
+            resolved = ctx.currentDir + "/" + csSymbol;
+        } else {
+            csSymbol = resolved.substr(resolved.rfind('/') + 1);
+        }
+        w.Write(resolved);
         w.Write(exit);
         w.Write(entrance);
         w.Write(flag);
