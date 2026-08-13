@@ -134,6 +134,7 @@
 #include "factories/oot/OoTCutsceneFactory.h"
 #include "factories/oot/OoTAudioFactory.h"
 #include "factories/oot/MMTextureAnimationFactory.h"
+#include "factories/oot/MMKeyFrameFactory.h"
 #endif
 
 #ifdef NAUDIO_SUPPORT
@@ -352,6 +353,8 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("MM:CUTSCENE", std::make_shared<OoT::OoTCutsceneFactory>());
     this->RegisterFactory("MM:PATH", std::make_shared<OoT::OoTPathFactory>());
     this->RegisterFactory("MM:TEXTURE_ANIMATION", std::make_shared<OoT::MMTextureAnimationFactory>());
+    this->RegisterFactory("MM:KEYFRAME_SKELETON", std::make_shared<OoT::MMKeyFrameSkelFactory>());
+    this->RegisterFactory("MM:KEYFRAME_ANIMATION", std::make_shared<OoT::MMKeyFrameAnimFactory>());
     this->RegisterFactory("MM:AUDIO", std::make_shared<OoT::OoTAudioFactory>());
 #endif
 
