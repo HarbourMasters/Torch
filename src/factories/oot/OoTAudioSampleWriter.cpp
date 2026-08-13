@@ -182,7 +182,11 @@ bool AudioSampleWriter::Extract(std::vector<uint8_t>& buffer, YAML::Node& node,
         return false;
     }
     uint32_t tableOff = audiotableSeg.value();
-    uint32_t tableSize = std::min((uint32_t)0x500000, (uint32_t)(buffer.size() - tableOff));
+    // No fixed cap. This was 0x500000, which covers OoT's Audiotable but cuts MM's
+    // (0x548770) short -- the samples past the cut got a header with no data,
+    // because the write below is guarded on the data fitting. Every read into this
+    // buffer is bounds-checked, so taking the rest of the rom is safe.
+    uint32_t tableSize = static_cast<uint32_t>(buffer.size() - tableOff);
     std::vector<uint8_t> audioTable(buffer.begin() + tableOff, buffer.begin() + tableOff + tableSize);
 
     AudioParseContext ctx {
