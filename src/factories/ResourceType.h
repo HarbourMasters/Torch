@@ -84,6 +84,7 @@ enum class ResourceType {
 
     // MM
     MMTextureAnimation = 0x4F54414E, // OTAN
+    MMText = 0x4F54584D,             // OTXM
     MMKeyFrameAnim = 0x4F4B4641,     // OKFA
     MMKeyFrameSkel = 0x4F4B4653,     // OKFS
 

@@ -134,6 +134,7 @@
 #include "factories/oot/OoTCutsceneFactory.h"
 #include "factories/oot/OoTAudioFactory.h"
 #include "factories/oot/MMTextureAnimationFactory.h"
+#include "factories/oot/MMTextFactory.h"
 #include "factories/oot/MMKeyFrameFactory.h"
 #endif
 
@@ -347,7 +348,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("MM:PLAYER_ANIMATION", std::make_shared<OoT::OoTPlayerAnimationHeaderFactory>());
     this->RegisterFactory("MM:PLAYER_ANIMATION_DATA", std::make_shared<OoT::OoTPlayerAnimationDataFactory>());
     this->RegisterFactory("MM:COLLISION", std::make_shared<OoT::OoTCollisionFactory>());
-    this->RegisterFactory("MM:TEXT", std::make_shared<OoT::OoTTextFactory>());
+    this->RegisterFactory("MM:TEXT", std::make_shared<OoT::MMTextFactory>());
     this->RegisterFactory("MM:SCENE", std::make_shared<OoT::OoTSceneFactory>());
     this->RegisterFactory("MM:ROOM", std::make_shared<OoT::OoTSceneFactory>());
     this->RegisterFactory("MM:CUTSCENE", std::make_shared<OoT::OoTCutsceneFactory>());
