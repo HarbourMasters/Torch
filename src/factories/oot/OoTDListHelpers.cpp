@@ -273,8 +273,23 @@ static void ExportDL(uint32_t& w0, uint32_t& w1, LUS::BinaryWriter& writer) {
             w0 = endValue.words.w0;
             w1 = endValue.words.w1;
         }
+    } else if (Companion::Instance->IsMajorasMask() && SEGMENT_OFFSET(w1) != 0) {
+        // MM exports a display list it cannot resolve as an index into that
+        // segment's gfx buffer, rather than leaving the raw address as OoT does.
+        // This is mostly segments 8-13, which are runtime-swapped and so never
+        // resolve. See the G_DL case in OTRExporter's DisplayListExporter.
+        if (branch) {
+            N64Gfx value = gsSPBranchListOTRIndex(w1);
+            w0 = value.words.w0;
+            w1 = value.words.w1;
+        } else {
+            N64Gfx value = gsSPDisplayListOTRIndex(w1);
+            w0 = value.words.w0;
+            w1 = value.words.w1;
+        }
     } else {
         SPDLOG_WARN("Could not find display list at 0x{:X}", ptr);
+        // A zero segment offset keeps the plain opcode in both games.
         w1 = (w1 & 0x0FFFFFFF) + 1;
     }
 }
