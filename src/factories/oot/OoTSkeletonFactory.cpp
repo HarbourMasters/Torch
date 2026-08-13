@@ -21,6 +21,15 @@ std::optional<std::shared_ptr<IParsedData>> OoTSkeletonFactory::parse(std::vecto
     uint32_t limbsArrayAddr = reader.ReadUInt32();
     limbsArrayAddr = Companion::Instance->PatchVirtualAddr(limbsArrayAddr);
     uint8_t limbCount = reader.ReadUByte();
+
+    // The header's limb count and the limb table's length are separate values and
+    // can disagree: object_fsn's header claims 18 where only 17 limbs exist, and
+    // its xml comments on the discrepancy. ZAPD writes the header's count as-is
+    // but walks the table's, so only the table length is overridable here.
+    uint8_t limbTableCount = limbCount;
+    if (node["limb_table_count"]) {
+        limbTableCount = node["limb_table_count"].as<uint8_t>();
+    }
     uint8_t dListCount = 0;
 
     if (skelType == OoTSkeletonType::Flex) {
@@ -30,14 +39,14 @@ std::optional<std::shared_ptr<IParsedData>> OoTSkeletonFactory::parse(std::vecto
 
     auto symbol = GetSafeNode<std::string>(node, "symbol");
     std::vector<std::string> limbPaths;
-    if (limbsArrayAddr != 0 && limbCount > 0) {
+    if (limbsArrayAddr != 0 && limbTableCount > 0) {
         YAML::Node limbTableNode;
         limbTableNode["offset"] = limbsArrayAddr;
-        auto limbTableRaw = Decompressor::AutoDecode(limbTableNode, buffer, limbCount * 4);
+        auto limbTableRaw = Decompressor::AutoDecode(limbTableNode, buffer, limbTableCount * 4);
         LUS::BinaryReader limbTableReader(limbTableRaw.segment.data, limbTableRaw.segment.size);
         limbTableReader.SetEndianness(Torch::Endianness::Big);
 
-        for (uint8_t i = 0; i < limbCount; i++) {
+        for (uint8_t i = 0; i < limbTableCount; i++) {
             uint32_t limbAddr = limbTableReader.ReadUInt32();
             limbAddr = Companion::Instance->PatchVirtualAddr(limbAddr);
             std::string limbPath = ResolvePointer(limbAddr);
