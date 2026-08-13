@@ -187,8 +187,14 @@ static void ExportVtx(uint32_t& w0, uint32_t& w1,
         return;
     }
 
-    // Direct lookup with OOT:ARRAY support
-    auto vtxNode = Companion::Instance->GetNodeByAddr(ptr);
+    // Direct lookup with OOT:ARRAY support.
+    //
+    // Look up the *unpatched* address. GetNodeByAddr resolves virtual addresses
+    // itself, and ptr has already been through PatchVirtualAddr -- which is the
+    // same function -- so passing ptr subtracts the file's vram base twice. For a
+    // file with a `virtual:` mapping that turns a correct address into a miss, and
+    // the miss falls through to the unresolved-virtual-segment path below.
+    auto vtxNode = Companion::Instance->GetNodeByAddr(w1);
     std::optional<std::string> dec = std::nullopt;
     bool nullCrossFile = false;
     if (vtxNode.has_value()) {
