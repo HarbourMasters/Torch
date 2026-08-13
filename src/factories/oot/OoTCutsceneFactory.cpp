@@ -222,15 +222,16 @@ namespace {
 
 // Majora's Mask cutscene command classification, from ZCutscene::GetCommandMM.
 // Everything funnels into a handful of shapes; the id ranges are the awkward part.
-constexpr uint32_t MM_CS_TEXT = 10;
-constexpr uint32_t MM_CS_CAMERA_SPLINE = 90;
-constexpr uint32_t MM_CS_MISC = 150;
-constexpr uint32_t MM_CS_TRANSITION_GENERAL = 250;
-constexpr uint32_t MM_CS_FADE_OUT_SEQ = 254;
-constexpr uint32_t MM_CS_TIME = 255;
-constexpr uint32_t MM_CS_PLAYER_CUE = 300;
-constexpr uint32_t MM_CS_RUMBLE = 400;
+constexpr uint32_t MM_CS_TEXT = 10;                 // 0x00A
+constexpr uint32_t MM_CS_CAMERA_SPLINE = 90;        // 0x05A
+constexpr uint32_t MM_CS_TRANSITION_GENERAL = 155;  // 0x09B
+constexpr uint32_t MM_CS_FADE_OUT_SEQ = 156;        // 0x09C
+constexpr uint32_t MM_CS_TIME = 157;                // 0x09D
+constexpr uint32_t MM_CS_PLAYER_CUE = 200;          // 0x0C8
+constexpr uint32_t MM_CS_RUMBLE = 400;              // 0x190
 
+// Actor cues share the player cue's 0x30-byte layout. The ranges are from the
+// goto in OTRExporter_Cutscene::SaveMM.
 bool MMIsActorCue(uint32_t id) {
     return (id >= 100 && id <= 149) || id == 201 || (id >= 450 && id <= 599) || id == MM_CS_PLAYER_CUE;
 }
