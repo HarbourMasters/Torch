@@ -36,6 +36,16 @@ enum SceneCmdID : uint32_t {
     SetCutscenes = 0x17,
     SetAlternateHeaders = 0x18,
     SetCameraSettings = 0x19,
+
+    // Majora's Mask only. 0x19 is a reuse, not an addition: MM has
+    // SetWorldMapVisited where OoT has SetCameraSettings.
+    SetAnimatedMaterialList = 0x1A,
+    SetActorCutsceneList = 0x1B,
+    SetMinimapList = 0x1C,
+    SetMinimapChests = 0x1E,
+    // Not a real opcode. ZAPD substitutes it for SetCutscenes when exporting MM,
+    // because MM's cutscene command carries a list where OoT's carries one pointer.
+    SetCutscenesMM = 0x1F,
 };
 
 // Deferred alternate header entry, processed after primary commands.
