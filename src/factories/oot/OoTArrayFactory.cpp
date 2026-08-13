@@ -92,7 +92,8 @@ std::optional<std::shared_ptr<IParsedData>> OoTArrayFactory::parse(std::vector<u
     return std::nullopt;
 }
 
-static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArrayData> data, bool zeroFlag) {
+static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArrayData> data, bool zeroFlag,
+                           bool sunTc) {
     writer.Write(static_cast<uint32_t>(SohArrayType::Vertex));
     writer.Write(static_cast<uint32_t>(data->mVtxs.size()));
 
@@ -106,7 +107,22 @@ static void exportVtxArray(LUS::BinaryWriter& writer, std::shared_ptr<OoTVtxArra
         // VTX arrays) selects the discovered behaviour.
         writer.Write(zeroFlag ? static_cast<uint16_t>(0) : v.flag);
         writer.Write(v.tc[0]);
-        writer.Write(v.tc[1]);
+        // MM's sun textures are one 64x64 image the rom stores in pieces, which
+        // ZAPD cannot extract whole (gameplay_keep.xml says so above gSunSunsetTex).
+        // It compensates by rewriting the t coordinates of the vertices gSunDL
+        // loads -- ZDisplayList.cpp, GfxdCallback_Vtx:
+        //
+        //     if (self->GetName() == "gSunDL")
+        //         vtx.t = (((vtx.t >> 5) - 1) / 2) << 5;
+        //
+        // so the exported array does not match the rom. Reproduced verbatim,
+        // integer division and all.
+        if (sunTc) {
+            const int32_t t = v.tc[1];
+            writer.Write(static_cast<int16_t>((((t >> 5) - 1) / 2) << 5));
+        } else {
+            writer.Write(v.tc[1]);
+        }
         writer.Write(v.cn[0]);
         writer.Write(v.cn[1]);
         writer.Write(v.cn[2]);
@@ -166,7 +182,8 @@ ExportResult OoTArrayBinaryExporter::Export(std::ostream& write, std::shared_ptr
 
     if (arrayType == "VTX") {
         bool zeroFlag = node["zero_flag"] && node["zero_flag"].as<bool>();
-        exportVtxArray(writer, std::static_pointer_cast<OoTVtxArrayData>(raw), zeroFlag);
+        bool sunTc = node["sun_tc"] && node["sun_tc"].as<bool>();
+        exportVtxArray(writer, std::static_pointer_cast<OoTVtxArrayData>(raw), zeroFlag, sunTc);
     } else if (arrayType == "Vec3s") {
         exportVec3sArray(writer, std::static_pointer_cast<OoTVec3sArrayData>(raw));
     } else if (arrayType == "Scalar") {
