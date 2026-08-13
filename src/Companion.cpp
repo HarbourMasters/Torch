@@ -1193,8 +1193,11 @@ void Companion::SetSegmentInfo(const YAML::Node& segments) {
 }
 
 uint32_t Companion::GetFileOffsetFromNodeStr(const std::string& str) const {
-    if (StringHelper::IsValidHex(str))
+    // IsValidHex demands an 0x prefix and at least three characters, so a bare
+    // "0" would fall through to the filelist and throw. IsValidOffset covers it.
+    if (StringHelper::IsValidOffset(str)) {
         return strtoul(str.c_str(), nullptr, 16);
+    }
     return GetFileOffsetFromName(str);
 }
 
