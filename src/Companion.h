@@ -101,8 +101,18 @@ struct GBIConfig {
     bool useFloats = false;
 };
 
+// Which Zelda 64 title a rom is. Ocarina of Time and Majora's Mask run on the same
+// engine and share most asset formats, but a few structures carry extra fields in
+// MM -- pathways, for one -- so shared code has to be able to tell them apart.
+// Declared per rom with `game: MM` in its config; defaults to OoT.
+enum class Zelda64Game {
+    OoT,
+    MM,
+};
+
 struct TorchConfig {
     GBIConfig gbi;
+    Zelda64Game zelda64Game = Zelda64Game::OoT;
     SegmentConfig segment;
     std::string outputPath;
     std::string moddingPath;
@@ -189,6 +199,8 @@ public:
     std::string GetDestRelativeOutputPath() { return RelativePathToDestDir(GetOutputPath()); }
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
+    Zelda64Game GetZelda64Game() const { return this->gConfig.zelda64Game; }
+    bool IsMajorasMask() const { return this->gConfig.zelda64Game == Zelda64Game::MM; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
     std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);

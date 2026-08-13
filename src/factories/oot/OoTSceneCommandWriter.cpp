@@ -541,22 +541,28 @@ void SceneCommandWriter::WriteSetPathways(LUS::BinaryWriter& w, uint32_t cmdArg2
     uint32_t maxPaths = GetNeighborSize(ctx.knownAddrs, cmdArg2, 8);
     if (maxPaths == 0) maxPaths = 256;
     auto pathReader = ReadSubArray(ctx.buffer, cmdArg2, maxPaths * 8);
-    std::vector<std::pair<uint8_t, uint32_t>> pathways;
+    std::vector<Pathway> pathways;
     for (uint32_t i = 0; i < maxPaths; i++) {
-        uint8_t np = pathReader.ReadUByte();
-        pathReader.ReadUByte(); pathReader.ReadUByte(); pathReader.ReadUByte();
-        uint32_t ptsAddr = pathReader.ReadUInt32();
-        if (ptsAddr == 0 || !IS_SEGMENTED(ptsAddr) || ((ptsAddr >> 24) & 0xFF) != pathSeg) {
+        Pathway path{};
+        path.numPoints = pathReader.ReadUByte();
+        path.unk1 = static_cast<int8_t>(pathReader.ReadUByte());
+        path.unk2 = pathReader.ReadInt16();
+        path.pointsAddr = pathReader.ReadUInt32();
+        if (path.pointsAddr == 0 || !IS_SEGMENTED(path.pointsAddr) ||
+            ((path.pointsAddr >> 24) & 0xFF) != pathSeg) {
             break;
         }
-        pathways.push_back({np, ptsAddr});
+        pathways.push_back(path);
     }
-    if (pathways.empty()) pathways.push_back({0, 0});
-
+    if (pathways.empty()) pathways.push_back(Pathway{});
     auto existingPath = ResolvePointer(cmdArg2);
     bool hasPreExistingResource = !existingPath.empty();
 
-    if (!hasPreExistingResource && ctx.isAltHeader && pathways.size() > 1) {
+    // OoT's alternate headers export only the first pathway of a shared list.
+    // MM exports all of them -- truncating there costs 19 paths, one per
+    // alt-header path command in the game.
+    if (!hasPreExistingResource && ctx.isAltHeader && pathways.size() > 1 &&
+        !Companion::Instance->IsMajorasMask()) {
         pathways.erase(pathways.begin() + 1, pathways.end());
     }
     bool doubled = hasPreExistingResource && (pathways.size() > 1);
@@ -567,8 +573,7 @@ void SceneCommandWriter::WriteSetPathways(LUS::BinaryWriter& w, uint32_t cmdArg2
     uint32_t repeats = doubled ? 2 : 1;
     for (uint32_t r = 0; r < repeats; r++) {
         for (uint32_t i = 0; i < pathways.size(); i++) {
-            auto [np, ptsAddr] = pathways[i];
-            uint32_t pointOffset = SEGMENT_OFFSET(ptsAddr);
+            uint32_t pointOffset = SEGMENT_OFFSET(pathways[i].pointsAddr);
             std::string pathSymbol = MakeAssetName(ctx.baseName, "PathwayList", pointOffset);
             std::string pathPath = ctx.currentDir + "/" + pathSymbol;
             w.Write(pathPath);
@@ -576,8 +581,7 @@ void SceneCommandWriter::WriteSetPathways(LUS::BinaryWriter& w, uint32_t cmdArg2
     }
 
     for (uint32_t i = 0; i < pathways.size(); i++) {
-        auto [np, ptsAddr] = pathways[i];
-        uint32_t pointOffset = SEGMENT_OFFSET(ptsAddr);
+        uint32_t pointOffset = SEGMENT_OFFSET(pathways[i].pointsAddr);
         std::string pathSymbol = MakeAssetName(ctx.baseName, "PathwayList", pointOffset);
         auto pathData = SerializePathways(ctx.buffer, pathways, writeCount, repeats);
         Companion::Instance->RegisterCompanionFile(pathSymbol, pathData);

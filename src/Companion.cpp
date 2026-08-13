@@ -1501,6 +1501,19 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
     auto gbi_floats = cfg["gbi_floats"];
+
+    // OoT and MM share this engine and most of their asset formats; the places
+    // they diverge need to know which one they are looking at.
+    this->gConfig.zelda64Game = Zelda64Game::OoT;
+    if (cfg["game"]) {
+        const auto game = cfg["game"].as<std::string>();
+        if (game == "MM") {
+            this->gConfig.zelda64Game = Zelda64Game::MM;
+        } else if (game != "OOT") {
+            throw std::runtime_error("Unknown `game:` value \"" + game +
+                                     "\".\n\nSupported: OOT (default), MM.");
+        }
+    }
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
 
     if (!this->gDestinationDirectory.empty() && !fs::exists(this->gDestinationDirectory)) {

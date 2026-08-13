@@ -26,15 +26,23 @@ std::string MakeAssetName(const std::string& baseName, const std::string& suffix
     return ss.str();
 }
 
-std::vector<char> SerializePathways(std::vector<uint8_t>& buffer,
-                                    const std::vector<std::pair<uint8_t, uint32_t>>& pathways,
+std::vector<char> SerializePathways(std::vector<uint8_t>& buffer, const std::vector<Pathway>& pathways,
                                     uint32_t writeCount, uint32_t repeats) {
     LUS::BinaryWriter w;
     BaseExporter::WriteHeader(w, Torch::ResourceType::OoTPath, 0);
     w.Write(static_cast<uint32_t>(writeCount));
+    const bool isMM = Companion::Instance->IsMajorasMask();
     for (uint32_t r = 0; r < repeats; r++) {
-        for (auto& [np, ptsAddr] : pathways) {
+        for (auto& path : pathways) {
+            const auto np = path.numPoints;
+            const auto ptsAddr = path.pointsAddr;
             w.Write(static_cast<uint32_t>(np));
+            // MM keeps the two fields OoT treats as padding. See OTRExporter's
+            // PathExporter.cpp, which writes them under a MM_RETAIL check.
+            if (isMM) {
+                w.Write(path.unk1);
+                w.Write(path.unk2);
+            }
             auto ptReader = ReadSubArray(buffer, ptsAddr, np * 6);
             for (uint8_t k = 0; k < np; k++) {
                 w.Write(ptReader.ReadInt16());

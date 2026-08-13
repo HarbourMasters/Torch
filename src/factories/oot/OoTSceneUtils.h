@@ -27,9 +27,18 @@ std::string ResolvePointer(uint32_t ptr);
 // Build a scene-relative asset name from offset
 std::string MakeAssetName(const std::string& baseName, const std::string& suffix, uint32_t offset);
 
+// One entry of a scene's pathway list. The rom struct is 8 bytes:
+//   numPoints (u8), unk1 (s8), unk2 (s16), pointsAddr (u32)
+// OoT ignores unk1/unk2 as padding; MM carries them into the exported asset.
+struct Pathway {
+    uint8_t numPoints;
+    int8_t unk1;
+    int16_t unk2;
+    uint32_t pointsAddr;
+};
+
 // Serialize pathway data into OoTPath binary format.
-std::vector<char> SerializePathways(std::vector<uint8_t>& buffer,
-                                    const std::vector<std::pair<uint8_t, uint32_t>>& pathways,
+std::vector<char> SerializePathways(std::vector<uint8_t>& buffer, const std::vector<Pathway>& pathways,
                                     uint32_t writeCount, uint32_t repeats);
 
 class CutsceneSerializer {
