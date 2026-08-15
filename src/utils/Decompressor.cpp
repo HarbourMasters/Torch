@@ -120,9 +120,9 @@ DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const 
 
     const uint8_t* in_buf = buffer.data() + offset;
 
-    const auto decompressed = new uint8_t[size];
-    const auto rgba = new uint8_t[size];
-    tkmk00_decode(in_buf, decompressed, rgba, alpha);
+    auto decompressed = std::make_unique<uint8_t[]>(size);
+    const auto rgba = static_cast<uint8_t*>(malloc(size * sizeof(uint8_t)));
+    tkmk00_decode(in_buf, decompressed.get(), rgba, alpha);
     {
         std::lock_guard<std::mutex> lock(gDecompCacheMutex);
         gCachedChunks[offset] = new DataChunk{ rgba, size };
