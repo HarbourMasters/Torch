@@ -3,7 +3,9 @@
 #include "archive/SWrapper.h"
 #include "spdlog/spdlog.h"
 #include "utils/Decompressor.h"
+#include <algorithm>
 #include <cstring>
+#include <fstream>
 #include <iomanip>
 #include <yaml-cpp/yaml.h>
 extern "C" {
@@ -32,6 +34,41 @@ static const std::unordered_map<std::string, TextureType> sTextureFormats = {
 };
 
 #define ALIGN8(val) (((val) + 7) & ~7)
+
+static bool ReadPngSize(const fs::path& path, int32_t& width, int32_t& height) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        return false;
+    }
+    uint8_t head[24];
+    input.read(reinterpret_cast<char*>(head), sizeof(head));
+    if (input.gcount() != static_cast<std::streamsize>(sizeof(head))) {
+        return false;
+    }
+    static const uint8_t kPngMagic[8] = { 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n' };
+    if (std::memcmp(head, kPngMagic, sizeof(kPngMagic)) != 0 || std::memcmp(head + 12, "IHDR", 4) != 0) {
+        return false;
+    }
+    width = (head[16] << 24) | (head[17] << 16) | (head[18] << 8) | head[19];
+    height = (head[20] << 24) | (head[21] << 16) | (head[22] << 8) | head[23];
+    return width > 0 && height > 0;
+}
+
+static bool FindModdedChunkSize(const std::string& chunkSymbol, int32_t& width, int32_t& height) {
+    const auto& moddedPaths = Companion::Instance->GetModdedAssetPaths();
+    for (const auto& [name, assetPath] : moddedPaths) {
+        if (name.size() < chunkSymbol.size()) {
+            continue;
+        }
+        const size_t at = name.size() - chunkSymbol.size();
+        if (name.compare(at, chunkSymbol.size(), chunkSymbol) != 0 || (at > 0 && name[at - 1] != '/')) {
+            continue;
+        }
+        const auto path = fs::path(Companion::Instance->GetConfig().moddingPath) / assetPath;
+        return ReadPngSize(path, width, height);
+    }
+    return false;
+}
 
 void ExtractChunk(LUS::BinaryReader& reader, std::vector<std::pair<int16_t, int16_t>>& positions, uint32_t& offset,
                   std::string format, std::string symbol, uint32_t chunkNo) {
@@ -371,6 +408,7 @@ std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse_modding(std::ve
 
     const auto frameCount = GetSafeNode<int16_t>(content, "FrameCount", 1);
     const auto formatCode = GetSafeNode<int16_t>(content, "FormatCode", static_cast<int16_t>(0x100));
+    const auto symbol = GetSafeNode<std::string>(node, "symbol");
 
     // Header/anim/frame fields and the existing chunk count come from the ROM sprite — but
     // an *additive* sprite (an id the ROM lacks, e.g. a language-pack world-name banner at
@@ -378,6 +416,7 @@ std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse_modding(std::ve
     int16_t unk4 = 0, unk6 = 0, unk8 = 0, unkA = 0;
     uint8_t animSpeed = 0, animType = 0, animDirection = 0, animFlip = 0;
     std::vector<SpriteFrameHeader> frameHeaders;
+    std::vector<std::pair<int32_t, int32_t>> chunkSizes;
     uint16_t romCount = 0;
     const bool additive = node["additive"] && node["additive"].as<bool>();
     if (!additive) {
@@ -398,22 +437,38 @@ std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse_modding(std::ve
         romCount = static_cast<uint16_t>(sprite->mPositions.size());
     } else {
         // Additive: no ROM sprite, so take the header/frame fields from the yaml (a
-        // banner mirrors the JP layout); fields default to a frame sized to the chunk.
+        // banner mirrors the JP layout). The frame's size is measured off the artwork.
         const auto i16 = [](int v) { return static_cast<int16_t>(v); };
+        int32_t measuredW = 0, measuredH = 0;
+        for (uint16_t i = 0; i < newCount; i++) {
+            int32_t cw = 0, chh = 0;
+            if (!FindModdedChunkSize(symbol + "_0_" + std::to_string(i), cw, chh)) {
+                SPDLOG_WARN("Sprite modding: no PNG found for additive chunk {}_0_{}; frame size may be wrong", symbol,
+                            i);
+                cw = chh = 0;
+            }
+            chunkSizes.emplace_back(cw, chh);
+            measuredW = std::max(measuredW, positions[i].first + cw);
+            measuredH = std::max(measuredH, positions[i].second + chh);
+        }
+        if (measuredW <= 0 || measuredH <= 0) {
+            SPDLOG_ERROR("Sprite modding: additive sprite {} has no readable chunk artwork", symbol);
+            return std::nullopt;
+        }
         unk4 = GetSafeNode<int16_t>(content, "Unk4", i16(0));
         unk6 = GetSafeNode<int16_t>(content, "Unk6", i16(0));
-        unk8 = GetSafeNode<int16_t>(content, "Unk8", positions[0].first);
-        unkA = GetSafeNode<int16_t>(content, "UnkA", positions[0].second);
+        unk8 = GetSafeNode<int16_t>(content, "Unk8", i16(measuredW));
+        unkA = GetSafeNode<int16_t>(content, "UnkA", i16(measuredH));
         YAML::Node fh = frame0["FrameHeader"];
         if (fh) {
             frameHeaders.push_back(
                 { GetSafeNode<int16_t>(fh, "x", i16(0)), GetSafeNode<int16_t>(fh, "y", i16(0)),
-                  GetSafeNode<int16_t>(fh, "w", positions[0].first), GetSafeNode<int16_t>(fh, "h", positions[0].second),
+                  GetSafeNode<int16_t>(fh, "w", i16(measuredW)), GetSafeNode<int16_t>(fh, "h", i16(measuredH)),
                   GetSafeNode<int16_t>(fh, "unkA", i16(0)), GetSafeNode<int16_t>(fh, "unkC", i16(0)),
                   GetSafeNode<int16_t>(fh, "unkE", i16(0)), GetSafeNode<int16_t>(fh, "unk10", i16(0)),
                   GetSafeNode<int16_t>(fh, "unk12", i16(0)) });
         } else {
-            frameHeaders.push_back({ 0, 0, positions[0].first, positions[0].second, 0, 0, 0, 0, 0 });
+            frameHeaders.push_back({ 0, 0, i16(measuredW), i16(measuredH), 0, 0, 0, 0, 0 });
         }
     }
 
@@ -448,15 +503,14 @@ std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse_modding(std::ve
             break;
     }
 
-    const auto symbol = GetSafeNode<std::string>(node, "symbol");
     for (uint16_t i = romCount; i < newCount; i++) {
         YAML::Node texture;
         texture["type"] = "TEXTURE";
         texture["offset"] = 0xF0000000u + i;
         texture["format"] = format;
         texture["ctype"] = "u16";
-        texture["width"] = additive ? frameHeaders[0].w : positions[i].first;
-        texture["height"] = additive ? frameHeaders[0].h : positions[i].second;
+        texture["width"] = additive ? chunkSizes[i].first : positions[i].first;
+        texture["height"] = additive ? chunkSizes[i].second : positions[i].second;
         texture["symbol"] = symbol + "_0_" + std::to_string(i);
         Companion::Instance->AddAsset(texture);
     }
