@@ -572,9 +572,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                     auto currentExternalFiles = this->gCurrentExternalFiles;
                     auto currentVirtualPath = this->gCurrentVirtualPath;
 
-                    this->gCurrentFile = externalFileName;
+                    this->gCurrentFile = externalFileName.string();
                     this->gCurrentDirectory = externalFileName.lexically_relative(this->gAssetPath).replace_extension("");
-                    YAML::Node root = YAML::LoadFile(externalFileName);
+                    YAML::Node root = YAML::LoadFile(externalFileName.string());
 
                     if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
                         ProcessFile(root, assetCount);
