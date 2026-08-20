@@ -38,7 +38,7 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
                 throw std::runtime_error("Failed to decode MIO0 header");
             }
 
-            const auto decompressed = new uint8_t[head.dest_size];
+            const auto decompressed = static_cast<uint8_t*>(malloc(head.dest_size));
             mio0_decode(in_buf, decompressed, nullptr);
             {
                 std::lock_guard<std::mutex> lock(gDecompCacheMutex);
@@ -120,9 +120,9 @@ DataChunk* Decompressor::DecodeTKMK00(const std::vector<uint8_t>& buffer, const 
 
     const uint8_t* in_buf = buffer.data() + offset;
 
-    const auto decompressed = new uint8_t[size];
-    const auto rgba = new uint8_t[size];
-    tkmk00_decode(in_buf, decompressed, rgba, alpha);
+    auto decompressed = std::make_unique<uint8_t[]>(size);
+    const auto rgba = static_cast<uint8_t*>(malloc(size * sizeof(uint8_t)));
+    tkmk00_decode(in_buf, decompressed.get(), rgba, alpha);
     {
         std::lock_guard<std::mutex> lock(gDecompCacheMutex);
         gCachedChunks[offset] = new DataChunk{ rgba, size };
@@ -382,7 +382,7 @@ bool Decompressor::IsSegmented(uint32_t addr) {
 void Decompressor::ClearCache() {
     std::lock_guard<std::mutex> lock(gDecompCacheMutex);
     for (auto& [key, value] : gCachedChunks) {
-        delete[] value->data;
+        free(value->data);
     }
     gCachedChunks.clear();
 }
