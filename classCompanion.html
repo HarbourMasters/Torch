@@ -170,10 +170,12 @@ std::optional&lt; std::vector&lt; std::tuple&lt; std::string, YAML::Node &gt; &g
 const std::vector&lt; std::tuple&lt; std::string, YAML::Node &gt; &gt; *&#160;</td><td class="memItemRight" valign="bottom"><b>GetNodesByTypeRef</b> (const std::string &amp;type, bool includeAutogen=false)</td></tr>
 <tr class="memitem:aea7f61cd14cc453b39c80c9fd106ed5b" id="r_aea7f61cd14cc453b39c80c9fd106ed5b"><td class="memItemLeft" align="right" valign="top"><a id="aea7f61cd14cc453b39c80c9fd106ed5b" name="aea7f61cd14cc453b39c80c9fd106ed5b"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>GetSymbolFromAddr</b> (uint32_t addr, bool validZero=false)</td></tr>
-<tr class="memitem:af91b9abba00eb9a7b5398e2d10936882" id="r_af91b9abba00eb9a7b5398e2d10936882"><td class="memItemLeft" align="right" valign="top"><a id="af91b9abba00eb9a7b5398e2d10936882" name="af91b9abba00eb9a7b5398e2d10936882"></a>
-std::optional&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetFileOffset</b> (void) const</td></tr>
-<tr class="memitem:ab83b11b03014a78f8677330440b4a25c" id="r_ab83b11b03014a78f8677330440b4a25c"><td class="memItemLeft" align="right" valign="top"><a id="ab83b11b03014a78f8677330440b4a25c" name="ab83b11b03014a78f8677330440b4a25c"></a>
-std::optional&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrSegmentNumber</b> (void) const</td></tr>
+<tr class="memitem:a8ef60204f4a444e89e1a65df298cd2f5" id="r_a8ef60204f4a444e89e1a65df298cd2f5"><td class="memItemLeft" align="right" valign="top"><a id="a8ef60204f4a444e89e1a65df298cd2f5" name="a8ef60204f4a444e89e1a65df298cd2f5"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrentFile</b> (void)</td></tr>
+<tr class="memitem:a36bcfd83d163df00585dbcea7bcdafc4" id="r_a36bcfd83d163df00585dbcea7bcdafc4"><td class="memItemLeft" align="right" valign="top"><a id="a36bcfd83d163df00585dbcea7bcdafc4" name="a36bcfd83d163df00585dbcea7bcdafc4"></a>
+std::optional&lt; std::uint32_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetFileOffsetFromName</b> (void) const</td></tr>
+<tr class="memitem:a47a338749ee339dd43385b54edba7bb1" id="r_a47a338749ee339dd43385b54edba7bb1"><td class="memItemLeft" align="right" valign="top"><a id="a47a338749ee339dd43385b54edba7bb1" name="a47a338749ee339dd43385b54edba7bb1"></a>
+std::uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrSegmentNumber</b> (void) const</td></tr>
 <tr class="memitem:a8d8a619e5ad88c53afd43fa63fab37ec" id="r_a8d8a619e5ad88c53afd43fa63fab37ec"><td class="memItemLeft" align="right" valign="top"><a id="a8d8a619e5ad88c53afd43fa63fab37ec" name="a8d8a619e5ad88c53afd43fa63fab37ec"></a>
 CompressionType&#160;</td><td class="memItemRight" valign="bottom"><b>GetCurrCompressionType</b> (void) const</td></tr>
 <tr class="memitem:aa9c198a690d3b1a54f0d51dbb62bcf01" id="r_aa9c198a690d3b1a54f0d51dbb62bcf01"><td class="memItemLeft" align="right" valign="top"><a id="aa9c198a690d3b1a54f0d51dbb62bcf01" name="aa9c198a690d3b1a54f0d51dbb62bcf01"></a>
@@ -226,6 +228,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>SetCompressedSegment<
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>GetCompressedSegmentOffset</b> (uint32_t *addr)</td></tr>
 <tr class="memitem:abf1c6a888b8deb94952b24cf976a083e" id="r_abf1c6a888b8deb94952b24cf976a083e"><td class="memItemLeft" align="right" valign="top"><a id="abf1c6a888b8deb94952b24cf976a083e" name="abf1c6a888b8deb94952b24cf976a083e"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>SetSingleYMLPath</b> (const std::string &amp;path)</td></tr>
+<tr class="memitem:a2e7e8465733c91bb2b69c6d39f2c2885" id="r_a2e7e8465733c91bb2b69c6d39f2c2885"><td class="memItemLeft" align="right" valign="top"><a id="a2e7e8465733c91bb2b69c6d39f2c2885" name="a2e7e8465733c91bb2b69c6d39f2c2885"></a>
+uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>GetFileOffsetFromName</b> (const std::string &amp;file) const</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-static-methods" class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
