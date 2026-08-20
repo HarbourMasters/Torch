@@ -620,16 +620,17 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
         // Set global variables for segmented data
         if (segments.IsSequence() && segments.size()) {
             if (segments[0].IsSequence() && segments[0].size() == 2) {
-                gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
-                gCurrentFileOffset = segments[0][1].as<uint32_t>();
+                SetSegmentInfo(segments);
+
                 gCurrentCompressionType = Decompressor::GetCompressionType(this->gRomData, gCurrentFileOffset);
                 if (node["no_compression"]) {
                     gCurrentCompressionType = CompressionType::None;
                 }
             } else {
                 throw std::runtime_error(
-                    "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
-                    "<file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
+                "<file_offset>] or - [<segment>, "
+                "<file_name>] \n\nLike so:\nsegments:\n  - [0x06, 0x821D10] or [0x06, object_jya_obj");
             }
         }
 
@@ -638,13 +639,14 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
             auto segment = segments[i];
             if (segment.IsSequence() && segment.size() == 2) {
                 const auto id = segment[0].as<uint32_t>();
-                const auto replacement = segment[1].as<uint32_t>();
+                const auto replacement = GetFileOffsetFromNodeStr(segment[1].as<std::string>());
                 this->gConfig.segment.local[id] = replacement;
                 SPDLOG_DEBUG("Segment {} replaced with 0x{:X}", id, replacement);
             } else {
                 throw std::runtime_error(
                     "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
-                    "<file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                    "<file_offset>] or - [<segment>, "
+                    "<file_name>] \n\nLike so:\nsegments:\n  - [0x06, 0x821D10] or [0x06, object_jya_obj");
             }
         }
     }
@@ -1183,6 +1185,19 @@ void Companion::ProcessExportFile() {
     }
 }
 
+void Companion::SetSegmentInfo(const YAML::Node& segments) {
+    gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
+
+    const auto offsetNode = segments[0][1].as<std::string>();
+    gCurrentFileOffset = GetFileOffsetFromNodeStr(offsetNode);
+}
+
+uint32_t Companion::GetFileOffsetFromNodeStr(const std::string& str) const {
+    if (StringHelper::IsValidOffset(str))
+        return strtoul(str.c_str(), nullptr, 16);
+    return GetFileOffsetFromName(str);
+}
+
 void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // Reset per-file state so segment/offset settings from a previous file don't
     // bleed into this file's Phase 1 gAddrMap registration.
@@ -1201,8 +1216,8 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     if (auto segments = root[":config"]["segments"]) {
         if (segments.IsSequence() && segments.size() > 0) {
             if (segments[0].IsSequence() && segments[0].size() == 2) {
-                gCurrentSegmentNumber = segments[0][0].as<uint32_t>();
-                gCurrentFileOffset = segments[0][1].as<uint32_t>();
+                SetSegmentInfo(segments);
+
                 gCurrentCompressionType = Decompressor::GetCompressionType(this->gRomData, gCurrentFileOffset);
                 if (root[":config"]["no_compression"]) {
                     gCurrentCompressionType = CompressionType::None;
@@ -1210,7 +1225,8 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
             } else {
                 throw std::runtime_error(
                     "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
-                    "<file_offset>]\n\nLike so:\nsegments:\n  - [0x06, 0x821D10]");
+                    "<file_offset>] or - [<segment>, "
+                    "<file_name>] \n\nLike so:\nsegments:\n  - [0x06, 0x821D10] or [0x06, object_jya_obj");
             }
         }
     }
@@ -1234,9 +1250,14 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
             continue;
         }
 
+        auto offset = GetFileOffsetFromNodeStr(node["offset"].as<std::string>());
+
         if (gCurrentSegmentNumber) {
-            if (IS_SEGMENTED(node["offset"].as<uint32_t>()) == false) {
-                node["offset"] = (gCurrentSegmentNumber << 24) | node["offset"].as<uint32_t>();
+
+            if (IS_SEGMENTED(offset) == false) {
+                offset = (gCurrentSegmentNumber << 24) | offset;
+                node["offset"] = offset;
+
             }
         }
 
@@ -1244,7 +1265,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
             node["path"] = gCurrentVirtualPath;
         }
 
-        this->gAddrMap[this->gCurrentFile][node["offset"].as<uint32_t>()] = std::make_tuple(output, node);
+        this->gAddrMap[this->gCurrentFile][offset] = std::make_tuple(output, node);
     }
 
     // Stupid hack because the iteration broke the assets
@@ -1414,6 +1435,16 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         }
     }
     this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
+
+    if (rom["filelist"]) {
+        const std::string filelistPath = (this->gSourceDirectory / rom["filelist"].as<std::string>()).string();
+        if (!fs::exists(filelistPath)) {
+            SPDLOG_ERROR("A filelist was specified but the file doesn't exist");
+            return;
+        }
+        ParseFilelist(filelistPath);
+    }
+
     auto opath = cfg["output"];
     auto gbi = cfg["gbi"];
     auto gbi_floats = cfg["gbi_floats"];
@@ -2589,4 +2620,17 @@ bool Companion::GetCompressedSegmentOffset(uint32_t* addr) {
         }
     }
     return false;
+}
+
+void Companion::ParseFilelist(const std::string& filelistPath) {
+    YAML::Node root = YAML::LoadFile(filelistPath);
+
+    for (const auto f : root["Files"]) {
+        for (const auto& kv : f) {
+            const auto file = kv.first.as<std::string>();
+            const auto offset = kv.second.as<uint32_t>();
+            gFileOffsets[file] = offset;
+        }
+
+    }
 }
