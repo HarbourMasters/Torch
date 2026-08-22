@@ -533,41 +533,49 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
         auto externalFiles = node["external_files"];
         if (externalFiles.IsSequence() && externalFiles.size()) {
             for (size_t i = 0; i < externalFiles.size(); i++) {
-                auto externalFile = externalFiles[i];
-                if (externalFile.size() == 0) {
+                auto externalFileNode = externalFiles[i];
+                if (externalFileNode.size() == 0) {
                     this->gCurrentExternalFiles.push_back(
-                        (this->gSourceDirectory / externalFile.as<std::string>()).generic_string());
+                        (this->gSourceDirectory / externalFileNode.as<std::string>()).generic_string());
                 } else {
-                    SPDLOG_INFO("External File size {}", externalFile.size());
+                    SPDLOG_INFO("External File size {}", externalFileNode.size());
                     throw std::runtime_error(
                         "Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n "
                         " - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
+                fs::path externalFileName;
+                std::string externalFile = externalFileNode.as<std::string>();
 
-                std::string externalFileName =
-                    (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
-                if (StringHelper::StartsWith(
-                        std::filesystem::relative(externalFileName, this->gAssetPath).generic_string(), "../")) {
-                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
+                // ${ACTIVE_TREE} is used for symlinked YMLs that sit out of tree from the rest of the version folder. It will
+                // be resolved to the full path of where it would be if file wasn't symlinked
+                constexpr char symlinkTag[] = "${ACTIVE_TREE}";
+                const auto verTagPos = externalFile.find(symlinkTag);
+                if (verTagPos != std::string::npos) {
+                    externalFileName = externalFile.replace(verTagPos, sizeof(symlinkTag) - 1, this->gAssetPath);
+                } else {
+                    externalFileName = (this->gSourceDirectory / externalFile).generic_string();
+                }
+                const auto relativePath = externalFileName.lexically_relative(this->gAssetPath);
+                if (StringHelper::StartsWith(relativePath.generic_string(), "../")) {
+                    throw std::runtime_error("External File " + externalFileName.string() + " Not In Asset Directory " +
                                              this->gAssetPath);
-                } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
-                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
+                }
+                if (relativePath == "") {
+                    throw std::runtime_error("External File " + externalFileName.string() + " Not In Asset Directory " +
                                              this->gAssetPath);
                 }
 
-                if (!Torch::contains(this->gAddrMap, externalFileName)) {
-                    SPDLOG_INFO("Dependency on external file {}. Now processing {}", externalFileName,
-                                externalFileName);
+                if (!Torch::contains(this->gAddrMap, externalFileName.string())) {
+                    SPDLOG_INFO("Dependency on external file {}. Now processing {}", externalFileName.string(),
+                                externalFileName.string());
                     auto currentFile = this->gCurrentFile;
                     auto currentDirectory = this->gCurrentDirectory;
                     auto currentExternalFiles = this->gCurrentExternalFiles;
                     auto currentVirtualPath = this->gCurrentVirtualPath;
 
-                    this->gCurrentFile = externalFileName;
-                    this->gCurrentDirectory =
-                        std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
-
-                    YAML::Node root = YAML::LoadFile(externalFileName);
+                    this->gCurrentFile = externalFileName.string();
+                    this->gCurrentDirectory = externalFileName.lexically_relative(this->gAssetPath).replace_extension("");
+                    YAML::Node root = YAML::LoadFile(externalFileName.string());
 
                     if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
                         ProcessFile(root, assetCount);
@@ -584,7 +592,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                     this->gCurrentVirtualPath = currentVirtualPath;
                     this->gFileHeader.clear();
                 } else {
-                    SPDLOG_INFO("Skipping external file {} as it has already been processed", externalFileName);
+                    SPDLOG_INFO("Skipping external file {} as it has already been processed", externalFileName.string());
                 }
             }
         }
@@ -1208,7 +1216,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // directory must be resolved before the loop. Default to the file's own
     // path, then honor a :config directory override (used to register a room's
     // assets under its scene's directory).
-    this->gCurrentDirectory = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
+    this->gCurrentDirectory = fs::path(this->gCurrentFile).lexically_relative(this->gAssetPath).replace_extension("");
     if (auto directory = root[":config"]["directory"]) {
         this->gCurrentDirectory = directory.as<std::string>();
     }
