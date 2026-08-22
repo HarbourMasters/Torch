@@ -546,11 +546,12 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 fs::path externalFileName;
                 std::string externalFile = externalFileNode.as<std::string>();
 
-                // ${VER} is used for symlinked YMLs that sit out of tree from the rest of the version folder. It will
+                // ${ACTIVE_TREE} is used for symlinked YMLs that sit out of tree from the rest of the version folder. It will
                 // be resolved to the full path of where it would be if file wasn't symlinked
-                const auto verTagPos = externalFile.find("${VER}");
+                constexpr char symlinkTag[] = "${ACTIVE_TREE}";
+                const auto verTagPos = externalFile.find(symlinkTag);
                 if (verTagPos != std::string::npos) {
-                    externalFileName = externalFile.replace(verTagPos, 6, this->gAssetPath);
+                    externalFileName = externalFile.replace(verTagPos, sizeof(symlinkTag) - 1, this->gAssetPath);
                 } else {
                     externalFileName = (this->gSourceDirectory / externalFile).generic_string();
                 }
