@@ -42,8 +42,10 @@ std::vector<fs::directory_entry> Torch::getRecursiveEntries(const fs::path baseD
         result.insert(entry);
     }
 
-    for (const auto& entry : fs::recursive_directory_iterator(commonDir, std::filesystem::directory_options::follow_directory_symlink)) {
-        result.insert(entry);
+    if (!commonDir.empty()) {
+        for (const auto& entry : fs::recursive_directory_iterator(commonDir)) {
+            result.insert(entry);
+        }
     }
 
     std::vector<fs::directory_entry> sortedEntries(result.begin(), result.end());

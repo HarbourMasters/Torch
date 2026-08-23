@@ -871,9 +871,6 @@ void Companion::ProcessParseFile(YAML::Node root, std::atomic<size_t>& assetCoun
 
 void Companion::ProcessExportFile() {
     for (auto& result : this->gParseResults[this->gCurrentFile]) {
-        if (result.name.find("common") != std::string::npos) {
-            int bp = 0;
-        }
         std::ostringstream stream;
         ExportResult endptr = std::nullopt;
         WriteEntry wEntry;
@@ -1335,7 +1332,7 @@ std::vector<fs::directory_entry> Companion::GetAssetYMLs(YAML::Node& rom) const 
         single.emplace_back(a);
         return single;
     }
-    return Torch::getRecursiveEntries(this->gAssetPath, this->gCommonAssetPath);
+    return Torch::getRecursiveEntries(this->gAssetPath, "");
 }
 
 void Companion::Process(std::atomic<size_t>& assetCount) {
