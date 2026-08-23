@@ -269,6 +269,7 @@ private:
     fs::path gCurrentDirectory;
     std::string gCurrentHash;
     std::string gAssetPath;
+    std::string gCommonAssetPath;
     std::string gVersion;
     std::string gSingleYMLPath;
     std::vector<uint8_t> gRomData;

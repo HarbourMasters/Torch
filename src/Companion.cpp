@@ -544,13 +544,15 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                         " - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
 
-                std::string externalFileName =
-                    (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
-                if (StringHelper::StartsWith(
-                        std::filesystem::relative(externalFileName, this->gAssetPath).generic_string(), "../")) {
-                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
-                                             this->gAssetPath);
-                } else if (std::filesystem::relative(externalFileName, this->gAssetPath).string() == "") {
+                std::string externalFileName = (this->gSourceDirectory / externalFile.as<std::string>()).string();
+                const auto relPath = std::filesystem::relative(externalFileName, this->gAssetPath).string();
+                const auto relCommonPath = std::filesystem::relative(externalFileName, this->gCommonAssetPath).string();
+                if (StringHelper::StartsWith(relPath , "../")) {
+                    if (StringHelper::StartsWith(relCommonPath, "../"))
+                        throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
+                                                 this->gAssetPath);
+                }
+                if (relPath == "") {
                     throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
                                              this->gAssetPath);
                 }
@@ -869,6 +871,9 @@ void Companion::ProcessParseFile(YAML::Node root, std::atomic<size_t>& assetCoun
 
 void Companion::ProcessExportFile() {
     for (auto& result : this->gParseResults[this->gCurrentFile]) {
+        if (result.name.find("common") != std::string::npos) {
+            int bp = 0;
+        }
         std::ostringstream stream;
         ExportResult endptr = std::nullopt;
         WriteEntry wEntry;
@@ -1208,7 +1213,12 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // directory must be resolved before the loop. Default to the file's own
     // path, then honor a :config directory override (used to register a room's
     // assets under its scene's directory).
-    this->gCurrentDirectory = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
+    auto relPath = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
+    if (StringHelper::StartsWith(relPath, "../"))
+        relPath = relative(fs::path(this->gCurrentFile), this->gCommonAssetPath).replace_extension("");
+
+    this->gCurrentDirectory = relPath;
+
     if (auto directory = root[":config"]["directory"]) {
         this->gCurrentDirectory = directory.as<std::string>();
     }
@@ -1325,7 +1335,7 @@ std::vector<fs::directory_entry> Companion::GetAssetYMLs(YAML::Node& rom) const 
         single.emplace_back(a);
         return single;
     }
-    return Torch::getRecursiveEntries(this->gAssetPath);
+    return Torch::getRecursiveEntries(this->gAssetPath, this->gCommonAssetPath);
 }
 
 void Companion::Process(std::atomic<size_t>& assetCount) {
@@ -1435,6 +1445,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         }
     }
     this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
+    this->gCommonAssetPath = (this->gSourceDirectory / rom["common_path"].as<std::string>()).string();
 
     if (rom["filelist"]) {
         const std::string filelistPath = (this->gSourceDirectory / rom["filelist"].as<std::string>()).string();
@@ -1875,7 +1886,7 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     std::unordered_map<std::string, std::vector<char>> files;
 
-    for (const auto& entry : Torch::getRecursiveEntries(folder)) {
+    for (const auto& entry : Torch::getRecursiveEntries(folder, "")) {
         if (entry.is_directory()) {
             continue;
         }

@@ -34,6 +34,6 @@ constexpr bool contains(const Container& c, const Key& k) {
 }
 
 uint32_t translate(uint32_t offset);
-std::vector<std::filesystem::directory_entry> getRecursiveEntries(const std::filesystem::path baseDir);
+std::vector<std::filesystem::directory_entry> getRecursiveEntries(const std::filesystem::path baseDir, const std::filesystem::path );
 
 };

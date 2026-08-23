@@ -35,10 +35,14 @@ int getFileDepth(const fs::path& base, const fs::path& p) {
     return std::distance(base.begin(), p.begin());
 }
 
-std::vector<fs::directory_entry> Torch::getRecursiveEntries(const fs::path baseDir) {
+std::vector<fs::directory_entry> Torch::getRecursiveEntries(const fs::path baseDir, const fs::path commonDir) {
     std::set<fs::directory_entry> result;
 
     for (const auto& entry : fs::recursive_directory_iterator(baseDir)) {
+        result.insert(entry);
+    }
+
+    for (const auto& entry : fs::recursive_directory_iterator(commonDir, std::filesystem::directory_options::follow_directory_symlink)) {
         result.insert(entry);
     }
 
