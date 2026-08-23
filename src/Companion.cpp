@@ -112,7 +112,8 @@
 #include "factories/bk64/SpriteFactory.h"
 #include "factories/bk64/ModelFactory.h"
 #include "factories/bk64/MapFactory.h"
-#include "factories/bk64/SoundfontTblFactory.h"
+#include "factories/bk64/MusicFactory.h"
+#include "factories/bk64/SoundfontFactory.h"
 #endif
 
 #ifdef MARIO_ARTIST_SUPPORT
@@ -285,8 +286,8 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("BK64:MAP", std::make_shared<BK64::MapFactory>());
     this->RegisterFactory("BK64:QUIZQ", std::make_shared<BK64::QuizQuestionFactory>());
     this->RegisterFactory("BK64:MODEL", std::make_shared<BK64::ModelFactory>());
-    this->RegisterFactory("BK64:SOUNDFONT_CTL", std::make_shared<BK64::SoundfontCtlFactory>());
-    this->RegisterFactory("BK64:SOUNDFONT_TBL", std::make_shared<BK64::SoundfontTblFactory>());
+    this->RegisterFactory("BK64:MUSIC", std::make_shared<BK64::MusicFactory>());
+    this->RegisterFactory("BK64:SOUNDFONT", std::make_shared<BK64::SoundfontFactory>());
     this->RegisterFactory("BK64:SPRITE", std::make_shared<BK64::SpriteFactory>());
 #endif
 
@@ -529,6 +530,8 @@ void Companion::ParseModdingConfig() {
 }
 
 void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& assetCount) {
+    this->gCurrentFileConfig = node;
+
     if (node["external_files"]) {
         auto externalFiles = node["external_files"];
         if (externalFiles.IsSequence() && externalFiles.size()) {

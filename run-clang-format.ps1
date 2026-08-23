@@ -25,7 +25,7 @@ if (-not (Test-Path $clangFormatFilePath) -or ($currentVersion -ne $requiredVers
     }
 
     $wc = New-Object net.webclient
-    $wc.Downloadfile($url, $PSScriptRoot + $llvmInstallerPath)
+    $wc.Downloadfile($url, (Join-Path $PSScriptRoot "LLVM-14.0.6-win64.exe"))
 
     $sevenZipPath = "C:\Program Files\7-Zip\7z.exe"
     $specificFileInArchive = "bin\clang-format.exe"
@@ -36,9 +36,7 @@ if (-not (Test-Path $clangFormatFilePath) -or ($currentVersion -ne $requiredVers
 
 $basePath = Join-Path (Get-Location).Path "src"
 $files = Get-ChildItem -Path $basePath -Recurse -File `
-    | Where-Object { ($_.Extension -eq '.c' -or $_.Extension -eq '.cpp' -or `
-                      (($_.Extension -eq '.h' -or $_.Extension -eq '.hpp') -and `
-                       (-not ($_.FullName -like "*\src\*" -or $_.FullName -like "*\include\*")))) -and `
+    | Where-Object { ($_.Extension -in '.c', '.cpp', '.h', '.hpp') -and `
                      (-not ($_.FullName -like "*\assets\*" -or $_.FullName -like "*\build\*")) }
 
 for ($i = 0; $i -lt $files.Length; $i++) {

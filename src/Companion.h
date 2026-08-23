@@ -242,6 +242,7 @@ public:
 
     void SetProcess(bool shouldProcess);
     TorchConfig& GetConfig() { return this->gConfig; }
+    const YAML::Node& GetCurrentFileConfig() const { return this->gCurrentFileConfig; }
     BinaryWrapper* GetCurrentWrapper() { return this->gCurrentWrapper; }
     const std::unordered_map<std::string, std::string>& GetModdedAssetPaths() const { return this->gModdedAssetPaths; }
 
@@ -262,6 +263,7 @@ public:
 private:
     TorchConfig gConfig;
     YAML::Node gModdingConfig;
+    YAML::Node gCurrentFileConfig;
     fs::path gSourceDirectory;
     fs::path gDestinationDirectory;
     fs::path gCurrentDirectory;
