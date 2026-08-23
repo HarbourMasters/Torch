@@ -1211,7 +1211,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // path, then honor a :config directory override (used to register a room's
     // assets under its scene's directory).
     auto relPath = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
-    if (StringHelper::StartsWith(relPath, "../"))
+    if (StringHelper::StartsWith(relPath.string(), "../"))
         relPath = relative(fs::path(this->gCurrentFile), this->gCommonAssetPath).replace_extension("");
 
     this->gCurrentDirectory = relPath;
