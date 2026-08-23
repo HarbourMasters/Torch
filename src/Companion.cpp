@@ -1332,7 +1332,7 @@ std::vector<fs::directory_entry> Companion::GetAssetYMLs(YAML::Node& rom) const 
         single.emplace_back(a);
         return single;
     }
-    return Torch::getRecursiveEntries(this->gAssetPath, "");
+    return Torch::getRecursiveEntries(this->gAssetPath, this->gCommonAssetPath);
 }
 
 void Companion::Process(std::atomic<size_t>& assetCount) {
