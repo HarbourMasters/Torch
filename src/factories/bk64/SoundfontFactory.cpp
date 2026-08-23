@@ -600,6 +600,7 @@ struct SoundNaming {
     int64_t sfxBase = -1;
     std::map<uint32_t, std::string> names;
     std::map<uint32_t, uint32_t> users;
+    std::map<uint32_t, std::string> instNames;
 };
 
 SoundNaming ReadNaming(YAML::Node& node) {
@@ -614,6 +615,11 @@ SoundNaming ReadNaming(YAML::Node& node) {
     if (config && config["sfx_names"]) {
         for (auto it = config["sfx_names"].begin(); it != config["sfx_names"].end(); ++it) {
             naming.names[it->first.as<uint32_t>()] = it->second.as<std::string>();
+        }
+    }
+    if (config && config["instrument_names"]) {
+        for (auto it = config["instrument_names"].begin(); it != config["instrument_names"].end(); ++it) {
+            naming.instNames[it->first.as<uint32_t>()] = it->second.as<std::string>();
         }
     }
     if (config && config["sfx_users"]) {
@@ -643,6 +649,10 @@ std::string PathForSound(const SoundNaming& naming, const SoundfontData& font, s
     }
 
     std::string path = naming.instPath + "/program" + std::to_string(instIndex);
+    const auto named = naming.instNames.find(static_cast<uint32_t>(instIndex));
+    if (named != naming.instNames.end() && !named->second.empty()) {
+        path += "_" + named->second;
+    }
     if (soundCount <= 1) {
         return path;
     }

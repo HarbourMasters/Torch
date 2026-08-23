@@ -484,7 +484,9 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
             std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator(input), {});
             input.close();
 
+            this->gCurrentModdingSource = path.filename().string();
             result = impl->parse_modding(data, node);
+            this->gCurrentModdingSource.clear();
             executeDef = !result.has_value();
         }
     }

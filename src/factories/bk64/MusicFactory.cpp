@@ -179,6 +179,19 @@ bool DecodeTrack(const uint8_t* data, size_t size, uint32_t start, uint32_t end,
     return !reader.Failed();
 }
 
+std::optional<uint32_t> LoopPointFromName(const std::string& name) {
+    const size_t at = name.rfind("LP ");
+    if (at == std::string::npos) {
+        return std::nullopt;
+    }
+    uint32_t tick = 0;
+    size_t digits = 0;
+    for (size_t i = at + 3; i < name.size() && std::isdigit(static_cast<unsigned char>(name[i])); i++, digits++) {
+        tick = tick * 10 + static_cast<uint32_t>(name[i] - '0');
+    }
+    return digits != 0 ? std::optional<uint32_t>(tick) : std::nullopt;
+}
+
 std::optional<uint32_t> TrackIdFromSymbol(const std::string& symbol) {
     const size_t at = symbol.rfind("COMUSIC_");
     if (at == std::string::npos) {
@@ -752,6 +765,44 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
     }
     if (callbacks != 0) {
         SPDLOG_WARN("Music: {} controller event(s) in 106-119 signal the game rather than the synth", callbacks);
+    }
+
+    const bool hasLoop = std::any_of(events.begin(), events.end(), [](const SmfEvent& event) {
+        return event.kind == static_cast<uint8_t>(MusicEventKind::LoopStart) ||
+               event.kind == static_cast<uint8_t>(MusicEventKind::LoopEnd);
+    });
+    if (!hasLoop) {
+        if (const auto loopPoint = LoopPointFromName(Companion::Instance->GetCurrentModdingSource())) {
+            bool used[16] = { false };
+            for (const SmfEvent& event : events) {
+                if (event.kind == static_cast<uint8_t>(MusicEventKind::Midi)) {
+                    used[event.track & 0x0F] = true;
+                }
+            }
+            int added = 0;
+            for (int track = 0; track < 16; track++) {
+                if (!used[track] || endTicks[track] <= *loopPoint) {
+                    continue;
+                }
+                SmfEvent start;
+                start.tick = *loopPoint;
+                start.order = -1;
+                start.kind = static_cast<uint8_t>(MusicEventKind::LoopStart);
+                start.track = static_cast<uint8_t>(track);
+                events.push_back(start);
+
+                SmfEvent finish;
+                finish.tick = endTicks[track];
+                finish.order = sequence++;
+                finish.kind = static_cast<uint8_t>(MusicEventKind::LoopEnd);
+                finish.byte1 = kLoopForever;
+                finish.byte2 = kLoopForever;
+                finish.track = static_cast<uint8_t>(track);
+                events.push_back(finish);
+                added++;
+            }
+            SPDLOG_INFO("Music: looping {} track(s) back to tick {} from the file name", added, *loopPoint);
+        }
     }
 
     FoldNoteOffs(events);
