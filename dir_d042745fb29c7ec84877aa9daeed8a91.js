@@ -14,7 +14,9 @@ var dir_d042745fb29c7ec84877aa9daeed8a91 =
     [ "GruntyQuestionFactory.h", "GruntyQuestionFactory_8h_source.html", null ],
     [ "MapFactory.h", "MapFactory_8h_source.html", null ],
     [ "ModelFactory.h", "ModelFactory_8h_source.html", null ],
+    [ "MusicFactory.h", "MusicFactory_8h_source.html", null ],
     [ "QuizQuestionFactory.h", "QuizQuestionFactory_8h_source.html", null ],
-    [ "SoundfontTblFactory.h", "SoundfontTblFactory_8h_source.html", null ],
-    [ "SpriteFactory.h", "bk64_2SpriteFactory_8h_source.html", null ]
+    [ "SoundfontFactory.h", "SoundfontFactory_8h_source.html", null ],
+    [ "SpriteFactory.h", "bk64_2SpriteFactory_8h_source.html", null ],
+    [ "VadpcmEncode.h", "VadpcmEncode_8h_source.html", null ]
 ];

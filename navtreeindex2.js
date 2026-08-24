@@ -1,5 +1,13 @@
 var NAVTREEINDEX2 =
 {
+"classSF64_1_1EnvironmentData.html":[1,0,9,13],
+"classSF64_1_1EnvironmentFactory.html":[1,0,9,14],
+"classSF64_1_1EnvironmentHeaderExporter.html":[1,0,9,15],
+"classSF64_1_1EnvironmentXMLExporter.html":[1,0,9,16],
+"classSF64_1_1HitboxBinaryExporter.html":[1,0,9,17],
+"classSF64_1_1HitboxCodeExporter.html":[1,0,9,18],
+"classSF64_1_1HitboxData.html":[1,0,9,19],
+"classSF64_1_1HitboxFactory.html":[1,0,9,20],
 "classSF64_1_1HitboxHeaderExporter.html":[1,0,9,21],
 "classSF64_1_1LimbData.html":[1,0,9,23],
 "classSF64_1_1MessageBinaryExporter.html":[1,0,9,24],
@@ -241,13 +249,5 @@ var NAVTREEINDEX2 =
 "otr_matrix.html":[0,3,3],
 "otr_matrix.html#autotoc_md32":[0,3,3,0],
 "otr_matrix.html#autotoc_md33":[0,3,3,0,0],
-"otr_matrix.html#autotoc_md34":[0,3,3,0,0,0],
-"otr_matrix.html#autotoc_md35":[0,3,3,0,1],
-"otr_texture.html":[0,3,8],
-"otr_texture.html#autotoc_md36":[0,3,8,0],
-"otr_texture.html#autotoc_md37":[0,3,8,0,0],
-"otr_texture.html#autotoc_md38":[0,3,8,0,1],
-"otr_texture.html#autotoc_md39":[0,3,8,0,2],
-"otr_texture.html#autotoc_md40":[0,3,8,0,2,0],
-"otr_vec3f.html":[0,3,5]
+"otr_matrix.html#autotoc_md34":[0,3,3,0,0,0]
 };

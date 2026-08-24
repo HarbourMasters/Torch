@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.14.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Torch: BK64::SoundfontTblFactory Class Reference</title>
+<title>Torch: BK64::MusicFactory Class Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -62,7 +62,7 @@ $(function() {
   </div>
 </div>
 <script type="text/javascript">
-$(function(){initNavTree('classBK64_1_1SoundfontTblFactory.html','','classBK64_1_1SoundfontTblFactory-members'); });
+$(function(){initNavTree('classBK64_1_1MusicFactory.html','','classBK64_1_1MusicFactory-members'); });
 </script>
 <div id="container">
 <div id="doc-content">
@@ -88,30 +88,28 @@ $(function(){initNavTree('classBK64_1_1SoundfontTblFactory.html','','classBK64_1
 </div>
 
 <div class="header">
-  <div class="headertitle"><div class="title">BK64::SoundfontTblFactory Class Reference</div></div>
+  <div class="headertitle"><div class="title">BK64::MusicFactory Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="dynheader">
-Inheritance diagram for BK64::SoundfontTblFactory:</div>
+Inheritance diagram for BK64::MusicFactory:</div>
 <div class="dyncontent">
  <div class="center">
-  <img src="classBK64_1_1SoundfontTblFactory.png" usemap="#BK64_3A_3ASoundfontTblFactory_map" alt=""/>
-  <map id="BK64_3A_3ASoundfontTblFactory_map" name="BK64_3A_3ASoundfontTblFactory_map">
-<area href="classBaseFactory.html" alt="BaseFactory" shape="rect" coords="0,0,166,24"/>
+  <img src="classBK64_1_1MusicFactory.png" usemap="#BK64_3A_3AMusicFactory_map" alt=""/>
+  <map id="BK64_3A_3AMusicFactory_map" name="BK64_3A_3AMusicFactory_map">
+<area href="classBaseFactory.html" alt="BaseFactory" shape="rect" coords="0,0,126,24"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a6c2a0887ecc5309f9f09e51c9f6eb05c" id="r_a6c2a0887ecc5309f9f09e51c9f6eb05c"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6c2a0887ecc5309f9f09e51c9f6eb05c">parse</a> (std::vector&lt; uint8_t &gt; &amp;buffer, YAML::Node &amp;data) override</td></tr>
-<tr class="memitem:a3875c390849386a9ba839fdc77853254" id="r_a3875c390849386a9ba839fdc77853254"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; ExportType, std::shared_ptr&lt; <a class="el" href="classBaseExporter.html">BaseExporter</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3875c390849386a9ba839fdc77853254">GetExporters</a> () override</td></tr>
+<tr class="memitem:a70b55ca241da7841df8cee7a966b583b" id="r_a70b55ca241da7841df8cee7a966b583b"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a70b55ca241da7841df8cee7a966b583b">parse</a> (std::vector&lt; uint8_t &gt; &amp;buffer, YAML::Node &amp;data) override</td></tr>
+<tr class="memitem:ae54a1dbfa7b21461d416f3bce580e8e3" id="r_ae54a1dbfa7b21461d416f3bce580e8e3"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae54a1dbfa7b21461d416f3bce580e8e3">parse_modding</a> (std::vector&lt; uint8_t &gt; &amp;buffer, YAML::Node &amp;data) override</td></tr>
+<tr class="memitem:a6ab2e5cef2903b6fbba4b85c06a5a4af" id="r_a6ab2e5cef2903b6fbba4b85c06a5a4af"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; ExportType, std::shared_ptr&lt; <a class="el" href="classBaseExporter.html">BaseExporter</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6ab2e5cef2903b6fbba4b85c06a5a4af">GetExporters</a> () override</td></tr>
+<tr class="memitem:ab3db07c2226f740291d43f9c53ec9cee" id="r_ab3db07c2226f740291d43f9c53ec9cee"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab3db07c2226f740291d43f9c53ec9cee">SupportModdedAssets</a> () override</td></tr>
 <tr class="inherit_header pub_methods_classBaseFactory"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classBaseFactory')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Public Member Functions inherited from <a class="el" href="classBaseFactory.html">BaseFactory</a></td></tr>
-<tr class="memitem:a6cbfdb0696ed86e946ba6fa477de6a89 inherit pub_methods_classBaseFactory" id="r_a6cbfdb0696ed86e946ba6fa477de6a89"><td class="memItemLeft" align="right" valign="top">
-virtual std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>parse_modding</b> (std::vector&lt; uint8_t &gt; &amp;buffer, YAML::Node &amp;data)</td></tr>
 <tr class="memitem:a336ae0007578da0f6149a78bc4ba80a8 inherit pub_methods_classBaseFactory" id="r_a336ae0007578da0f6149a78bc4ba80a8"><td class="memItemLeft" align="right" valign="top">
 std::optional&lt; std::shared_ptr&lt; <a class="el" href="classBaseExporter.html">BaseExporter</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetExporter</b> (ExportType type)</td></tr>
-<tr class="memitem:a962d740ebca7aaf5c71fbcac9bee5652 inherit pub_methods_classBaseFactory" id="r_a962d740ebca7aaf5c71fbcac9bee5652"><td class="memItemLeft" align="right" valign="top">
-virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>SupportModdedAssets</b> ()</td></tr>
 <tr class="memitem:a1b9f75eb437ae27264cfec237f2c3043 inherit pub_methods_classBaseFactory" id="r_a1b9f75eb437ae27264cfec237f2c3043"><td class="memItemLeft" align="right" valign="top">
 virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>HasModdedDependencies</b> ()</td></tr>
 <tr class="memitem:a5ea650cd4e2833b0d69c9c4f7823bce2 inherit pub_methods_classBaseFactory" id="r_a5ea650cd4e2833b0d69c9c4f7823bce2"><td class="memItemLeft" align="right" valign="top">
@@ -126,8 +124,8 @@ virtual std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedDa
 virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>CanPreviewCode</b> ()</td></tr>
 </table>
 <a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
-<a id="a3875c390849386a9ba839fdc77853254" name="a3875c390849386a9ba839fdc77853254"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3875c390849386a9ba839fdc77853254">&#9670;&#160;</a></span>GetExporters()</h2>
+<a id="a6ab2e5cef2903b6fbba4b85c06a5a4af" name="a6ab2e5cef2903b6fbba4b85c06a5a4af"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ab2e5cef2903b6fbba4b85c06a5a4af">&#9670;&#160;</a></span>GetExporters()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -136,7 +134,7 @@ virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>CanPreviewCod
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::unordered_map&lt; ExportType, std::shared_ptr&lt; <a class="el" href="classBaseExporter.html">BaseExporter</a> &gt; &gt; BK64::SoundfontTblFactory::GetExporters </td>
+          <td class="memname">std::unordered_map&lt; ExportType, std::shared_ptr&lt; <a class="el" href="classBaseExporter.html">BaseExporter</a> &gt; &gt; BK64::MusicFactory::GetExporters </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
@@ -153,8 +151,8 @@ virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>CanPreviewCod
 
 </div>
 </div>
-<a id="a6c2a0887ecc5309f9f09e51c9f6eb05c" name="a6c2a0887ecc5309f9f09e51c9f6eb05c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6c2a0887ecc5309f9f09e51c9f6eb05c">&#9670;&#160;</a></span>parse()</h2>
+<a id="a70b55ca241da7841df8cee7a966b583b" name="a70b55ca241da7841df8cee7a966b583b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a70b55ca241da7841df8cee7a966b583b">&#9670;&#160;</a></span>parse()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -163,7 +161,7 @@ virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>CanPreviewCod
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt; BK64::SoundfontTblFactory::parse </td>
+          <td class="memname">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt; BK64::MusicFactory::parse </td>
           <td>(</td>
           <td class="paramtype">std::vector&lt; uint8_t &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>buffer</em></span>, </td>
         </tr>
@@ -184,9 +182,67 @@ virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>CanPreviewCod
 
 </div>
 </div>
+<a id="ae54a1dbfa7b21461d416f3bce580e8e3" name="ae54a1dbfa7b21461d416f3bce580e8e3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae54a1dbfa7b21461d416f3bce580e8e3">&#9670;&#160;</a></span>parse_modding()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt; BK64::MusicFactory::parse_modding </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; uint8_t &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>buffer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">YAML::Node &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel override">override</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classBaseFactory.html">BaseFactory</a>.</p>
+
+</div>
+</div>
+<a id="ab3db07c2226f740291d43f9c53ec9cee" name="ab3db07c2226f740291d43f9c53ec9cee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab3db07c2226f740291d43f9c53ec9cee">&#9670;&#160;</a></span>SupportModdedAssets()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool BK64::MusicFactory::SupportModdedAssets </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span><span class="mlabel override">override</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classBaseFactory.html">BaseFactory</a>.</p>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
-<li>src/factories/bk64/<a class="el" href="SoundfontTblFactory_8h_source.html">SoundfontTblFactory.h</a></li>
-<li>src/factories/bk64/<b>SoundfontTblFactory.cpp</b></li>
+<li>src/factories/bk64/<a class="el" href="MusicFactory_8h_source.html">MusicFactory.h</a></li>
+<li>src/factories/bk64/<b>MusicFactory.cpp</b></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->
@@ -201,7 +257,7 @@ virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>CanPreviewCod
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>BK64</b></li><li class="navelem"><a href="classBK64_1_1SoundfontTblFactory.html">SoundfontTblFactory</a></li>
+    <li class="navelem"><b>BK64</b></li><li class="navelem"><a href="classBK64_1_1MusicFactory.html">MusicFactory</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.14.0 </li>
   </ul>
 </div>

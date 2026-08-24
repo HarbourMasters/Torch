@@ -353,111 +353,115 @@ $(function(){initNavTree('Companion_8h_source.html','',''); });
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span> </div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    <span class="keywordtype">void</span> SetProcess(<span class="keywordtype">bool</span> shouldProcess);</div>
 <div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    <a class="code hl_struct" href="structTorchConfig.html">TorchConfig</a>&amp; GetConfig() { <span class="keywordflow">return</span> this-&gt;gConfig; }</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    <a class="code hl_class" href="classBinaryWrapper.html">BinaryWrapper</a>* GetCurrentWrapper() { <span class="keywordflow">return</span> this-&gt;gCurrentWrapper; }</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    <span class="keyword">const</span> std::unordered_map&lt;std::string, std::string&gt;&amp; GetModdedAssetPaths()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> this-&gt;gModdedAssetPaths; }</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span> </div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    std::optional&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt; RegisterAsset(<span class="keyword">const</span> std::string&amp; name, YAML::Node&amp; node);</div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    std::optional&lt;YAML::Node&gt; AddSubFileAsset(YAML::Node asset, std::string newFileName, CompressionType newCompressionType, uint32_t compressedSize = 0);</div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    std::optional&lt;YAML::Node&gt; AddAsset(YAML::Node asset);</div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    std::string GetCurrentDirectory()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> gCurrentDirectory.generic_string(); }</div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    <span class="keywordtype">void</span> SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);</div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    <span class="keywordtype">bool</span> GetCompressedSegmentOffset(uint32_t* addr);</div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span> </div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    <span class="keywordtype">void</span> SetSingleYMLPath(<span class="keyword">const</span> std::string&amp; path) { this-&gt;gSingleYMLPath = path; }</div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    uint32_t GetFileOffsetFromName(<span class="keyword">const</span> std::string&amp; file)<span class="keyword"> const </span>{ <span class="keywordflow">return</span> this-&gt;gFileOffsets.at(file); }</div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span> </div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span><span class="preprocessor">#ifdef BUILD_UI</span></div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>    <span class="keywordtype">void</span> RegisterUIFactory(<span class="keyword">const</span> std::string&amp; type, <span class="keyword">const</span> std::shared_ptr&lt;BaseFactoryUI&gt;&amp; factory);</div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    std::optional&lt;std::shared_ptr&lt;BaseFactoryUI&gt;&gt; GetUIFactory(<span class="keyword">const</span> std::string&amp; type);</div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <span class="keyword">const</span> std::unordered_map&lt;std::string, std::vector&lt;ParseResultData&gt;&gt;&amp; GetParseResults() { <span class="keywordflow">return</span> this-&gt;gParseResults; }</div>
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    <a class="code hl_struct" href="structTorchConfig.html">TorchConfig</a> gConfig;</div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    YAML::Node gModdingConfig;</div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    fs::path gSourceDirectory;</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    fs::path gDestinationDirectory;</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    fs::path gCurrentDirectory;</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    std::string gCurrentHash;</div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    std::string gAssetPath;</div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    std::string gVersion;</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    std::string gSingleYMLPath;</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    std::vector&lt;uint8_t&gt; gRomData;</div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    std::optional&lt;std::filesystem::path&gt; gRomPath;</div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    <span class="keywordtype">bool</span> gNodeForceProcessing = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    <span class="keywordtype">bool</span> gIndividualIncludes = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>    YAML::Node gHashNode;</div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    std::shared_ptr&lt;N64::Cartridge&gt; gCartridge;</div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    std::string gGameTitle;</div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    std::unordered_map&lt;std::string, std::vector&lt;YAML::Node&gt;&gt; gCourseMetadata;</div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    std::unordered_map&lt;std::string, std::unordered_map&lt;int32_t, std::string&gt;&gt; gEnums;</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    <a class="code hl_class" href="classBinaryWrapper.html">BinaryWrapper</a>* gCurrentWrapper;</div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span> </div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>    <span class="comment">// Temporal Variables</span></div>
-<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>    std::string gCurrentAssetName;</div>
-<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>    std::atomic&lt;size_t&gt;* gAssetCounter = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    std::atomic&lt;size_t&gt;* gAssetTotal = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>    std::function&lt;void(<span class="keywordtype">int</span>)&gt; gPhaseCallback;</div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    std::string gCurrentFile;</div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>    std::vector&lt;std::string&gt; gSubFileList;</div>
-<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>    std::string gCurrentVirtualPath;</div>
-<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    std::string gFileHeader;</div>
-<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>    <span class="keywordtype">bool</span> gEnablePadGen = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>    <span class="keywordtype">bool</span> mShouldProcess = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>    uint32_t gCurrentPad = 0;</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>    uint32_t gCurrentFileOffset;</div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>    uint32_t gCurrentSegmentNumber;</div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    std::optional&lt;VRAMEntry&gt; gCurrentVram;</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    CompressionType gCurrentCompressionType = CompressionType::None;</div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    std::optional&lt;std::uint32_t&gt; gCurrentCompressedSize;</div>
-<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>    std::vector&lt;Table&gt; gTables;</div>
-<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>    std::vector&lt;std::string&gt; gCurrentExternalFiles;</div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    std::unordered_map&lt;int, std::string&gt; gManualSegments;</div>
-<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>    std::unordered_set&lt;std::string&gt; gProcessedFiles;</div>
-<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>    std::unordered_map&lt;std::string, uint32_t&gt; gFileOffsets;</div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span> </div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    std::unordered_map&lt;std::string, std::vector&lt;char&gt;&gt; gCompanionFiles;</div>
-<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    std::vector&lt;std::pair&lt;std::string, std::vector&lt;char&gt;&gt;&gt; gArchiveFiles;</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>    std::unordered_map&lt;std::string, std::vector&lt;ParseResultData&gt;&gt; gParseResults;</div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    std::vector&lt;std::string&gt; gAdditionalFiles;</div>
-<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span> </div>
-<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    std::unordered_map&lt;std::string, std::string&gt; gModdedAssetPaths;</div>
-<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>    std::variant&lt;std::vector&lt;std::string&gt;, std::string&gt; gWriteOrder;</div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    std::unordered_map&lt;std::string, std::shared_ptr&lt;BaseFactory&gt;&gt; gFactories;</div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span><span class="preprocessor">#ifdef BUILD_UI</span></div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    std::unordered_map&lt;std::string, std::shared_ptr&lt;BaseFactoryUI&gt;&gt; gUIFactories;</div>
-<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    std::unordered_map&lt;std::string, std::map&lt;std::string, std::vector&lt;WriteEntry&gt;&gt;&gt; gWriteMap;</div>
-<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>    std::unordered_map&lt;std::string, std::tuple&lt;uint32_t, uint32_t&gt;&gt; gVirtualAddrMap;</div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    std::unordered_map&lt;std::string, std::unordered_map&lt;uint32_t, std::tuple&lt;std::string, YAML::Node&gt;&gt;&gt; gAddrMap;</div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    <span class="comment">// Cached results of GetNodesByType keyed by [file][type][includeAutogen?].</span></div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    <span class="comment">// Built lazily; invalidated on RegisterAsset for the affected (file, type).</span></div>
-<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    <span class="comment">// Index 0 = !includeAutogen, index 1 = includeAutogen.</span></div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    std::unordered_map&lt;std::string,</div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>                       std::unordered_map&lt;std::string, std::array&lt;std::vector&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt;, 2&gt;&gt;&gt;</div>
-<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        gNodesByTypeCache;</div>
-<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    <span class="comment">// Validity bitmap; bit 0 = !includeAutogen, bit 1 = includeAutogen.</span></div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    std::unordered_map&lt;std::string, std::unordered_map&lt;std::string, uint8_t&gt;&gt; gNodesByTypeCacheValid;</div>
-<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span> </div>
-<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    <span class="keywordtype">void</span> ProcessParseFile(YAML::Node root, std::atomic&lt;size_t&gt;&amp; assetCount);</div>
-<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    <span class="keywordtype">void</span> ProcessExportFile();</div>
-<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    <span class="keywordtype">void</span> ProcessFile(YAML::Node root);</div>
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    <span class="keywordtype">void</span> ProcessFile(YAML::Node root, std::atomic&lt;size_t&gt;&amp; assetCount);</div>
-<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    std::optional&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt; FindNodeInOverlaySegments(uint32_t addr, <span class="keyword">const</span> std::string&amp; file);</div>
-<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    std::optional&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt; FindInExternalByVRAM(uint32_t addr, <span class="keyword">const</span> std::string&amp; file);</div>
-<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    <span class="keywordtype">void</span> ParseEnums(std::string&amp; file);</div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <span class="keywordtype">void</span> ParseHash();</div>
-<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    <span class="keywordtype">void</span> ParseModdingConfig();</div>
-<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    <span class="keywordtype">void</span> ParseCurrentFileConfig(YAML::Node node, std::atomic&lt;size_t&gt;&amp; assetCount);</div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <span class="keywordtype">void</span> RegisterFactory(<span class="keyword">const</span> std::string&amp; type, <span class="keyword">const</span> std::shared_ptr&lt;BaseFactory&gt;&amp; factory);</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <span class="keywordtype">void</span> ExtractNode(YAML::Node&amp; node, std::string&amp; name, <a class="code hl_class" href="classBinaryWrapper.html">BinaryWrapper</a>* binary);</div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <span class="keywordtype">void</span> ProcessTables(YAML::Node&amp; rom);</div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordtype">void</span> LoadYAMLRecursively(<span class="keyword">const</span> std::string &amp;dirPath, std::vector&lt;YAML::Node&gt; &amp;result, <span class="keywordtype">bool</span> skipRoot);</div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>    std::vector&lt;fs::directory_entry&gt; GetAssetYMLs(YAML::Node&amp; rom) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    std::optional&lt;ParseResultData&gt; ParseNode(YAML::Node&amp; node, std::string&amp; name);</div>
-<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    <span class="keywordtype">void</span> ParseFilelist(<span class="keyword">const</span> std::string&amp; filelistPath);</div>
-<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keywordtype">void</span> SetSegmentInfo(<span class="keyword">const</span> YAML::Node&amp; segments);</div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    uint32_t GetFileOffsetFromNodeStr(<span class="keyword">const</span> std::string&amp; str) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>};</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    <span class="keyword">const</span> YAML::Node&amp; GetCurrentFileConfig()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> this-&gt;gCurrentFileConfig; }</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    <span class="keyword">const</span> std::string&amp; GetCurrentModdingSource()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> this-&gt;gCurrentModdingSource; }</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    <a class="code hl_class" href="classBinaryWrapper.html">BinaryWrapper</a>* GetCurrentWrapper() { <span class="keywordflow">return</span> this-&gt;gCurrentWrapper; }</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    <span class="keyword">const</span> std::unordered_map&lt;std::string, std::string&gt;&amp; GetModdedAssetPaths()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> this-&gt;gModdedAssetPaths; }</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span> </div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    std::optional&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt; RegisterAsset(<span class="keyword">const</span> std::string&amp; name, YAML::Node&amp; node);</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    std::optional&lt;YAML::Node&gt; AddSubFileAsset(YAML::Node asset, std::string newFileName, CompressionType newCompressionType, uint32_t compressedSize = 0);</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    std::optional&lt;YAML::Node&gt; AddAsset(YAML::Node asset);</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    std::string GetCurrentDirectory()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> gCurrentDirectory.generic_string(); }</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    <span class="keywordtype">void</span> SetCompressedSegment(uint32_t segmentId, uint32_t compressedFileOffset, uint32_t offset);</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    <span class="keywordtype">bool</span> GetCompressedSegmentOffset(uint32_t* addr);</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span> </div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>    <span class="keywordtype">void</span> SetSingleYMLPath(<span class="keyword">const</span> std::string&amp; path) { this-&gt;gSingleYMLPath = path; }</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    uint32_t GetFileOffsetFromName(<span class="keyword">const</span> std::string&amp; file)<span class="keyword"> const </span>{ <span class="keywordflow">return</span> this-&gt;gFileOffsets.at(file); }</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span><span class="preprocessor">#ifdef BUILD_UI</span></div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <span class="keywordtype">void</span> RegisterUIFactory(<span class="keyword">const</span> std::string&amp; type, <span class="keyword">const</span> std::shared_ptr&lt;BaseFactoryUI&gt;&amp; factory);</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    std::optional&lt;std::shared_ptr&lt;BaseFactoryUI&gt;&gt; GetUIFactory(<span class="keyword">const</span> std::string&amp; type);</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    <span class="keyword">const</span> std::unordered_map&lt;std::string, std::vector&lt;ParseResultData&gt;&gt;&amp; GetParseResults() { <span class="keywordflow">return</span> this-&gt;gParseResults; }</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <a class="code hl_struct" href="structTorchConfig.html">TorchConfig</a> gConfig;</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    YAML::Node gModdingConfig;</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    YAML::Node gCurrentFileConfig;</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    std::string gCurrentModdingSource;</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    fs::path gSourceDirectory;</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    fs::path gDestinationDirectory;</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    fs::path gCurrentDirectory;</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    std::string gCurrentHash;</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    std::string gAssetPath;</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    std::string gVersion;</div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    std::string gSingleYMLPath;</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>    std::vector&lt;uint8_t&gt; gRomData;</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    std::optional&lt;std::filesystem::path&gt; gRomPath;</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    <span class="keywordtype">bool</span> gNodeForceProcessing = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    <span class="keywordtype">bool</span> gIndividualIncludes = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    YAML::Node gHashNode;</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    std::shared_ptr&lt;N64::Cartridge&gt; gCartridge;</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    std::string gGameTitle;</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>    std::unordered_map&lt;std::string, std::vector&lt;YAML::Node&gt;&gt; gCourseMetadata;</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>    std::unordered_map&lt;std::string, std::unordered_map&lt;int32_t, std::string&gt;&gt; gEnums;</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>    <a class="code hl_class" href="classBinaryWrapper.html">BinaryWrapper</a>* gCurrentWrapper;</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span> </div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>    <span class="comment">// Temporal Variables</span></div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    std::string gCurrentAssetName;</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>    std::atomic&lt;size_t&gt;* gAssetCounter = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>    std::atomic&lt;size_t&gt;* gAssetTotal = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    std::function&lt;void(<span class="keywordtype">int</span>)&gt; gPhaseCallback;</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>    std::string gCurrentFile;</div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>    std::vector&lt;std::string&gt; gSubFileList;</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>    std::string gCurrentVirtualPath;</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>    std::string gFileHeader;</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>    <span class="keywordtype">bool</span> gEnablePadGen = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    <span class="keywordtype">bool</span> mShouldProcess = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    uint32_t gCurrentPad = 0;</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    uint32_t gCurrentFileOffset;</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>    uint32_t gCurrentSegmentNumber;</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>    std::optional&lt;VRAMEntry&gt; gCurrentVram;</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    CompressionType gCurrentCompressionType = CompressionType::None;</div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>    std::optional&lt;std::uint32_t&gt; gCurrentCompressedSize;</div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>    std::vector&lt;Table&gt; gTables;</div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>    std::vector&lt;std::string&gt; gCurrentExternalFiles;</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    std::unordered_map&lt;int, std::string&gt; gManualSegments;</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    std::unordered_set&lt;std::string&gt; gProcessedFiles;</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>    std::unordered_map&lt;std::string, uint32_t&gt; gFileOffsets;</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span> </div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>    std::unordered_map&lt;std::string, std::vector&lt;char&gt;&gt; gCompanionFiles;</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    std::vector&lt;std::pair&lt;std::string, std::vector&lt;char&gt;&gt;&gt; gArchiveFiles;</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>    std::unordered_map&lt;std::string, std::vector&lt;ParseResultData&gt;&gt; gParseResults;</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    std::vector&lt;std::string&gt; gAdditionalFiles;</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span> </div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    std::unordered_map&lt;std::string, std::string&gt; gModdedAssetPaths;</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>    std::variant&lt;std::vector&lt;std::string&gt;, std::string&gt; gWriteOrder;</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    std::unordered_map&lt;std::string, std::shared_ptr&lt;BaseFactory&gt;&gt; gFactories;</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span><span class="preprocessor">#ifdef BUILD_UI</span></div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    std::unordered_map&lt;std::string, std::shared_ptr&lt;BaseFactoryUI&gt;&gt; gUIFactories;</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    std::unordered_map&lt;std::string, std::map&lt;std::string, std::vector&lt;WriteEntry&gt;&gt;&gt; gWriteMap;</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    std::unordered_map&lt;std::string, std::tuple&lt;uint32_t, uint32_t&gt;&gt; gVirtualAddrMap;</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    std::unordered_map&lt;std::string, std::unordered_map&lt;uint32_t, std::tuple&lt;std::string, YAML::Node&gt;&gt;&gt; gAddrMap;</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>    <span class="comment">// Cached results of GetNodesByType keyed by [file][type][includeAutogen?].</span></div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>    <span class="comment">// Built lazily; invalidated on RegisterAsset for the affected (file, type).</span></div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    <span class="comment">// Index 0 = !includeAutogen, index 1 = includeAutogen.</span></div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    std::unordered_map&lt;std::string,</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>                       std::unordered_map&lt;std::string, std::array&lt;std::vector&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt;, 2&gt;&gt;&gt;</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>        gNodesByTypeCache;</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>    <span class="comment">// Validity bitmap; bit 0 = !includeAutogen, bit 1 = includeAutogen.</span></div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    std::unordered_map&lt;std::string, std::unordered_map&lt;std::string, uint8_t&gt;&gt; gNodesByTypeCacheValid;</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span> </div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    <span class="keywordtype">void</span> ProcessParseFile(YAML::Node root, std::atomic&lt;size_t&gt;&amp; assetCount);</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    <span class="keywordtype">void</span> ProcessExportFile();</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    <span class="keywordtype">void</span> ProcessFile(YAML::Node root);</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <span class="keywordtype">void</span> ProcessFile(YAML::Node root, std::atomic&lt;size_t&gt;&amp; assetCount);</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    std::optional&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt; FindNodeInOverlaySegments(uint32_t addr, <span class="keyword">const</span> std::string&amp; file);</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    std::optional&lt;std::tuple&lt;std::string, YAML::Node&gt;&gt; FindInExternalByVRAM(uint32_t addr, <span class="keyword">const</span> std::string&amp; file);</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <span class="keywordtype">void</span> ParseEnums(std::string&amp; file);</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <span class="keywordtype">void</span> ParseHash();</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <span class="keywordtype">void</span> ParseModdingConfig();</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordtype">void</span> ParseCurrentFileConfig(YAML::Node node, std::atomic&lt;size_t&gt;&amp; assetCount);</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>    <span class="keywordtype">void</span> RegisterFactory(<span class="keyword">const</span> std::string&amp; type, <span class="keyword">const</span> std::shared_ptr&lt;BaseFactory&gt;&amp; factory);</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    <span class="keywordtype">void</span> ExtractNode(YAML::Node&amp; node, std::string&amp; name, <a class="code hl_class" href="classBinaryWrapper.html">BinaryWrapper</a>* binary);</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    <span class="keywordtype">void</span> ProcessTables(YAML::Node&amp; rom);</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keywordtype">void</span> LoadYAMLRecursively(<span class="keyword">const</span> std::string &amp;dirPath, std::vector&lt;YAML::Node&gt; &amp;result, <span class="keywordtype">bool</span> skipRoot);</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    std::vector&lt;fs::directory_entry&gt; GetAssetYMLs(YAML::Node&amp; rom) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    std::optional&lt;ParseResultData&gt; ParseNode(YAML::Node&amp; node, std::string&amp; name);</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <span class="keywordtype">void</span> ParseFilelist(<span class="keyword">const</span> std::string&amp; filelistPath);</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="keywordtype">void</span> SetSegmentInfo(<span class="keyword">const</span> YAML::Node&amp; segments);</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    uint32_t GetFileOffsetFromNodeStr(<span class="keyword">const</span> std::string&amp; str) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>};</div>
 </div>
 <div class="ttc" id="aclassBinaryWrapper_html"><div class="ttname"><a href="classBinaryWrapper.html">BinaryWrapper</a></div><div class="ttdef"><b>Definition</b> BinaryWrapper.h:7</div></div>
 <div class="ttc" id="aclassN64_1_1Cartridge_html"><div class="ttname"><a href="classN64_1_1Cartridge.html">N64::Cartridge</a></div><div class="ttdef"><b>Definition</b> Cartridge.h:15</div></div>
