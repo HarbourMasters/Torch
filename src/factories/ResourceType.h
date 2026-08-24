@@ -91,6 +91,9 @@ enum class ResourceType {
     BKMap = 0x424B4D50,            // BKMP
     BKGruntyQuestion = 0x424B4751, // BKGQ
     BKQuizQuestion = 0x424B5151,   // BKQQ
+    BKSound = 0x424B534E,          // BKSN
+    BKSoundBank = 0x424B5342,      // BKSB
+    BKMusic = 0x424B4D55,          // BKMU
 
     // NAudio v0
     Bank = 0x42414E4B,         // BANK

@@ -576,7 +576,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
                     Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
                     break;
                 case BKAssetType::Midi:
-                    bkAssetNode["type"] = "BLOB";
+                    bkAssetNode["type"] = "BK64:MUSIC";
                     Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
                     break;
                 case BKAssetType::Model:
