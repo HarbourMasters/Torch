@@ -538,49 +538,43 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
         auto externalFiles = node["external_files"];
         if (externalFiles.IsSequence() && externalFiles.size()) {
             for (size_t i = 0; i < externalFiles.size(); i++) {
-                auto externalFileNode = externalFiles[i];
-                if (externalFileNode.size() == 0) {
+                auto externalFile = externalFiles[i];
+                if (externalFile.size() == 0) {
                     this->gCurrentExternalFiles.push_back(
-                        (this->gSourceDirectory / externalFileNode.as<std::string>()).generic_string());
+                        (this->gSourceDirectory / externalFile.as<std::string>()).generic_string());
                 } else {
-                    SPDLOG_INFO("External File size {}", externalFileNode.size());
+                    SPDLOG_INFO("External File size {}", externalFile.size());
                     throw std::runtime_error(
                         "Incorrect yaml syntax for external files.\n\nThe yaml expects:\n:config:\n  external_files:\n "
                         " - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
-                fs::path externalFileName;
-                std::string externalFile = externalFileNode.as<std::string>();
 
-                // ${ACTIVE_TREE} is used for symlinked YMLs that sit out of tree from the rest of the version folder. It will
-                // be resolved to the full path of where it would be if file wasn't symlinked
-                constexpr char symlinkTag[] = "${ACTIVE_TREE}";
-                const auto verTagPos = externalFile.find(symlinkTag);
-                if (verTagPos != std::string::npos) {
-                    externalFileName = externalFile.replace(verTagPos, sizeof(symlinkTag) - 1, this->gAssetPath);
-                } else {
-                    externalFileName = (this->gSourceDirectory / externalFile).generic_string();
+                std::string externalFileName = (this->gSourceDirectory / externalFile.as<std::string>()).string();
+                const auto relPath = std::filesystem::relative(externalFileName, this->gAssetPath).string();
+                const auto relCommonPath = std::filesystem::relative(externalFileName, this->gCommonAssetPath).string();
+                if (StringHelper::StartsWith(relPath , "../")) {
+                    if (StringHelper::StartsWith(relCommonPath, "../"))
+                        throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
+                                                 this->gAssetPath);
                 }
-                const auto relativePath = externalFileName.lexically_relative(this->gAssetPath);
-                if (StringHelper::StartsWith(relativePath.generic_string(), "../")) {
-                    throw std::runtime_error("External File " + externalFileName.string() + " Not In Asset Directory " +
-                                             this->gAssetPath);
-                }
-                if (relativePath == "") {
-                    throw std::runtime_error("External File " + externalFileName.string() + " Not In Asset Directory " +
+                if (relPath == "") {
+                    throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
                                              this->gAssetPath);
                 }
 
-                if (!Torch::contains(this->gAddrMap, externalFileName.string())) {
-                    SPDLOG_INFO("Dependency on external file {}. Now processing {}", externalFileName.string(),
-                                externalFileName.string());
+                if (!Torch::contains(this->gAddrMap, externalFileName)) {
+                    SPDLOG_INFO("Dependency on external file {}. Now processing {}", externalFileName,
+                                externalFileName);
                     auto currentFile = this->gCurrentFile;
                     auto currentDirectory = this->gCurrentDirectory;
                     auto currentExternalFiles = this->gCurrentExternalFiles;
                     auto currentVirtualPath = this->gCurrentVirtualPath;
 
-                    this->gCurrentFile = externalFileName.string();
-                    this->gCurrentDirectory = externalFileName.lexically_relative(this->gAssetPath).replace_extension("");
-                    YAML::Node root = YAML::LoadFile(externalFileName.string());
+                    this->gCurrentFile = externalFileName;
+                    this->gCurrentDirectory =
+                        std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
+
+                    YAML::Node root = YAML::LoadFile(externalFileName);
 
                     if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
                         ProcessFile(root, assetCount);
@@ -597,7 +591,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                     this->gCurrentVirtualPath = currentVirtualPath;
                     this->gFileHeader.clear();
                 } else {
-                    SPDLOG_INFO("Skipping external file {} as it has already been processed", externalFileName.string());
+                    SPDLOG_INFO("Skipping external file {} as it has already been processed", externalFileName);
                 }
             }
         }
@@ -1221,7 +1215,12 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // directory must be resolved before the loop. Default to the file's own
     // path, then honor a :config directory override (used to register a room's
     // assets under its scene's directory).
-    this->gCurrentDirectory = fs::path(this->gCurrentFile).lexically_relative(this->gAssetPath).replace_extension("");
+    auto relPath = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
+    if (StringHelper::StartsWith(relPath.string(), "../"))
+        relPath = relative(fs::path(this->gCurrentFile), this->gCommonAssetPath).replace_extension("");
+
+    this->gCurrentDirectory = relPath;
+
     if (auto directory = root[":config"]["directory"]) {
         this->gCurrentDirectory = directory.as<std::string>();
     }
@@ -1338,7 +1337,7 @@ std::vector<fs::directory_entry> Companion::GetAssetYMLs(YAML::Node& rom) const 
         single.emplace_back(a);
         return single;
     }
-    return Torch::getRecursiveEntries(this->gAssetPath);
+    return Torch::getRecursiveEntries(this->gAssetPath, this->gCommonAssetPath);
 }
 
 void Companion::Process(std::atomic<size_t>& assetCount) {
@@ -1448,6 +1447,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         }
     }
     this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
+    this->gCommonAssetPath = (this->gSourceDirectory / rom["common_path"].as<std::string>()).string();
 
     if (rom["filelist"]) {
         const std::string filelistPath = (this->gSourceDirectory / rom["filelist"].as<std::string>()).string();
@@ -1888,7 +1888,7 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     std::unordered_map<std::string, std::vector<char>> files;
 
-    for (const auto& entry : Torch::getRecursiveEntries(folder)) {
+    for (const auto& entry : Torch::getRecursiveEntries(folder, "")) {
         if (entry.is_directory()) {
             continue;
         }
