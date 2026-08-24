@@ -597,6 +597,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
         }
     }
 
+    this->gCurrentFileConfig.reset(node);
+
     if (node["directory"]) {
         this->gCurrentDirectory = node["directory"].as<std::string>();
     }
@@ -1295,6 +1297,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     this->gCurrentExternalFiles.clear();
     this->gSubFileList.clear();
     this->gManualSegments.clear();
+    this->gCurrentFileConfig.reset(YAML::Node());
     GFXDOverride::ClearVtx();
 
     if (root[":config"]) {
@@ -1447,7 +1450,11 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         }
     }
     this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
-    this->gCommonAssetPath = (this->gSourceDirectory / rom["common_path"].as<std::string>()).string();
+    // Optional: a rom that keeps all its ymls under one tree has no common dir, and
+    // getRecursiveEntries already treats an empty path as "nothing to add".
+    if (rom["common_path"]) {
+        this->gCommonAssetPath = (this->gSourceDirectory / rom["common_path"].as<std::string>()).string();
+    }
 
     if (rom["filelist"]) {
         const std::string filelistPath = (this->gSourceDirectory / rom["filelist"].as<std::string>()).string();
