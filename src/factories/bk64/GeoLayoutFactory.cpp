@@ -28,6 +28,11 @@ static uint32_t GetGeoCommandByteSize(const GeoLayoutCommand& cmd) {
         case GeoLayoutOpCode::LoadDL:
             bodySize = 4;
             break; // 2+2
+        case GeoLayoutOpCode::NOP:
+        case GeoLayoutOpCode::NOP2:
+        case GeoLayoutOpCode::NOP3:
+            bodySize = 4;
+            break; // 4 bytes Banjo's Backpack writes and nothing reads
         case GeoLayoutOpCode::Skinning:
             // 2 per arg + 2 for terminator
             bodySize = static_cast<uint32_t>(cmd.args.size()) * 2 + 2;
@@ -149,6 +154,12 @@ ExportResult BK64::GeoLayoutBinaryExporter::Export(std::ostream& write, std::sha
             case GeoLayoutOpCode::LoadDL:
                 writeU16(std::get<uint16_t>(arguments[0]));
                 writeU16(std::get<uint16_t>(arguments[1]));
+                break;
+            case GeoLayoutOpCode::NOP:
+            case GeoLayoutOpCode::NOP2:
+            case GeoLayoutOpCode::NOP3:
+                for (size_t i = 0; i < arguments.size(); i++)
+                    writeU8(std::get<uint8_t>(arguments[i]));
                 break;
             case GeoLayoutOpCode::Skinning:
                 writeU16(std::get<uint16_t>(arguments[0]));
@@ -297,6 +308,19 @@ ExportResult GeoLayoutModdingExporter::Export(std::ostream& write, std::shared_p
                 out << YAML::Value << YAML::BeginMap;
                 out << YAML::Key << "dlIndex" << YAML::Value << std::get<uint16_t>(arguments.at(0));
                 out << YAML::Key << "triCount" << YAML::Value << std::get<uint16_t>(arguments.at(1));
+                break;
+            // Nothing reads the body, so there is nothing worth writing out
+            case GeoLayoutOpCode::NOP:
+                out << YAML::Key << "NOP";
+                out << YAML::Value << YAML::BeginMap;
+                break;
+            case GeoLayoutOpCode::NOP2:
+                out << YAML::Key << "NOP2";
+                out << YAML::Value << YAML::BeginMap;
+                break;
+            case GeoLayoutOpCode::NOP3:
+                out << YAML::Key << "NOP3";
+                out << YAML::Value << YAML::BeginMap;
                 break;
             case GeoLayoutOpCode::Skinning:
                 out << YAML::Key << "Skinning";
@@ -541,6 +565,16 @@ std::optional<std::shared_ptr<IParsedData>> GeoLayoutFactory::parse(std::vector<
                 auto triCount = reader.ReadUInt16();
                 args.emplace_back(dlIndex);
                 args.emplace_back(triCount);
+                break;
+            }
+            case GeoLayoutOpCode::NOP:
+            case GeoLayoutOpCode::NOP2:
+            case GeoLayoutOpCode::NOP3: {
+                // sGeoCmdList dispatches these to modelRender_geoCmd_NOP--nothing reads the body.
+                // Keep the bytes so the binary exporter writes the command back as it was.
+                for (int32_t i = 0; i < 4; i++) {
+                    args.emplace_back(reader.ReadUByte());
+                }
                 break;
             }
             case GeoLayoutOpCode::Skinning: {
