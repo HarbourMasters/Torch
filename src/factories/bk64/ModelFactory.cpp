@@ -5,6 +5,7 @@
 #include "types/RawBuffer.h"
 #include "utils/Decompressor.h"
 #include "utils/TorchUtils.h"
+#include <string_view>
 
 #define BK64_MODEL_HEADER 0xB
 #define TEXTURE_HEADER_SIZE 0x8
@@ -42,6 +43,28 @@ static const std::unordered_map<GBIVersion, std::unordered_map<std::string, uint
 };
 
 #define GBI(cmd) gGBITable.at(Companion::Instance->GetGBIVersion()).at(#cmd)
+
+// textureInfo_getBitDepth tests the type field bit by bit and takes the first one set, so a
+// texture with extra bits still resolves to a format. The game's ladder stops at 0x8; Torch
+// extends to 0x10.
+static std::string_view GetTextureFormat(uint16_t type) {
+    if (type & 0x1) {
+        return "CI4";
+    }
+    if (type & 0x2) {
+        return "CI8";
+    }
+    if (type & 0x4) {
+        return "RGBA16";
+    }
+    if (type & 0x8) {
+        return "RGBA32";
+    }
+    if (type & 0x10) {
+        return "IA8";
+    }
+    return {};
+}
 
 ExportResult ModelHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
                                          YAML::Node& node, std::string* replacement) {
@@ -230,7 +253,7 @@ ExportResult BK64::ModelBinaryExporter::Export(std::ostream& write, std::shared_
         std::unordered_map<uint32_t, uint32_t> imageOffsetToTex;
         for (uint32_t ti = 0; ti < model->mTexInfos.size(); ti++) {
             const auto& tex = model->mTexInfos[ti];
-            const bool isCI = tex.type == 0x1 || tex.type == 0x2; // CI4 / CI8
+            const bool isCI = tex.tlutColors != 0; // CI4 and CI8 are the only types with a palette
             const uint32_t tlutByteSize = isCI ? tex.tlutColors * 2u : 0u;
             imageOffsetToTex[tex.textureDataOffset + tlutByteSize] = ti;
         }
@@ -478,14 +501,10 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             reader.ReadUInt16(); // pad
             reader.ReadUInt32(); // pad
 
-            std::string format;
-            std::string ctype;
-            uint32_t tlutSize = 0;
-            uint16_t tlutColors = 0;
-
-            // Stash texture metadata for the binary exporter. Type 0x1 just means "has a TLUT" —
-            // it's both CI4 and CI8. We can't tell which until all the headers are in, so the real
-            // bit depth gets resolved further down.
+            // Stash texture metadata for the binary exporter. Type 0x1 is CI4
+            // and 0x2 is CI8: every type 0x2 region in the ROM holds a 256
+            // entry TLUT and 8-bit pixels, and no type 0x1 region has room for
+            // one.
             TexInfo texInfo;
             texInfo.type = textureType;
             texInfo.width = static_cast<uint8_t>(width);
@@ -493,20 +512,15 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             texInfo.tlutColors = 0;
             texInfo.textureDataOffset = textureDataOffset;
 
-            switch (textureType) {
-                case 0x1:
-                    // Sorted out later, once every header is read
-                    break;
-                case 0x2:
-                    texInfo.tlutColors = 0x100;
-                    break;
-                case 0x4:
-                case 0x8:
-                case 0x10:
-                    break;
-                default:
-                    throw std::runtime_error("BK64::ModelFactory: Invalid Texture Format Found " +
-                                             std::to_string(textureType));
+            const auto format = GetTextureFormat(textureType);
+            if (format.empty()) {
+                throw std::runtime_error("BK64::ModelFactory: Invalid Texture Format Found " +
+                                         std::to_string(textureType));
+            }
+            if (format == "CI4") {
+                texInfo.tlutColors = 0x10;
+            } else if (format == "CI8") {
+                texInfo.tlutColors = 0x100;
             }
 
             modelData->mTexInfos.push_back(texInfo);
@@ -515,45 +529,6 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
         uint32_t texDataStart =
             modelOffset + textureSetupOffset + TEXTURE_HEADER_SIZE + textureCount * TEXTURE_METADATA_SIZE;
         modelData->mTexDataSize = textureDataSize;
-
-        // Now disambiguate the type 0x1 textures. 0x1 means "has TLUT", which is either CI4
-        // (16-entry palette) or CI8 (256-entry palette) — the header doesn't say which. Trick is
-        // to measure the gap to the next texture: if it's big enough for a full CI8 payload
-        // (0x200 TLUT + W*H pixels), call it CI8, otherwise CI4. The last texture in a list can be
-        // padded, hence >= instead of ==. CI8 always needs more room than CI4 at the same W*H
-        // (delta = 0x1E0 - W*H/2 > 0 for any BK texture up to 64x64), so there's no overlap to
-        // worry about.
-        for (uint16_t i = 0; i < textureCount; i++) {
-            auto& tex = modelData->mTexInfos[i];
-            if (tex.type != 0x1) {
-                continue;
-            }
-
-            uint32_t nextOffset =
-                (i + 1 < textureCount) ? modelData->mTexInfos[i + 1].textureDataOffset : textureDataSize;
-            uint32_t gap = nextOffset - tex.textureDataOffset;
-            uint32_t ci4Size = 0x20 + ((uint32_t)tex.width * tex.height) / 2; // 16-entry TLUT + CI4 pixels
-            uint32_t ci8Size = 0x200 + (uint32_t)tex.width * tex.height;      // 256-entry TLUT + CI8 pixels
-
-            if (gap >= ci8Size) {
-                tex.type = 0x2; // CI8
-                tex.tlutColors = 0x100;
-                if (gap != ci8Size) {
-                    SPDLOG_INFO("[BK64::Model] tex[{}] {}x{}: gap=0x{:X} >= CI8 (0x{:X}), classified CI8 (pad=0x{:X})",
-                                i, tex.width, tex.height, gap, ci8Size, gap - ci8Size);
-                }
-            } else {
-                tex.tlutColors = 0x10; // CI4
-                if (gap < ci4Size) {
-                    SPDLOG_WARN("[BK64::Model] tex[{}] {}x{}: gap=0x{:X} smaller than CI4 (0x{:X}), data may be "
-                                "truncated",
-                                i, tex.width, tex.height, gap, ci4Size);
-                } else if (gap != ci4Size) {
-                    SPDLOG_INFO("[BK64::Model] tex[{}] {}x{}: gap=0x{:X} (CI4 0x{:X}, pad=0x{:X})", i, tex.width,
-                                tex.height, gap, ci4Size, gap - ci4Size);
-                }
-            }
-        }
 
         // [port] Grab the entire raw texture area so animated frames and any unlisted bytes
         // between textures survive into the binary.
@@ -568,30 +543,11 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             const auto& tex = modelData->mTexInfos[i];
             uint32_t texOffset = texDataStart + tex.textureDataOffset;
 
-            std::string format;
-            uint32_t tlutByteSize = 0;
-
-            switch (tex.type) {
-                case 0x1:
-                    format = "CI4";
-                    tlutByteSize = tex.tlutColors * 2;
-                    break;
-                case 0x2:
-                    format = "CI8";
-                    tlutByteSize = tex.tlutColors * 2;
-                    break;
-                case 0x4:
-                    format = "RGBA16";
-                    break;
-                case 0x8:
-                    format = "RGBA32";
-                    break;
-                case 0x10:
-                    format = "IA8";
-                    break;
-                default:
-                    continue;
+            const std::string format{ GetTextureFormat(tex.type) };
+            if (format.empty()) {
+                continue;
             }
+            uint32_t tlutByteSize = tex.tlutColors * 2;
 
             std::string texSymbol = symbol + "_tex_" + std::to_string(i);
 
