@@ -623,6 +623,7 @@ var annotated_dup =
     [ "PM64AudioFactory", "classPM64AudioFactory.html", null ],
     [ "PM64AudioHeaderExporter", "classPM64AudioHeaderExporter.html", null ],
     [ "PM64BackgroundBinaryExporter", "classPM64BackgroundBinaryExporter.html", null ],
+    [ "PM64BackgroundData", "structPM64BackgroundData.html", null ],
     [ "PM64BackgroundFactory", "classPM64BackgroundFactory.html", null ],
     [ "PM64BackgroundHeaderExporter", "classPM64BackgroundHeaderExporter.html", null ],
     [ "PM64BgmBinaryExporter", "classPM64BgmBinaryExporter.html", null ],

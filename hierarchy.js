@@ -555,6 +555,7 @@ var hierarchy =
       [ "OoT::OoTTextData", "structOoT_1_1OoTTextData.html", null ],
       [ "OoT::OoTVec3sArrayData", "classOoT_1_1OoTVec3sArrayData.html", null ],
       [ "OoT::OoTVtxArrayData", "classOoT_1_1OoTVtxArrayData.html", null ],
+      [ "PM64BackgroundData", "structPM64BackgroundData.html", null ],
       [ "PM64BgmData", "classPM64BgmData.html", null ],
       [ "PM64BkSampleData", "classPM64BkSampleData.html", null ],
       [ "PM64ShapeData", "classPM64ShapeData.html", null ],
