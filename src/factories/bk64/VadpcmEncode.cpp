@@ -3,9 +3,33 @@
 #define DR_WAV_IMPLEMENTATION
 #define DR_MP3_IMPLEMENTATION
 #define DR_FLAC_IMPLEMENTATION
+
+// Note: dr_libs define each _PRIVATE macro inside the same `#ifndef DR*_API`
+// block, so predefining the API macro also requires predefining _PRIVATE.
+#define DRWAV_API static
+#define DRWAV_PRIVATE static
+#define DRMP3_API static
+#define DRMP3_PRIVATE static
+#define DRFLAC_API static
+#define DRFLAC_PRIVATE static
+
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 #include "dr_flac.h"
 #include "dr_mp3.h"
 #include "dr_wav.h"
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 #include <algorithm>
 #include <cctype>
