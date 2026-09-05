@@ -549,7 +549,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                         " - <external_files>\n\ne.g.:\nexternal_files:\n  - actors/actor1.yaml");
                 }
 
-                std::string externalFileName = (this->gSourceDirectory / externalFile.as<std::string>()).string();
+                std::string externalFileName =
+                    (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
                 const auto relPath = std::filesystem::relative(externalFileName, this->gAssetPath).string();
                 const auto relCommonPath = std::filesystem::relative(externalFileName, this->gCommonAssetPath).string();
                 if (StringHelper::StartsWith(relPath , "../")) {
