@@ -143,6 +143,36 @@ static const uint8_t kWarpEpilogue[16] = {
     0x00, 0x00, 0x00, 0x00  // NOP
 };
 
+// Callees a warp stub can tail-call, and what each adds to the $a1 immediate before it
+// is a MAP<<8|ENTRY destination. Three slots go through a transformation-gated wrapper
+// that biases the argument, so their immediates are only part of the address.
+struct WarpTailCall {
+    uint32_t addr; // RAM, not an overlay offset
+    int destBias;
+};
+static const WarpTailCall kWarpTailCalls[] = {
+    { 0x8031CC8C, 0x0000 }, // the plain warp
+    { 0x8031DC8C, 0x1000 }, // Big Croc's nostrils, croc only
+    { 0x8031DBAC, 0x2F00 }, // MMM drainpipe, pumpkin only
+};
+
+static int ResolveWarpDest(const uint8_t* f, uint32_t i, int rawImm) {
+    if (i < 4) {
+        return -1;
+    }
+    uint32_t jal = ReadU32BE(f + i - 4);
+    if ((jal >> 26) != 3) {
+        return -1;
+    }
+    uint32_t target = 0x80000000u | ((jal & 0x03FFFFFFu) << 2);
+    for (const auto& call : kWarpTailCalls) {
+        if (call.addr == target) {
+            return rawImm + call.destBias;
+        }
+    }
+    return -1;
+}
+
 // Decompress an rzip blob (magic 0x11 0x72) at `off`, or nullptr. Caller frees.
 static uint8_t* TryUnzipAt(const std::vector<uint8_t>& rom, uint32_t off, uint32_t* outSize) {
     *outSize = 0x100000;
@@ -358,8 +388,12 @@ static bool ScanWarpDestOnly(const uint8_t* ovl, uint32_t funcOff, uint32_t func
     const uint8_t* f = ovl + funcOff;
     for (uint32_t i = 0; i + 20 <= limit; i += 4) {
         if ((f[i] == 0x24 || f[i] == 0x34) && f[i + 1] == 0x05 && memcmp(f + i + 4, kWarpEpilogue, 16) == 0) {
-            outDest = (f[i + 2] << 8) | f[i + 3];
-            return true;
+            outDest = ResolveWarpDest(f, i, (f[i + 2] << 8) | f[i + 3]);
+            if (outDest >= 0) {
+                return true;
+            }
+            i += 16; // not a warp callee, step over the epilogue and keep looking
+            continue;
         }
         if (f[i] == 0x03 && f[i + 1] == 0xE0 && f[i + 2] == 0x00 && f[i + 3] == 0x08) {
             return false;
@@ -384,9 +418,10 @@ static bool ScanWarpDestDiff(const uint8_t* vanOvl, const uint8_t* modOvl, uint3
             memcmp(van + i + 4, kWarpEpilogue, 16) == 0) {
             // Same load must still be present in the modified overlay.
             if ((mod[i] == 0x24 || mod[i] == 0x34) && mod[i + 1] == 0x05) {
-                int vanDest = (van[i + 2] << 8) | van[i + 3];
-                int modDest = (mod[i + 2] << 8) | mod[i + 3];
-                if (vanDest != modDest) {
+                // Resolve against the vanilla jal
+                int vanDest = ResolveWarpDest(van, i, (van[i + 2] << 8) | van[i + 3]);
+                int modDest = ResolveWarpDest(van, i, (mod[i + 2] << 8) | mod[i + 3]);
+                if (vanDest >= 0 && vanDest != modDest) {
                     outVanDest = vanDest;
                     outModDest = modDest;
                     return true;
