@@ -711,6 +711,7 @@ var hierarchy =
     [ "VRAMEntry", "structVRAMEntry.html", null ],
     [ "BK64::VtxHeader", "structBK64_1_1VtxHeader.html", null ],
     [ "VtxRaw", "structVtxRaw.html", null ],
+    [ "BK64::WarpTailCall", "structBK64_1_1WarpTailCall.html", null ],
     [ "OoT::WaterBox", "structOoT_1_1WaterBox.html", null ],
     [ "WriteEntry", "structWriteEntry.html", null ]
 ];

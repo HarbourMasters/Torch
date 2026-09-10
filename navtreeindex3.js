@@ -91,6 +91,7 @@ var NAVTREEINDEX3 =
 "structBK64_1_1Unk28__0.html":[1,0,0,110],
 "structBK64_1_1VadpcmSample.html":[1,0,0,111],
 "structBK64_1_1VtxHeader.html":[1,0,0,112],
+"structBK64_1_1WarpTailCall.html":[1,0,0,113],
 "structBank.html":[1,0,53],
 "structCTLHeader.html":[1,0,76],
 "structChunk.html":[1,0,64],

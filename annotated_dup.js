@@ -113,7 +113,8 @@ var annotated_dup =
       [ "Unk20_0", "structBK64_1_1Unk20__0.html", null ],
       [ "Unk28_0", "structBK64_1_1Unk28__0.html", null ],
       [ "VadpcmSample", "structBK64_1_1VadpcmSample.html", null ],
-      [ "VtxHeader", "structBK64_1_1VtxHeader.html", null ]
+      [ "VtxHeader", "structBK64_1_1VtxHeader.html", null ],
+      [ "WarpTailCall", "structBK64_1_1WarpTailCall.html", null ]
     ] ],
     [ "DeferredVtx", null, [
       [ "PendingVtx", "structDeferredVtx_1_1PendingVtx.html", null ]
