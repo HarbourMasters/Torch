@@ -3,6 +3,20 @@
 #include "factories/BaseFactory.h"
 #include "types/RawBuffer.h"
 
+// One sprite raster split out of the blob so it can be addressed by name.
+struct PM64SpriteRaster {
+    uint8_t width;
+    uint8_t height;
+    std::vector<uint8_t> pixels; // CI4
+};
+
+struct PM64SpriteData : public RawBuffer {
+    std::vector<PM64SpriteRaster> rasters;
+    std::vector<std::vector<uint8_t>> palettes; // 16 x RGBA16, 32 bytes each
+
+    explicit PM64SpriteData(std::vector<uint8_t>& buffer) : RawBuffer(buffer) {}
+};
+
 class PM64SpriteBinaryExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName, YAML::Node& node, std::string* replacement) override;
 };

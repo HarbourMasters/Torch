@@ -1,7 +1,9 @@
 #include "SpriteFactory.h"
 #include "Companion.h"
 #include "utils/Decompressor.h"
+#include "utils/TextureUtils.h"
 #include "spdlog/spdlog.h"
+#include <sstream>
 #include <unordered_set>
 
 // PM64 sprite structure (decompressed, before byte-swap):
@@ -147,6 +149,85 @@ static void ByteSwapSpriteData(uint8_t* data, size_t size) {
     // so the raw ROM byte order must be preserved.
 }
 
+static uint32_t ReadBE32(const std::vector<uint8_t>& rom, size_t offset) {
+    return (rom[offset] << 24) | (rom[offset + 1] << 16) | (rom[offset + 2] << 8) | rom[offset + 3];
+}
+
+// Walk the (already byte-swapped) blob's raster and palette lists. NPC raster
+// images sit inside the blob at imageOffset; player sprites keep their images in
+// the shared player raster data instead, located through the load descriptor
+// table, so those are read from the ROM using the offsets the yaml provides.
+static void CollectSpriteImages(PM64SpriteData& sprite, const std::vector<uint8_t>& rom, YAML::Node& node) {
+    const auto& data = sprite.mBuffer;
+    const size_t size = data.size();
+    if (size < 16) {
+        return;
+    }
+    const uint32_t rastersOffset = reinterpret_cast<const uint32_t*>(data.data())[0];
+    const uint32_t palettesOffset = reinterpret_cast<const uint32_t*>(data.data())[1];
+
+    std::vector<uint32_t> descriptors;
+    uint32_t imageDataBase = 0, imageDataRom = 0;
+    const bool player = node["raster_index"].IsDefined();
+    if (player) {
+        const auto index = GetSafeNode<uint32_t>(node, "raster_index");
+        const auto header = GetSafeNode<uint32_t>(node, "raster_header");
+        const auto sets = GetSafeNode<uint32_t>(node, "raster_sets");
+        const auto descs = GetSafeNode<uint32_t>(node, "raster_descriptors");
+        imageDataRom = GetSafeNode<uint32_t>(node, "raster_image_data");
+        imageDataBase = ReadBE32(rom, header + 8);
+        const uint32_t first = ReadBE32(rom, sets + index * 4);
+        const uint32_t last = ReadBE32(rom, sets + (index + 1) * 4);
+        for (uint32_t i = first; i < last; i++) {
+            descriptors.push_back(ReadBE32(rom, descs + i * 4));
+        }
+    }
+
+    if (rastersOffset > 0 && rastersOffset < size) {
+        const uint32_t* list = reinterpret_cast<const uint32_t*>(data.data() + rastersOffset);
+        for (size_t i = 0; list[i] != 0xFFFFFFFF && reinterpret_cast<const uint8_t*>(&list[i]) < data.data() + size;
+             i++) {
+            const uint32_t entry = list[i];
+            if (entry == 0 || entry + 8 > size) {
+                break;
+            }
+            PM64SpriteRaster raster;
+            const uint32_t imageOffset = *reinterpret_cast<const uint32_t*>(data.data() + entry);
+            raster.width = data[entry + 4];
+            raster.height = data[entry + 5];
+            const size_t bytes = (size_t)raster.width * raster.height / 2;
+            if (player) {
+                if (i >= descriptors.size()) {
+                    break;
+                }
+                // upper three nibbles give size / 16, lower five the offset
+                const uint32_t romOffset = imageDataRom + ((descriptors[i] & 0xFFFFF) - imageDataBase);
+                const uint32_t descSize = (descriptors[i] >> 16) & 0xFFF0;
+                // Placeholder entries (back-facing sprites, 255x255 dummies) point at a
+                // 16-byte stub; leave those without pixels so nothing is emitted for them.
+                if (romOffset + bytes <= rom.size() && descSize >= bytes) {
+                    raster.pixels.assign(rom.begin() + romOffset, rom.begin() + romOffset + bytes);
+                }
+            } else if (imageOffset + bytes <= size) {
+                raster.pixels.assign(data.begin() + imageOffset, data.begin() + imageOffset + bytes);
+            }
+            sprite.rasters.push_back(std::move(raster));
+        }
+    }
+
+    if (palettesOffset > 0 && palettesOffset < size) {
+        const uint32_t* list = reinterpret_cast<const uint32_t*>(data.data() + palettesOffset);
+        for (size_t i = 0; list[i] != 0xFFFFFFFF && reinterpret_cast<const uint8_t*>(&list[i]) < data.data() + size;
+             i++) {
+            const uint32_t offset = list[i];
+            if (offset + 32 > size) {
+                break;
+            }
+            sprite.palettes.emplace_back(data.begin() + offset, data.begin() + offset + 32);
+        }
+    }
+}
+
 std::optional<std::shared_ptr<IParsedData>> PM64SpriteFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     // Get the offset from YAML
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -154,6 +235,7 @@ std::optional<std::shared_ptr<IParsedData>> PM64SpriteFactory::parse(std::vector
     // Check if this is compressed (YAY0)
     auto compressionType = Decompressor::GetCompressionType(buffer, offset);
 
+    std::vector<uint8_t> spriteData;
     if (compressionType == CompressionType::YAY0) {
         // Decompress YAY0 data
         auto decoded = Decompressor::Decode(buffer, offset, CompressionType::YAY0);
@@ -163,36 +245,68 @@ std::optional<std::shared_ptr<IParsedData>> PM64SpriteFactory::parse(std::vector
         }
 
         // Create a copy of decompressed data for byte-swapping
-        std::vector<uint8_t> spriteData(decoded->data, decoded->data + decoded->size);
-
-        // Byte-swap for little-endian
-        ByteSwapSpriteData(spriteData.data(), spriteData.size());
+        spriteData.assign(decoded->data, decoded->data + decoded->size);
 
         SPDLOG_DEBUG("PM64:SPRITE parsed at 0x{:X}, decompressed size: {}", offset, spriteData.size());
-
-        return std::make_shared<RawBuffer>(spriteData);
     } else {
         // Uncompressed - just read raw data with size from YAML
         auto size = GetSafeNode<size_t>(node, "size");
         auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
 
-        std::vector<uint8_t> spriteData(segment.data, segment.data + segment.size);
-        ByteSwapSpriteData(spriteData.data(), spriteData.size());
-
-        return std::make_shared<RawBuffer>(spriteData);
+        spriteData.assign(segment.data, segment.data + segment.size);
     }
+
+    // Byte-swap for little-endian
+    ByteSwapSpriteData(spriteData.data(), spriteData.size());
+
+    auto sprite = std::make_shared<PM64SpriteData>(spriteData);
+    CollectSpriteImages(*sprite, buffer, node);
+    return sprite;
 }
 
 ExportResult PM64SpriteBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                               std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
-    auto data = std::static_pointer_cast<RawBuffer>(raw)->mBuffer;
+    auto sprite = std::static_pointer_cast<PM64SpriteData>(raw);
+    auto& data = sprite->mBuffer;
 
     // Write as Blob type for now - game will load as raw binary
     WriteHeader(writer, Torch::ResourceType::Blob, 0);
     writer.Write(static_cast<uint32_t>(data.size()));
     writer.Write(reinterpret_cast<char*>(data.data()), data.size());
     writer.Finish(write);
+    std::string base = entryName;
+    auto lastSlash = base.rfind('/');
+    if (lastSlash != std::string::npos) {
+        base = base.substr(lastSlash + 1);
+    }
+
+    auto companion = [&](const std::string& name, uint32_t type, uint32_t w, uint32_t h,
+                         const std::vector<uint8_t>& px) {
+        auto texWriter = LUS::BinaryWriter();
+        WriteHeader(texWriter, Torch::ResourceType::Texture, 0);
+        texWriter.Write(type);
+        texWriter.Write(w);
+        texWriter.Write(h);
+        texWriter.Write((uint32_t)px.size());
+        texWriter.Write((char*)px.data(), px.size());
+        std::stringstream ss;
+        texWriter.Finish(ss);
+        std::string str = ss.str();
+        Companion::Instance->RegisterCompanionFile(name, std::vector<char>(str.begin(), str.end()));
+    };
+
+    for (size_t i = 0; i < sprite->rasters.size(); i++) {
+        const auto& r = sprite->rasters[i];
+        if (r.pixels.empty()) {
+            continue;
+        }
+        companion(base + "_raster_" + std::to_string(i), (uint32_t)TextureType::Palette4bpp, r.width, r.height,
+                  r.pixels);
+    }
+    for (size_t i = 0; i < sprite->palettes.size(); i++) {
+        companion(base + "_pal_" + std::to_string(i), (uint32_t)TextureType::RGBA16bpp, 16, 1, sprite->palettes[i]);
+    }
 
     return std::nullopt;
 }

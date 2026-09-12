@@ -1,6 +1,8 @@
 #include "StoryImageFactory.h"
 #include "Companion.h"
 #include "spdlog/spdlog.h"
+#include "utils/TextureUtils.h"
+#include <sstream>
 
 // PM64 story image factory for intro sequence graphics
 // Handles CI8 images with palettes and IA8 images without palettes
@@ -43,6 +45,21 @@ std::optional<std::shared_ptr<IParsedData>> PM64StoryImageFactory::parse(std::ve
     return std::make_shared<RawBuffer>(result);
 }
 
+static void RegisterTexture(const std::string& name, uint32_t type, uint32_t w, uint32_t h, const uint8_t* px,
+                            size_t bytes) {
+    auto writer = LUS::BinaryWriter();
+    BaseExporter::WriteHeader(writer, Torch::ResourceType::Texture, 0);
+    writer.Write(type);
+    writer.Write(w);
+    writer.Write(h);
+    writer.Write((uint32_t)bytes);
+    writer.Write((char*)px, bytes);
+    std::stringstream ss;
+    writer.Finish(ss);
+    std::string str = ss.str();
+    Companion::Instance->RegisterCompanionFile(name, std::vector<char>(str.begin(), str.end()));
+}
+
 ExportResult PM64StoryImageBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                                   std::string& entryName, YAML::Node& node, std::string* replacement) {
     auto writer = LUS::BinaryWriter();
@@ -53,6 +70,26 @@ ExportResult PM64StoryImageBinaryExporter::Export(std::ostream& write, std::shar
     writer.Write(static_cast<uint32_t>(data.size()));
     writer.Write(reinterpret_cast<char*>(data.data()), data.size());
     writer.Finish(write);
+
+    // The same image and palette as textures the game can address by name
+    // ("<page>_img", "<page>_tlut"), so replacements can be keyed to them.
+    const auto width = GetSafeNode<uint32_t>(node, "width");
+    const auto height = GetSafeNode<uint32_t>(node, "height");
+    const auto hasPalette = GetSafeNode<bool>(node, "has_palette");
+    std::string base = entryName;
+    const auto slash = base.rfind('/');
+    if (slash != std::string::npos) {
+        base = base.substr(slash + 1);
+    }
+    const size_t imageSize = (size_t)width * height;
+    if (data.size() >= imageSize) {
+        RegisterTexture(base + "_img",
+                        (uint32_t)(hasPalette ? TextureType::Palette8bpp : TextureType::GrayscaleAlpha8bpp), width,
+                        height, data.data(), imageSize);
+    }
+    if (hasPalette && data.size() >= imageSize + 512) {
+        RegisterTexture(base + "_tlut", (uint32_t)TextureType::RGBA16bpp, 256, 1, data.data() + imageSize, 512);
+    }
 
     return std::nullopt;
 }
