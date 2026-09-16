@@ -192,6 +192,8 @@ var hierarchy =
       [ "PM64BackgroundHeaderExporter", "classPM64BackgroundHeaderExporter.html", null ],
       [ "PM64BgmBinaryExporter", "classPM64BgmBinaryExporter.html", null ],
       [ "PM64BkSampleBinaryExporter", "classPM64BkSampleBinaryExporter.html", null ],
+      [ "PM64CharsetBinaryExporter", "classPM64CharsetBinaryExporter.html", null ],
+      [ "PM64CharsetHeaderExporter", "classPM64CharsetHeaderExporter.html", null ],
       [ "PM64CollisionBinaryExporter", "classPM64CollisionBinaryExporter.html", null ],
       [ "PM64CollisionHeaderExporter", "classPM64CollisionHeaderExporter.html", null ],
       [ "PM64ImgFXAnimBinaryExporter", "classPM64ImgFXAnimBinaryExporter.html", null ],
@@ -372,6 +374,7 @@ var hierarchy =
       [ "PM64BackgroundFactory", "classPM64BackgroundFactory.html", null ],
       [ "PM64BgmFactory", "classPM64BgmFactory.html", null ],
       [ "PM64BkSampleFactory", "classPM64BkSampleFactory.html", null ],
+      [ "PM64CharsetFactory", "classPM64CharsetFactory.html", null ],
       [ "PM64CollisionFactory", "classPM64CollisionFactory.html", null ],
       [ "PM64ImgFXAnimFactory", "classPM64ImgFXAnimFactory.html", null ],
       [ "PM64MapTextureFactory", "classPM64MapTextureFactory.html", null ],
@@ -561,7 +564,8 @@ var hierarchy =
       [ "PM64ShapeData", "classPM64ShapeData.html", null ],
       [ "RawBuffer", "classRawBuffer.html", [
         [ "BK64::MusicData", "classBK64_1_1MusicData.html", null ],
-        [ "BK64::SoundfontData", "classBK64_1_1SoundfontData.html", null ]
+        [ "BK64::SoundfontData", "classBK64_1_1SoundfontData.html", null ],
+        [ "PM64SpriteData", "structPM64SpriteData.html", null ]
       ] ],
       [ "SF64::AnimData", "classSF64_1_1AnimData.html", null ],
       [ "SF64::ColPolyData", "classSF64_1_1ColPolyData.html", null ],
@@ -637,6 +641,7 @@ var hierarchy =
     [ "OoT::PendingAltHeader", "structOoT_1_1PendingAltHeader.html", null ],
     [ "DeferredVtx::PendingVtx", "structDeferredVtx_1_1PendingVtx.html", null ],
     [ "PM64DisplayListInfo", "structPM64DisplayListInfo.html", null ],
+    [ "PM64SpriteRaster", "structPM64SpriteRaster.html", null ],
     [ "UI::PreviewAtmosphere", "structUI_1_1PreviewAtmosphere.html", null ],
     [ "UI::PreviewLighting", "structUI_1_1PreviewLighting.html", null ],
     [ "UI::PreviewVertex", "structUI_1_1PreviewVertex.html", null ],
