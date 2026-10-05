@@ -137,6 +137,19 @@
 #include "factories/oot/OoTAudioFactory.h"
 #endif
 
+#ifdef MM_SUPPORT
+#include "factories/mm/MMArrayFactory.h"
+#include "factories/mm/MMCollisionFactory.h"
+#include "factories/mm/MMCutsceneFactory.h"
+#include "factories/mm/MMKeyFrameFactory.h"
+#include "factories/mm/MMPathFactory.h"
+#include "factories/mm/MMSceneFactory.h"
+#include "factories/mm/MMSkeletonFactory.h"
+#include "factories/mm/MMTextFactory.h"
+#include "factories/mm/MMAudioFactory.h"
+#include "factories/mm/MMTextureAnimationFactory.h"
+#endif
+
 #ifdef NAUDIO_SUPPORT
 #include "factories/naudio/v0/AudioHeaderFactory.h"
 #include "factories/naudio/v0/BankFactory.h"
@@ -330,6 +343,21 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("OOT:CUTSCENE", std::make_shared<OoT::OoTCutsceneFactory>());
     this->RegisterFactory("OOT:PATH", std::make_shared<OoT::OoTPathFactory>());
     this->RegisterFactory("OOT:AUDIO", std::make_shared<OoT::OoTAudioFactory>());
+#endif
+
+#ifdef MM_SUPPORT
+    this->RegisterFactory("MM:CUTSCENE", std::make_shared<MM::MMCutsceneFactory>());
+    this->RegisterFactory("MM:KEYFRAME_ANIMATION", std::make_shared<MM::MMKeyFrameAnimationFactory>());
+    this->RegisterFactory("MM:KEYFRAME_SKELETON", std::make_shared<MM::MMKeyFrameSkeletonFactory>());
+    this->RegisterFactory("MM:PATH", std::make_shared<MM::MMPathFactory>());
+    this->RegisterFactory("MM:SCENE", std::make_shared<MM::MMSceneFactory>());
+    this->RegisterFactory("MM:ROOM", std::make_shared<MM::MMSceneFactory>());
+    this->RegisterFactory("MM:TEXT", std::make_shared<MM::MMTextFactory>());
+    this->RegisterFactory("MM:TEXTURE_ANIMATION", std::make_shared<MM::MMTextureAnimationFactory>());
+    this->RegisterFactory("MM:ARRAY", std::make_shared<MM::MMArrayFactory>());
+    this->RegisterFactory("MM:SKELETON", std::make_shared<MM::MMSkeletonFactory>());
+    this->RegisterFactory("MM:COLLISION", std::make_shared<MM::MMCollisionFactory>());
+    this->RegisterFactory("MM:AUDIO", std::make_shared<MM::MMAudioFactory>());
 #endif
 
 #ifdef BUILD_UI
@@ -533,6 +561,20 @@ void Companion::ParseModdingConfig() {
     }
 }
 
+static std::optional<CompressionType> ExplicitCompressionType(const YAML::Node& config) {
+    if (!config || !config["compression"]) {
+        return std::nullopt;
+    }
+    const auto name = config["compression"].as<std::string>();
+    if (name == "CMPDMA") {
+        return CompressionType::CMPDMA;
+    }
+    if (name == "NONE") {
+        return CompressionType::None;
+    }
+    throw std::runtime_error("Unknown `compression:` value \"" + name + "\".");
+}
+
 void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& assetCount) {
     this->gCurrentFileConfig = node;
 
@@ -635,6 +677,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 SetSegmentInfo(segments);
 
                 gCurrentCompressionType = Decompressor::GetCompressionType(this->gRomData, gCurrentFileOffset);
+                if (const auto explicitType = ExplicitCompressionType(node)) {
+                    gCurrentCompressionType = *explicitType;
+                }
                 if (node["no_compression"]) {
                     gCurrentCompressionType = CompressionType::None;
                 }
@@ -1236,6 +1281,9 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
                 SetSegmentInfo(segments);
 
                 gCurrentCompressionType = Decompressor::GetCompressionType(this->gRomData, gCurrentFileOffset);
+                if (const auto explicitType = ExplicitCompressionType(root[":config"])) {
+                    gCurrentCompressionType = *explicitType;
+                }
                 if (root[":config"]["no_compression"]) {
                     gCurrentCompressionType = CompressionType::None;
                 }
@@ -1469,6 +1517,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     }
 
     auto opath = cfg["output"];
+    this->gConfig.game = GetSafeNode<std::string>(cfg, "game", "");
     auto gbi = cfg["gbi"];
     auto gbi_floats = cfg["gbi_floats"];
     auto modding_path = opath && opath["modding"] ? opath["modding"].as<std::string>() : "modding";
@@ -2455,6 +2504,15 @@ void Companion::SetProcess(bool shouldProcess) {
 void Companion::RegisterCompanionFile(const std::string path, std::vector<char> data) {
     this->gCompanionFiles[path] = data;
     SPDLOG_TRACE("Registered companion file {}", path);
+}
+
+void Companion::PatchCompanionFiles(const std::function<bool(const std::string&)>& matches,
+                                    const std::function<void(std::vector<char>&)>& patch) {
+    for (auto& [path, data] : this->gCompanionFiles) {
+        if (matches(path)) {
+            patch(data);
+        }
+    }
 }
 
 void Companion::RegisterArchiveFile(const std::string& name, std::vector<char> data) {

@@ -182,7 +182,7 @@ bool AudioSampleWriter::Extract(std::vector<uint8_t>& buffer, YAML::Node& node,
         return false;
     }
     uint32_t tableOff = audiotableSeg.value();
-    uint32_t tableSize = std::min((uint32_t)0x500000, (uint32_t)(buffer.size() - tableOff));
+    uint32_t tableSize = std::min((uint32_t)0x550000, (uint32_t)(buffer.size() - tableOff));
     std::vector<uint8_t> audioTable(buffer.begin() + tableOff, buffer.begin() + tableOff + tableSize);
 
     AudioParseContext ctx {
