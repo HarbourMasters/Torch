@@ -285,7 +285,7 @@ std::vector<uint8_t> BuildSmfTrack(const MusicTrack& track, const std::string& l
             if (type == 0x90) {
                 TimedEvent off;
                 off.tick = tick + event.aux;
-                off.order = -1;
+                off.order = event.aux == 0 ? noteOn.order : -1;
                 off.bytes = { static_cast<uint8_t>(0x80 | (event.status & 0x0F)), event.byte1, 0 };
                 timed.push_back(off);
             }
