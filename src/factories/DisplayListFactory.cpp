@@ -9,6 +9,9 @@
 #ifdef OOT_SUPPORT
 #include "oot/OoTDListHelpers.h"
 #endif
+#ifdef MM_SUPPORT
+#include "mm/MMDListHelpers.h"
+#endif
 
 #ifdef STANDALONE
 #include <gfxd.h>
@@ -238,6 +241,12 @@ std::optional<std::tuple<std::string, YAML::Node>> SearchVtx(uint32_t ptr) {
 
 ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
                                          YAML::Node& node, std::string* replacement) {
+#ifdef MM_SUPPORT
+    if (Companion::Instance->GetGame() == "MM") {
+        auto mmResult = MM::DListHelpers::Export(write, raw, entryName, node, replacement);
+        if (mmResult.has_value()) return mmResult.value();
+    }
+#endif
 #ifdef OOT_SUPPORT
     auto ootResult = OoT::DListHelpers::Export(write, raw, entryName, node, replacement);
     if (ootResult.has_value()) return ootResult.value();

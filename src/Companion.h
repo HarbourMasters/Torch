@@ -102,6 +102,7 @@ struct GBIConfig {
 };
 
 struct TorchConfig {
+    std::string game;
     GBIConfig gbi;
     SegmentConfig segment;
     std::string outputPath;
@@ -190,6 +191,7 @@ public:
 
     GBIVersion GetGBIVersion() const { return this->gConfig.gbi.version; }
     GBIMinorVersion GetGBIMinorVersion() const { return  this->gConfig.gbi.subversion; }
+    const std::string& GetGame() const { return this->gConfig.game; }
     std::unordered_map<std::string, std::vector<YAML::Node>> GetCourseMetadata() { return this->gCourseMetadata; }
     std::optional<std::string> GetEnumFromValue(const std::string& key, int id);
     bool IsUsingIndividualIncludes() const { return this->gIndividualIncludes; }
@@ -233,6 +235,8 @@ public:
     std::string RelativePathToSrcDir(const std::string& path) const;
     std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
+    void PatchCompanionFiles(const std::function<bool(const std::string&)>& matches,
+                             const std::function<void(std::vector<char>&)>& patch);
     void RegisterArchiveFile(const std::string& name, std::vector<char> data);
     void SetAdditionalFiles(const std::vector<std::string>& files) { this->gAdditionalFiles = files; }
     void SetVersion(const std::string& version) { this->gVersion = version; }

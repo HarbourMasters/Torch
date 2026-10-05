@@ -15,6 +15,7 @@ enum class CompressionType {
     YAY1,
     YAZ0,
     BKZIP,
+    CMPDMA,
 };
 
 

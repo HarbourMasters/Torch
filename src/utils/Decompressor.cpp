@@ -3,6 +3,8 @@
 
 #include <stdexcept>
 #include <mutex>
+#include <algorithm>
+#include <cstdlib>
 #include "spdlog/spdlog.h"
 #include <Companion.h>
 
@@ -101,7 +103,44 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
                 throw std::runtime_error("Failed to decode YAZ0");
             }
 
+            std::lock_guard<std::mutex> lock(gDecompCacheMutex);
             gCachedChunks[offset] = new DataChunk{ decompressed, size };
+            return gCachedChunks[offset];
+        }
+        case CompressionType::CMPDMA: {
+            const auto readU32 = [&](size_t index) -> uint32_t {
+                const auto* p = in_buf + index * sizeof(uint32_t);
+                return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16) |
+                       (static_cast<uint32_t>(p[2]) << 8) | static_cast<uint32_t>(p[3]);
+            };
+            const uint32_t dataStart = readU32(0);
+            if (dataStart < 2 * sizeof(uint32_t) || dataStart % sizeof(uint32_t) != 0) {
+                throw std::runtime_error("CMPDMA: implausible dataStart 0x" + Torch::to_hex(dataStart, false) +
+                                         " at ROM offset 0x" + Torch::to_hex(offset, false));
+            }
+
+            const size_t count = dataStart / sizeof(uint32_t) - 1;
+            std::vector<uint8_t> joined;
+            for (size_t i = 0; i < count; ++i) {
+                const uint32_t relativeOffset = i == 0 ? 0 : readU32(i);
+                uint32_t subSize = 0;
+                uint8_t* sub = yaz0_decode(in_buf + dataStart + relativeOffset, &subSize);
+                if (sub == nullptr) {
+                    throw std::runtime_error("CMPDMA: sub-file " + std::to_string(i) + " of " +
+                                             std::to_string(count) + " is not a Yaz0 stream (ROM offset 0x" +
+                                             Torch::to_hex(offset + dataStart + relativeOffset, false) + ")");
+                }
+                joined.insert(joined.end(), sub, sub + subSize);
+                free(sub);
+            }
+
+            auto* decompressed = static_cast<uint8_t*>(malloc(joined.size()));
+            if (decompressed == nullptr && !joined.empty()) {
+                throw std::bad_alloc();
+            }
+            std::copy(joined.begin(), joined.end(), decompressed);
+            std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+            gCachedChunks[offset] = new DataChunk{ decompressed, joined.size() };
             return gCachedChunks[offset];
         }
         default:
@@ -209,6 +248,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
         case CompressionType::YAY0:
         case CompressionType::YAY1:
         case CompressionType::MIO0:
+        case CompressionType::CMPDMA:
         case CompressionType::YAZ0: {
             offset = ASSET_PTR(offset);
 
