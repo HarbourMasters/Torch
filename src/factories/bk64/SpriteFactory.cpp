@@ -509,8 +509,13 @@ std::optional<std::shared_ptr<IParsedData>> SpriteFactory::parse_modding(std::ve
         texture["offset"] = 0xF0000000u + i;
         texture["format"] = format;
         texture["ctype"] = "u16";
-        texture["width"] = additive ? chunkSizes[i].first : positions[i].first;
-        texture["height"] = additive ? chunkSizes[i].second : positions[i].second;
+        int32_t width = additive ? chunkSizes[i].first : 0;
+        int32_t height = additive ? chunkSizes[i].second : 0;
+        if (!additive && !FindModdedChunkSize(symbol + "_0_" + std::to_string(i), width, height)) {
+            SPDLOG_WARN("Sprite modding: no PNG found for added chunk {}_0_{}", symbol, i);
+        }
+        texture["width"] = width;
+        texture["height"] = height;
         texture["symbol"] = symbol + "_0_" + std::to_string(i);
         Companion::Instance->AddAsset(texture);
     }
