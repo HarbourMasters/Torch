@@ -60,8 +60,8 @@ static uint32_t GetGeoCommandByteSize(const GeoLayoutCommand& cmd) {
             bodySize = 12;
             break; // 2*6
         case GeoLayoutOpCode::UnknownCmdF:
-            bodySize = 16;
-            break; // 2+1+1+12
+            bodySize = static_cast<uint32_t>(cmd.args.size()) + 1;
+            break; // 2+1+1, then one byte per id
         case GeoLayoutOpCode::UnknownCmd10:
             bodySize = 4;
             break; // 4
@@ -410,8 +410,8 @@ ExportResult GeoLayoutModdingExporter::Export(std::ostream& write, std::shared_p
                 out << YAML::Key << "unkB" << YAML::Value << (uint32_t)std::get<uint8_t>(arguments.at(2));
                 out << YAML::Key << "unkCBuf" << YAML::Value;
                 out << YAML::BeginSeq;
-                for (uint32_t j = 0; j < 12; j++) {
-                    out << YAML::Value << (uint32_t)std::get<uint8_t>(arguments.at(j + 3));
+                for (size_t j = 3; j < arguments.size(); j++) {
+                    out << YAML::Value << (uint32_t)std::get<uint8_t>(arguments.at(j));
                 }
                 out << YAML::EndSeq;
                 if (std::get<uint16_t>(arguments.at(0)) != 0) {
@@ -701,14 +701,13 @@ std::optional<std::shared_ptr<IParsedData>> GeoLayoutFactory::parse(std::vector<
             }
             case GeoLayoutOpCode::UnknownCmdF: {
                 auto childOffset = reader.ReadUInt16();
-                auto unkA = reader.ReadUByte();
-                auto unkB = reader.ReadUByte();
+                auto count = reader.ReadUByte();
+                auto flags = reader.ReadUByte();
                 args.emplace_back(childOffset);
-                args.emplace_back(unkA);
-                args.emplace_back(unkB);
-                for (int32_t i = 0; i < 12; i++) {
-                    auto unkCBuf = reader.ReadUByte();
-                    args.emplace_back(unkCBuf);
+                args.emplace_back(count);
+                args.emplace_back(flags);
+                for (int32_t i = 0; i < count; i++) {
+                    args.emplace_back(reader.ReadUByte());
                 }
                 if (childOffset != 0) {
                     offsetStack.push_back(localOffset + childOffset);
