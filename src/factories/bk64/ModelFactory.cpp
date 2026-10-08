@@ -240,7 +240,10 @@ ExportResult BK64::ModelBinaryExporter::Export(std::ostream& write, std::shared_
 
         // The falling jiggies transition rewrites its own texture at runtime, so leave its
         // G_SETTIMG alone. Touch it and you get the white fallback texture instead.
-        const bool isFramebufferSubstitutionModel = entryName.find("TRANSITION_FALLING_JIGGIES") != std::string::npos;
+        // transition.c picks it by asset id.
+        constexpr uint32_t kFallingJiggiesTransition = 0x467; // ASSET_467_MODEL_TRANSITION_FALLING_JIGGIES
+        const bool isFramebufferSubstitutionModel =
+            GetSafeNode<uint32_t>(node, "asset_id", 0) == kFallingJiggiesTransition;
         for (size_t i = 0; i + 1 < model->mRawDLWords.size(); i += 2) {
             uint32_t w0 = model->mRawDLWords[i];
             uint32_t w1 = model->mRawDLWords[i + 1];

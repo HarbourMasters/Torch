@@ -583,6 +583,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
                     break;
                 case BKAssetType::Model:
                     bkAssetNode["type"] = "BK64:MODEL";
+                    bkAssetNode["asset_id"] = assetInfo.index;
                     Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
                     break;
                 case BKAssetType::QuizQuestion:
