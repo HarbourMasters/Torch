@@ -123,6 +123,17 @@ inline int16_t YamlShort(const YAML::Node& entry, const char* key, const std::st
     return YamlShort(entry[key], where + " " + key);
 }
 
+inline float YamlFloat(const YAML::Node& entry, const char* key, const std::string& where) {
+    if (!entry[key]) {
+        YamlFail(where, std::string("needs ") + key);
+    }
+    try {
+        return entry[key].as<float>();
+    } catch (const YAML::Exception&) {
+        YamlFail(where + " " + key, "\"" + entry[key].as<std::string>() + "\" isn't a number");
+    }
+}
+
 // A modding file's one entry, keyed by the asset's name.
 inline YAML::Node YamlEntry(const std::vector<uint8_t>& buffer, const std::string& where) {
     YAML::Node root;
