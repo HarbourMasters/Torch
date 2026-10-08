@@ -146,6 +146,23 @@ inline YAML::Node YamlEntry(const std::vector<uint8_t>& buffer, const std::strin
     return root.begin()->second;
 }
 
+// Every key the map holds has to be one of keys.
+inline void YamlKeys(const YAML::Node& node, std::initializer_list<const char*> keys, const std::string& where) {
+    if (!node.IsMap()) {
+        YamlFail(where, "needs to be a map");
+    }
+    for (const auto& item : node) {
+        const std::string key = item.first.as<std::string>();
+        bool known = false;
+        for (const char* name : keys) {
+            known |= key == name;
+        }
+        if (!known) {
+            YamlFail(where, "doesn't take " + key);
+        }
+    }
+}
+
 template <typename T> void ReadList(const YAML::Node& list, T* values, int count, const std::string& at) {
     if (!list.IsSequence() || (int)list.size() != count) {
         YamlFail(at, "needs " + std::to_string(count) + " numbers");
