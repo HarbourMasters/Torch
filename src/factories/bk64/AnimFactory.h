@@ -52,6 +52,14 @@ class AnimModdingExporter : public BaseExporter {
                         YAML::Node& node, std::string* replacement) override;
 };
 
+std::shared_ptr<AnimData> ReadAnimRom(const std::vector<uint8_t>& bytes, std::string& error);
+std::vector<uint8_t> WriteAnimRom(const AnimData& anim);
+// A BKAnimation resource, as AnimBinaryExporter writes it.
+std::shared_ptr<AnimData> ReadAnimResource(const std::vector<uint8_t>& resource, std::string& error);
+std::vector<uint8_t> WriteAnimResource(const AnimData& anim);
+std::string AnimToYaml(const AnimData& anim, const std::string& symbol);
+bool AnimFromYaml(const std::string& text, AnimData& out, std::string& error);
+
 class AnimFactory : public BaseFactory {
   public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
