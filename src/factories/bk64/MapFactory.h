@@ -53,125 +53,36 @@ typedef struct NodeProp {
 } NodeProp;
 
 /**
- * ModelProp: Static 3D model (is_actor=0, is_3d=1) - 12 bytes
- * Decomp: model_prop_s from props.h
+ * Prop: a sprite, model or actor slot - 12 bytes, kept in the ROM's big-endian order
+ * Decomp: sprite_prop_s, model_prop_s and actor_prop_s in prop.h
  *
- * Structure Layout:
- *   Offset 0x00: unk0 (u16) - modelId:12, pad0_19:4
- *   Offset 0x02: yaw (u8) - rotation Y-axis
- *   Offset 0x03: roll (u8) - rotation around local axis
- *   Offset 0x04: position[3] (s16[3]) - X, Y, Z world position
- *   Offset 0x0A: scale (u8)
- *   Offset 0x0B: flags (u8) - isModelProp:1, isActorProp:1, etc.
+ * The halfword at 0x0A picks the layout: bit0 set is an actor slot, else bit1 set
+ * is a model, else a sprite. Every layout has position[3] (s16[3]) at 0x04.
  *
- * Asset ID = (modelId & 0xFFF) + MODEL_ASSET_OFFSET (0x2D1)
+ *   Sprite:     0x00 spriteId:12, unk0_19:1, rgb_remove_red/green/blue:3 each,
+ *                    scale:8 (percent), isMirrored:1, pad0_0:1 (u32)
+ *               0x0A frame:5, unk8_10:5 (phase), flags:4, isModelProp:1, isActorProp:1
+ *   Model:      0x00 modelId:12, pad0_19:4 (u16); 0x02 yaw, 0x03 roll (degrees / 2)
+ *               0x0A scale (percent); 0x0B flags:6, isModelProp:1, isActorProp:1
+ *   Actor slot: 0x00 marker (a runtime pointer, 0 in the ROM)
+ *               0x0A frame:5, unk8_10:5, flags:4, isModelProp:1, isActorProp:1
+ *
+ * Asset ID = spriteId + 0x572, modelId + 0x2D1.
  */
-typedef struct ModelProp {
-    uint16_t unk0;       // modelId:12, pad0_19:4
-    uint8_t yaw;         // Y-axis rotation
-    uint8_t roll;        // roll
-    int16_t position[3]; // X, Y, Z world position
-    uint8_t scale;       // scale
-    uint8_t flags;       // discriminator (isModelProp=1, isActorProp=0)
-} ModelProp;
-
-/**
- * SpriteProp: 2D billboard sprite (is_actor=0, is_3d=0) - 12 bytes
- * Decomp: sprite_prop_s from props.h
- *
- * Complete Structure Layout (12 bytes):
- *   Offset 0x00-0x03: word0 (32-bit packed) - sprite appearance/rendering
- * parameters Offset 0x04-0x09: unk4[3] (s16[3]) - X, Y, Z world position Offset
- * 0x0A-0x0B: wordA (16-bit packed) - animation frame + discriminator flags
- *
- * Packed Field Layout (word0 - 32-bit big-endian at offset 0x00):
- *   Bits 31-20: spriteId (12 bits) → Asset ID = spriteId + SPRITE_ASSET_OFFSET
- * (0x572) Bit 19: unk0_19 (1 bit) Bits 18-16: rgb_remove_red (3 bits, 0-7 color
- * removal value) Bits 15-13: rgb_remove_green (3 bits, 0-7 color removal value)
- *   Bits 12-10: rgb_remove_blue (3 bits, 0-7 color removal value)
- *   Bits 9-2: scale (8 bits)
- *   Bit 1: isMirrored (1 bit, horizontal flip)
- *   Bit 0: pad0_0 (1 bit)
- *
- * Packed Field Layout (wordA - 16-bit big-endian at offset 0x0A):
- *   Bits 15-11: frame (5 bits, animation frame index)
- *   Bits 10-6: unk8_10 (5 bits)
- *   Bit 5: unk8_5 (1 bit)
- *   Bit 4: isNotFeatherEggOrNote (1 bit)
- *   Bit 3: unk8_3 (1 bit)
- *   Bit 2: isCollisionResolved (1 bit)
- *   Bit 1: isModelProp (1 bit, always 0 for sprites)
- *   Bit 0: isActorProp (1 bit, always 0 for sprites)
- */
-typedef struct SpriteProp {
-    uint32_t word0;
-    int16_t unk4[3];
-    uint16_t wordA;
-} SpriteProp;
-
-/**
- * ActorProp: Dynamic entity created at runtime (is_actor=1) - 12 bytes
- * Decomp: actor_prop_s from props.h
- *
- * Structure Layout:
- *   Offset 0x00: marker (ActorMarker* - 4 bytes, runtime pointer)
- *   Offset 0x04: position[3] (s16[3] - 6 bytes, X/Y/Z cache)
- *   Offset 0x0A: flags (u16 - 2 bytes) - frame:5, unk8_10:5, isMirrored:1,
- *                isNotFeatherEggOrNote:1, unk8_3:1, isCollisionResolved:1,
- *                isModelProp:1 (0), isActorProp:1 (1)
- *
- * Yes, ActorProps really are in ROM. The `marker` field (bytes 0-3) is always
- * NULL there and only gets filled in when the engine spawns the actor. The
- * position and flags fields, though, are genuine ROM data.
- */
-typedef struct ActorProp {
-    uint32_t marker;     // ActorMarker* — runtime only
-    int16_t position[3]; // X, Y, Z position cache
-    uint16_t flags;      // discriminator (isActorProp=1)
-} ActorProp;
-
-/**
- * Prop: union of ModelProp, SpriteProp, ActorProp (12 bytes)
- *
- * Which one it is comes from the flags at offset 0x0A, bits 0-1:
- *   isActorProp=1 → ActorProp (carries actor marker metadata)
- *   isActorProp=0, isModelProp=1 → ModelProp (static 3D geometry)
- *   isActorProp=0, isModelProp=0 → SpriteProp (2D billboard sprite)
- *
- * All three are 12 bytes and live in ROM; only the flags tell them apart.
- */
-typedef union Prop {
-    ModelProp model;
-    SpriteProp sprite;
-    ActorProp actor;
-    struct {
-        uint32_t pad0;
-        int16_t unk4[3];
-        uint16_t padA_15 : 10;
-        uint16_t unkA_5 : 1;
-        uint16_t unkA_4 : 1;
-        uint16_t unkA_3 : 1;
-        uint16_t unkA_2 : 1;
-        uint16_t is_3d : 1;
-        uint16_t is_actor : 1;
-    };
+typedef struct Prop {
     uint8_t raw[12];
 } Prop;
 
 /**
  * CubeData: one cell of the 32×32×32 spatial partition grid
  *
- * x/y/z are 5-bit grid coords (0-31).
- * unk0_4 splits the NodeProps: [0..unk0_4) are regular spawns,
- * [unk0_4..prop1Cnt) are events.
+ * Cells come in file order: x outermost, z innermost.
  */
 typedef struct CubeData {
-    int32_t x : 5;
-    int32_t y : 5;
-    int32_t z : 5;
-    uint32_t prop1Cnt : 6;
-    uint32_t prop2Cnt : 6;
-    uint32_t unk0_4 : 5; // split point: [0..unk0_4)=spawns, [unk0_4..prop1Cnt)=events
+    int32_t x;
+    int32_t y;
+    int32_t z;
+    bool listedEmpty = false; // holds nothing, but the file still writes its node and prop blocks
     std::vector<NodeProp> nodeProps;
     std::vector<Prop> props;
 } CubeData;
@@ -300,6 +211,13 @@ class MapModdingExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> data, std::string& entryName,
                         YAML::Node& node, std::string* replacement) override;
 };
+
+// The setup as the ROM stores it once decompressed, which is also the decomp's .lvl_setup.bin.
+std::shared_ptr<MapData> ReadMapRom(const std::vector<uint8_t>& bytes, const std::string& symbol);
+std::vector<uint8_t> WriteMapRom(const MapData& map);
+// A BKMap resource, as MapBinaryExporter writes it.
+std::shared_ptr<MapData> ReadMapResource(const std::vector<uint8_t>& resource);
+std::string MapToYaml(const MapData& map, const std::string& symbol);
 
 class MapFactory : public BaseFactory {
   public:
