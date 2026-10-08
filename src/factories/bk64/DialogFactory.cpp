@@ -222,13 +222,10 @@ std::optional<std::shared_ptr<IParsedData>> DialogFactory::parse(std::vector<uin
 
 std::optional<std::shared_ptr<IParsedData>> DialogFactory::parse_modding(std::vector<uint8_t>& buffer,
                                                                          YAML::Node& node) {
-    const auto info = LoadModdingRoot(buffer);
-    if (!info.has_value()) {
-        return std::nullopt;
-    }
+    const YAML::Node info = YamlEntry(buffer, GetSafeNode<std::string>(node, "symbol"));
 
-    auto bottom = ReadModdingDialogSeq((*info)["Bottom"]);
-    auto top = ReadModdingDialogSeq((*info)["Top"]);
+    auto bottom = ReadModdingDialogSeq(info["Bottom"]);
+    auto top = ReadModdingDialogSeq(info["Top"]);
 
     EnsureTerminator(bottom);
     EnsureTerminator(top);

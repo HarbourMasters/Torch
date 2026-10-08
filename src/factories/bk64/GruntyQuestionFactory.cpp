@@ -204,15 +204,12 @@ std::optional<std::shared_ptr<IParsedData>> GruntyQuestionFactory::parse(std::ve
 
 std::optional<std::shared_ptr<IParsedData>> GruntyQuestionFactory::parse_modding(std::vector<uint8_t>& buffer,
                                                                                  YAML::Node& node) {
-    const auto info = LoadModdingRoot(buffer);
-    if (!info.has_value()) {
-        return std::nullopt;
-    }
+    const YAML::Node info = YamlEntry(buffer, GetSafeNode<std::string>(node, "symbol"));
 
-    auto text = ReadModdingDialogSeq((*info)["Text"]);
+    auto text = ReadModdingDialogSeq(info["Text"]);
 
     std::vector<OptionString> options;
-    auto optionsNode = (*info)["Options"];
+    auto optionsNode = info["Options"];
     for (YAML::iterator it = optionsNode.begin(); it != optionsNode.end(); ++it) {
         if (options.size() >= kQuestionOptionCount) {
             SPDLOG_WARN("BK64 GruntyQuestion: Only 3 Options Allowed; extra options ignored");

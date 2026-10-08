@@ -111,18 +111,6 @@ inline std::vector<DialogString> ReadModdingDialogSeq(const YAML::Node& seq) {
 }
 
 // Parse a modding-yaml buffer and return the asset's value node (the map under its symbol).
-inline std::optional<YAML::Node> LoadModdingRoot(const std::vector<uint8_t>& buffer) {
-    try {
-        std::string text((char*)buffer.data(), buffer.size());
-        YAML::Node assetNode = YAML::Load(text.c_str());
-        return assetNode.begin()->second;
-    } catch (YAML::ParserException& e) {
-        SPDLOG_ERROR("Failed to parse message data: {}", e.what());
-        SPDLOG_ERROR("{}", (char*)buffer.data());
-        return std::nullopt;
-    }
-}
-
 // Both question types share a container. Header byte 0 is the language count, followed
 // by one LE u16 start offset per language. US has a single language, so its offset table
 // is the lone `05 00` and the question begins right after it; PAL carries three, with

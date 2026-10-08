@@ -699,8 +699,7 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
                                                                         YAML::Node& node) {
     SmfReader reader(buffer.data(), buffer.size());
     if (!reader.Tag("MThd")) {
-        SPDLOG_ERROR("Music: not a MIDI file");
-        return std::nullopt;
+        throw std::runtime_error("Music: not a MIDI file");
     }
     const uint32_t headerLength = reader.U32();
     const uint16_t format = reader.U16();
@@ -709,12 +708,10 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
     reader.Seek(8 + headerLength);
 
     if (format > 1) {
-        SPDLOG_ERROR("Music: format {} is not supported; save as format 0 or 1", format);
-        return std::nullopt;
+        throw std::runtime_error(fmt::format("Music: format {} is not supported; save as format 0 or 1", format));
     }
     if ((division & 0x8000) != 0) {
-        SPDLOG_ERROR("Music: SMPTE timing is not supported; use ticks per quarter note");
-        return std::nullopt;
+        throw std::runtime_error("Music: SMPTE timing is not supported; use ticks per quarter note");
     }
 
     std::vector<SmfEvent> events;
@@ -723,20 +720,17 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
     int sequence = 0;
     for (uint16_t i = 0; i < trackCount && reader.Ok(); i++) {
         if (!reader.Tag("MTrk")) {
-            SPDLOG_ERROR("Music: track {} is not an MTrk chunk", i);
-            return std::nullopt;
+            throw std::runtime_error(fmt::format("Music: track {} is not an MTrk chunk", i));
         }
         const uint32_t size = reader.U32();
         const size_t end = reader.At() + size;
         if (!ReadSmfTrack(reader, end, events, sequence, endTicks, volume)) {
-            SPDLOG_ERROR("Music: track {} does not parse", i);
-            return std::nullopt;
+            throw std::runtime_error(fmt::format("Music: track {} does not parse", i));
         }
         reader.Seek(end);
     }
     if (!reader.Ok()) {
-        SPDLOG_ERROR("Music: file ended early");
-        return std::nullopt;
+        throw std::runtime_error("Music: file ended early");
     }
 
     int muting = 0;

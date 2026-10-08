@@ -121,18 +121,7 @@ std::optional<std::shared_ptr<IParsedData>> DemoInputFactory::parse(std::vector<
 
 std::optional<std::shared_ptr<IParsedData>> DemoInputFactory::parse_modding(std::vector<uint8_t>& buffer,
                                                                             YAML::Node& node) {
-    YAML::Node assetNode;
-
-    try {
-        std::string text((char*)buffer.data(), buffer.size());
-        assetNode = YAML::Load(text.c_str());
-    } catch (YAML::ParserException& e) {
-        SPDLOG_ERROR("Failed to parse message data: {}", e.what());
-        SPDLOG_ERROR("{}", (char*)buffer.data());
-        return std::nullopt;
-    }
-
-    const auto info = assetNode.begin()->second;
+    const YAML::Node info = YamlEntry(buffer, GetSafeNode<std::string>(node, "symbol"));
 
     auto controllerInfo = info["ControllerInputs"];
 

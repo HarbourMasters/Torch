@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <iomanip>
+#include <stdexcept>
 #include <string>
 #include <yaml-cpp/yaml.h>
 
@@ -66,6 +67,23 @@ inline std::string DecodeText(const std::string& str) {
         out += str[i];
     }
     return out;
+}
+
+// Modding yaml readers. They throw, naming where the bad value is.
+[[noreturn]] inline void YamlFail(const std::string& where, const std::string& problem) {
+    throw std::runtime_error(where + ": " + problem);
+}
+
+// A modding file's one entry, keyed by the asset's name.
+inline YAML::Node YamlEntry(const std::vector<uint8_t>& buffer, const std::string& where) {
+    YAML::Node root;
+    try {
+        root = YAML::Load(std::string(buffer.begin(), buffer.end()));
+    } catch (const YAML::Exception& e) { YamlFail(where, e.what()); }
+    if (!root.IsMap() || root.size() != 1) {
+        YamlFail(where, "needs one top-level key, the asset's name");
+    }
+    return root.begin()->second;
 }
 
 } // namespace BK64

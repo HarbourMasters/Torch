@@ -1197,8 +1197,7 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
     try {
         bankNode = YAML::Load(std::string(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     } catch (const YAML::ParserException& envelope) {
-        SPDLOG_ERROR("Soundfont: modding yaml is malformed: {}", envelope.what());
-        return std::nullopt;
+        throw std::runtime_error(fmt::format("Soundfont: modding yaml is malformed: {}", envelope.what()));
     }
 
     const std::filesystem::path root = std::filesystem::path(Companion::Instance->GetConfig().moddingPath) /
@@ -1245,8 +1244,7 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
             try {
                 sound = YAML::LoadFile((root / (rel + ".yaml")).string());
             } catch (const std::exception& envelope) {
-                SPDLOG_ERROR("Soundfont: cannot read {}.yaml: {}", rel, envelope.what());
-                return std::nullopt;
+                throw std::runtime_error(fmt::format("Soundfont: cannot read {}.yaml: {}", rel, envelope.what()));
             }
 
             SoundfontBook book;
@@ -1258,15 +1256,14 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
             if (mode == "raw") {
                 const std::vector<uint8_t> bin = ReadFile(root / (rel + ".bin"));
                 if (bin.empty() || !ParseRawSample(bin, book, loopState, adpcm)) {
-                    SPDLOG_ERROR("Soundfont: {}.bin is missing or malformed", rel);
-                    return std::nullopt;
+                    throw std::runtime_error(fmt::format("Soundfont: {}.bin is missing or malformed", rel));
                 }
                 verbatim++;
             } else {
                 const std::filesystem::path audio = root / std::filesystem::path(rel).parent_path() / mode;
                 if (!std::filesystem::exists(audio)) {
-                    SPDLOG_ERROR("Soundfont: {} names sample '{}', which is not next to it", rel, mode);
-                    return std::nullopt;
+                    throw std::runtime_error(
+                        fmt::format("Soundfont: {} names sample '{}', which is not next to it", rel, mode));
                 }
                 SoundfontKeyMap slot;
                 slot.keyBase = static_cast<uint8_t>(Field(sound, "KeyBase", 60));
@@ -1276,8 +1273,7 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
                 std::vector<int16_t> pcm;
                 std::string error;
                 if (!DecodeAudioFile(audio.string(), playbackRate, pcm, error)) {
-                    SPDLOG_ERROR("Soundfont: {}", error);
-                    return std::nullopt;
+                    throw std::runtime_error(fmt::format("Soundfont: {}", error));
                 }
 
                 const bool trim = sound["TrimSilence"] ? sound["TrimSilence"].as<bool>() : !sound["Loop"];
