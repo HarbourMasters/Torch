@@ -218,16 +218,21 @@ std::vector<uint8_t> WriteMapRom(const MapData& map);
 // A BKMap resource, as MapBinaryExporter writes it.
 std::shared_ptr<MapData> ReadMapResource(const std::vector<uint8_t>& resource);
 std::string MapToYaml(const MapData& map, const std::string& symbol);
+bool MapFromYaml(const std::string& text, MapData& out, std::string& error);
 
 class MapFactory : public BaseFactory {
   public:
     std::optional<std::shared_ptr<IParsedData>> parse(std::vector<uint8_t>& buffer, YAML::Node& data) override;
+    std::optional<std::shared_ptr<IParsedData>> parse_modding(std::vector<uint8_t>& buffer, YAML::Node& data) override;
     inline std::unordered_map<ExportType, std::shared_ptr<BaseExporter>> GetExporters() override {
         return { REGISTER(Code, MapCodeExporter) REGISTER(Header, MapHeaderExporter) REGISTER(Binary, MapBinaryExporter)
                      REGISTER(Modding, MapModdingExporter) };
     }
 
     bool HasModdedDependencies() override {
+        return true;
+    }
+    bool SupportModdedAssets() override {
         return true;
     }
 };

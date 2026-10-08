@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iomanip>
+#include <set>
 #include <sstream>
 
 namespace BK64 {
@@ -46,10 +47,40 @@ static void NodeToWords(const NodeProp& node, uint32_t words[5]) {
                node.pad10_5 << 2 | node.unk10_0;
 }
 
+static NodeProp NodeFromWords(const uint32_t words[5]) {
+    NodeProp node;
+    node.position[0] = (int16_t)(words[0] >> 16);
+    node.position[1] = (int16_t)words[0];
+    node.position[2] = (int16_t)(words[1] >> 16);
+    node.radius = (words[1] >> 7) & 0x1FF;
+    node.bit6 = (words[1] >> 1) & 0x3F;
+    node.bit0 = words[1] & 1;
+    node.unk8 = words[2] >> 16;
+    node.unkA = (words[2] >> 8) & 0xFF;
+    node.padB = words[2] & 0xFF;
+    node.yaw = words[3] >> 23;
+    node.scale = words[3] & 0x7FFFFF;
+    node.unk10_31 = words[4] >> 20;
+    node.unk10_19 = (words[4] >> 8) & 0xFFF;
+    node.pad10_7 = (words[4] >> 7) & 1;
+    node.unk10_6 = (words[4] >> 6) & 1;
+    node.pad10_5 = (words[4] >> 2) & 0xF;
+    node.unk10_0 = words[4] & 3;
+    return node;
+}
+
 static void PropToWords(const Prop& prop, uint32_t words[3]) {
     for (int i = 0; i < 3; i++) {
         words[i] = ReadU32BE(prop.raw + i * 4);
     }
+}
+
+static Prop PropFromWords(const uint32_t words[3]) {
+    Prop prop;
+    for (int i = 0; i < 3; i++) {
+        WriteU32BE(prop.raw + i * 4, words[i]);
+    }
+    return prop;
 }
 
 static PropKind KindOf(const Prop& prop) {
@@ -364,6 +395,15 @@ std::optional<std::shared_ptr<IParsedData>> MapFactory::parse(std::vector<uint8_
         SPDLOG_ERROR("MapFactory parse error for {}: {}", symbol, e.what());
         return std::nullopt;
     }
+}
+
+std::optional<std::shared_ptr<IParsedData>> MapFactory::parse_modding(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    auto map = std::make_shared<MapData>();
+    std::string error;
+    if (!MapFromYaml(std::string(buffer.begin(), buffer.end()), *map, error)) {
+        YamlFail(GetSafeNode<std::string>(node, "symbol"), error);
+    }
+    return map;
 }
 
 std::shared_ptr<MapData> ReadMapRom(const std::vector<uint8_t>& bytes, const std::string& symbol) {
@@ -1439,6 +1479,362 @@ std::string MapToYaml(const MapData& map, const std::string& symbol) {
     out << YAML::EndMap;
     out << YAML::EndMap;
     return out.c_str();
+}
+
+template <size_t N> static void AllowFields(std::set<std::string>& keys, const Field (&fields)[N]) {
+    for (const Field& field : fields) {
+        keys.insert(field.key);
+    }
+}
+
+static void CheckKeys(const YAML::Node& entry, const std::set<std::string>& keys, const std::string& where) {
+    if (!entry.IsMap()) {
+        YamlFail(where, "isn't a map");
+    }
+    for (const auto& it : entry) {
+        if (!keys.count(it.first.as<std::string>())) {
+            YamlFail(where, "has no field called " + it.first.as<std::string>());
+        }
+    }
+}
+
+template <size_t N>
+static void ReadFields(const YAML::Node& entry, uint32_t* words, const Field (&fields)[N], const std::string& where) {
+    for (const Field& field : fields) {
+        const YAML::Node node = entry[field.key];
+        uint32_t value = field.fallback == UINT32_MAX ? 0 : field.fallback;
+        const std::string at = where + " " + field.key;
+        if (field.fallback == UINT32_MAX && !node) {
+            YamlFail(where, std::string("needs a ") + field.key);
+        }
+        if (!node) {
+        } else if (field.form == 'b') {
+            bool flag;
+            if (!YAML::convert<bool>::decode(node, flag)) {
+                YamlFail(at, "\"" + node.as<std::string>() + "\" isn't true or false");
+            }
+            value = flag;
+        } else if (field.form == 'a') {
+            value = 0;
+            for (const auto& name : node) {
+                const auto found = std::find(std::begin(sApplyNames), std::end(sApplyNames), name.as<std::string>());
+                if (found == std::end(sApplyNames)) {
+                    YamlFail(at, name.as<std::string>() + " isn't Pause, Speed or Animation");
+                }
+                value |= 1 << (found - std::begin(sApplyNames));
+            }
+        } else {
+            const uint32_t most = field.form == '2' ? FieldMask(field) * 2 : FieldMask(field) + field.offset;
+            value = YamlNumber(node, at, most);
+            if (value < field.offset) {
+                YamlFail(at, node.as<std::string>() + " is under " + std::to_string(field.offset));
+            }
+            value -= field.offset;
+            if (field.form == '2') {
+                if (value % 2) {
+                    YamlFail(at, "goes in steps of 2 degrees");
+                }
+                value /= 2;
+            }
+        }
+        words[field.word] = (words[field.word] & ~(FieldMask(field) << field.shift)) | value << field.shift;
+    }
+}
+
+static float ReadFloat(const YAML::Node& entry, const char* key, const std::string& where) {
+    if (!entry[key]) {
+        YamlFail(where, std::string("needs a ") + key);
+    }
+    try {
+        return entry[key].as<float>();
+    } catch (const YAML::Exception&) {
+        YamlFail(where + " " + key, "\"" + entry[key].as<std::string>() + "\" isn't a number");
+    }
+}
+
+template <size_t N>
+static uint32_t ReadNamed(const YAML::Node& node, const char* const (&names)[N], uint32_t most,
+                          const std::string& where) {
+    const std::string text = node.as<std::string>();
+    for (size_t i = 0; i < N; i++) {
+        if (names[i] && text == names[i]) {
+            return (uint32_t)i;
+        }
+    }
+    return YamlNumber(node, where, most);
+}
+
+static uint32_t ReadCategory(const YAML::Node& node, const std::string& where) {
+    for (const auto& [number, name] : sNodeCategories) {
+        if (node.as<std::string>() == name) {
+            return number;
+        }
+    }
+    return YamlNumber(node, where, 0x3F);
+}
+
+bool MapFromYaml(const std::string& text, MapData& out, std::string& error) {
+    out = MapData();
+    try {
+        const YAML::Node root = YAML::Load(text);
+        if (!root.IsMap() || root.size() != 1) {
+            YamlFail("setup", "needs one top-level key, the asset's name");
+        }
+        const YAML::Node setup = root.begin()->second;
+        CheckKeys(setup, { "Bounds", "EmptyCells", "Nodes", "Props", "Cameras", "Lights" }, "setup");
+
+        const YAML::Node bounds = setup["Bounds"];
+        if (!bounds) {
+            YamlFail("setup", "needs Bounds");
+        }
+        CheckKeys(bounds, { "Min", "Max" }, "Bounds");
+        int32_t* min = out.mCubeMin;
+        int32_t* max = out.mCubeMax;
+        ReadList(bounds, "Min", min, 3, "Bounds");
+        ReadList(bounds, "Max", max, 3, "Bounds");
+        // Max under Min on any axis leaves no cells, which a setup with nothing in it can have
+        int64_t span[3];
+        for (int axis = 0; axis < 3; axis++) {
+            span[axis] = std::max<int64_t>((int64_t)max[axis] - min[axis] + 1, 0);
+        }
+        if (span[0] * span[1] * span[2] > 0x10000) {
+            YamlFail("Bounds", "hold more than 65536 cells");
+        }
+        for (int32_t x = min[0]; x <= max[0]; x++) {
+            for (int32_t y = min[1]; y <= max[1]; y++) {
+                for (int32_t z = min[2]; z <= max[2]; z++) {
+                    CubeData cube;
+                    cube.x = x;
+                    cube.y = y;
+                    cube.z = z;
+                    out.mCubes.push_back(cube);
+                }
+            }
+        }
+        const auto cellAt = [&](const int32_t cell[3], const std::string& where) -> CubeData& {
+            for (int axis = 0; axis < 3; axis++) {
+                if (cell[axis] < out.mCubeMin[axis] || cell[axis] > out.mCubeMax[axis]) {
+                    YamlFail(where, "Cell is outside the Bounds");
+                }
+            }
+            const int64_t index = ((cell[0] - out.mCubeMin[0]) * span[1] + (cell[1] - out.mCubeMin[1])) * span[2] +
+                                  (cell[2] - out.mCubeMin[2]);
+            return out.mCubes[index];
+        };
+        const auto cellOf = [&](const YAML::Node& entry, const int16_t position[3],
+                                const std::string& where) -> CubeData& {
+            int32_t cell[3];
+            if (entry["Cell"]) {
+                ReadList(entry, "Cell", cell, 3, where);
+            } else {
+                for (int axis = 0; axis < 3; axis++) {
+                    cell[axis] = CellOf(position[axis], out.mCubeMin[axis], out.mCubeMax[axis]);
+                }
+            }
+            return cellAt(cell, where);
+        };
+
+        int index = 0;
+        for (const auto& cell : setup["EmptyCells"]) {
+            const std::string where = "EmptyCells[" + std::to_string(index++) + "]";
+            int32_t at[3];
+            if (!cell.IsSequence() || cell.size() != 3) {
+                YamlFail(where, "needs 3 numbers");
+            }
+            for (int axis = 0; axis < 3; axis++) {
+                at[axis] = YamlShort(cell[axis], where);
+            }
+            cellAt(at, where).listedEmpty = true;
+        }
+
+        std::set<std::string> nodeKeys = { "Category", "Id", "Position", "Cell" };
+        AllowFields(nodeKeys, kNodeFields);
+        std::set<std::string> zoneKeys = nodeKeys;
+        AllowFields(nodeKeys, kNodeSetting);
+        AllowFields(zoneKeys, kZoneSetting);
+        std::set<std::string> legKeys = { "Category", "Fraction", "Cell" };
+        AllowFields(legKeys, kWaypointLinks);
+        std::set<std::string> eventKeys = legKeys;
+        eventKeys.insert("Event");
+        AllowFields(legKeys, kLegFields);
+        AllowFields(eventKeys, kEventFields);
+
+        index = 0;
+        for (const auto& entry : setup["Nodes"]) {
+            const std::string where = "Nodes[" + std::to_string(index++) + "]";
+            if (!entry.IsMap() || !entry["Category"]) {
+                YamlFail(where, "needs a Category");
+            }
+            uint32_t words[5] = {};
+            if (entry["Category"].as<std::string>() == "Waypoint") {
+                const bool event = (bool)entry["Event"];
+                CheckKeys(entry, event ? eventKeys : legKeys, where);
+                if (!entry["Cell"]) {
+                    YamlFail(where, "needs a Cell");
+                }
+                const float fraction = ReadFloat(entry, "Fraction", where);
+                std::memcpy(&words[0], &fraction, sizeof(fraction));
+                words[1] = 1;
+                ReadFields(entry, words, kWaypointLinks, where);
+                if (event) {
+                    words[1] |= ReadNamed(entry["Event"], sEventKinds, 7, where + " Event") << 1;
+                    words[3] = 1;
+                    ReadFields(entry, words, kEventFields, where);
+                } else {
+                    ReadFields(entry, words, kLegFields, where);
+                }
+                cellOf(entry, nullptr, where).nodeProps.push_back(NodeFromWords(words));
+                continue;
+            }
+            const uint32_t category = ReadCategory(entry["Category"], where + " Category");
+            const bool zone = category == CATEGORY_CAMERA_ZONE;
+            CheckKeys(entry, zone ? zoneKeys : nodeKeys, where);
+            int16_t position[3];
+            ReadList(entry, "Position", position, 3, where);
+            words[0] = (uint32_t)(uint16_t)position[0] << 16 | (uint16_t)position[1];
+            words[1] = (uint32_t)(uint16_t)position[2] << 16 | category << 1;
+            ReadFields(entry, words, kNodeId, where);
+            ReadFields(entry, words, kNodeFields, where);
+            if (zone) {
+                ReadFields(entry, words, kZoneSetting, where);
+            } else {
+                ReadFields(entry, words, kNodeSetting, where);
+            }
+            cellOf(entry, position, where).nodeProps.push_back(NodeFromWords(words));
+        }
+
+        std::set<std::string> spriteKeys = { "Type", "Position", "Cell", "ColorRemove" };
+        AllowFields(spriteKeys, kSpriteId);
+        AllowFields(spriteKeys, kSpriteFields);
+        std::set<std::string> modelKeys = { "Type", "Position", "Cell" };
+        std::set<std::string> slotKeys = modelKeys;
+        AllowFields(modelKeys, kModelId);
+        AllowFields(modelKeys, kModelFields);
+        AllowFields(slotKeys, kActorSlotFields);
+
+        index = 0;
+        for (const auto& entry : setup["Props"]) {
+            const std::string where = "Props[" + std::to_string(index++) + "]";
+            if (!entry.IsMap() || !entry["Type"]) {
+                YamlFail(where, "needs a Type");
+            }
+            const std::string type = entry["Type"].as<std::string>();
+            const auto found = std::find(std::begin(sPropKinds), std::end(sPropKinds), type);
+            if (found == std::end(sPropKinds)) {
+                YamlFail(where + " Type", type + " isn't Sprite, Model or ActorSlot");
+            }
+            const auto kind = (PropKind)(found - std::begin(sPropKinds));
+            CheckKeys(entry, kind == PROP_SPRITE ? spriteKeys : kind == PROP_MODEL ? modelKeys : slotKeys, where);
+            int16_t position[3];
+            ReadList(entry, "Position", position, 3, where);
+            uint32_t words[3] = { 0, (uint32_t)(uint16_t)position[0] << 16 | (uint16_t)position[1],
+                                  (uint32_t)(uint16_t)position[2] << 16 };
+            if (kind == PROP_SPRITE) {
+                ReadFields(entry, words, kSpriteId, where);
+                ReadFields(entry, words, kSpriteFields, where);
+                if (const YAML::Node color = entry["ColorRemove"]) {
+                    if (!color.IsSequence() || color.size() != 3) {
+                        YamlFail(where + " ColorRemove", "needs 3 numbers");
+                    }
+                    for (int i = 0; i < 3; i++) {
+                        words[0] |= YamlNumber(color[i], where + " ColorRemove", 7) << kSpriteColor[i].shift;
+                    }
+                }
+            } else if (kind == PROP_MODEL) {
+                words[2] |= 2;
+                ReadFields(entry, words, kModelId, where);
+                ReadFields(entry, words, kModelFields, where);
+            } else {
+                words[2] |= 1;
+                ReadFields(entry, words, kActorSlotFields, where);
+            }
+            cellOf(entry, position, where).props.push_back(PropFromWords(words));
+        }
+
+        index = 0;
+        for (const auto& entry : setup["Cameras"]) {
+            const std::string where = "Cameras[" + std::to_string(index++) + "]";
+            if (!entry.IsMap() || !entry["Type"] || !entry["Index"]) {
+                YamlFail(where, "needs an Index and a Type");
+            }
+            CameraNode cam = {};
+            cam.index = YamlShort(entry, "Index", where);
+            cam.type = ReadNamed(entry["Type"], sCameraTypes, 0xFF, where + " Type");
+            std::set<std::string> keys = { "Index", "Type" };
+            const auto speeds = [&](auto& data) {
+                ReadList(entry, "Position", data.position, 3, where);
+                data.horizontalSpeed = ReadFloat(entry, "HorizontalSpeed", where);
+                data.verticalSpeed = ReadFloat(entry, "VerticalSpeed", where);
+                data.rotation = ReadFloat(entry, "Rotation", where);
+                data.accelaration = ReadFloat(entry, "Acceleration", where);
+                ReadList(entry, "LooksFrom", data.pitchYawRoll, 3, where);
+                if (!entry["Flags"]) {
+                    YamlFail(where, "needs Flags");
+                }
+                data.unknownFlag = (int32_t)YamlNumber(entry, "Flags", where, UINT32_MAX);
+                keys.insert({ "Position", "HorizontalSpeed", "VerticalSpeed", "Rotation", "Acceleration", "LooksFrom",
+                              "Flags" });
+            };
+            switch (cam.type) {
+                case 1:
+                    speeds(cam.data.type1);
+                    break;
+                case 2:
+                    ReadList(entry, "Position", cam.data.type2.position, 3, where);
+                    ReadList(entry, "PitchYawRoll", cam.data.type2.pitchYawRoll, 3, where);
+                    keys.insert({ "Position", "PitchYawRoll" });
+                    break;
+                case 3:
+                    speeds(cam.data.type3);
+                    cam.data.type3.closeDistance = ReadFloat(entry, "CloseDistance", where);
+                    cam.data.type3.farDistance = ReadFloat(entry, "FarDistance", where);
+                    keys.insert({ "CloseDistance", "FarDistance" });
+                    break;
+                case 4:
+                    if (!entry["Preset"]) {
+                        YamlFail(where, "needs a Preset");
+                    }
+                    cam.data.type4.unknownFlag = (int32_t)YamlNumber(entry, "Preset", where, UINT32_MAX);
+                    keys.insert("Preset");
+                    break;
+            }
+            CheckKeys(entry, keys, where);
+            out.mCameraNodes.push_back(cam);
+        }
+
+        index = 0;
+        for (const auto& entry : setup["Lights"]) {
+            const std::string where = "Lights[" + std::to_string(index++) + "]";
+            CheckKeys(entry, { "Position", "Fade", "Color" }, where);
+            LightingVector light;
+            ReadList(entry, "Position", light.position, 3, where);
+            ReadList(entry, "Fade", light.fadeRadii, 2, where);
+            ReadList(entry, "Color", light.rgb, 3, where);
+            out.mLightingVectors.push_back(light);
+        }
+
+        for (const auto& cube : out.mCubes) {
+            const std::string where =
+                "Cell [" + std::to_string(cube.x) + ", " + std::to_string(cube.y) + ", " + std::to_string(cube.z) + "]";
+            if (cube.nodeProps.size() > 0xFF) {
+                YamlFail(where, "holds " + std::to_string(cube.nodeProps.size()) + " nodes and waypoints, over 255");
+            }
+            if (cube.props.size() > 0xFF) {
+                YamlFail(where, "holds " + std::to_string(cube.props.size()) + " props, over 255");
+            }
+            const auto front = std::count_if(cube.nodeProps.begin(), cube.nodeProps.end(),
+                                             [](const NodeProp& node) { return !node.bit0 && node.bit6 < 6; });
+            if (front > 31) {
+                SPDLOG_WARN("[BK64:MAP] {} holds {} nodes of categories 0 to 5. Lighthouse takes them all, but the N64 "
+                            "game only 31.",
+                            where, front);
+            }
+        }
+    } catch (const std::exception& e) {
+        error = e.what();
+        return false;
+    }
+    return true;
 }
 
 } // namespace BK64
