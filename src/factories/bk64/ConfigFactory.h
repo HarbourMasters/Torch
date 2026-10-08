@@ -20,6 +20,8 @@ enum class RomhackKind {
 
 constexpr uint32_t GAMECONFIG_MAGIC = 0x46434B42;
 constexpr uint16_t GAMECONFIG_VERSION = 1;
+// Its entry in modding.yml, and with .yaml its file in the modding folder.
+constexpr const char* GAMECONFIG_MODDING_NAME = "assets/aGameConfig";
 
 enum class ConfigSectionType : uint16_t {
     CODE_CONSTANTS = 1,
@@ -76,6 +78,88 @@ enum class CodeConstantKey : uint16_t {
 inline bool IsRomhack(const std::vector<uint8_t>& rom) {
     return rom.size() > 0x1000000;
 }
+
+// The aGameConfig blob read back out. Each table keeps its entries in blob order, so writing one back
+// gives the same bytes.
+struct GameConfigData {
+    struct Constant {
+        uint16_t key;
+        uint16_t value;
+    };
+    struct WorldMap {
+        uint16_t map;
+        uint16_t level;
+    };
+    struct LairReturn {
+        uint8_t world;
+        uint16_t map;
+        uint16_t exit;
+    };
+    struct Music {
+        uint16_t map;
+        uint16_t track;
+        uint16_t alternate;
+    };
+    struct SkyLayer {
+        int16_t model;
+        float scale;
+        float spin; // degrees per second
+    };
+    struct Sky {
+        uint16_t map;
+        SkyLayer layers[3];
+    };
+    struct LevelModels {
+        uint16_t map;
+        int16_t opaque;
+        int16_t translucent;
+        int16_t cubeMin[3];
+        int16_t cubeMax[3];
+        float scale;
+    };
+    struct Title {
+        uint8_t index;
+        std::string text;
+    };
+    struct Warp {
+        uint16_t warp;
+        uint16_t dest; // map << 8 | entrance
+    };
+    struct NoteDoor {
+        uint8_t door;
+        uint16_t notes;
+    };
+    struct Puzzle {
+        uint8_t picture;
+        uint8_t cost;
+        uint8_t size;
+        uint16_t flag;
+    };
+
+    std::string romName;
+    std::vector<Constant> constants;
+    std::vector<WorldMap> worldByMap;
+    std::vector<LairReturn> returnToLair;
+    std::vector<Music> music;
+    std::vector<Sky> skybox;
+    std::vector<LevelModels> levelModels;
+    std::vector<Title> titles;
+    std::vector<Warp> warps;
+    std::vector<NoteDoor> noteDoors;
+    std::vector<Puzzle> puzzles;
+    bool hasCustomCode = false;
+    uint32_t customCodeRamBase = 0;
+    uint8_t customCodeSha1[20] = {};
+    CustomCodeKind customCodeKind = CustomCodeKind::NONE;
+    bool hasRomHash = false;
+    uint8_t romHash[20] = {};
+};
+
+bool ReadGameConfig(const std::vector<char>& blob, GameConfigData& out, std::string& error);
+std::vector<char> WriteGameConfig(const GameConfigData& config);
+std::string GameConfigToYaml(const GameConfigData& config);
+bool GameConfigFromYaml(const std::string& text, GameConfigData& out, std::string& error);
+const char* CodeConstantName(uint16_t key);
 
 RomhackKind ClassifyRomhack(const std::vector<uint8_t>& rom);
 
