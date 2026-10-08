@@ -643,8 +643,8 @@ static void ParseCubeSection(LUS::BinaryReader& reader, std::shared_ptr<MapData>
                 // Runs until it eats the 0x01 per-cube terminator
                 ReadCubeData(reader, cube, symbol);
 
-                SPDLOG_INFO("[BK64:MAP] {} cube ({},{},{}) nodeProps={} props={}", symbol, x, y, z,
-                            cube.nodeProps.size(), cube.props.size());
+                SPDLOG_DEBUG("[BK64:MAP] {} cube ({},{},{}) nodeProps={} props={}", symbol, x, y, z,
+                             cube.nodeProps.size(), cube.props.size());
 
                 map->mCubes.push_back(cube);
             }
@@ -835,7 +835,7 @@ static void ParseCameraSection(LUS::BinaryReader& reader, std::shared_ptr<MapDat
             }
 
         map->mCameraNodes.push_back(node);
-        SPDLOG_INFO("[BK64:MAP] {} camera node index={} type={}", symbol, node.index, node.type);
+        SPDLOG_DEBUG("[BK64:MAP] {} camera node index={} type={}", symbol, node.index, node.type);
 
         if (innerError)
             break;
@@ -902,10 +902,10 @@ static void ParseLightingSection(LUS::BinaryReader& reader, std::shared_ptr<MapD
             light.rgb[2] = reader.ReadInt32();
 
             map->mLightingVectors.push_back(light);
-            SPDLOG_INFO("[BK64:MAP] {} light pos=({:.2f},{:.2f},{:.2f}) "
-                        "radii=({:.2f},{:.2f}) rgb=({},{},{})",
-                        symbol, light.position[0], light.position[1], light.position[2], light.fadeRadii[0],
-                        light.fadeRadii[1], light.rgb[0], light.rgb[1], light.rgb[2]);
+            SPDLOG_DEBUG("[BK64:MAP] {} light pos=({:.2f},{:.2f},{:.2f}) "
+                         "radii=({:.2f},{:.2f}) rgb=({},{},{})",
+                         symbol, light.position[0], light.position[1], light.position[2], light.fadeRadii[0],
+                         light.fadeRadii[1], light.rgb[0], light.rgb[1], light.rgb[2]);
         } else {
             SPDLOG_WARN("[BK64:MAP] Unexpected marker 0x{:02X} in lighting section "
                         "at offset 0x{:X} in asset {}",
