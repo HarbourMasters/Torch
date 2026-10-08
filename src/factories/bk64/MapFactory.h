@@ -12,10 +12,15 @@ namespace BK64 {
  * These are the spatial triggers and spawn locations for a level. At load time
  * cubeList_fromFile (actor_cubebounds.c) turns each one into an ActorMarker.
  * The category field is what decides what it actually does:
+ *   * 3 = Warp (touching it warps the player; actorId picks the warp)
+ *   * 4 = Contact trigger (touching it runs the action actorId picks)
  *   * 6 = Actor spawn point (spawns an entity via markerActorTypeArray dispatch)
- *   * 7 = Warp destination (teleports the player to another map)
- *   * 9 = Trigger zone (fires events when the player enters the radius)
- *   * 0xA = Event marker, used by level-specific systems
+ *   * 7 = Enemy area (keeps enemies inside it)
+ *   * 8 = Path point
+ *   * 9 = Camera zone (switches to camera actorId while the player is inside)
+ *   * 0xA = Collectible ID zone (numbers the jiggies, honeycombs and tokens inside it)
+ * With bit0 set the record is a path waypoint instead, and every field after the
+ * position is packed waypoint data.
  *
  * Flow: ROM → MapFactory parse() → NodeProp array → cubeList_fromFile →
  *       ActorMarker → actor spawn / event trigger via overlay callbacks
@@ -32,15 +37,15 @@ namespace BK64 {
 typedef struct NodeProp {
     int16_t position[3];    // X, Y, Z world position (s16)
     uint16_t radius : 9;    // selector_or_radius: trigger/volume radius
-    uint16_t bit6 : 6;      // category (6=actor, 7=warp, 9=trigger, 0xA=event)
-    uint16_t bit0 : 1;      // active/enabled
+    uint16_t bit6 : 6;      // category, see above
+    uint16_t bit0 : 1;      // path waypoint
     uint16_t unk8;          // actorId — meaning depends on category
     uint8_t unkA;           // markerId: index into the ActorMarker lookup table
     uint8_t padB;           // padding
-    uint32_t yaw : 9;       // spawn Y rotation; *2 for degrees (0-511 → 0-1022°)
-    uint32_t scale : 23;    // spawn scale, fixed point (/1000.0 for the real value)
-    uint32_t unk10_31 : 12; // secondary ID or overlay-specific param
-    uint32_t unk10_19 : 12; // more params (animation phase, variant, ...)
+    uint32_t yaw : 9;       // degrees
+    uint32_t scale : 23;    // percent for an actor spawn, 0 for its default size
+    uint32_t unk10_31 : 12; // this record's number in a path chain
+    uint32_t unk10_19 : 12; // the next record's number in the chain
     uint32_t pad10_7 : 1;   // padding
     uint32_t unk10_6 : 1;   // "initialized" flag, set at runtime
     uint32_t pad10_5 : 4;   // padding
@@ -172,13 +177,9 @@ typedef struct CubeData {
 } CubeData;
 
 /**
- * CameraNodeType1: scripted/path camera (CAMERA_TYPE_1_UNKNOWN)
- * Decomp: CameraNodeType1 from camera.h
+ * CameraNodeType1: pivot camera, stays put and turns to follow the player
+ * Decomp: PivotCameraNode in camera.h
  * Size: 44 bytes (11 floats + 1 s32)
- *
- * Cutscenes and scripted sequences, most likely. No per-frame update handler —
- * the camera just rides a predefined path from these position/speed/accel/
- * orientation params.
  */
 typedef struct CameraNodeType1 {
     float position[3];     // camera position
@@ -186,13 +187,13 @@ typedef struct CameraNodeType1 {
     float verticalSpeed;   // vertical speed
     float rotation;        // rotation speed
     float accelaration;    // acceleration
-    float pitchYawRoll[3]; // orientation (pitch, yaw, roll)
+    float pitchYawRoll[3]; // the point it looks from while the player is nearly underneath it
     int32_t unknownFlag;   // unknown; tested against 1, 2, 4
 } CameraNodeType1;
 
 /**
- * CameraNodeType2: dynamic camera (CAMERA_TYPE_2_DYNAMIC)
- * Decomp: CameraNodeType2 from camera.h
+ * CameraNodeType2: static camera, only cutscenes and scripts cut to it
+ * Decomp: StaticCameraNode in camera.h
  * Size: 24 bytes (6 floats)
  */
 typedef struct CameraNodeType2 {
@@ -201,8 +202,8 @@ typedef struct CameraNodeType2 {
 } CameraNodeType2;
 
 /**
- * CameraNodeType3: static camera (CAMERA_TYPE_3_STATIC)
- * Decomp: CameraNodeType3 from camera.h
+ * CameraNodeType3: dolly camera, follows the player between its close and far distance
+ * Decomp: ZoomCameraNode in camera.h
  * Size: 52 bytes (12 floats + 1 s32)
  */
 typedef struct CameraNodeType3 {
@@ -211,19 +212,19 @@ typedef struct CameraNodeType3 {
     float verticalSpeed;   // vertical speed
     float rotation;        // rotation speed
     float accelaration;    // acceleration
-    float closeDistance;   // near clip distance
-    float farDistance;     // far clip distance
-    float pitchYawRoll[3]; // orientation (pitch, yaw, roll)
+    float closeDistance;   // nearest it comes to the player
+    float farDistance;     // farthest it drops back
+    float pitchYawRoll[3]; // the point it looks from while the player is nearly underneath it
     int32_t unknownFlag;   // unknown
 } CameraNodeType3;
 
 /**
- * CameraNodeType4: random camera (CAMERA_TYPE_4_RANDOM)
- * Decomp: CameraNodeType4 from camera.h
+ * CameraNodeType4: zoom preset for the normal camera
+ * Decomp: RandomCameraNode in camera.h
  * Size: 4 bytes (1 s32)
  */
 typedef struct CameraNodeType4 {
-    int32_t unknownFlag; // unknown
+    int32_t unknownFlag; // the preset
 } CameraNodeType4;
 
 /**
@@ -233,14 +234,15 @@ typedef struct CameraNodeType4 {
  * type-specific data
  *
  * Camera types:
- *   1 = Scripted/path camera (cutscenes, camera paths)
- *   2 = Dynamic camera (follows player)
- *   3 = Static camera (fixed position)
- *   4 = Random camera (special behavior)
+ *   0 = Empty
+ *   1 = Pivot
+ *   2 = Static
+ *   3 = Dolly
+ *   4 = Zoom preset
  */
 typedef struct CameraNode {
     int16_t index; // node index
-    uint8_t type;  // 1=Scripted, 2=Dynamic, 3=Static, 4=Random
+    uint8_t type;  // 0=Empty, 1=Pivot, 2=Static, 3=Dolly, 4=ZoomPreset
     union {
         CameraNodeType1 type1;
         CameraNodeType2 type2;
