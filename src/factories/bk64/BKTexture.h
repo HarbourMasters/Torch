@@ -18,6 +18,8 @@ struct TexelFormat {
 };
 
 const TexelFormat* FindTexelFormat(const std::string& name);
+// A BKTextureInfo type, by its lowest bit set.
+const TexelFormat* ModelTextureFormat(uint16_t type);
 
 bool IsIndexed(const TexelFormat& format);
 size_t TlutColors(const TexelFormat& format);

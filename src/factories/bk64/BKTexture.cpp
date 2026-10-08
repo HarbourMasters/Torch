@@ -70,6 +70,21 @@ const TexelFormat* FindTexelFormat(const std::string& name) {
     return nullptr;
 }
 
+// textureInfo_getBitDepth tests the type field bit by bit and takes the first one set, so a
+// texture with extra bits still resolves to a format. The game's ladder stops at 0x8; Torch
+// extends to 0x10.
+const TexelFormat* ModelTextureFormat(uint16_t type) {
+    static const std::pair<uint16_t, const char*> kTypes[] = {
+        { 0x1, "CI4" }, { 0x2, "CI8" }, { 0x4, "RGBA16" }, { 0x8, "RGBA32" }, { 0x10, "IA8" },
+    };
+    for (const auto& [bit, name] : kTypes) {
+        if (type & bit) {
+            return FindTexelFormat(name);
+        }
+    }
+    return nullptr;
+}
+
 bool IsIndexed(const TexelFormat& format) {
     return format.texture == TextureType::Palette4bpp || format.texture == TextureType::Palette8bpp;
 }
