@@ -1,4 +1,5 @@
 #include "MusicFactory.h"
+#include "BKByteUtils.h"
 
 #include "Companion.h"
 #include "spdlog/spdlog.h"
@@ -146,8 +147,7 @@ bool DecodeTrack(const uint8_t* data, size_t size, uint32_t start, uint32_t end,
                 }
                 event.byte1 = raw[0];
                 event.byte2 = raw[1];
-                event.aux = (static_cast<uint32_t>(raw[2]) << 24) | (static_cast<uint32_t>(raw[3]) << 16) |
-                            (static_cast<uint32_t>(raw[4]) << 8) | raw[5];
+                event.aux = ReadU32BE(raw + 2);
                 event.kind = static_cast<uint8_t>(MusicEventKind::LoopEnd);
                 running = 0;
             } else {
@@ -234,12 +234,6 @@ void PushVarLen(std::vector<uint8_t>& out, uint32_t value) {
     }
     while (count > 0) {
         out.push_back(buffer[--count]);
-    }
-}
-
-void PushBE(std::vector<uint8_t>& out, uint32_t value, int bytes) {
-    for (int i = bytes - 1; i >= 0; i--) {
-        out.push_back(static_cast<uint8_t>(value >> (i * 8)));
     }
 }
 
@@ -356,11 +350,9 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse(std::vector<uint
 
     uint32_t offsets[16];
     for (int i = 0; i < 16; i++) {
-        offsets[i] = (static_cast<uint32_t>(data[i * 4]) << 24) | (static_cast<uint32_t>(data[i * 4 + 1]) << 16) |
-                     (static_cast<uint32_t>(data[i * 4 + 2]) << 8) | data[i * 4 + 3];
+        offsets[i] = ReadU32BE(data + i * 4);
     }
-    music->mDivision = (static_cast<uint32_t>(data[64]) << 24) | (static_cast<uint32_t>(data[65]) << 16) |
-                       (static_cast<uint32_t>(data[66]) << 8) | data[67];
+    music->mDivision = ReadU32BE(data + 64);
 
     for (int i = 0; i < 16; i++) {
         MusicTrack track;
@@ -870,10 +862,7 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
                     out.push_back(event->byte1);
                     out.push_back(event->byte2);
                     const uint32_t back = static_cast<uint32_t>(out.size() + 4 - target);
-                    out.push_back(static_cast<uint8_t>(back >> 24));
-                    out.push_back(static_cast<uint8_t>(back >> 16));
-                    out.push_back(static_cast<uint8_t>(back >> 8));
-                    out.push_back(static_cast<uint8_t>(back));
+                    PushBE(out, back, 4);
                     break;
                 }
                 default:
@@ -886,15 +875,9 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
     }
 
     for (int i = 0; i < 16; i++) {
-        out[i * 4 + 0] = static_cast<uint8_t>(offsets[i] >> 24);
-        out[i * 4 + 1] = static_cast<uint8_t>(offsets[i] >> 16);
-        out[i * 4 + 2] = static_cast<uint8_t>(offsets[i] >> 8);
-        out[i * 4 + 3] = static_cast<uint8_t>(offsets[i]);
+        WriteU32BE(out.data() + i * 4, offsets[i]);
     }
-    out[64] = static_cast<uint8_t>(division >> 24);
-    out[65] = static_cast<uint8_t>(division >> 16);
-    out[66] = static_cast<uint8_t>(division >> 8);
-    out[67] = static_cast<uint8_t>(division);
+    WriteU32BE(out.data() + 64, division);
 
     auto music = std::make_shared<MusicData>(std::move(out));
     music->mDivision = division;

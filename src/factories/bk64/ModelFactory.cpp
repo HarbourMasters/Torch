@@ -1,4 +1,5 @@
 #include "ModelFactory.h"
+#include "BKByteUtils.h"
 
 #include "Companion.h"
 #include "spdlog/spdlog.h"
@@ -811,8 +812,8 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             if (at + kCollHeaderSize > segment.size) {
                 return false;
             }
-            uint16_t geoCnt = (uint16_t)((segment.data[at + 0x10] << 8) | segment.data[at + 0x11]);
-            uint16_t triCnt = (uint16_t)((segment.data[at + 0x14] << 8) | segment.data[at + 0x15]);
+            uint16_t geoCnt = ReadU16BE(segment.data + at + 0x10);
+            uint16_t triCnt = ReadU16BE(segment.data + at + 0x14);
             size_t needed = (size_t)kCollHeaderSize + (size_t)geoCnt * kGeoCubeSize + (size_t)triCnt * kCollTriSize;
             return at + needed <= segment.size;
         };

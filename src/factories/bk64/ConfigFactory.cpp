@@ -192,10 +192,7 @@ static void Sha1Into(const uint8_t* data, size_t len, uint8_t out[20]) {
     uint32_t digest[5];
     s.getDigest(digest);
     for (int i = 0; i < 5; i++) {
-        out[i * 4 + 0] = (digest[i] >> 24) & 0xFF;
-        out[i * 4 + 1] = (digest[i] >> 16) & 0xFF;
-        out[i * 4 + 2] = (digest[i] >> 8) & 0xFF;
-        out[i * 4 + 3] = digest[i] & 0xFF;
+        WriteU32BE(out + i * 4, digest[i]);
     }
 }
 
@@ -313,8 +310,8 @@ static uint8_t* FindPatchedOverlay(const std::vector<uint8_t>& rom, uint32_t& ou
     };
 
     for (const auto& pair : eorPairs) {
-        uint16_t pLui = (rom[pair.u] << 8) | rom[pair.u + 1];
-        uint16_t pAddiu = (rom[pair.l] << 8) | rom[pair.l + 1];
+        uint16_t pLui = ReadU16BE(rom.data() + pair.u);
+        uint16_t pAddiu = ReadU16BE(rom.data() + pair.l);
         uint32_t addr = (pLui << 16) + static_cast<int16_t>(pAddiu);
 
         if (addr == 0 || addr >= rom.size() - 6)
@@ -322,7 +319,7 @@ static uint8_t* FindPatchedOverlay(const std::vector<uint8_t>& rom, uint32_t& ou
         if (rom[addr] != 0x11 || rom[addr + 1] != 0x72)
             continue;
 
-        uint32_t expectedLen = (rom[addr + 2] << 24) | (rom[addr + 3] << 16) | (rom[addr + 4] << 8) | rom[addr + 5];
+        uint32_t expectedLen = ReadU32BE(rom.data() + addr + 2);
         if (expectedLen < 800000 || expectedLen > 1000000)
             continue;
 
@@ -353,7 +350,7 @@ static uint8_t* FindRelocatedF9CAE0(const std::vector<uint8_t>& rom, uint32_t f3
         if (rom[scan + 1] != 0x72)
             continue;
 
-        uint32_t expected = (rom[scan + 2] << 24) | (rom[scan + 3] << 16) | (rom[scan + 4] << 8) | rom[scan + 5];
+        uint32_t expected = ReadU32BE(rom.data() + scan + 2);
         if (expected < 80000 || expected > 100000)
             continue;
 
@@ -388,7 +385,7 @@ static bool ScanWarpDestOnly(const uint8_t* ovl, uint32_t funcOff, uint32_t func
     const uint8_t* f = ovl + funcOff;
     for (uint32_t i = 0; i + 20 <= limit; i += 4) {
         if ((f[i] == 0x24 || f[i] == 0x34) && f[i + 1] == 0x05 && memcmp(f + i + 4, kWarpEpilogue, 16) == 0) {
-            outDest = ResolveWarpDest(f, i, (f[i + 2] << 8) | f[i + 3]);
+            outDest = ResolveWarpDest(f, i, ReadU16BE(f + i + 2));
             if (outDest >= 0) {
                 return true;
             }
@@ -419,8 +416,8 @@ static bool ScanWarpDestDiff(const uint8_t* vanOvl, const uint8_t* modOvl, uint3
             // Same load must still be present in the modified overlay.
             if ((mod[i] == 0x24 || mod[i] == 0x34) && mod[i + 1] == 0x05) {
                 // Resolve against the vanilla jal
-                int vanDest = ResolveWarpDest(van, i, (van[i + 2] << 8) | van[i + 3]);
-                int modDest = ResolveWarpDest(van, i, (mod[i + 2] << 8) | mod[i + 3]);
+                int vanDest = ResolveWarpDest(van, i, ReadU16BE(van + i + 2));
+                int modDest = ResolveWarpDest(van, i, ReadU16BE(mod + i + 2));
                 if (vanDest >= 0 && vanDest != modDest) {
                     outVanDest = vanDest;
                     outModDest = modDest;
@@ -474,8 +471,7 @@ static int CountInternalCustomCodeJals(const std::vector<uint8_t>& rom, uint32_t
     for (uint32_t off = start; off + 4 <= end; off += 4) {
         if (rom[off] != 0x0C)
             continue; // op=3 (JAL) starts with 0x0C in BE
-        uint32_t word = (uint32_t(rom[off]) << 24) | (uint32_t(rom[off + 1]) << 16) | (uint32_t(rom[off + 2]) << 8) |
-                        uint32_t(rom[off + 3]);
+        uint32_t word = ReadU32BE(rom.data() + off);
         if ((word >> 26) != 0x03)
             continue;
         uint32_t target = 0x80000000u | ((word & 0x03FFFFFFu) << 2);
@@ -692,10 +688,7 @@ static bool DetectOverlayHookedCustomCode(const std::vector<uint8_t>& rom, uint3
     std::vector<uint8_t> sig;
     sig.reserve(targets.size() * 4);
     for (uint32_t t : targets) {
-        sig.push_back((t >> 24) & 0xFF);
-        sig.push_back((t >> 16) & 0xFF);
-        sig.push_back((t >> 8) & 0xFF);
-        sig.push_back(t & 0xFF);
+        PushBE(sig, t, 4);
     }
     if (outBlobSha1) {
         Sha1Into(sig.data(), sig.size(), outBlobSha1);
@@ -735,8 +728,7 @@ static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outB
         if (rom[off] != 0x11 || rom[off + 1] != 0x72) {
             continue;
         }
-        uint32_t expectedSize = (uint32_t(rom[off + 2]) << 24) | (uint32_t(rom[off + 3]) << 16) |
-                                (uint32_t(rom[off + 4]) << 8) | uint32_t(rom[off + 5]);
+        uint32_t expectedSize = ReadU32BE(rom.data() + off + 2);
         // Plausible size for an injected custom-code blob: ~10 KB to ~1 MB.
         if (expectedSize < 0x4000 || expectedSize > 0x100000) {
             continue;

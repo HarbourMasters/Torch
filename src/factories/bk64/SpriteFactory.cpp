@@ -1,4 +1,5 @@
 #include "SpriteFactory.h"
+#include "BKByteUtils.h"
 #include "Companion.h"
 #include "archive/SWrapper.h"
 #include "spdlog/spdlog.h"
@@ -49,8 +50,8 @@ static bool ReadPngSize(const fs::path& path, int32_t& width, int32_t& height) {
     if (std::memcmp(head, kPngMagic, sizeof(kPngMagic)) != 0 || std::memcmp(head + 12, "IHDR", 4) != 0) {
         return false;
     }
-    width = (head[16] << 24) | (head[17] << 16) | (head[18] << 8) | head[19];
-    height = (head[20] << 24) | (head[21] << 16) | (head[22] << 8) | head[23];
+    width = static_cast<int32_t>(ReadU32BE(head + 16));
+    height = static_cast<int32_t>(ReadU32BE(head + 20));
     return width > 0 && height > 0;
 }
 

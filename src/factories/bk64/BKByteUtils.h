@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 namespace BK64 {
 
@@ -19,6 +20,19 @@ inline uint32_t ReadU32BE(const uint8_t* p) {
 
 inline int32_t ReadS32BE(const uint8_t* p) {
     return static_cast<int32_t>(ReadU32BE(p));
+}
+
+inline void WriteU32BE(uint8_t* p, uint32_t value) {
+    p[0] = static_cast<uint8_t>(value >> 24);
+    p[1] = static_cast<uint8_t>(value >> 16);
+    p[2] = static_cast<uint8_t>(value >> 8);
+    p[3] = static_cast<uint8_t>(value);
+}
+
+inline void PushBE(std::vector<uint8_t>& out, uint32_t value, int bytes) {
+    for (int i = bytes - 1; i >= 0; i--) {
+        out.push_back(static_cast<uint8_t>(value >> (i * 8)));
+    }
 }
 
 } // namespace BK64
