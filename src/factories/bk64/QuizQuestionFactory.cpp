@@ -161,7 +161,7 @@ std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse(std::vect
 }
 
 std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse_modding(std::vector<uint8_t>& buffer,
-                                                                              YAML::Node& node) {
+                                                                               YAML::Node& node) {
     const YAML::Node info = YamlEntry(buffer, GetSafeNode<std::string>(node, "symbol"));
 
     auto text = ReadModdingDialogSeq(info["Text"]);

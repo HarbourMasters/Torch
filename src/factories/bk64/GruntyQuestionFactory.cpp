@@ -179,7 +179,7 @@ ExportResult BK64::GruntyQuestionModdingExporter::Export(std::ostream& write, st
 }
 
 std::optional<std::shared_ptr<IParsedData>> GruntyQuestionFactory::parse(std::vector<uint8_t>& buffer,
-                                                                        YAML::Node& node) {
+                                                                         YAML::Node& node) {
     auto [_, segment] = Decompressor::AutoDecode(node, buffer);
     LUS::BinaryReader reader(segment.data, segment.size);
     reader.SetEndianness(Torch::Endianness::Big);

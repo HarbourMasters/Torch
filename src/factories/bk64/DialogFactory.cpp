@@ -15,7 +15,6 @@
 #define DIALOG_CMD_CLOSE 0x04
 #define DIALOG_TERMINATOR_SIZE 3
 
-
 namespace BK64 {
 
 static void WriteLangBlock(LUS::BinaryWriter& writer, const std::vector<DialogString>& bottom,
@@ -118,8 +117,8 @@ static bool ReadEntries(LUS::BinaryReader& reader, uint8_t count, std::vector<Di
     for (uint8_t i = 0; i < count; i++) {
         // cmd + length, then the string itself
         if (!HasBytes(reader, 2)) {
-            SPDLOG_WARN("[BK64] Dialog {}: {} entry {} of {} runs past the end of the blob; dropping the rest.",
-                        symbol, boxName, i + 1, count);
+            SPDLOG_WARN("[BK64] Dialog {}: {} entry {} of {} runs past the end of the blob; dropping the rest.", symbol,
+                        boxName, i + 1, count);
             return false;
         }
 

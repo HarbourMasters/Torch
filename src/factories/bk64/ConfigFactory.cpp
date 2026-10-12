@@ -99,8 +99,7 @@ static const uint16_t sVanillaNoteDoors[12] = { 50, 180, 260, 350, 450, 640, 765
 // Jiggy puzzles (11 entries, 4 bytes each): { u8 cost; u8 size_bits; u16 progress_flag }.
 static const uint8_t sVanillaJiggyCosts[11] = { 1, 2, 5, 7, 8, 9, 10, 12, 15, 25, 4 };
 static const uint8_t sVanillaJiggySizes[11] = { 1, 2, 3, 3, 4, 4, 4, 4, 4, 5, 3 };
-static const uint16_t sVanillaJiggyFlags[11] = { 0x5D, 0x5E, 0x60, 0x63, 0x66,
-                                                 0x6A, 0x6E, 0x72, 0x76, 0x7A, 0x7F };
+static const uint16_t sVanillaJiggyFlags[11] = { 0x5D, 0x5E, 0x60, 0x63, 0x66, 0x6A, 0x6E, 0x72, 0x76, 0x7A, 0x7F };
 
 // Vanilla level names (pause menu display)
 static const char* sVanillaLevelNames[13] = { "GAME TOTAL",          "SPIRAL MOUNTAIN",     "GRUNTILDA'S LAIR",
@@ -183,9 +182,7 @@ static uint8_t* TryUnzipAt(const std::vector<uint8_t>& rom, uint32_t off, uint32
     }
     try {
         return bk_unzip(rom.data() + off, outSize);
-    } catch (...) {
-        return nullptr;
-    }
+    } catch (...) { return nullptr; }
 }
 
 static void Sha1Into(const uint8_t* data, size_t len, uint8_t out[20]) {
@@ -413,8 +410,7 @@ static bool ScanWarpDestDiff(const uint8_t* vanOvl, const uint8_t* modOvl, uint3
     const uint8_t* van = vanOvl + funcOff;
     const uint8_t* mod = modOvl + funcOff;
     for (uint32_t i = 0; i + 20 <= limit; i += 4) {
-        if ((van[i] == 0x24 || van[i] == 0x34) && van[i + 1] == 0x05 &&
-            memcmp(van + i + 4, kWarpEpilogue, 16) == 0) {
+        if ((van[i] == 0x24 || van[i] == 0x34) && van[i + 1] == 0x05 && memcmp(van + i + 4, kWarpEpilogue, 16) == 0) {
             // Same load must still be present in the modified overlay.
             if ((mod[i] == 0x24 || mod[i] == 0x34) && mod[i + 1] == 0x05) {
                 // Resolve against the vanilla jal
@@ -768,8 +764,7 @@ static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outB
         if (rawSize >= 0x4000) {
             std::vector<uint8_t> payload(rom.begin() + CUSTOM_CODE_ROM_OFFSET,
                                          rom.begin() + CUSTOM_CODE_ROM_OFFSET + rawSize);
-            if (CheckCustomCodePayload(payload, outInternalJalCount, outFirstInternalTarget, outRamBase,
-                                       outBlobSha1)) {
+            if (CheckCustomCodePayload(payload, outInternalJalCount, outFirstInternalTarget, outRamBase, outBlobSha1)) {
                 outBlobRomOffset = CUSTOM_CODE_ROM_OFFSET;
                 outKind = CustomCodeKind::BB_GLOBALIZATION;
                 return true;
@@ -1112,12 +1107,13 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         for (int layer = 0; layer < 3; layer++) {
                             uint32_t base = off + 4 + layer * 12;
                             blob.writeS16(static_cast<int16_t>(ReadU16BE(modF9 + base))); // model_id
-                            blob.writeU32(ReadU32BE(modF9 + base + 4));                   // scale (BE f32 bits -> LE u32)
+                            blob.writeU32(ReadU32BE(modF9 + base + 4)); // scale (BE f32 bits -> LE u32)
                             blob.writeU32(ReadU32BE(modF9 + base + 8)); // rotation (BE f32 bits -> LE u32)
                         }
                         count++;
                         SPDLOG_INFO("[ConfigFactory] skybox: scene 0x{:X} models [{},{},{}]", sceneId,
-                                    ReadU16BE(modF9 + off + 4), ReadU16BE(modF9 + off + 16), ReadU16BE(modF9 + off + 28));
+                                    ReadU16BE(modF9 + off + 4), ReadU16BE(modF9 + off + 16),
+                                    ReadU16BE(modF9 + off + 28));
                     }
                 }
 
