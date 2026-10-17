@@ -1367,10 +1367,10 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     if (this->gPhaseCallback) {
         this->gPhaseCallback(2);
     }
-    if (this->gAssetCounter) {
-        *this->gAssetCounter = 0;
-    }
     if (this->gAssetTotal) {
+        if (this->gAssetCounter) {
+            *this->gAssetCounter = 0;
+        }
         size_t total = 0;
         for (const auto& [file, results] : this->gParseResults) {
             total += results.size();
