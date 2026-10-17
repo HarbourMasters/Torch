@@ -11,8 +11,10 @@
 #include <unordered_set>
 #include <variant>
 #include <functional>
+#include <map>
 #include "factories/BaseFactory.h"
 #include "n64/Cartridge.h"
+#include "input/InputSource.h"
 #include "utils/Decompressor.h"
 #include "factories/TextureFactory.h"
 
@@ -40,7 +42,8 @@ enum class GBIMinorVersion {
     SM64,
     PM64,
     OoT,
-    BK64
+    BK64,
+    AC
 };
 
 enum class TableMode {
@@ -93,6 +96,19 @@ struct WriteEntry {
     std::string buffer;
     std::optional<std::string> comment;
     std::optional<uint32_t> endptr;
+};
+
+struct GlobalVtxRange {
+    uint32_t end;
+    std::string name;
+    YAML::Node node;
+};
+
+struct RuntimeBufferRange {
+    uint32_t end;
+    uint32_t segment;
+    uint32_t segmentOffset;
+    std::string name;
 };
 
 struct GBIConfig {
@@ -181,6 +197,7 @@ public:
     bool AddTextureDefines() const { return this->gConfig.textureDefines; }
 
     N64::Cartridge* GetCartridge() const { return this->gCartridge.get(); }
+    InputSource* GetInput() const { return this->gInput.get(); }
     // Survives cartridge teardown so the UI can key game-specific behavior.
     const std::string& GetGameTitle() const { return this->gGameTitle; }
     std::vector<uint8_t>& GetRomData() { return this->gRomData; }
@@ -257,6 +274,16 @@ public:
 
     void SetSingleYMLPath(const std::string& path) { this->gSingleYMLPath = path; }
     uint32_t GetFileOffsetFromName(const std::string& file) const { return this->gFileOffsets.at(file); }
+    void SetWriteHashFile(bool enabled) { this->gWriteHashFile = enabled; }
+
+    void ResolveFileKey(YAML::Node& node);
+    bool IsGlobalAddrSpace() const { return this->gGlobalAddrSpace; }
+    std::optional<std::tuple<std::string, YAML::Node>> GetGlobalNodeByAddr(uint32_t addr);
+    std::optional<std::tuple<std::string, YAML::Node>> SearchGlobalVtx(uint32_t addr);
+    std::vector<std::tuple<std::string, YAML::Node>> GetVariantsByAddr(uint32_t addr);
+    std::optional<uint32_t> MapRuntimeBuffer(uint32_t addr);
+
+    static std::vector<std::string> Manifest(const fs::path& root, const std::vector<std::string>& ymls);
 
 #ifdef BUILD_UI
     void RegisterUIFactory(const std::string& type, const std::shared_ptr<BaseFactoryUI>& factory);
@@ -279,9 +306,17 @@ private:
     std::vector<uint8_t> gRomData;
     std::optional<std::filesystem::path> gRomPath;
     bool gNodeForceProcessing = false;
+    bool gWriteHashFile = true;
+    bool gStrictDeclarationsDefault = false;
+    bool gGlobalAddrSpace = false;
+    std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>> gGlobalAddrMap;
+    std::map<uint32_t, GlobalVtxRange> gGlobalVtxRanges;
+    std::unordered_map<uint32_t, std::vector<std::tuple<std::string, YAML::Node>>> gGlobalVariants;
+    std::map<uint32_t, RuntimeBufferRange> gRuntimeBuffers;
     bool gIndividualIncludes = false;
     YAML::Node gHashNode;
     std::shared_ptr<N64::Cartridge> gCartridge;
+    std::shared_ptr<InputSource> gInput;
     std::string gGameTitle;
     std::unordered_map<std::string, std::vector<YAML::Node>> gCourseMetadata;
     std::unordered_map<std::string, std::unordered_map<int32_t, std::string>> gEnums;
@@ -309,6 +344,8 @@ private:
     std::unordered_map<int, std::string> gManualSegments;
     std::unordered_set<std::string> gProcessedFiles;
     std::unordered_map<std::string, uint32_t> gFileOffsets;
+    std::unordered_map<std::string, uint32_t> gFileAddresses;
+    std::unordered_map<std::string, uint32_t> gFileSizes;
 
     std::unordered_map<std::string, std::vector<char>> gCompanionFiles;
     std::vector<std::pair<std::string, std::vector<char>>> gArchiveFiles;
@@ -352,4 +389,6 @@ private:
     void ParseFilelist(const std::string& filelistPath);
     void SetSegmentInfo(const YAML::Node& segments);
     uint32_t GetFileOffsetFromNodeStr(const std::string& str) const;
+    fs::path GetYamlDirectory(const std::string& yamlPath, YAML::Node& root) const;
+    void BuildGlobalAddrSpace(const std::vector<fs::directory_entry>& entries);
 };

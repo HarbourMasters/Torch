@@ -26,10 +26,15 @@ ExportResult ADPCMLoopBinaryExporter::Export(std::ostream& write, std::shared_pt
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<ADPCMLoopData>(raw);
 
-    WriteHeader(writer, Torch::ResourceType::AdpcmLoop, 0);
+    const bool hasSampleEnd = AudioContext::IsNeos();
+
+    WriteHeader(writer, Torch::ResourceType::AdpcmLoop, hasSampleEnd ? 1 : 0);
     writer.Write(data->start);
     writer.Write(data->end);
     writer.Write(data->count);
+    if (hasSampleEnd) {
+        writer.Write(data->sampleEnd);
+    }
     if (data->count != 0) {
         for (size_t i = 0; i < 16; i++) {
             writer.Write(data->predictorState[i]);
@@ -48,6 +53,7 @@ std::optional<std::shared_ptr<IParsedData>> ADPCMLoopFactory::parse(std::vector<
     loop->start = reader.ReadInt32();
     loop->end = reader.ReadUInt32();
     loop->count = reader.ReadUInt32();
+    loop->sampleEnd = reader.ReadUInt32();
 
     if (loop->count != 0) {
         for (size_t i = 0; i < 16; i++) {

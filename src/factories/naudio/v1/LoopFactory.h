@@ -8,6 +8,7 @@ public:
     uint32_t start;
     uint32_t end;
     uint32_t count;
+    uint32_t sampleEnd;
     int16_t predictorState[16];
 };
 

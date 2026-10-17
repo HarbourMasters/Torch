@@ -1,6 +1,7 @@
 #include "SampleFactory.h"
 #include "AudioConverter.h"
 #include "Companion.h"
+#include "spdlog/spdlog.h"
 #include <tinyxml2.h>
 #include "LoopFactory.h"
 #include "BookFactory.h"
@@ -28,7 +29,7 @@ ExportResult NSampleCodeExporter::Export(std::ostream& write, std::shared_ptr<IP
 
 ExportResult NSampleBinaryExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
                                            std::string& entryName, YAML::Node& node, std::string* replacement) {
-    // parse() returns nullopt for duplicates, so Export() is only reached for
+    // Duplicates are parsed with no_export set, so Export() is only reached for
     // canonical samples — no redirect check needed here.
     auto data = std::static_pointer_cast<NSampleData>(raw);
     auto writer = LUS::BinaryWriter();
@@ -41,7 +42,7 @@ ExportResult NSampleBinaryExporter::Export(std::ostream& write, std::shared_ptr<
     writer.Write(AudioContext::GetPathByAddr(data->loop));
     writer.Write(AudioContext::GetPathByAddr(data->book));
 
-    auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
+    auto& table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
     writer.Write((char*)table.buffer.data() + table.info->entries[data->sampleBankId].addr + data->sampleAddr,
                  data->size);
 
@@ -62,7 +63,7 @@ ExportResult NSampleModdingExporter::Export(std::ostream& write, std::shared_ptr
 #ifdef SF64_SUPPORT
     if (AudioContext::driver == NAudioDrivers::SF64 && data->codec == 2) {
         *replacement += ".pcm";
-        auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
+        auto& table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
         auto ptr = table.buffer.data() + table.info->entries[data->sampleBankId].addr + data->sampleAddr;
         auto vec = std::vector<uint8_t>(ptr, ptr + data->size);
         auto output = new int16_t[data->size * 2];
@@ -141,7 +142,7 @@ ExportResult NSampleXMLExporter::Export(std::ostream& write, std::shared_ptr<IPa
     sample.Accept(&printer);
     write.write(printer.CStr(), printer.CStrSize() - 1);
 
-    auto table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
+    auto& table = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
     auto sampleData = table.buffer.data() + table.info->entries[entry->sampleBankId].addr + entry->sampleAddr;
     std::vector<char> data(sampleData, sampleData + entry->size);
     Companion::Instance->RegisterCompanionFile(path.filename().string() + "_data", data);
@@ -154,7 +155,8 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     auto parent = GetSafeNode<uint32_t>(node, "parent");
     auto tuning = GetSafeNode<float>(node, "tuning", 0.0f);
     auto sampleRate = GetSafeNode<uint32_t>(node, "sampleRate", 0);
-    auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
+    auto banks = AudioContext::GetSampleBankIds(node);
+    auto sampleBankId = banks.bank1;
 
     auto table = AudioContext::tables[AudioTableType::FONT_TABLE].entries[parent];
     auto reader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, offset);
@@ -164,10 +166,25 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
     uint32_t flags = reader.ReadUInt32();
     uint32_t addr = reader.ReadUInt32();
 
-    sample->codec = (flags >> 28) & 0x0F;
-    sample->medium = (flags >> 24) & 0x03;
-    sample->unk = (flags >> 22) & 0x01;
-    sample->size = flags;
+    if (AudioContext::IsNeos()) {
+        sample->codec = (flags >> 28) & 0x07;
+        sample->medium = (flags >> 26) & 0x03;
+        sample->unk = (flags >> 25) & 0x01;
+        sample->size = flags & 0xFFFFFF;
+
+        if (sample->medium == 1 && banks.bank2 != 0xFF) {
+            sampleBankId = banks.bank2;
+        } else if (sample->medium != 0 && sample->medium != 1) {
+            SPDLOG_WARN("Neos sample at 0x{:X} uses medium {}; reading it from bank {}", offset,
+                        (uint32_t)sample->medium, sampleBankId);
+        }
+        sampleBankId = AudioContext::ResolveTableIndex(AudioTableType::SAMPLE_TABLE, sampleBankId);
+    } else {
+        sample->codec = (flags >> 28) & 0x0F;
+        sample->medium = (flags >> 24) & 0x03;
+        sample->unk = (flags >> 22) & 0x01;
+        sample->size = flags;
+    }
 
     auto loopAddr = reader.ReadUInt32();
     auto bookAddr = reader.ReadUInt32();
@@ -214,7 +231,8 @@ std::optional<std::shared_ptr<IParsedData>> NSampleFactory::parse(std::vector<ui
         } else if (isAutogen) {
             // Auto-generated duplicate: redirect to canonical, suppress export.
             AudioContext::sampleAddrRemap[offset] = it->second;
-            return std::nullopt;
+            node["no_export"] = true;
+            return sample;
         }
         // Explicit entries fall through — always exported with their declared name.
     }

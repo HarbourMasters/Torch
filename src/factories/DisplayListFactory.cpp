@@ -9,6 +9,9 @@
 #ifdef OOT_SUPPORT
 #include "oot/OoTDListHelpers.h"
 #endif
+#ifdef AC_SUPPORT
+#include "ac/ACDListHelpers.h"
+#endif
 
 #ifdef STANDALONE
 #include <gfxd.h>
@@ -241,6 +244,10 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
 #ifdef OOT_SUPPORT
     auto ootResult = OoT::DListHelpers::Export(write, raw, entryName, node, replacement);
     if (ootResult.has_value()) return ootResult.value();
+#endif
+#ifdef AC_SUPPORT
+    auto acResult = AC::DListHelpers::Export(write, raw, entryName, node, replacement);
+    if (acResult.has_value()) return acResult.value();
 #endif
 
     const auto gbi = Companion::Instance->GetGBIVersion();
@@ -527,6 +534,10 @@ std::optional<std::shared_ptr<IParsedData>> DListFactory::parse(std::vector<uint
 #ifdef OOT_SUPPORT
     auto ootResult = OoT::DListHelpers::Parse(raw_buffer, node);
     if (ootResult.has_value()) return ootResult.value();
+#endif
+#ifdef AC_SUPPORT
+    auto acResult = AC::DListHelpers::Parse(raw_buffer, node);
+    if (acResult.has_value()) return acResult.value();
 #endif
 
     const auto gbi = Companion::Instance->GetGBIVersion();

@@ -6,10 +6,12 @@
 #include "utils/TorchUtils.h"
 #include "archive/SWrapper.h"
 #include "archive/ZWrapper.h"
+#include "input/N64RomInput.h"
 #include "spdlog/spdlog.h"
 #include "TinySHA1.hpp"
 
 #include <regex>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <filesystem>
@@ -162,11 +164,36 @@
 
 #include "preprocess/CompTool.h"
 
+#ifdef AC_SUPPORT
+#include "factories/ac/ACDListHelpers.h"
+#include "factories/ac/RuntimeBufferFactory.h"
+#include "factories/ac/KeyFrameSkelFactory.h"
+#include "factories/ac/KeyFrameAnimFactory.h"
+#include "factories/ac/NpcAnimFactory.h"
+#include "factories/ac/EvwAnimeFactory.h"
+#include "factories/ac/TexAtlasFactory.h"
+#include "factories/ac/AssetListFactory.h"
+#include "factories/ac/StructArrayFactory.h"
+#include "factories/ac/FgDataFactory.h"
+#endif
+
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
+
+static void SetLogPattern(const std::string& pattern) {
+#ifdef STANDALONE
+    spdlog::set_pattern(pattern);
+#endif
+}
+
+static void SetLogLevel(spdlog::level::level_enum level) {
+#ifdef STANDALONE
+    spdlog::set_level(level);
+#endif
+}
 
 static std::string ConvertType(std::string type) {
     int index = type.find(':');
@@ -192,8 +219,8 @@ void Companion::Init(const ExportType type) {
 
 void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, bool shouldProcess) {
     this->mShouldProcess = shouldProcess;
-    spdlog::set_level(spdlog::level::debug);
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+    SetLogLevel(spdlog::level::debug);
+    SetLogPattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
     this->gConfig.exporterType = type;
     this->RegisterFactory("BLOB", std::make_shared<BlobFactory>());
@@ -313,6 +340,17 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
     this->RegisterFactory("NAUDIO:V1:ADPCM_LOOP", std::make_shared<ADPCMLoopFactory>());
     this->RegisterFactory("NAUDIO:V1:ADPCM_BOOK", std::make_shared<ADPCMBookFactory>());
     this->RegisterFactory("NAUDIO:V1:SEQUENCE", std::make_shared<NSequenceFactory>());
+#endif
+#ifdef AC_SUPPORT
+    this->RegisterFactory("AC:RUNTIME_BUFFER", std::make_shared<AC::RuntimeBufferFactory>());
+    this->RegisterFactory("AC:CKF_SKELETON", std::make_shared<AC::KeyFrameSkelFactory>());
+    this->RegisterFactory("AC:CKF_ANIMATION", std::make_shared<AC::KeyFrameAnimFactory>());
+    this->RegisterFactory("AC:NPC_ANIM", std::make_shared<AC::NpcAnimFactory>());
+    this->RegisterFactory("AC:EVW_ANIME", std::make_shared<AC::EvwAnimeFactory>());
+    this->RegisterFactory("AC:TEX_ATLAS", std::make_shared<AC::TexAtlasFactory>());
+    this->RegisterFactory("AC:ASSET_ARRAY", std::make_shared<AC::AssetListFactory>());
+    this->RegisterFactory("AC:STRUCT_ARRAY", std::make_shared<AC::StructArrayFactory>());
+    this->RegisterFactory("AC:FG_DATA", std::make_shared<AC::FgDataFactory>());
 #endif
 #ifdef OOT_SUPPORT
     this->RegisterFactory("OOT:ARRAY", std::make_shared<OoT::OoTArrayFactory>());
@@ -447,14 +485,14 @@ void Companion::ParseEnums(std::string& header) {
 std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::string& name) {
     auto type = GetTypeNode(node);
 
-    spdlog::set_pattern(regular);
+    SetLogPattern(regular);
     if (node["offset"]) {
         auto offset = node["offset"].as<uint32_t>();
         SPDLOG_INFO("- [{}] Processing {} at 0x{:X}", type, name, offset);
     } else {
         SPDLOG_INFO("- [{}] Processing {}", type, name);
     }
-    spdlog::set_pattern(line);
+    SetLogPattern(line);
     node["vpath"] = name;
 
     auto factory = this->GetFactory(type);
@@ -601,6 +639,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
     }
 
     this->gCurrentFileConfig.reset(node);
+
+    this->gConfig.strictDeclarations =
+        GetSafeNode<bool>(node, "strict_declarations", this->gStrictDeclarationsDefault);
 
     if (node["directory"]) {
         this->gCurrentDirectory = node["directory"].as<std::string>();
@@ -854,6 +895,12 @@ void Companion::ProcessParseFile(YAML::Node root, std::atomic<size_t>& assetCoun
 
         this->gCurrentAssetName = "Parsing: " + entryName;
 
+        ResolveFileKey(assetNode);
+
+        if (this->gInput && !this->gInput->IsN64() && assetNode.IsMap() && !assetNode["symbol"]) {
+            assetNode["symbol"] = entryName;
+        }
+
         if (gCurrentFileOffset && assetNode["offset"]) {
             const auto offset = assetNode["offset"].as<uint32_t>();
             if (!IS_SEGMENTED(offset)) {
@@ -873,9 +920,9 @@ void Companion::ProcessParseFile(YAML::Node root, std::atomic<size_t>& assetCoun
             this->gParseResults[this->gCurrentFile].push_back(result.value());
         }
 
-        spdlog::set_pattern(regular);
+        SetLogPattern(regular);
         SPDLOG_INFO("------------------------------------------------");
-        spdlog::set_pattern(line);
+        SetLogPattern(line);
     }
 }
 
@@ -1216,19 +1263,12 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     gCurrentSegmentNumber = 0;
     gCurrentFileOffset = 0;
     gCurrentCompressionType = CompressionType::None;
+    this->gConfig.strictDeclarations = this->gStrictDeclarationsDefault;
     // gAddrMap registration below keys assets by their output path, so the
     // directory must be resolved before the loop. Default to the file's own
     // path, then honor a :config directory override (used to register a room's
     // assets under its scene's directory).
-    auto relPath = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
-    if (StringHelper::StartsWith(relPath.string(), "../"))
-        relPath = relative(fs::path(this->gCurrentFile), this->gCommonAssetPath).replace_extension("");
-
-    this->gCurrentDirectory = relPath;
-
-    if (auto directory = root[":config"]["directory"]) {
-        this->gCurrentDirectory = directory.as<std::string>();
-    }
+    this->gCurrentDirectory = GetYamlDirectory(this->gCurrentFile, root);
     // Set compressed file offsets and compression type
     if (auto segments = root[":config"]["segments"]) {
         if (segments.IsSequence() && segments.size() > 0) {
@@ -1263,6 +1303,8 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
 #endif
         }
 
+        ResolveFileKey(node);
+
         if (!node["offset"]) {
             continue;
         }
@@ -1280,6 +1322,10 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
 
         if (!gCurrentVirtualPath.empty()) {
             node["path"] = gCurrentVirtualPath;
+        }
+
+        if (entryName.find('@') != std::string::npos && Torch::contains(this->gAddrMap[this->gCurrentFile], offset)) {
+            continue;
         }
 
         this->gAddrMap[this->gCurrentFile][offset] = std::make_tuple(output, node);
@@ -1311,9 +1357,9 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
         return;
     }
 
-    spdlog::set_pattern(regular);
+    SetLogPattern(regular);
     SPDLOG_INFO("------------------------------------------------");
-    spdlog::set_pattern(line);
+    SetLogPattern(line);
 
     ProcessParseFile(root, assetCount);
 
@@ -1362,28 +1408,47 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     bool isDirectoryMode = config["mode"] && config["mode"].as<std::string>() == "directory";
 
     if (!isDirectoryMode) {
-        if (this->gRomPath.has_value()) {
-            std::ifstream input(this->gRomPath.value(), std::ios::binary);
-            this->gRomData = std::vector<uint8_t>(std::istreambuf_iterator(input), {});
-            input.close();
+        this->gInput = InputSource::Create(this->gRomPath, this->gRomData);
+        this->gInput->Open();
+        this->gGameTitle = this->gInput->GetTitle();
+
+        if (auto n64 = std::dynamic_pointer_cast<N64RomInput>(this->gInput)) {
+            this->gCartridge = n64->GetSharedCartridge();
         }
 
-        this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
-        this->gCartridge->Initialize();
-        this->gGameTitle = this->gCartridge->GetGameTitle();
-
-        if (!config[this->gCartridge->GetHash()]) {
+        if (!config[this->gInput->GetHash()]) {
             bool synthesized = false;
 #ifdef BK64_SUPPORT
-            if (this->gRomPath.has_value()) {
+            if (this->gRomPath.has_value() && this->gCartridge) {
                 synthesized = BK64::TrySynthesizeRomConfig(config, this->gCartridge->GetHash(), this->gRomPath.value(),
-                                                           this->gRomData);
+                                                           this->gInput->GetImage());
             }
 #endif
             if (!synthesized) {
-                SPDLOG_ERROR("No config found for {}", this->gCartridge->GetHash());
+                SPDLOG_ERROR("No config found for {}", this->gInput->GetHash());
+                if (!this->gInput->IsN64()) {
+                    throw std::runtime_error("No config.yml entry matches " + this->gInput->GetTitle() +
+                                             " (main.dol SHA-1 " + this->gInput->GetHash() + ")");
+                }
                 return;
             }
+        }
+
+        auto entry = config[this->gInput->GetHash()];
+        this->gInput->Build(entry);
+        this->gRomData = std::move(this->gInput->GetImage());
+
+        for (const auto& [segment, offset] : this->gInput->GetVirtualSegments()) {
+            this->gConfig.segment.global[segment] = offset;
+        }
+        for (const auto& [name, offset] : this->gInput->GetFileOffsets()) {
+            this->gFileOffsets[name] = offset;
+        }
+        for (const auto& [name, addr] : this->gInput->GetFileAddresses()) {
+            this->gFileAddresses[name] = addr;
+        }
+        for (const auto& [name, size] : this->gInput->GetFileSizes()) {
+            this->gFileSizes[name] = size;
         }
 
         this->gConfig.parseMode = ParseMode::Default;
@@ -1391,7 +1456,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         this->gConfig.parseMode = ParseMode::Directory;
     }
 
-    auto rom = !isDirectoryMode ? config[this->gCartridge->GetHash()] : config;
+    auto rom = !isDirectoryMode ? config[this->gInput->GetHash()] : config;
 
     if (rom["preprocess"]) {
         auto preprocess = rom["preprocess"];
@@ -1405,9 +1470,11 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                 auto restart = GetSafeNode<bool>(item, "restart");
 
                 if (type == "DECOMPRESS") {
-                    this->gRomData = CompTool::Decompress(this->gRomData);
-                    this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
-                    this->gCartridge->Initialize();
+                    auto n64 = std::make_shared<N64RomInput>(CompTool::Decompress(this->gRomData));
+                    n64->Open();
+                    this->gRomData = n64->GetImage();
+                    this->gInput = n64;
+                    this->gCartridge = n64->GetSharedCartridge();
                     this->gGameTitle = this->gCartridge->GetGameTitle();
 
                     auto hash = this->gCartridge->GetHash();
@@ -1438,7 +1505,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     }
     if (!cfg) {
         SPDLOG_ERROR("No config found for {}",
-                     !isDirectoryMode ? this->gCartridge->GetHash() : GetSafeNode<std::string>(config, "folder"));
+                     !isDirectoryMode ? this->gInput->GetHash() : GetSafeNode<std::string>(config, "folder"));
         return;
     }
 
@@ -1544,6 +1611,9 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         } else if (key == "F3DEX_BK64") {
             this->gConfig.gbi.version = GBIVersion::f3dex;
             this->gConfig.gbi.subversion = GBIMinorVersion::BK64;
+        } else if (key == "F3DEX2_AC") {
+            this->gConfig.gbi.version = GBIVersion::f3dex2;
+            this->gConfig.gbi.subversion = GBIMinorVersion::AC;
         } else {
             SPDLOG_ERROR("Invalid GBI version");
             return;
@@ -1623,20 +1693,18 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     this->gConfig.dialogPack = cfg["dialog_pack"] && cfg["dialog_pack"].as<bool>();
 
     this->gConfig.strictDeclarations = GetSafeNode<bool>(cfg, "strict_declarations", false);
+    this->gStrictDeclarationsDefault = this->gConfig.strictDeclarations;
+    this->gGlobalAddrSpace = GetSafeNode<bool>(cfg, "global_addr_space", false);
 
     this->ParseHash();
 
     SPDLOG_CRITICAL("------------------------------------------------");
-    spdlog::set_pattern(line);
+    SetLogPattern(line);
 
     SPDLOG_CRITICAL("Starting Torch...");
 
     if (this->gConfig.parseMode == ParseMode::Default) {
-        SPDLOG_CRITICAL("Game: {}", this->gCartridge->GetGameTitle());
-        SPDLOG_CRITICAL("CRC: {}", this->gCartridge->GetCRC());
-        SPDLOG_CRITICAL("Version: {}", this->gCartridge->GetVersion());
-        SPDLOG_CRITICAL("Country: [{}]", this->gCartridge->GetCountryCode());
-        SPDLOG_CRITICAL("Hash: {}", this->gCartridge->GetHash());
+        this->gInput->LogInfo();
         SPDLOG_CRITICAL("Assets: {}", this->gAssetPath);
     } else {
         SPDLOG_CRITICAL("Mode: Directory");
@@ -1682,12 +1750,22 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     vWriter.Write(static_cast<uint8_t>(Torch::Endianness::Big));
 
     if (this->gConfig.parseMode == ParseMode::Default) {
-        vWriter.Write(this->gCartridge->GetCRC());
+        vWriter.Write(this->gInput->GetVersionCRC());
     } else {
         vWriter.Write((uint32_t)0);
     }
 
     std::vector<fs::directory_entry> entries = GetAssetYMLs(rom);
+
+#ifdef AC_SUPPORT
+    AC::DListHelpers::Reset();
+#endif
+
+    if (this->gGlobalAddrSpace) {
+        BuildGlobalAddrSpace(this->gSingleYMLPath.empty() ? entries
+                                                          : Torch::getRecursiveEntries(this->gAssetPath,
+                                                                                       this->gCommonAssetPath));
+    }
 
     for (const auto& entry : entries) {
         if (entry.is_directory()) {
@@ -1834,6 +1912,13 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
 
     this->gCurrentAssetName.clear();
 
+#ifdef AC_SUPPORT
+    if (this->gConfig.gbi.subversion == GBIMinorVersion::AC && this->mShouldProcess &&
+        this->gConfig.exporterType == ExportType::Binary && this->gSingleYMLPath.empty()) {
+        AC::DListHelpers::Finalize();
+    }
+#endif
+
     if (wrapper != nullptr && mShouldProcess) {
         // Add additional files specified by the user
         for (const auto& filePath : this->gAdditionalFiles) {
@@ -1867,28 +1952,30 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         wrapper->Close();
     }
 
-    // Write entries hash
-    std::ofstream file(this->gDestinationDirectory / "torch.hash.yml", std::ios::binary);
-    file << this->gHashNode;
-    file.close();
+    if (this->mShouldProcess && this->gWriteHashFile) {
+        std::ofstream file(this->gDestinationDirectory / "torch.hash.yml", std::ios::binary);
+        file << this->gHashNode;
+        file.close();
+    }
 
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     auto level = spdlog::get_level();
-    spdlog::set_level(spdlog::level::info);
+    SetLogLevel(spdlog::level::info);
     SPDLOG_CRITICAL("Done! Took {}ms", end.count() - start.count());
     SPDLOG_CRITICAL("------------------------------------------------");
-    spdlog::set_level(level);
-    spdlog::set_pattern(regular);
+    SetLogLevel(level);
+    SetLogPattern(regular);
 
     Decompressor::ClearCache();
     this->gArchiveFiles.clear();
     this->gCartridge = nullptr;
+    this->gInput = nullptr;
 }
 
 void Companion::Pack(const std::string& folder, const std::string& output, const ArchiveType otrMode,
                      const std::string& version) {
-    spdlog::set_level(spdlog::level::debug);
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+    SetLogLevel(spdlog::level::debug);
+    SetLogPattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
     SPDLOG_CRITICAL("------------------------------------------------");
 
@@ -1940,7 +2027,7 @@ void Companion::Pack(const std::string& folder, const std::string& output, const
     auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     SPDLOG_CRITICAL("Done! Took {}ms", end.count() - start.count());
     SPDLOG_CRITICAL("Exported to {}", output);
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
+    SetLogPattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
     SPDLOG_CRITICAL("------------------------------------------------");
 
     wrapper->Close();
@@ -1980,9 +2067,9 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::RegisterAsset(cons
     if (dResult.has_value()) {
         this->gParseResults[this->gCurrentFile].push_back(dResult.value());
     }
-    spdlog::set_pattern(regular);
+    SetLogPattern(regular);
     SPDLOG_INFO("------------------------------------------------");
-    spdlog::set_pattern(line);
+    SetLogPattern(line);
 
     return entry;
 }
@@ -2249,6 +2336,10 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
         }
     }
 
+    if (this->gGlobalAddrSpace) {
+        return GetGlobalNodeByAddr(addr);
+    }
+
     return std::nullopt;
 }
 
@@ -2273,6 +2364,9 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
         if (f != file && Torch::contains(map, addr)) {
             return map[addr];
         }
+    }
+    if (this->gGlobalAddrSpace) {
+        return GetGlobalNodeByAddr(addr);
     }
     return std::nullopt;
 }
@@ -2656,4 +2750,204 @@ void Companion::ParseFilelist(const std::string& filelistPath) {
         }
 
     }
+}
+
+static bool IsAssetYaml(const std::string& path) {
+    if (path.find(".yaml") == std::string::npos && path.find(".yml") == std::string::npos) {
+        return false;
+    }
+    return path.find("config.yml") == std::string::npos && path.find("hashes.yaml") == std::string::npos;
+}
+
+fs::path Companion::GetYamlDirectory(const std::string& yamlPath, YAML::Node& root) const {
+    auto relPath = relative(fs::path(yamlPath), this->gAssetPath).replace_extension("");
+    if (StringHelper::StartsWith(relPath.string(), "../"))
+        relPath = relative(fs::path(yamlPath), this->gCommonAssetPath).replace_extension("");
+
+    if (auto directory = root[":config"]["directory"]) {
+        return directory.as<std::string>();
+    }
+    return relPath;
+}
+
+void Companion::ResolveFileKey(YAML::Node& node) {
+    if (this->gFileAddresses.empty() || !node.IsMap() || !node["file"] || node["offset"]) {
+        return;
+    }
+    const auto name = node["file"].as<std::string>();
+    const auto it = this->gFileAddresses.find(name);
+    if (it == this->gFileAddresses.end()) {
+        throw std::runtime_error("Unknown file '" + name + "' referenced by a file: key");
+    }
+    const auto fileSize = Torch::contains(this->gFileSizes, name) ? this->gFileSizes.at(name) : 0;
+    const auto fileOffset = GetSafeNode<uint32_t>(node, "file_offset", 0);
+    if (fileSize != 0 && fileOffset >= fileSize) {
+        throw std::runtime_error("file_offset 0x" + Torch::to_hex(fileOffset, false) + " is outside '" + name + "'");
+    }
+    char hex[16];
+    std::snprintf(hex, sizeof(hex), "0x%X", it->second + fileOffset);
+    node["offset"] = std::string(hex);
+    if (!node["size"] && fileSize != 0 && fileOffset == 0) {
+        node["size"] = fileSize;
+    }
+    if (node["size"] && fileSize != 0 && fileOffset + node["size"].as<uint32_t>() > fileSize) {
+        throw std::runtime_error("Asset at file_offset 0x" + Torch::to_hex(fileOffset, false) + " runs past the end of '" +
+                                 name + "'");
+    }
+}
+
+void Companion::BuildGlobalAddrSpace(const std::vector<fs::directory_entry>& entries) {
+    this->gGlobalAddrMap.clear();
+    this->gGlobalVtxRanges.clear();
+    this->gGlobalVariants.clear();
+    this->gRuntimeBuffers.clear();
+
+    for (const auto& entry : entries) {
+        if (entry.is_directory()) {
+            continue;
+        }
+        const auto yamlPath = entry.path().generic_string();
+        if (!IsAssetYaml(yamlPath)) {
+            continue;
+        }
+
+        YAML::Node root = YAML::LoadFile(yamlPath);
+        const auto directory = GetYamlDirectory(yamlPath, root);
+
+        for (auto asset = root.begin(); asset != root.end(); ++asset) {
+            const auto name = asset->first.as<std::string>();
+            auto node = asset->second;
+            if (name.find(":config") != std::string::npos || !node.IsMap()) {
+                continue;
+            }
+
+            ResolveFileKey(node);
+            if (!node["offset"]) {
+                continue;
+            }
+
+            const auto offset = GetFileOffsetFromNodeStr(node["offset"].as<std::string>());
+            auto output = (directory / name).string();
+            std::replace(output.begin(), output.end(), '\\', '/');
+
+            if (name.find('@') != std::string::npos) {
+                this->gGlobalVariants[offset].emplace_back(output, node);
+                continue;
+            }
+
+            if (node["type"] && GetTypeNode(node) == "AC:RUNTIME_BUFFER") {
+                const auto size = GetSafeNode<uint32_t>(node, "size");
+                this->gRuntimeBuffers[offset] = { offset + size, GetSafeNode<uint32_t>(node, "segment"),
+                                                  GetSafeNode<uint32_t>(node, "segment_offset"), output };
+            }
+
+            if (auto it = this->gGlobalAddrMap.find(offset); it != this->gGlobalAddrMap.end()) {
+                if (std::get<0>(it->second) != output) {
+                    SPDLOG_WARN("Global address 0x{:X} declared by both {} and {}", offset, std::get<0>(it->second),
+                                output);
+                }
+                continue;
+            }
+            this->gGlobalAddrMap[offset] = std::make_tuple(output, node);
+
+            if (node["type"] && GetTypeNode(node) == "VTX" && node["count"]) {
+                const auto end = offset + node["count"].as<uint32_t>() * 16;
+                this->gGlobalVtxRanges[offset] = { end, output, node };
+            }
+        }
+    }
+
+    SPDLOG_INFO("Global address space: {} assets, {} vertex blocks", this->gGlobalAddrMap.size(),
+                this->gGlobalVtxRanges.size());
+}
+
+std::optional<std::tuple<std::string, YAML::Node>> Companion::GetGlobalNodeByAddr(uint32_t addr) {
+    if (auto it = this->gGlobalAddrMap.find(addr); it != this->gGlobalAddrMap.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+std::vector<std::tuple<std::string, YAML::Node>> Companion::GetVariantsByAddr(uint32_t addr) {
+    if (auto it = this->gGlobalVariants.find(addr); it != this->gGlobalVariants.end()) {
+        return it->second;
+    }
+    return {};
+}
+
+std::optional<uint32_t> Companion::MapRuntimeBuffer(uint32_t addr) {
+    auto it = this->gRuntimeBuffers.upper_bound(addr);
+    if (it == this->gRuntimeBuffers.begin()) {
+        return std::nullopt;
+    }
+    --it;
+    if (addr < it->first || addr >= it->second.end) {
+        return std::nullopt;
+    }
+    return ((it->second.segment << 24) | (it->second.segmentOffset + (addr - it->first))) | 1;
+}
+
+std::optional<std::tuple<std::string, YAML::Node>> Companion::SearchGlobalVtx(uint32_t addr) {
+    auto it = this->gGlobalVtxRanges.upper_bound(addr);
+    if (it == this->gGlobalVtxRanges.begin()) {
+        return std::nullopt;
+    }
+    --it;
+    if (addr >= it->first && addr < it->second.end) {
+        return std::make_tuple(it->second.name, it->second.node);
+    }
+    return std::nullopt;
+}
+
+std::vector<std::string> Companion::Manifest(const fs::path& root, const std::vector<std::string>& ymls) {
+    std::vector<fs::path> files;
+    auto collect = [&](const fs::path& dir) {
+        for (const auto& entry : fs::recursive_directory_iterator(dir)) {
+            if (entry.is_regular_file() && IsAssetYaml(entry.path().generic_string())) {
+                files.push_back(entry.path());
+            }
+        }
+    };
+
+    if (ymls.empty()) {
+        collect(root);
+    }
+    for (const auto& yml : ymls) {
+        fs::path path = yml;
+        if (!fs::exists(path) && path.is_relative()) {
+            path = root / path;
+        }
+        if (fs::is_directory(path)) {
+            collect(path);
+        } else {
+            files.push_back(path);
+        }
+    }
+
+    std::vector<std::string> out;
+    for (const auto& file : files) {
+        YAML::Node yaml = YAML::LoadFile(file.string());
+        fs::path directory = fs::relative(file, root).replace_extension("");
+        if (yaml[":config"] && yaml[":config"]["directory"]) {
+            directory = yaml[":config"]["directory"].as<std::string>();
+        }
+
+        for (auto asset = yaml.begin(); asset != yaml.end(); ++asset) {
+            const auto name = asset->first.as<std::string>();
+            auto node = asset->second;
+            if (name.find(":config") != std::string::npos || !node.IsMap() || !node["type"]) {
+                continue;
+            }
+            if (node["no_export"] && node["no_export"].as<bool>()) {
+                continue;
+            }
+            if (GetTypeNode(node) == "AC:RUNTIME_BUFFER") {
+                continue;
+            }
+            out.push_back((directory / name).generic_string());
+        }
+    }
+
+    std::sort(out.begin(), out.end());
+    return out;
 }

@@ -88,13 +88,13 @@ ExportResult AudioTableBinaryExporter::Export(std::ostream& write, std::shared_p
     writer.Write((uint32_t)data->entries.size());
 
     for (auto& entry : data->entries) {
-        if (data->type == AudioTableType::FONT_TABLE && entry.crc == 0) {
-            throw std::runtime_error("Fuck this thing");
-        }
         if (entry.size == 0) {
-            auto item = AudioContext::tables[AudioTableType::SEQ_TABLE].info->entries[entry.addr];
-            writer.Write(item.crc);
+            const auto& linked = data->entries.at(entry.addr);
+            writer.Write(linked.crc);
         } else {
+            if (data->type == AudioTableType::FONT_TABLE && entry.crc == 0) {
+                throw std::runtime_error("Sound font table entry has no exported font");
+            }
             writer.Write(entry.crc);
         }
         writer.Write(entry.size);
@@ -189,6 +189,12 @@ std::optional<std::shared_ptr<IParsedData>> AudioTableFactory::parse(std::vector
         uint64_t crc = 0;
 
         auto entry = AudioTableEntry{ addr, size, medium, policy, sd1, sd2, sd3, crc };
+
+        if (size == 0) {
+            entries.push_back(entry);
+            continue;
+        }
+
         AudioContext::tables[type].entries[addr] = entry;
 
         switch (type) {

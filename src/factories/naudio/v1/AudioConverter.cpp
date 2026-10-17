@@ -176,7 +176,7 @@ void AudioConverter::SampleV1ToAIFC(NSampleData* sample, LUS::BinaryWriter& out)
 
 void AudioConverter::SampleV1ToAIFC(NSampleData* sample, const ADPCMLoopData* loop, const ADPCMBookData* book,
                                     LUS::BinaryWriter& out) {
-    auto entry = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
+    auto& entry = AudioContext::tables[AudioTableType::SAMPLE_TABLE];
     auto sampleData = entry.buffer.data() + entry.info->entries[sample->sampleBankId].addr + sample->sampleAddr;
     auto aifc = AIFCWriter();
     std::vector<uint8_t> data(sampleData, sampleData + sample->size);
