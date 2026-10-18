@@ -97,25 +97,21 @@ $(function(){initNavTree('structBK64_1_1CubeData.html','','structBK64_1_1CubeDat
 <tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:afcdcbf0e91f6166549df49b5cbdab040" id="r_afcdcbf0e91f6166549df49b5cbdab040"><td class="memItemLeft" align="right" valign="top"><a id="afcdcbf0e91f6166549df49b5cbdab040" name="afcdcbf0e91f6166549df49b5cbdab040"></a>
-int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>x</b>: 5</td></tr>
+int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>x</b></td></tr>
 <tr class="memitem:aca868e66d430be64a18d2e0b6be58b5c" id="r_aca868e66d430be64a18d2e0b6be58b5c"><td class="memItemLeft" align="right" valign="top"><a id="aca868e66d430be64a18d2e0b6be58b5c" name="aca868e66d430be64a18d2e0b6be58b5c"></a>
-int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>y</b>: 5</td></tr>
+int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>y</b></td></tr>
 <tr class="memitem:a1d95de6fa8cb13305a1d774ee2020d55" id="r_a1d95de6fa8cb13305a1d774ee2020d55"><td class="memItemLeft" align="right" valign="top"><a id="a1d95de6fa8cb13305a1d774ee2020d55" name="a1d95de6fa8cb13305a1d774ee2020d55"></a>
-int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>z</b>: 5</td></tr>
-<tr class="memitem:a170be9f857fd69dc86b47f3c443b81dc" id="r_a170be9f857fd69dc86b47f3c443b81dc"><td class="memItemLeft" align="right" valign="top"><a id="a170be9f857fd69dc86b47f3c443b81dc" name="a170be9f857fd69dc86b47f3c443b81dc"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>prop1Cnt</b>: 6</td></tr>
-<tr class="memitem:a79a0343c38e5c8f740c930c209cbc2ef" id="r_a79a0343c38e5c8f740c930c209cbc2ef"><td class="memItemLeft" align="right" valign="top"><a id="a79a0343c38e5c8f740c930c209cbc2ef" name="a79a0343c38e5c8f740c930c209cbc2ef"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>prop2Cnt</b>: 6</td></tr>
-<tr class="memitem:aa7ee02891a1ee4edaad734ba1b98d45e" id="r_aa7ee02891a1ee4edaad734ba1b98d45e"><td class="memItemLeft" align="right" valign="top"><a id="aa7ee02891a1ee4edaad734ba1b98d45e" name="aa7ee02891a1ee4edaad734ba1b98d45e"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>unk0_4</b>: 5</td></tr>
+int32_t&#160;</td><td class="memItemRight" valign="bottom"><b>z</b></td></tr>
+<tr class="memitem:a0973bc94c26b5257c5b6d27a20d36bc0" id="r_a0973bc94c26b5257c5b6d27a20d36bc0"><td class="memItemLeft" align="right" valign="top"><a id="a0973bc94c26b5257c5b6d27a20d36bc0" name="a0973bc94c26b5257c5b6d27a20d36bc0"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>listedEmpty</b> = false</td></tr>
 <tr class="memitem:af69e76efb3a1733718b5c9c07ec510ca" id="r_af69e76efb3a1733718b5c9c07ec510ca"><td class="memItemLeft" align="right" valign="top"><a id="af69e76efb3a1733718b5c9c07ec510ca" name="af69e76efb3a1733718b5c9c07ec510ca"></a>
 std::vector&lt; <a class="el" href="structBK64_1_1NodeProp.html">NodeProp</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>nodeProps</b></td></tr>
 <tr class="memitem:ad2166e53edb91068b65a65941f675196" id="r_ad2166e53edb91068b65a65941f675196"><td class="memItemLeft" align="right" valign="top"><a id="ad2166e53edb91068b65a65941f675196" name="ad2166e53edb91068b65a65941f675196"></a>
-std::vector&lt; <a class="el" href="unionBK64_1_1Prop.html">Prop</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>props</b></td></tr>
+std::vector&lt; <a class="el" href="structBK64_1_1Prop.html">Prop</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>props</b></td></tr>
 </table>
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="structBK64_1_1CubeData.html">CubeData</a>: one cell of the 32×32×32 spatial partition grid</p>
-<p>x/y/z are 5-bit grid coords (0-31). unk0_4 splits the NodeProps: [0..unk0_4) are regular spawns, [unk0_4..prop1Cnt) are events. </p>
+<p>Cells come in file order: x outermost, z innermost. </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>src/factories/bk64/<a class="el" href="MapFactory_8h_source.html">MapFactory.h</a></li>
 </ul>

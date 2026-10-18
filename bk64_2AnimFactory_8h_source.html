@@ -157,24 +157,33 @@ $(function(){initNavTree('bk64_2AnimFactory_8h_source.html','',''); });
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>};</div>
 </div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
-<div class="foldopen" id="foldopen00055" data-start="{" data-end="};">
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno"><a class="line" href="classBK64_1_1AnimFactory.html">   55</a></span><span class="keyword">class </span><a class="code hl_class" href="classBK64_1_1AnimFactory.html">AnimFactory</a> : <span class="keyword">public</span> <a class="code hl_class" href="classBaseFactory.html">BaseFactory</a> {</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  <span class="keyword">public</span>:</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    std::optional&lt;std::shared_ptr&lt;IParsedData&gt;&gt; parse(std::vector&lt;uint8_t&gt;&amp; buffer, YAML::Node&amp; data) <span class="keyword">override</span>;</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    std::optional&lt;std::shared_ptr&lt;IParsedData&gt;&gt; parse_modding(std::vector&lt;uint8_t&gt;&amp; buffer, YAML::Node&amp; data) <span class="keyword">override</span>;</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keyword">inline</span> std::unordered_map&lt;ExportType, std::shared_ptr&lt;BaseExporter&gt;&gt; GetExporters()<span class="keyword"> override </span>{</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        <span class="keywordflow">return</span> { REGISTER(Code, <a class="code hl_class" href="classBK64_1_1AnimCodeExporter.html">AnimCodeExporter</a>) REGISTER(Header, <a class="code hl_class" href="classBK64_1_1BKHeaderExporter.html">BKHeaderExporter</a>)</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>                     REGISTER(Binary, <a class="code hl_class" href="classBK64_1_1AnimBinaryExporter.html">AnimBinaryExporter</a>) REGISTER(Modding, <a class="code hl_class" href="classBK64_1_1AnimModdingExporter.html">AnimModdingExporter</a>) };</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    }</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordtype">bool</span> SupportModdedAssets()<span class="keyword"> override </span>{</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    }</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>};</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>std::shared_ptr&lt;AnimData&gt; ReadAnimRom(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; bytes, std::string&amp; error);</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>std::vector&lt;uint8_t&gt; WriteAnimRom(<span class="keyword">const</span> <a class="code hl_class" href="classBK64_1_1AnimData.html">AnimData</a>&amp; anim);</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span><span class="comment">// A BKAnimation resource, as AnimBinaryExporter writes it.</span></div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>std::shared_ptr&lt;AnimData&gt; ReadAnimResource(<span class="keyword">const</span> std::vector&lt;uint8_t&gt;&amp; resource, std::string&amp; error);</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>std::vector&lt;uint8_t&gt; WriteAnimResource(<span class="keyword">const</span> <a class="code hl_class" href="classBK64_1_1AnimData.html">AnimData</a>&amp; anim);</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>std::string AnimToYaml(<span class="keyword">const</span> <a class="code hl_class" href="classBK64_1_1AnimData.html">AnimData</a>&amp; anim, <span class="keyword">const</span> std::string&amp; symbol);</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span><span class="keywordtype">bool</span> AnimFromYaml(<span class="keyword">const</span> std::string&amp; text, <a class="code hl_class" href="classBK64_1_1AnimData.html">AnimData</a>&amp; out, std::string&amp; error);</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>
+<div class="foldopen" id="foldopen00063" data-start="{" data-end="};">
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno"><a class="line" href="classBK64_1_1AnimFactory.html">   63</a></span><span class="keyword">class </span><a class="code hl_class" href="classBK64_1_1AnimFactory.html">AnimFactory</a> : <span class="keyword">public</span> <a class="code hl_class" href="classBaseFactory.html">BaseFactory</a> {</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>  <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    std::optional&lt;std::shared_ptr&lt;IParsedData&gt;&gt; parse(std::vector&lt;uint8_t&gt;&amp; buffer, YAML::Node&amp; data) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    std::optional&lt;std::shared_ptr&lt;IParsedData&gt;&gt; parse_modding(std::vector&lt;uint8_t&gt;&amp; buffer, YAML::Node&amp; data) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="keyword">inline</span> std::unordered_map&lt;ExportType, std::shared_ptr&lt;BaseExporter&gt;&gt; GetExporters()<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>        <span class="keywordflow">return</span> { REGISTER(Code, <a class="code hl_class" href="classBK64_1_1AnimCodeExporter.html">AnimCodeExporter</a>) REGISTER(Header, <a class="code hl_class" href="classBK64_1_1BKHeaderExporter.html">BKHeaderExporter</a>)</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>                     REGISTER(Binary, <a class="code hl_class" href="classBK64_1_1AnimBinaryExporter.html">AnimBinaryExporter</a>) REGISTER(Modding, <a class="code hl_class" href="classBK64_1_1AnimModdingExporter.html">AnimModdingExporter</a>) };</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    }</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    <span class="keywordtype">bool</span> SupportModdedAssets()<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    }</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>};</div>
 </div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>} <span class="comment">// namespace BK64</span></div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>} <span class="comment">// namespace BK64</span></div>
 <div class="ttc" id="aclassBK64_1_1AnimBinaryExporter_html"><div class="ttname"><a href="classBK64_1_1AnimBinaryExporter.html">BK64::AnimBinaryExporter</a></div><div class="ttdef"><b>Definition</b> AnimFactory.h:40</div></div>
 <div class="ttc" id="aclassBK64_1_1AnimCodeExporter_html"><div class="ttname"><a href="classBK64_1_1AnimCodeExporter.html">BK64::AnimCodeExporter</a></div><div class="ttdef"><b>Definition</b> AnimFactory.h:45</div></div>
-<div class="ttc" id="aclassBK64_1_1AnimFactory_html"><div class="ttname"><a href="classBK64_1_1AnimFactory.html">BK64::AnimFactory</a></div><div class="ttdef"><b>Definition</b> AnimFactory.h:55</div></div>
+<div class="ttc" id="aclassBK64_1_1AnimData_html"><div class="ttname"><a href="classBK64_1_1AnimData.html">BK64::AnimData</a></div><div class="ttdef"><b>Definition</b> AnimFactory.h:29</div></div>
+<div class="ttc" id="aclassBK64_1_1AnimFactory_html"><div class="ttname"><a href="classBK64_1_1AnimFactory.html">BK64::AnimFactory</a></div><div class="ttdef"><b>Definition</b> AnimFactory.h:63</div></div>
 <div class="ttc" id="aclassBK64_1_1AnimModdingExporter_html"><div class="ttname"><a href="classBK64_1_1AnimModdingExporter.html">BK64::AnimModdingExporter</a></div><div class="ttdef"><b>Definition</b> AnimFactory.h:50</div></div>
 <div class="ttc" id="aclassBK64_1_1BKHeaderExporter_html"><div class="ttname"><a href="classBK64_1_1BKHeaderExporter.html">BK64::BKHeaderExporter</a></div><div class="ttdef"><b>Definition</b> BKHeaderExporter.h:8</div></div>
 <div class="ttc" id="aclassBaseExporter_html"><div class="ttname"><a href="classBaseExporter.html">BaseExporter</a></div><div class="ttdef"><b>Definition</b> BaseFactory.h:96</div></div>

@@ -130,10 +130,13 @@ uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>unk10_0</b>: 2</t
 <a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="structBK64_1_1NodeProp.html">NodeProp</a>: spawn point, warp, trigger, or event marker - 20 bytes Decomp: <a class="el" href="structBK64_1_1NodeProp.html">NodeProp</a> from props.h</p>
 <p>These are the spatial triggers and spawn locations for a level. At load time cubeList_fromFile (actor_cubebounds.c) turns each one into an ActorMarker. The category field is what decides what it actually does:</p><ul>
+<li>3 = Warp (touching it warps the player; actorId picks the warp)</li>
+<li>4 = Contact trigger (touching it runs the action actorId picks)</li>
 <li>6 = Actor spawn point (spawns an entity via markerActorTypeArray dispatch)</li>
-<li>7 = Warp destination (teleports the player to another map)</li>
-<li>9 = Trigger zone (fires events when the player enters the radius)</li>
-<li>0xA = Event marker, used by level-specific systems</li>
+<li>7 = Enemy area (keeps enemies inside it)</li>
+<li>8 = Path point</li>
+<li>9 = Camera zone (switches to camera actorId while the player is inside)</li>
+<li>0xA = Collectible ID zone (numbers the jiggies, honeycombs and tokens inside it) With bit0 set the record is a path waypoint instead, and every field after the position is packed waypoint data.</li>
 </ul>
 <p>Flow: ROM → <a class="el" href="classBK64_1_1MapFactory.html">MapFactory</a> parse() → <a class="el" href="structBK64_1_1NodeProp.html">NodeProp</a> array → cubeList_fromFile → ActorMarker → actor spawn / event trigger via overlay callbacks</p>
 <p>Structure Layout: Offset 0x00: position[3] (s16[3]) - X, Y, Z world coordinates Offset 0x06: selector_or_radius:9, category:6, bit0:1 (u16) Offset 0x08: actorId (u16) - Actor/Warp/Event ID depending on category Offset 0x0A: markerId (u8), padB (u8) Offset 0x0C: yaw:9, scale:23 (u32) Offset 0x10: unk10_31:12, unk10_19:12, pad10_7:1, unk10_6:1, pad10_5:4, unk10_0:2 (u32) </p>

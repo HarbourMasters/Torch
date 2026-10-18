@@ -1,5 +1,10 @@
 var NAVTREEINDEX2 =
 {
+"classSF64_1_1AnimFactory.html":[1,0,9,3],
+"classSF64_1_1AnimHeaderExporter.html":[1,0,9,4],
+"classSF64_1_1ColPolyBinaryExporter.html":[1,0,9,6],
+"classSF64_1_1ColPolyCodeExporter.html":[1,0,9,7],
+"classSF64_1_1ColPolyData.html":[1,0,9,8],
 "classSF64_1_1ColPolyFactory.html":[1,0,9,9],
 "classSF64_1_1ColPolyHeaderExporter.html":[1,0,9,10],
 "classSF64_1_1EnvironmentBinaryExporter.html":[1,0,9,11],
@@ -244,10 +249,5 @@ var NAVTREEINDEX2 =
 "otr_generic_array.html#autotoc_md18":[0,3,12,0,0],
 "otr_generic_array.html#autotoc_md19":[0,3,12,0,0,0],
 "otr_generic_array.html#autotoc_md20":[0,3,12,0,1],
-"otr_generic_array.html#autotoc_md21":[0,3,12,0,1,0],
-"otr_light.html":[0,3,2],
-"otr_light.html#autotoc_md22":[0,3,2,0],
-"otr_light.html#autotoc_md23":[0,3,2,0,0],
-"otr_light.html#autotoc_md24":[0,3,2,0,0,0],
-"otr_light.html#autotoc_md25":[0,3,2,0,1]
+"otr_generic_array.html#autotoc_md21":[0,3,12,0,1,0]
 };

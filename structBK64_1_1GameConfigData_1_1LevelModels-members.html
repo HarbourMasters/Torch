@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.14.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Torch: BK64::SpriteProp Struct Reference</title>
+<title>Torch: Member List</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -62,7 +62,7 @@ $(function() {
   </div>
 </div>
 <script type="text/javascript">
-$(function(){initNavTree('structBK64_1_1SpriteProp.html','','structBK64_1_1SpriteProp-members'); });
+$(function(){initNavTree('structBK64_1_1GameConfigData_1_1LevelModels.html','',''); });
 </script>
 <div id="container">
 <div id="doc-content">
@@ -88,43 +88,24 @@ $(function(){initNavTree('structBK64_1_1SpriteProp.html','','structBK64_1_1Sprit
 </div>
 
 <div class="header">
-  <div class="headertitle"><div class="title">BK64::SpriteProp Struct Reference</div></div>
+  <div class="headertitle"><div class="title">BK64::GameConfigData::LevelModels Member List</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p><code>#include &lt;<a class="el" href="MapFactory_8h_source.html">MapFactory.h</a>&gt;</code></p>
-<table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 id="header-pub-attribs" class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
-Public Attributes</h2></td></tr>
-<tr class="memitem:a9ae78a6955a62f11db630ce2cac4231e" id="r_a9ae78a6955a62f11db630ce2cac4231e"><td class="memItemLeft" align="right" valign="top"><a id="a9ae78a6955a62f11db630ce2cac4231e" name="a9ae78a6955a62f11db630ce2cac4231e"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>word0</b></td></tr>
-<tr class="memitem:aed9d953c77f0e0722c7e11d27aa870ef" id="r_aed9d953c77f0e0722c7e11d27aa870ef"><td class="memItemLeft" align="right" valign="top"><a id="aed9d953c77f0e0722c7e11d27aa870ef" name="aed9d953c77f0e0722c7e11d27aa870ef"></a>
-int16_t&#160;</td><td class="memItemRight" valign="bottom"><b>unk4</b> [3]</td></tr>
-<tr class="memitem:a8582465e0bd4f5745a72810b68bcbc2b" id="r_a8582465e0bd4f5745a72810b68bcbc2b"><td class="memItemLeft" align="right" valign="top"><a id="a8582465e0bd4f5745a72810b68bcbc2b" name="a8582465e0bd4f5745a72810b68bcbc2b"></a>
-uint16_t&#160;</td><td class="memItemRight" valign="bottom"><b>wordA</b></td></tr>
-</table>
-<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
-<div class="textblock"><p><a class="el" href="structBK64_1_1SpriteProp.html">SpriteProp</a>: 2D billboard sprite (is_actor=0, is_3d=0) - 12 bytes Decomp: sprite_prop_s from props.h</p>
-<p>Complete Structure Layout (12 bytes): Offset 0x00-0x03: word0 (32-bit packed) - sprite appearance/rendering parameters Offset 0x04-0x09: unk4[3] (s16[3]) - X, Y, Z world position Offset 0x0A-0x0B: wordA (16-bit packed) - animation frame + discriminator flags</p>
-<p>Packed Field Layout (word0 - 32-bit big-endian at offset 0x00): Bits 31-20: spriteId (12 bits) → Asset ID = spriteId + SPRITE_ASSET_OFFSET (0x572) Bit 19: unk0_19 (1 bit) Bits 18-16: rgb_remove_red (3 bits, 0-7 color removal value) Bits 15-13: rgb_remove_green (3 bits, 0-7 color removal value) Bits 12-10: rgb_remove_blue (3 bits, 0-7 color removal value) Bits 9-2: scale (8 bits) Bit 1: isMirrored (1 bit, horizontal flip) Bit 0: pad0_0 (1 bit)</p>
-<p>Packed Field Layout (wordA - 16-bit big-endian at offset 0x0A): Bits 15-11: frame (5 bits, animation frame index) Bits 10-6: unk8_10 (5 bits) Bit 5: unk8_5 (1 bit) Bit 4: isNotFeatherEggOrNote (1 bit) Bit 3: unk8_3 (1 bit) Bit 2: isCollisionResolved (1 bit) Bit 1: isModelProp (1 bit, always 0 for sprites) Bit 0: isActorProp (1 bit, always 0 for sprites) </p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
-<li>src/factories/bk64/<a class="el" href="MapFactory_8h_source.html">MapFactory.h</a></li>
-</ul>
-</div><!-- contents -->
+<p>This is the complete list of members for <a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a>, including all inherited members.</p>
+<table class="directory">
+  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>cubeMax</b> (defined in <a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a>)</td><td class="entry"><a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a></td><td class="entry"></td></tr>
+  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>cubeMin</b> (defined in <a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a>)</td><td class="entry"><a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a></td><td class="entry"></td></tr>
+  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>map</b> (defined in <a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a>)</td><td class="entry"><a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a></td><td class="entry"></td></tr>
+  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>opaque</b> (defined in <a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a>)</td><td class="entry"><a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a></td><td class="entry"></td></tr>
+  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>scale</b> (defined in <a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a>)</td><td class="entry"><a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a></td><td class="entry"></td></tr>
+  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>translucent</b> (defined in <a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a>)</td><td class="entry"><a class="el" href="structBK64_1_1GameConfigData_1_1LevelModels.html">BK64::GameConfigData::LevelModels</a></td><td class="entry"></td></tr>
+</table></div><!-- contents -->
 </div><!-- doc-content -->
-<div id="page-nav" class="page-nav-panel">
-<div id="page-nav-resize-handle"></div>
-<div id="page-nav-tree">
-<div id="page-nav-contents">
-</div><!-- page-nav-contents -->
-</div><!-- page-nav-tree -->
-</div><!-- page-nav -->
 </div><!-- container -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="navelem"><b>BK64</b></li><li class="navelem"><a href="structBK64_1_1SpriteProp.html">SpriteProp</a></li>
     <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.14.0 </li>
   </ul>
 </div>

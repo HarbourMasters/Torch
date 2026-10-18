@@ -104,11 +104,10 @@ Inheritance diagram for BK64::GeoLayoutFactory:</div>
 <tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a46b0f1846230d4ced575289f3741ad13" id="r_a46b0f1846230d4ced575289f3741ad13"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a46b0f1846230d4ced575289f3741ad13">parse</a> (std::vector&lt; uint8_t &gt; &amp;buffer, YAML::Node &amp;data) override</td></tr>
+<tr class="memitem:ab496f9e7285b8540d0d6adfa946ee8bb" id="r_ab496f9e7285b8540d0d6adfa946ee8bb"><td class="memItemLeft" align="right" valign="top">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab496f9e7285b8540d0d6adfa946ee8bb">parse_modding</a> (std::vector&lt; uint8_t &gt; &amp;buffer, YAML::Node &amp;data) override</td></tr>
 <tr class="memitem:a41d0f1f65bd4395175511f4236c21325" id="r_a41d0f1f65bd4395175511f4236c21325"><td class="memItemLeft" align="right" valign="top">std::unordered_map&lt; ExportType, std::shared_ptr&lt; <a class="el" href="classBaseExporter.html">BaseExporter</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a41d0f1f65bd4395175511f4236c21325">GetExporters</a> () override</td></tr>
 <tr class="memitem:a9be330fcbf348b2daf404a6c08689c94" id="r_a9be330fcbf348b2daf404a6c08689c94"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9be330fcbf348b2daf404a6c08689c94">SupportModdedAssets</a> () override</td></tr>
 <tr class="inherit_header pub_methods_classBaseFactory"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classBaseFactory')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Public Member Functions inherited from <a class="el" href="classBaseFactory.html">BaseFactory</a></td></tr>
-<tr class="memitem:a6cbfdb0696ed86e946ba6fa477de6a89 inherit pub_methods_classBaseFactory" id="r_a6cbfdb0696ed86e946ba6fa477de6a89"><td class="memItemLeft" align="right" valign="top">
-virtual std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>parse_modding</b> (std::vector&lt; uint8_t &gt; &amp;buffer, YAML::Node &amp;data)</td></tr>
 <tr class="memitem:a336ae0007578da0f6149a78bc4ba80a8 inherit pub_methods_classBaseFactory" id="r_a336ae0007578da0f6149a78bc4ba80a8"><td class="memItemLeft" align="right" valign="top">
 std::optional&lt; std::shared_ptr&lt; <a class="el" href="classBaseExporter.html">BaseExporter</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>GetExporter</b> (ExportType type)</td></tr>
 <tr class="memitem:a1b9f75eb437ae27264cfec237f2c3043 inherit pub_methods_classBaseFactory" id="r_a1b9f75eb437ae27264cfec237f2c3043"><td class="memItemLeft" align="right" valign="top">
@@ -180,6 +179,37 @@ virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>CanPreviewCod
 </div><div class="memdoc">
 
 <p>Implements <a class="el" href="classBaseFactory.html">BaseFactory</a>.</p>
+
+</div>
+</div>
+<a id="ab496f9e7285b8540d0d6adfa946ee8bb" name="ab496f9e7285b8540d0d6adfa946ee8bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab496f9e7285b8540d0d6adfa946ee8bb">&#9670;&#160;</a></span>parse_modding()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; std::shared_ptr&lt; <a class="el" href="classIParsedData.html">IParsedData</a> &gt; &gt; BK64::GeoLayoutFactory::parse_modding </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; uint8_t &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>buffer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">YAML::Node &amp;</td>          <td class="paramname"><span class="paramname"><em>data</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel override">override</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classBaseFactory.html">BaseFactory</a>.</p>
 
 </div>
 </div>

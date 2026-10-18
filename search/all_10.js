@@ -67,5 +67,6 @@ var searchData=
   ['previewlighting_64',['PreviewLighting',['../structUI_1_1PreviewLighting.html',1,'UI']]],
   ['previewvertex_65',['PreviewVertex',['../structUI_1_1PreviewVertex.html',1,'UI']]],
   ['programinfo_66',['ProgramInfo',['../structPM64Audio_1_1ProgramInfo.html',1,'PM64Audio']]],
-  ['prop_67',['Prop',['../unionBK64_1_1Prop.html',1,'BK64']]]
+  ['prop_67',['Prop',['../structBK64_1_1Prop.html',1,'BK64']]],
+  ['puzzle_68',['Puzzle',['../structBK64_1_1GameConfigData_1_1Puzzle.html',1,'BK64::GameConfigData']]]
 ];

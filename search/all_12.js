@@ -16,5 +16,7 @@ var searchData=
   ['resource_20types_13',['Resource Types',['../otr_format.html#autotoc_md31',1,'']]],
   ['resource_20vc3f_14',['Vector 3 Float Resource (VC3F)',['../otr_vec3f.html#autotoc_md41',1,'']]],
   ['resource_20vc3s_15',['Vector 3 Short Resource (VC3S)',['../otr_vec3s.html#autotoc_md45',1,'']]],
-  ['rotationindex_16',['RotationIndex',['../structOoT_1_1RotationIndex.html',1,'OoT']]]
+  ['resourcereader_16',['ResourceReader',['../classBK64_1_1ResourceReader.html',1,'BK64']]],
+  ['rgbaimage_17',['RgbaImage',['../structBK64_1_1RgbaImage.html',1,'BK64']]],
+  ['rotationindex_18',['RotationIndex',['../structOoT_1_1RotationIndex.html',1,'OoT']]]
 ];
