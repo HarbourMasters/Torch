@@ -1,4 +1,6 @@
 #include "ModelFactory.h"
+#include "BKByteUtils.h"
+#include "BKTexture.h"
 
 #include "Companion.h"
 #include "spdlog/spdlog.h"
@@ -43,28 +45,6 @@ static const std::unordered_map<GBIVersion, std::unordered_map<std::string, uint
 };
 
 #define GBI(cmd) gGBITable.at(Companion::Instance->GetGBIVersion()).at(#cmd)
-
-// textureInfo_getBitDepth tests the type field bit by bit and takes the first one set, so a
-// texture with extra bits still resolves to a format. The game's ladder stops at 0x8; Torch
-// extends to 0x10.
-static std::string_view GetTextureFormat(uint16_t type) {
-    if (type & 0x1) {
-        return "CI4";
-    }
-    if (type & 0x2) {
-        return "CI8";
-    }
-    if (type & 0x4) {
-        return "RGBA16";
-    }
-    if (type & 0x8) {
-        return "RGBA32";
-    }
-    if (type & 0x10) {
-        return "IA8";
-    }
-    return {};
-}
 
 ExportResult ModelHeaderExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
                                          YAML::Node& node, std::string* replacement) {
@@ -260,7 +240,10 @@ ExportResult BK64::ModelBinaryExporter::Export(std::ostream& write, std::shared_
 
         // The falling jiggies transition rewrites its own texture at runtime, so leave its
         // G_SETTIMG alone. Touch it and you get the white fallback texture instead.
-        const bool isFramebufferSubstitutionModel = entryName.find("TRANSITION_FALLING_JIGGIES") != std::string::npos;
+        // transition.c picks it by asset id.
+        constexpr uint32_t kFallingJiggiesTransition = 0x467; // ASSET_467_MODEL_TRANSITION_FALLING_JIGGIES
+        const bool isFramebufferSubstitutionModel =
+            GetSafeNode<uint32_t>(node, "asset_id", 0) == kFallingJiggiesTransition;
         for (size_t i = 0; i + 1 < model->mRawDLWords.size(); i += 2) {
             uint32_t w0 = model->mRawDLWords[i];
             uint32_t w1 = model->mRawDLWords[i + 1];
@@ -512,15 +495,13 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             texInfo.tlutColors = 0;
             texInfo.textureDataOffset = textureDataOffset;
 
-            const auto format = GetTextureFormat(textureType);
-            if (format.empty()) {
+            const TexelFormat* format = ModelTextureFormat(textureType);
+            if (format == nullptr) {
                 throw std::runtime_error("BK64::ModelFactory: Invalid Texture Format Found " +
                                          std::to_string(textureType));
             }
-            if (format == "CI4") {
-                texInfo.tlutColors = 0x10;
-            } else if (format == "CI8") {
-                texInfo.tlutColors = 0x100;
+            if (IsIndexed(*format)) {
+                texInfo.tlutColors = (uint32_t)TlutColors(*format);
             }
 
             modelData->mTexInfos.push_back(texInfo);
@@ -543,8 +524,8 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             const auto& tex = modelData->mTexInfos[i];
             uint32_t texOffset = texDataStart + tex.textureDataOffset;
 
-            const std::string format{ GetTextureFormat(tex.type) };
-            if (format.empty()) {
+            const TexelFormat* format = ModelTextureFormat(tex.type);
+            if (format == nullptr) {
                 continue;
             }
             uint32_t tlutByteSize = tex.tlutColors * 2;
@@ -565,7 +546,7 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             YAML::Node texture;
             texture["type"] = "TEXTURE";
             texture["offset"] = texOffset + tlutByteSize;
-            texture["format"] = format;
+            texture["format"] = format->name;
             texture["ctype"] = "u16";
             texture["width"] = (int)tex.width;
             texture["height"] = (int)tex.height;
@@ -811,8 +792,8 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             if (at + kCollHeaderSize > segment.size) {
                 return false;
             }
-            uint16_t geoCnt = (uint16_t)((segment.data[at + 0x10] << 8) | segment.data[at + 0x11]);
-            uint16_t triCnt = (uint16_t)((segment.data[at + 0x14] << 8) | segment.data[at + 0x15]);
+            uint16_t geoCnt = ReadU16BE(segment.data + at + 0x10);
+            uint16_t triCnt = ReadU16BE(segment.data + at + 0x14);
             size_t needed = (size_t)kCollHeaderSize + (size_t)geoCnt * kGeoCubeSize + (size_t)triCnt * kCollTriSize;
             return at + needed <= segment.size;
         };

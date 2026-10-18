@@ -2,7 +2,9 @@
 
 #include "factories/BaseFactory.h"
 #include "factories/bk64/BKHeaderExporter.h"
+#include "factories/bk64/BKImage.h"
 #include "utils/TextureUtils.h"
+#include <functional>
 #include <string>
 #include <types/RawBuffer.h>
 #include <unordered_map>
@@ -25,6 +27,20 @@ struct SpriteFrameHeader {
     int16_t unk12;
 };
 
+struct SpriteChunk {
+    int16_t x;
+    int16_t y;
+    int16_t w;
+    int16_t h;
+    std::vector<uint8_t> texels; // as the ROM stores them
+};
+
+struct SpriteFrame {
+    SpriteFrameHeader header;
+    std::vector<uint8_t> tlut; // big-endian RGBA5551, 16 colors for CI4 and 256 for CI8
+    std::vector<SpriteChunk> chunks;
+};
+
 /**
  * A 2D billboard sprite.
  */
@@ -45,6 +61,9 @@ class SpriteData : public IParsedData {
     std::vector<uint16_t> mChunkCounts;                  // chunks per frame (length = mFrameCount)
     std::vector<std::pair<int16_t, int16_t>> mPositions; // (x, y) offset per chunk
     std::vector<SpriteFrameHeader> mFrameHeaders;        // per-frame header data
+    std::vector<SpriteFrame> mFrames;                    // empty for a sprite read without its texels
+    // Built from modding files, so the binary export writes the chunk textures too
+    bool mWriteTextures = false;
 
     SpriteData(int16_t frameCount, int16_t formatCode, std::vector<uint16_t> chunkCounts,
                std::vector<std::pair<int16_t, int16_t>> positions, std::vector<SpriteFrameHeader> frameHeaders = {},
@@ -71,6 +90,44 @@ class SpriteModdingExporter : public BaseExporter {
     ExportResult Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName, YAML::Node& node,
                         std::string* replacement) override;
 };
+
+using SpriteFileReader = std::function<bool(const std::string& name, std::vector<uint8_t>& out)>;
+
+struct SpriteFile {
+    std::string name;
+    std::vector<uint8_t> bytes;
+};
+
+// "CI4", "RGBA16" and so on, or nullptr for a code the game doesn't draw.
+const char* SpriteFormatName(int16_t code);
+// Null for the two raw textures stored where sprites go (a frame count over 0x100).
+std::shared_ptr<SpriteData> ReadSpriteRom(const std::vector<uint8_t>& bytes, std::string& error);
+std::vector<uint8_t> WriteSpriteRom(const SpriteData& sprite);
+// textures reads the "_<frame>_<chunk>" and "_<frame>_TLUT" resources beside the sprite.
+std::shared_ptr<SpriteData> ReadSpriteResource(const std::vector<uint8_t>& resource, const SpriteFileReader& textures,
+                                               std::string& error);
+// The sprite resource first, under "", then each texture resource under its suffix.
+std::vector<SpriteFile> WriteSpriteResource(const SpriteData& sprite);
+// images gets the frame images the yaml names, relative to the yaml.
+std::string SpriteToYaml(const SpriteData& sprite, const std::string& symbol, std::vector<SpriteFile>& images);
+// files reads the images the yaml names.
+bool SpriteFromYaml(const std::string& text, const SpriteFileReader& files, SpriteData& out, std::string& error);
+
+// A frame drawn on a canvas that covers the frame and all its chunks.
+struct SpriteCanvas {
+    RgbaImage image;
+    int16_t originX = 0; // the frame point at the canvas's top-left
+    int16_t originY = 0;
+};
+SpriteCanvas DrawSpriteFrame(const SpriteData& sprite, size_t frame);
+// New art for a frame. The pivot scales with it, and the chunks and bounds are redone. oneChunk keeps the frame
+// in one piece, which HUD sprites need.
+void SetSpriteFrameImage(SpriteData& sprite, size_t frame, const RgbaImage& image, bool oneChunk);
+// Art drawn on the frame's own canvas, as DrawSpriteFrame gives it. The chunks keep their places and the bounds are
+// redone. False when the canvas isn't that size.
+bool RedrawSpriteFrame(SpriteData& sprite, size_t frame, const RgbaImage& canvas);
+// Fills the frame count, chunk counts, positions and frame headers in from mFrames.
+void LayoutSprite(SpriteData& sprite);
 
 class SpriteFactory : public BaseFactory {
   public:

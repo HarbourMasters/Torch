@@ -555,7 +555,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                     (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
                 const auto relPath = std::filesystem::relative(externalFileName, this->gAssetPath).string();
                 const auto relCommonPath = std::filesystem::relative(externalFileName, this->gCommonAssetPath).string();
-                if (StringHelper::StartsWith(relPath , "../")) {
+                if (StringHelper::StartsWith(relPath, "../")) {
                     if (StringHelper::StartsWith(relCommonPath, "../"))
                         throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
                                                  this->gAssetPath);
@@ -640,9 +640,9 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 }
             } else {
                 throw std::runtime_error(
-                "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
-                "<file_offset>] or - [<segment>, "
-                "<file_name>] \n\nLike so:\nsegments:\n  - [0x06, 0x821D10] or [0x06, object_jya_obj");
+                    "Incorrect yaml syntax for segments.\n\nThe yaml expects:\n:config:\n  segments:\n  - [<segment>, "
+                    "<file_offset>] or - [<segment>, "
+                    "<file_name>] \n\nLike so:\nsegments:\n  - [0x06, 0x821D10] or [0x06, object_jya_obj");
             }
         }
 
@@ -1279,7 +1279,6 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
             if (IS_SEGMENTED(offset) == false) {
                 offset = (gCurrentSegmentNumber << 24) | offset;
                 node["offset"] = offset;
-
             }
         }
 
@@ -2699,6 +2698,5 @@ void Companion::ParseFilelist(const std::string& filelistPath) {
             const auto offset = kv.second.as<uint32_t>();
             gFileOffsets[file] = offset;
         }
-
     }
 }
