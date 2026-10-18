@@ -34,6 +34,7 @@ void N64::Cartridge::Initialize() {
             break;
     }
     reader.Close();
+    std::vector<uint8_t>().swap(this->gRomData);
 }
 
 const std::string& N64::Cartridge::GetGameTitle() {

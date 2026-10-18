@@ -974,6 +974,11 @@ void Companion::ProcessExportFile() {
 
         this->gCompanionFiles.clear();
 
+        // Binary output is already in the archive; the write map only feeds code and header export
+        if (this->gConfig.exporterType == ExportType::Binary) {
+            continue;
+        }
+
         if (result.node["offset"]) {
             auto alignment = GetSafeNode<uint32_t>(result.node, "alignment", impl->GetAlignment());
             if (!endptr.has_value()) {
@@ -1689,24 +1694,47 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
 
     std::vector<fs::directory_entry> entries = GetAssetYMLs(rom);
 
-    for (const auto& entry : entries) {
+    auto isAssetYaml = [](const fs::directory_entry& entry) {
         if (entry.is_directory()) {
+            return false;
+        }
+        const auto path = entry.path().generic_string();
+        return (path.find(".yaml") != std::string::npos || path.find(".yml") != std::string::npos) &&
+               path.find("config.yml") == std::string::npos && path.find("hashes.yaml") == std::string::npos;
+    };
+
+    // A file another yaml lists under external_files is looked up again when that yaml is processed,
+    // and a processed file is never reparsed, so only files nothing depends on are freed after export.
+    std::unordered_set<std::string> externalDependencies;
+    if (this->gConfig.exporterType == ExportType::Binary) {
+        for (const auto& entry : entries) {
+            if (!isAssetYaml(entry)) {
+                continue;
+            }
+            const YAML::Node root = YAML::LoadFile(entry.path().generic_string());
+            const auto config = root[":config"];
+            if (!config) {
+                continue;
+            }
+            const auto externalFiles = config["external_files"];
+            if (!externalFiles || !externalFiles.IsSequence()) {
+                continue;
+            }
+            for (const auto& externalFile : externalFiles) {
+                if (externalFile.IsScalar()) {
+                    externalDependencies.insert(
+                        (this->gSourceDirectory / externalFile.as<std::string>()).generic_string());
+                }
+            }
+        }
+    }
+
+    for (const auto& entry : entries) {
+        if (!isAssetYaml(entry)) {
             continue;
         }
 
         const auto yamlPath = entry.path().generic_string();
-
-        if (yamlPath.find(".yaml") == std::string::npos && yamlPath.find(".yml") == std::string::npos) {
-            continue;
-        }
-
-        if (yamlPath.find("config.yml") != std::string::npos) {
-            continue;
-        }
-
-        if (yamlPath.find("hashes.yaml") != std::string::npos) {
-            continue;
-        }
 
         YAML::Node root = YAML::LoadFile(yamlPath);
         this->gCurrentFile = yamlPath;
@@ -1827,6 +1855,23 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                             this->gProcessedFiles.insert(subFile);
                         }
                     }
+                }
+            }
+
+            // Keep memory usage low during extraction
+            if (this->gConfig.exporterType == ExportType::Binary) {
+                auto freeFile = [&](const std::string& file) {
+                    if (externalDependencies.contains(file)) {
+                        return;
+                    }
+                    this->gParseResults.erase(file);
+                    this->gAddrMap.erase(file);
+                    this->gNodesByTypeCache.erase(file);
+                    this->gNodesByTypeCacheValid.erase(file);
+                };
+                freeFile(yamlPath);
+                for (const auto& subFile : this->gSubFileList) {
+                    freeFile(subFile);
                 }
             }
         }
