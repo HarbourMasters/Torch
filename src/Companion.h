@@ -252,6 +252,7 @@ public:
     std::string RelativePathToSrcDir(const std::string& path) const;
     std::string RelativePathToDestDir(const std::string& path) const;
     void RegisterCompanionFile(const std::string path, std::vector<char> data);
+    void RegisterModdedAsset(const std::string& name, const std::string& file) { this->gModdedAssetPaths[name] = file; }
     void RegisterArchiveFile(const std::string& name, std::vector<char> data);
     void SetAdditionalFiles(const std::vector<std::string>& files) { this->gAdditionalFiles = files; }
     void SetVersion(const std::string& version) { this->gVersion = version; }

@@ -1,5 +1,7 @@
 #include "ConfigFactory.h"
 #include "BKByteUtils.h"
+#include "BKEmitText.h"
+#include "BKMapNames.h"
 #include "BKAssetTable.h"
 #include "Companion.h"
 #include "TinySHA1.hpp"
@@ -97,8 +99,7 @@ static const uint16_t sVanillaNoteDoors[12] = { 50, 180, 260, 350, 450, 640, 765
 // Jiggy puzzles (11 entries, 4 bytes each): { u8 cost; u8 size_bits; u16 progress_flag }.
 static const uint8_t sVanillaJiggyCosts[11] = { 1, 2, 5, 7, 8, 9, 10, 12, 15, 25, 4 };
 static const uint8_t sVanillaJiggySizes[11] = { 1, 2, 3, 3, 4, 4, 4, 4, 4, 5, 3 };
-static const uint16_t sVanillaJiggyFlags[11] = { 0x5D, 0x5E, 0x60, 0x63, 0x66,
-                                                 0x6A, 0x6E, 0x72, 0x76, 0x7A, 0x7F };
+static const uint16_t sVanillaJiggyFlags[11] = { 0x5D, 0x5E, 0x60, 0x63, 0x66, 0x6A, 0x6E, 0x72, 0x76, 0x7A, 0x7F };
 
 // Vanilla level names (pause menu display)
 static const char* sVanillaLevelNames[13] = { "GAME TOTAL",          "SPIRAL MOUNTAIN",     "GRUNTILDA'S LAIR",
@@ -181,9 +182,7 @@ static uint8_t* TryUnzipAt(const std::vector<uint8_t>& rom, uint32_t off, uint32
     }
     try {
         return bk_unzip(rom.data() + off, outSize);
-    } catch (...) {
-        return nullptr;
-    }
+    } catch (...) { return nullptr; }
 }
 
 static void Sha1Into(const uint8_t* data, size_t len, uint8_t out[20]) {
@@ -192,10 +191,7 @@ static void Sha1Into(const uint8_t* data, size_t len, uint8_t out[20]) {
     uint32_t digest[5];
     s.getDigest(digest);
     for (int i = 0; i < 5; i++) {
-        out[i * 4 + 0] = (digest[i] >> 24) & 0xFF;
-        out[i * 4 + 1] = (digest[i] >> 16) & 0xFF;
-        out[i * 4 + 2] = (digest[i] >> 8) & 0xFF;
-        out[i * 4 + 3] = digest[i] & 0xFF;
+        WriteU32BE(out + i * 4, digest[i]);
     }
 }
 
@@ -313,8 +309,8 @@ static uint8_t* FindPatchedOverlay(const std::vector<uint8_t>& rom, uint32_t& ou
     };
 
     for (const auto& pair : eorPairs) {
-        uint16_t pLui = (rom[pair.u] << 8) | rom[pair.u + 1];
-        uint16_t pAddiu = (rom[pair.l] << 8) | rom[pair.l + 1];
+        uint16_t pLui = ReadU16BE(rom.data() + pair.u);
+        uint16_t pAddiu = ReadU16BE(rom.data() + pair.l);
         uint32_t addr = (pLui << 16) + static_cast<int16_t>(pAddiu);
 
         if (addr == 0 || addr >= rom.size() - 6)
@@ -322,7 +318,7 @@ static uint8_t* FindPatchedOverlay(const std::vector<uint8_t>& rom, uint32_t& ou
         if (rom[addr] != 0x11 || rom[addr + 1] != 0x72)
             continue;
 
-        uint32_t expectedLen = (rom[addr + 2] << 24) | (rom[addr + 3] << 16) | (rom[addr + 4] << 8) | rom[addr + 5];
+        uint32_t expectedLen = ReadU32BE(rom.data() + addr + 2);
         if (expectedLen < 800000 || expectedLen > 1000000)
             continue;
 
@@ -353,7 +349,7 @@ static uint8_t* FindRelocatedF9CAE0(const std::vector<uint8_t>& rom, uint32_t f3
         if (rom[scan + 1] != 0x72)
             continue;
 
-        uint32_t expected = (rom[scan + 2] << 24) | (rom[scan + 3] << 16) | (rom[scan + 4] << 8) | rom[scan + 5];
+        uint32_t expected = ReadU32BE(rom.data() + scan + 2);
         if (expected < 80000 || expected > 100000)
             continue;
 
@@ -388,7 +384,7 @@ static bool ScanWarpDestOnly(const uint8_t* ovl, uint32_t funcOff, uint32_t func
     const uint8_t* f = ovl + funcOff;
     for (uint32_t i = 0; i + 20 <= limit; i += 4) {
         if ((f[i] == 0x24 || f[i] == 0x34) && f[i + 1] == 0x05 && memcmp(f + i + 4, kWarpEpilogue, 16) == 0) {
-            outDest = ResolveWarpDest(f, i, (f[i + 2] << 8) | f[i + 3]);
+            outDest = ResolveWarpDest(f, i, ReadU16BE(f + i + 2));
             if (outDest >= 0) {
                 return true;
             }
@@ -414,13 +410,12 @@ static bool ScanWarpDestDiff(const uint8_t* vanOvl, const uint8_t* modOvl, uint3
     const uint8_t* van = vanOvl + funcOff;
     const uint8_t* mod = modOvl + funcOff;
     for (uint32_t i = 0; i + 20 <= limit; i += 4) {
-        if ((van[i] == 0x24 || van[i] == 0x34) && van[i + 1] == 0x05 &&
-            memcmp(van + i + 4, kWarpEpilogue, 16) == 0) {
+        if ((van[i] == 0x24 || van[i] == 0x34) && van[i + 1] == 0x05 && memcmp(van + i + 4, kWarpEpilogue, 16) == 0) {
             // Same load must still be present in the modified overlay.
             if ((mod[i] == 0x24 || mod[i] == 0x34) && mod[i + 1] == 0x05) {
                 // Resolve against the vanilla jal
-                int vanDest = ResolveWarpDest(van, i, (van[i + 2] << 8) | van[i + 3]);
-                int modDest = ResolveWarpDest(van, i, (mod[i + 2] << 8) | mod[i + 3]);
+                int vanDest = ResolveWarpDest(van, i, ReadU16BE(van + i + 2));
+                int modDest = ResolveWarpDest(van, i, ReadU16BE(mod + i + 2));
                 if (vanDest >= 0 && vanDest != modDest) {
                     outVanDest = vanDest;
                     outModDest = modDest;
@@ -474,8 +469,7 @@ static int CountInternalCustomCodeJals(const std::vector<uint8_t>& rom, uint32_t
     for (uint32_t off = start; off + 4 <= end; off += 4) {
         if (rom[off] != 0x0C)
             continue; // op=3 (JAL) starts with 0x0C in BE
-        uint32_t word = (uint32_t(rom[off]) << 24) | (uint32_t(rom[off + 1]) << 16) | (uint32_t(rom[off + 2]) << 8) |
-                        uint32_t(rom[off + 3]);
+        uint32_t word = ReadU32BE(rom.data() + off);
         if ((word >> 26) != 0x03)
             continue;
         uint32_t target = 0x80000000u | ((word & 0x03FFFFFFu) << 2);
@@ -692,10 +686,7 @@ static bool DetectOverlayHookedCustomCode(const std::vector<uint8_t>& rom, uint3
     std::vector<uint8_t> sig;
     sig.reserve(targets.size() * 4);
     for (uint32_t t : targets) {
-        sig.push_back((t >> 24) & 0xFF);
-        sig.push_back((t >> 16) & 0xFF);
-        sig.push_back((t >> 8) & 0xFF);
-        sig.push_back(t & 0xFF);
+        PushBE(sig, t, 4);
     }
     if (outBlobSha1) {
         Sha1Into(sig.data(), sig.size(), outBlobSha1);
@@ -735,8 +726,7 @@ static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outB
         if (rom[off] != 0x11 || rom[off + 1] != 0x72) {
             continue;
         }
-        uint32_t expectedSize = (uint32_t(rom[off + 2]) << 24) | (uint32_t(rom[off + 3]) << 16) |
-                                (uint32_t(rom[off + 4]) << 8) | uint32_t(rom[off + 5]);
+        uint32_t expectedSize = ReadU32BE(rom.data() + off + 2);
         // Plausible size for an injected custom-code blob: ~10 KB to ~1 MB.
         if (expectedSize < 0x4000 || expectedSize > 0x100000) {
             continue;
@@ -774,8 +764,7 @@ static bool DetectCustomCodeBlob(const std::vector<uint8_t>& rom, uint32_t& outB
         if (rawSize >= 0x4000) {
             std::vector<uint8_t> payload(rom.begin() + CUSTOM_CODE_ROM_OFFSET,
                                          rom.begin() + CUSTOM_CODE_ROM_OFFSET + rawSize);
-            if (CheckCustomCodePayload(payload, outInternalJalCount, outFirstInternalTarget, outRamBase,
-                                       outBlobSha1)) {
+            if (CheckCustomCodePayload(payload, outInternalJalCount, outFirstInternalTarget, outRamBase, outBlobSha1)) {
                 outBlobRomOffset = CUSTOM_CODE_ROM_OFFSET;
                 outKind = CustomCodeKind::BB_GLOBALIZATION;
                 return true;
@@ -1118,12 +1107,13 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
                         for (int layer = 0; layer < 3; layer++) {
                             uint32_t base = off + 4 + layer * 12;
                             blob.writeS16(static_cast<int16_t>(ReadU16BE(modF9 + base))); // model_id
-                            blob.writeU32(ReadU32BE(modF9 + base + 4));                   // scale (BE f32 bits -> LE u32)
+                            blob.writeU32(ReadU32BE(modF9 + base + 4)); // scale (BE f32 bits -> LE u32)
                             blob.writeU32(ReadU32BE(modF9 + base + 8)); // rotation (BE f32 bits -> LE u32)
                         }
                         count++;
                         SPDLOG_INFO("[ConfigFactory] skybox: scene 0x{:X} models [{},{},{}]", sceneId,
-                                    ReadU16BE(modF9 + off + 4), ReadU16BE(modF9 + off + 16), ReadU16BE(modF9 + off + 28));
+                                    ReadU16BE(modF9 + off + 4), ReadU16BE(modF9 + off + 16),
+                                    ReadU16BE(modF9 + off + 28));
                     }
                 }
 
@@ -1398,6 +1388,651 @@ std::vector<char> BuildGameConfigBlob(const std::vector<uint8_t>& rom, const std
 
     SPDLOG_INFO("[ConfigFactory] Built aGameConfig blob: {} bytes, {} sections", blob.data.size(), sectionCount);
     return blob.data;
+}
+
+static const char* const sCodeConstantNames[] = {
+    "NEW_GAME_MAP",      "START_LEVEL_1",           "START_LEVEL_2",
+    "KNOW_ALL_MOVES",    "MUMBO_COST_TERMITE",      "MUMBO_COST_CROC",
+    "MUMBO_COST_WALRUS", "MUMBO_COST_PUMPKIN",      "MUMBO_COST_BEE",
+    "EGGS_NORMAL_MAX",   "RED_FEATHERS_NORMAL_MAX", "GOLD_FEATHERS_NORMAL_MAX",
+    "EGGS_CHEATO_MAX",   "RED_FEATHERS_CHEATO_MAX", "GOLD_FEATHERS_CHEATO_MAX",
+    "NOTES_MAX",         "JIGGIES_PER_WORLD",       "HONEYCOMBS_PER_WORLD",
+    "EXTRA_HC_START",    "WARP_EXIT_BANJOS_HOUSE",  "WARP_ENTER_LAIR",
+    "SPECIAL_LEVEL",     "HIDE_JIGGIES_LEVEL",      "HIDE_COLLECTIBLES_LEVEL",
+};
+static_assert(sizeof(sCodeConstantNames) / sizeof(sCodeConstantNames[0]) == static_cast<int>(CodeConstantKey::COUNT));
+
+// KNOW_ALL_MOVES's patched instruction halfword. Lighthouse only checks the key is there.
+static constexpr uint16_t KNOW_ALL_MOVES_ON = 0x0F98;
+// Pictures past these two place their pieces one at a time.
+static constexpr int PUZZLE_MASK_PICTURES = 9;
+static constexpr int PUZZLE_MASK_PIECES = 32;
+static constexpr int PUZZLE_COUNT = 11;
+static constexpr int NOTE_DOOR_COUNT = 12;
+static constexpr int TITLE_COUNT = 13;
+
+const char* CodeConstantName(uint16_t key) {
+    return key < static_cast<uint16_t>(CodeConstantKey::COUNT) ? sCodeConstantNames[key] : nullptr;
+}
+
+namespace {
+struct BlobReader {
+    const std::vector<char>& data;
+    size_t pos = 0;
+    bool ok = true;
+
+    uint8_t u8() {
+        if (pos >= data.size()) {
+            ok = false;
+            return 0;
+        }
+        return static_cast<uint8_t>(data[pos++]);
+    }
+    uint16_t u16() {
+        const uint16_t lo = u8();
+        return static_cast<uint16_t>(lo | (u8() << 8));
+    }
+    uint32_t u32() {
+        const uint32_t lo = u16();
+        return lo | (static_cast<uint32_t>(u16()) << 16);
+    }
+    float f32() {
+        const uint32_t bits = u32();
+        float value;
+        memcpy(&value, &bits, sizeof(value));
+        return value;
+    }
+};
+
+uint32_t floatBits(float value) {
+    uint32_t bits;
+    memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
+std::string hexBytes(const uint8_t* bytes, size_t count) {
+    std::string out;
+    char pair[3];
+    for (size_t i = 0; i < count; i++) {
+        snprintf(pair, sizeof(pair), "%02x", bytes[i]);
+        out += pair;
+    }
+    return out;
+}
+
+bool isMapConstant(uint16_t key) {
+    return key == static_cast<uint16_t>(CodeConstantKey::NEW_GAME_MAP) ||
+           key == static_cast<uint16_t>(CodeConstantKey::START_LEVEL_1) ||
+           key == static_cast<uint16_t>(CodeConstantKey::START_LEVEL_2);
+}
+
+bool isLevelConstant(uint16_t key) {
+    return key == static_cast<uint16_t>(CodeConstantKey::SPECIAL_LEVEL) ||
+           key == static_cast<uint16_t>(CodeConstantKey::HIDE_JIGGIES_LEVEL) ||
+           key == static_cast<uint16_t>(CodeConstantKey::HIDE_COLLECTIBLES_LEVEL);
+}
+
+bool isWarpConstant(uint16_t key) {
+    return key == static_cast<uint16_t>(CodeConstantKey::WARP_EXIT_BANJOS_HOUSE) ||
+           key == static_cast<uint16_t>(CodeConstantKey::WARP_ENTER_LAIR);
+}
+
+std::string mapComment(uint32_t map) {
+    const char* name = MapName(map);
+    return name ? name : "unknown map";
+}
+
+void emitDest(YAML::Emitter& out, uint16_t dest) {
+    out << YAML::Flow << YAML::BeginMap;
+    out << YAML::Key << "Map" << YAML::Value << YAML_HEX(dest >> 8);
+    out << YAML::Key << "Entrance" << YAML::Value << (dest & 0xFF);
+    out << YAML::EndMap << YAML::Comment(mapComment(dest >> 8));
+}
+
+// Hex for an id, but a negative one would come out as 32-bit hex.
+void emitId(YAML::Emitter& out, int16_t id) {
+    if (id < 0) {
+        out << id;
+    } else {
+        out << YAML_HEX(id);
+    }
+}
+
+// Romhacks store 0xFFFF in some map fields, so a number goes through as it is.
+uint16_t mapNumber(const YAML::Node& node, const std::string& where, uint32_t most = 0xFFFF) {
+    if (const auto named = MapFromName(node.as<std::string>())) {
+        return *named;
+    }
+    return static_cast<uint16_t>(YamlNumber(node, where, most));
+}
+
+uint16_t levelNumber(const YAML::Node& node, const std::string& where) {
+    const std::string text = node.as<std::string>();
+    if (const auto named = LevelFromName(text)) {
+        return *named;
+    }
+    return static_cast<uint16_t>(YamlNumber(node, where, 0xFF));
+}
+
+uint16_t destNumber(const YAML::Node& node, const std::string& where) {
+    if (!node.IsMap() || !node["Map"] || !node["Entrance"]) {
+        YamlFail(where, "needs a Map and an Entrance");
+    }
+    return static_cast<uint16_t>(mapNumber(node["Map"], where + " Map", 0xFF) << 8 |
+                                 YamlNumber(node, "Entrance", where, 0xFF));
+}
+
+void readHex(const YAML::Node& node, const std::string& where, uint8_t* out, size_t count) {
+    const std::string text = node.as<std::string>();
+    if (text.size() != count * 2) {
+        YamlFail(where, "needs " + std::to_string(count * 2) + " hex digits");
+    }
+    for (size_t i = 0; i < count; i++) {
+        out[i] = static_cast<uint8_t>(std::stoul(text.substr(i * 2, 2), nullptr, 16));
+    }
+}
+} // namespace
+
+bool ReadGameConfig(const std::vector<char>& blob, GameConfigData& out, std::string& error) {
+    out = GameConfigData{};
+    BlobReader r{ blob };
+    if (r.u32() != GAMECONFIG_MAGIC) {
+        error = "not a BKCF game config";
+        return false;
+    }
+    if (r.u16() != GAMECONFIG_VERSION) {
+        error = "unknown game config version";
+        return false;
+    }
+    const uint16_t sections = r.u16();
+    const uint8_t nameLength = r.u8();
+    for (uint8_t i = 0; i < nameLength; i++) {
+        out.romName += static_cast<char>(r.u8());
+    }
+    for (uint16_t section = 0; section < sections && r.ok; section++) {
+        const uint16_t type = r.u16();
+        const uint16_t count = r.u16();
+        for (uint16_t entry = 0; entry < count && r.ok; entry++) {
+            switch (static_cast<ConfigSectionType>(type)) {
+                case ConfigSectionType::CODE_CONSTANTS:
+                    out.constants.push_back({ r.u16(), r.u16() });
+                    break;
+                case ConfigSectionType::SCENE_REMAP:
+                    out.worldByMap.push_back({ r.u16(), r.u16() });
+                    break;
+                case ConfigSectionType::RETURN_TO_LAIR: {
+                    const uint8_t world = r.u8();
+                    r.u8();
+                    out.returnToLair.push_back({ world, r.u16(), r.u16() });
+                    break;
+                }
+                case ConfigSectionType::MUSIC:
+                    out.music.push_back({ r.u16(), r.u16(), r.u16() });
+                    break;
+                case ConfigSectionType::SKYBOX: {
+                    GameConfigData::Sky sky{ r.u16() };
+                    for (auto& layer : sky.layers) {
+                        layer.model = static_cast<int16_t>(r.u16());
+                        layer.scale = r.f32();
+                        layer.spin = r.f32();
+                    }
+                    out.skybox.push_back(sky);
+                    break;
+                }
+                case ConfigSectionType::SCENE_DEF: {
+                    GameConfigData::LevelModels models{ r.u16() };
+                    models.opaque = static_cast<int16_t>(r.u16());
+                    models.translucent = static_cast<int16_t>(r.u16());
+                    for (int16_t& v : models.cubeMin) {
+                        v = static_cast<int16_t>(r.u16());
+                    }
+                    for (int16_t& v : models.cubeMax) {
+                        v = static_cast<int16_t>(r.u16());
+                    }
+                    models.scale = r.f32();
+                    out.levelModels.push_back(models);
+                    break;
+                }
+                case ConfigSectionType::LEVEL_NAMES: {
+                    GameConfigData::Title title{ r.u8() };
+                    const uint8_t length = r.u8();
+                    for (uint8_t i = 0; i < length; i++) {
+                        title.text += static_cast<char>(r.u8());
+                    }
+                    out.titles.push_back(title);
+                    break;
+                }
+                case ConfigSectionType::WARP_DESTINATIONS:
+                    out.warps.push_back({ r.u16(), r.u16() });
+                    break;
+                case ConfigSectionType::NOTE_DOORS: {
+                    const uint8_t door = r.u8();
+                    r.u8();
+                    out.noteDoors.push_back({ door, r.u16() });
+                    break;
+                }
+                case ConfigSectionType::JIGGY_PUZZLES: {
+                    GameConfigData::Puzzle puzzle{ r.u8(), r.u8(), r.u8() };
+                    r.u8();
+                    puzzle.flag = r.u16();
+                    out.puzzles.push_back(puzzle);
+                    break;
+                }
+                case ConfigSectionType::CUSTOM_CODE:
+                    out.hasCustomCode = true;
+                    out.customCodeRamBase = r.u32();
+                    for (uint8_t& b : out.customCodeSha1) {
+                        b = r.u8();
+                    }
+                    break;
+                case ConfigSectionType::CUSTOM_CODE_INFO:
+                    out.customCodeKind = static_cast<CustomCodeKind>(r.u16());
+                    r.u16();
+                    break;
+                case ConfigSectionType::ROM_HASH:
+                    out.hasRomHash = true;
+                    for (uint8_t& b : out.romHash) {
+                        b = r.u8();
+                    }
+                    break;
+                default:
+                    error = "unknown game config section " + std::to_string(type);
+                    return false;
+            }
+        }
+    }
+    if (!r.ok) {
+        error = "game config ends early";
+        return false;
+    }
+    return true;
+}
+
+// Sections go out in the order BuildGameConfigBlob writes them.
+std::vector<char> WriteGameConfig(const GameConfigData& config) {
+    BlobWriter blob;
+    uint16_t sectionCount = 0;
+    blob.writeU32(GAMECONFIG_MAGIC);
+    blob.writeU16(GAMECONFIG_VERSION);
+    const size_t sectionCountPos = blob.data.size();
+    blob.writeU16(0);
+    const uint8_t nameLength = static_cast<uint8_t>(std::min(config.romName.size(), size_t(255)));
+    blob.writeU8(nameLength);
+    for (uint8_t i = 0; i < nameLength; i++) {
+        blob.writeU8(static_cast<uint8_t>(config.romName[i]));
+    }
+
+    const auto section = [&](ConfigSectionType type, size_t count, const auto& writeEntry) {
+        if (count == 0) {
+            return;
+        }
+        const size_t pos = blob.beginSection(type);
+        for (size_t i = 0; i < count; i++) {
+            writeEntry(i);
+        }
+        blob.patchU16(pos, static_cast<uint16_t>(count));
+        sectionCount++;
+    };
+
+    section(ConfigSectionType::CUSTOM_CODE, config.hasCustomCode, [&](size_t) {
+        blob.writeU32(config.customCodeRamBase);
+        for (uint8_t b : config.customCodeSha1) {
+            blob.writeU8(b);
+        }
+    });
+    section(ConfigSectionType::CUSTOM_CODE_INFO, config.hasCustomCode, [&](size_t) {
+        blob.writeU16(static_cast<uint16_t>(config.customCodeKind));
+        blob.writeU16(0);
+    });
+    section(ConfigSectionType::ROM_HASH, config.hasRomHash, [&](size_t) {
+        for (uint8_t b : config.romHash) {
+            blob.writeU8(b);
+        }
+    });
+    section(ConfigSectionType::CODE_CONSTANTS, config.constants.size(), [&](size_t i) {
+        blob.writeU16(config.constants[i].key);
+        blob.writeU16(config.constants[i].value);
+    });
+    section(ConfigSectionType::SCENE_REMAP, config.worldByMap.size(), [&](size_t i) {
+        blob.writeU16(config.worldByMap[i].map);
+        blob.writeU16(config.worldByMap[i].level);
+    });
+    section(ConfigSectionType::RETURN_TO_LAIR, config.returnToLair.size(), [&](size_t i) {
+        blob.writeU8(config.returnToLair[i].world);
+        blob.writeU8(0);
+        blob.writeU16(config.returnToLair[i].map);
+        blob.writeU16(config.returnToLair[i].exit);
+    });
+    section(ConfigSectionType::MUSIC, config.music.size(), [&](size_t i) {
+        blob.writeU16(config.music[i].map);
+        blob.writeU16(config.music[i].track);
+        blob.writeU16(config.music[i].alternate);
+    });
+    section(ConfigSectionType::SKYBOX, config.skybox.size(), [&](size_t i) {
+        blob.writeU16(config.skybox[i].map);
+        for (const auto& layer : config.skybox[i].layers) {
+            blob.writeS16(layer.model);
+            blob.writeU32(floatBits(layer.scale));
+            blob.writeU32(floatBits(layer.spin));
+        }
+    });
+    section(ConfigSectionType::SCENE_DEF, config.levelModels.size(), [&](size_t i) {
+        const auto& models = config.levelModels[i];
+        blob.writeU16(models.map);
+        blob.writeS16(models.opaque);
+        blob.writeS16(models.translucent);
+        for (int16_t v : models.cubeMin) {
+            blob.writeS16(v);
+        }
+        for (int16_t v : models.cubeMax) {
+            blob.writeS16(v);
+        }
+        blob.writeU32(floatBits(models.scale));
+    });
+    section(ConfigSectionType::LEVEL_NAMES, config.titles.size(), [&](size_t i) {
+        const auto& title = config.titles[i];
+        const uint8_t length = static_cast<uint8_t>(std::min(title.text.size(), size_t(255)));
+        blob.writeU8(title.index);
+        blob.writeU8(length);
+        for (uint8_t c = 0; c < length; c++) {
+            blob.writeU8(static_cast<uint8_t>(title.text[c]));
+        }
+    });
+    section(ConfigSectionType::WARP_DESTINATIONS, config.warps.size(), [&](size_t i) {
+        blob.writeU16(config.warps[i].warp);
+        blob.writeU16(config.warps[i].dest);
+    });
+    section(ConfigSectionType::NOTE_DOORS, config.noteDoors.size(), [&](size_t i) {
+        blob.writeU8(config.noteDoors[i].door);
+        blob.writeU8(0);
+        blob.writeU16(config.noteDoors[i].notes);
+    });
+    section(ConfigSectionType::JIGGY_PUZZLES, config.puzzles.size(), [&](size_t i) {
+        const auto& puzzle = config.puzzles[i];
+        blob.writeU8(puzzle.picture);
+        blob.writeU8(puzzle.cost);
+        blob.writeU8(puzzle.size);
+        blob.writeU8(0);
+        blob.writeU16(puzzle.flag);
+    });
+
+    blob.patchU16(sectionCountPos, sectionCount);
+    return blob.data;
+}
+
+std::string GameConfigToYaml(const GameConfigData& config) {
+    YAML::Emitter out;
+    out.SetIndent(2);
+    out << YAML::BeginMap << YAML::Key << "aGameConfig" << YAML::Value << YAML::BeginMap;
+    if (!config.romName.empty()) {
+        out << YAML::Key << "RomName" << YAML::Value;
+        EmitText(out, config.romName);
+    }
+
+    if (!config.constants.empty()) {
+        out << YAML::Key << "Constants" << YAML::Value << YAML::BeginMap;
+        for (const auto& constant : config.constants) {
+            const char* name = CodeConstantName(constant.key);
+            out << YAML::Key << (name ? std::string(name) : std::to_string(constant.key)) << YAML::Value;
+            if (isMapConstant(constant.key)) {
+                out << YAML_HEX(constant.value) << YAML::Comment(mapComment(constant.value));
+            } else if (isLevelConstant(constant.key)) {
+                const char* level = LevelName(constant.value);
+                out << YAML_HEX(constant.value) << YAML::Comment(level ? level : "unknown world");
+            } else if (isWarpConstant(constant.key)) {
+                emitDest(out, constant.value);
+            } else if (constant.key == static_cast<uint16_t>(CodeConstantKey::KNOW_ALL_MOVES) &&
+                       constant.value == KNOW_ALL_MOVES_ON) {
+                out << true;
+            } else {
+                out << constant.value;
+            }
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.worldByMap.empty()) {
+        out << YAML::Key << "WorldByMap" << YAML::Value << YAML::BeginMap;
+        for (const auto& entry : config.worldByMap) {
+            const char* level = LevelName(entry.level);
+            out << YAML::Key << YAML_HEX(entry.map) << YAML::Value << YAML_HEX(entry.level)
+                << YAML::Comment(mapComment(entry.map) + " -> " + (level ? level : "unknown world"));
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.returnToLair.empty()) {
+        out << YAML::Key << "ReturnToLair" << YAML::Value << YAML::BeginMap;
+        for (const auto& entry : config.returnToLair) {
+            out << YAML::Key << static_cast<uint32_t>(entry.world) << YAML::Value << YAML::Flow << YAML::BeginMap;
+            out << YAML::Key << "Map" << YAML::Value << YAML_HEX(entry.map);
+            out << YAML::Key << "Exit" << YAML::Value << YAML_HEX(entry.exit);
+            out << YAML::EndMap << YAML::Comment(mapComment(entry.map));
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.music.empty()) {
+        out << YAML::Key << "MusicByMap" << YAML::Value << YAML::BeginMap;
+        for (const auto& entry : config.music) {
+            out << YAML::Key << YAML_HEX(entry.map) << YAML::Value << YAML::Flow << YAML::BeginMap;
+            out << YAML::Key << "Track" << YAML::Value << YAML_HEX(entry.track);
+            out << YAML::Key << "Alternate" << YAML::Value << YAML_HEX(entry.alternate);
+            out << YAML::EndMap << YAML::Comment(mapComment(entry.map));
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.skybox.empty()) {
+        out << YAML::Key << "SkyboxByMap" << YAML::Value << YAML::BeginMap;
+        for (const auto& sky : config.skybox) {
+            out << YAML::Key << YAML_HEX(sky.map) << YAML::Comment(mapComment(sky.map));
+            out << YAML::Value << YAML::BeginSeq;
+            for (const auto& layer : sky.layers) {
+                out << YAML::Flow << YAML::BeginMap;
+                out << YAML::Key << "Model" << YAML::Value;
+                emitId(out, layer.model);
+                out << YAML::Key << "Scale" << YAML::Value << layer.scale;
+                out << YAML::Key << "Spin" << YAML::Value << layer.spin;
+                out << YAML::EndMap;
+            }
+            out << YAML::EndSeq;
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.levelModels.empty()) {
+        out << YAML::Key << "LevelModelsByMap" << YAML::Value << YAML::BeginMap;
+        for (const auto& models : config.levelModels) {
+            out << YAML::Key << YAML_HEX(models.map) << YAML::Value << YAML::Flow << YAML::BeginMap;
+            out << YAML::Key << "Opaque" << YAML::Value;
+            emitId(out, models.opaque);
+            out << YAML::Key << "Translucent" << YAML::Value;
+            emitId(out, models.translucent);
+            EmitList(out, "CubeMin", models.cubeMin, 3);
+            EmitList(out, "CubeMax", models.cubeMax, 3);
+            out << YAML::Key << "Scale" << YAML::Value << models.scale;
+            out << YAML::EndMap << YAML::Comment(mapComment(models.map));
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.titles.empty()) {
+        out << YAML::Key << "PauseMenuTitles" << YAML::Value << YAML::BeginMap;
+        for (const auto& title : config.titles) {
+            out << YAML::Key << static_cast<uint32_t>(title.index) << YAML::Value;
+            EmitText(out, title.text);
+            if (title.index < TITLE_COUNT) {
+                out << YAML::Comment(std::string("was ") + sVanillaLevelNames[title.index]);
+            }
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.warps.empty()) {
+        out << YAML::Key << "Warps" << YAML::Value << YAML::BeginMap;
+        for (const auto& warp : config.warps) {
+            out << YAML::Key << YAML_HEX(warp.warp) << YAML::Value;
+            emitDest(out, warp.dest);
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.noteDoors.empty()) {
+        out << YAML::Key << "NoteDoors" << YAML::Value << YAML::BeginMap;
+        for (const auto& door : config.noteDoors) {
+            out << YAML::Key << static_cast<uint32_t>(door.door) << YAML::Value << door.notes;
+            if (door.door < NOTE_DOOR_COUNT) {
+                out << YAML::Comment("door " + std::to_string(door.door + 1) + ", was " +
+                                     std::to_string(sVanillaNoteDoors[door.door]));
+            }
+        }
+        out << YAML::EndMap;
+    }
+    if (!config.puzzles.empty()) {
+        out << YAML::Key << "JiggyPuzzles" << YAML::Value << YAML::BeginMap;
+        for (const auto& puzzle : config.puzzles) {
+            out << YAML::Key << static_cast<uint32_t>(puzzle.picture) << YAML::Value << YAML::Flow << YAML::BeginMap;
+            out << YAML::Key << "Cost" << YAML::Value << static_cast<uint32_t>(puzzle.cost);
+            out << YAML::Key << "Size" << YAML::Value << static_cast<uint32_t>(puzzle.size);
+            out << YAML::Key << "Flag" << YAML::Value << YAML_HEX(puzzle.flag);
+            out << YAML::EndMap;
+        }
+        out << YAML::EndMap;
+    }
+    if (config.hasCustomCode) {
+        out << YAML::Key << "CustomCode" << YAML::Value << YAML::Flow << YAML::BeginMap;
+        out << YAML::Key << "RamBase" << YAML::Value << YAML_HEX(config.customCodeRamBase);
+        out << YAML::Key << "Sha1" << YAML::Value << hexBytes(config.customCodeSha1, 20);
+        out << YAML::Key << "Kind" << YAML::Value << static_cast<uint32_t>(config.customCodeKind);
+        out << YAML::EndMap;
+    }
+    if (config.hasRomHash) {
+        out << YAML::Key << "RomHash" << YAML::Value << hexBytes(config.romHash, 20);
+    }
+    out << YAML::EndMap << YAML::EndMap;
+    return std::string(out.c_str()) + "\n";
+}
+
+bool GameConfigFromYaml(const std::string& text, GameConfigData& out, std::string& error) {
+    out = GameConfigData{};
+    try {
+        const YAML::Node root = YAML::Load(text);
+        const YAML::Node config = root["aGameConfig"];
+        if (!config || !config.IsMap()) {
+            error = "no aGameConfig map";
+            return false;
+        }
+        if (config["RomName"]) {
+            out.romName = DecodeText(config["RomName"].as<std::string>());
+            if (out.romName.size() > 255) {
+                YamlFail("RomName", "longer than 255 characters");
+            }
+        }
+        for (const auto& entry : config["Constants"]) {
+            const std::string name = entry.first.as<std::string>();
+            uint16_t key = 0;
+            while (key < static_cast<uint16_t>(CodeConstantKey::COUNT) && name != sCodeConstantNames[key]) {
+                key++;
+            }
+            if (key == static_cast<uint16_t>(CodeConstantKey::COUNT)) {
+                YamlFail("Constants", name + " isn't a setting");
+            }
+            const std::string where = "Constants " + name;
+            uint16_t value;
+            if (isMapConstant(key)) {
+                value = mapNumber(entry.second, where);
+            } else if (isLevelConstant(key)) {
+                value = levelNumber(entry.second, where);
+            } else if (isWarpConstant(key)) {
+                value = destNumber(entry.second, where);
+            } else if (bool on; key == static_cast<uint16_t>(CodeConstantKey::KNOW_ALL_MOVES) &&
+                                YAML::convert<bool>::decode(entry.second, on)) {
+                if (!on) {
+                    continue;
+                }
+                value = KNOW_ALL_MOVES_ON;
+            } else {
+                value = static_cast<uint16_t>(YamlNumber(entry.second, where, 0xFFFF));
+            }
+            out.constants.push_back({ key, value });
+        }
+        for (const auto& entry : config["WorldByMap"]) {
+            out.worldByMap.push_back({ mapNumber(entry.first, "WorldByMap"), levelNumber(entry.second, "WorldByMap") });
+        }
+        for (const auto& entry : config["ReturnToLair"]) {
+            const std::string where = "ReturnToLair " + entry.first.as<std::string>();
+            out.returnToLair.push_back({ static_cast<uint8_t>(YamlNumber(entry.first, where, 0xFF)),
+                                         mapNumber(entry.second["Map"], where + " Map"),
+                                         static_cast<uint16_t>(YamlNumber(entry.second, "Exit", where, 0xFFFF)) });
+        }
+        for (const auto& entry : config["MusicByMap"]) {
+            const std::string where = "MusicByMap " + entry.first.as<std::string>();
+            out.music.push_back({ mapNumber(entry.first, where),
+                                  static_cast<uint16_t>(YamlNumber(entry.second, "Track", where, 0xFFFF)),
+                                  static_cast<uint16_t>(YamlNumber(entry.second, "Alternate", where, 0xFFFF)) });
+        }
+        for (const auto& entry : config["SkyboxByMap"]) {
+            const std::string where = "SkyboxByMap " + entry.first.as<std::string>();
+            GameConfigData::Sky sky{ mapNumber(entry.first, where) };
+            if (!entry.second.IsSequence() || entry.second.size() != 3) {
+                YamlFail(where, "needs three layers");
+            }
+            for (size_t i = 0; i < 3; i++) {
+                const YAML::Node layer = entry.second[i];
+                sky.layers[i] = { YamlShort(layer, "Model", where), layer["Scale"].as<float>(),
+                                  layer["Spin"].as<float>() };
+            }
+            out.skybox.push_back(sky);
+        }
+        for (const auto& entry : config["LevelModelsByMap"]) {
+            const std::string where = "LevelModelsByMap " + entry.first.as<std::string>();
+            GameConfigData::LevelModels models{ mapNumber(entry.first, where) };
+            models.opaque = YamlShort(entry.second, "Opaque", where);
+            models.translucent = YamlShort(entry.second, "Translucent", where);
+            ReadList(entry.second, "CubeMin", models.cubeMin, 3, where);
+            ReadList(entry.second, "CubeMax", models.cubeMax, 3, where);
+            models.scale = entry.second["Scale"].as<float>();
+            out.levelModels.push_back(models);
+        }
+        for (const auto& entry : config["PauseMenuTitles"]) {
+            const std::string where = "PauseMenuTitles " + entry.first.as<std::string>();
+            GameConfigData::Title title{ static_cast<uint8_t>(YamlNumber(entry.first, where, TITLE_COUNT - 1)),
+                                         DecodeText(entry.second.as<std::string>()) };
+            if (title.text.size() > 255) {
+                YamlFail(where, "longer than 255 characters");
+            }
+            out.titles.push_back(title);
+        }
+        for (const auto& entry : config["Warps"]) {
+            const std::string where = "Warps " + entry.first.as<std::string>();
+            out.warps.push_back({ static_cast<uint16_t>(YamlNumber(entry.first, where, WARP_ENTRY_COUNT - 1)),
+                                  destNumber(entry.second, where) });
+        }
+        for (const auto& entry : config["NoteDoors"]) {
+            const std::string where = "NoteDoors " + entry.first.as<std::string>();
+            out.noteDoors.push_back({ static_cast<uint8_t>(YamlNumber(entry.first, where, NOTE_DOOR_COUNT - 1)),
+                                      static_cast<uint16_t>(YamlNumber(entry.second, where, 0xFFFF)) });
+        }
+        for (const auto& entry : config["JiggyPuzzles"]) {
+            const std::string where = "JiggyPuzzles " + entry.first.as<std::string>();
+            GameConfigData::Puzzle puzzle{ static_cast<uint8_t>(YamlNumber(entry.first, where, PUZZLE_COUNT - 1)),
+                                           static_cast<uint8_t>(YamlNumber(entry.second, "Cost", where, 0xFF)),
+                                           static_cast<uint8_t>(YamlNumber(entry.second, "Size", where, 0xFF)),
+                                           static_cast<uint16_t>(YamlNumber(entry.second, "Flag", where, 0xFFFF)) };
+            if (puzzle.picture < PUZZLE_MASK_PICTURES && puzzle.cost > PUZZLE_MASK_PIECES) {
+                SPDLOG_WARN("[aGameConfig] {}: a picture needing more than {} jiggies can't be finished", where,
+                            PUZZLE_MASK_PIECES);
+            }
+            out.puzzles.push_back(puzzle);
+        }
+        if (const YAML::Node code = config["CustomCode"]) {
+            out.hasCustomCode = true;
+            out.customCodeRamBase = YamlNumber(code, "RamBase", "CustomCode", 0xFFFFFFFF);
+            readHex(code["Sha1"], "CustomCode Sha1", out.customCodeSha1, 20);
+            out.customCodeKind = static_cast<CustomCodeKind>(YamlNumber(code, "Kind", "CustomCode", 0xFFFF));
+        }
+        if (const YAML::Node hash = config["RomHash"]) {
+            out.hasRomHash = true;
+            readHex(hash, "RomHash", out.romHash, 20);
+        }
+    } catch (const std::exception& e) {
+        error = e.what();
+        return false;
+    }
+    return true;
 }
 
 void EmitAssetHashes(const std::filesystem::path& romPath, const std::filesystem::path& outputPath) {

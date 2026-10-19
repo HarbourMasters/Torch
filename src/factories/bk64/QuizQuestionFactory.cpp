@@ -161,16 +161,13 @@ std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse(std::vect
 }
 
 std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse_modding(std::vector<uint8_t>& buffer,
-                                                                              YAML::Node& node) {
-    const auto info = LoadModdingRoot(buffer);
-    if (!info.has_value()) {
-        return std::nullopt;
-    }
+                                                                               YAML::Node& node) {
+    const YAML::Node info = YamlEntry(buffer, GetSafeNode<std::string>(node, "symbol"));
 
-    auto text = ReadModdingDialogSeq((*info)["Text"]);
+    auto text = ReadModdingDialogSeq(info["Text"]);
 
     std::vector<DialogString> options;
-    auto optionsNode = (*info)["Options"];
+    auto optionsNode = info["Options"];
     for (YAML::iterator it = optionsNode.begin(); it != optionsNode.end(); ++it) {
         if (options.size() >= 3) {
             SPDLOG_WARN("BK64 QuizQuestion: Only 3 Options Allowed; extra options ignored");

@@ -7,6 +7,8 @@
 #include "TinySHA1.hpp"
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <thread>
 #include <mutex>
@@ -581,6 +583,7 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
                     break;
                 case BKAssetType::Model:
                     bkAssetNode["type"] = "BK64:MODEL";
+                    bkAssetNode["asset_id"] = assetInfo.index;
                     Companion::Instance->AddSubFileAsset(bkAssetNode, assetSymbol, compressionType, assetSize);
                     break;
                 case BKAssetType::QuizQuestion:
@@ -697,6 +700,38 @@ std::optional<std::shared_ptr<IParsedData>> BKAssetFactory::parse(std::vector<ui
         romName = (dot != std::string::npos) ? filename.substr(0, dot) : filename;
     }
     std::vector<char> configBlob = BuildGameConfigBlob(buffer, romName);
+    const auto& config = Companion::Instance->GetConfig();
+    const auto& modded = Companion::Instance->GetModdedAssetPaths();
+    if (const auto listed = modded.find(GAMECONFIG_MODDING_NAME);
+        config.modding && config.exporterType != ExportType::Modding && listed != modded.end()) {
+        const std::filesystem::path path = std::filesystem::path(config.moddingPath) / listed->second;
+        std::ifstream input(path, std::ios::binary);
+        const std::string text((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+        GameConfigData parsed;
+        std::string error;
+        if (!input || !GameConfigFromYaml(text, parsed, error)) {
+            throw std::runtime_error(listed->second + ": " + (input ? error : "couldn't read it"));
+        }
+        if (parsed.romName.empty()) {
+            parsed.romName = romName;
+        }
+        configBlob = WriteGameConfig(parsed);
+    }
+    if (!configBlob.empty() && config.exporterType == ExportType::Modding) {
+        GameConfigData parsed;
+        std::string error;
+        if (ReadGameConfig(configBlob, parsed, error)) {
+            // Named after the modding folder here; a build names it after its own output.
+            parsed.romName.clear();
+            const std::string file = std::string(GAMECONFIG_MODDING_NAME) + ".yaml";
+            const std::filesystem::path path = std::filesystem::path(Companion::Instance->GetOutputPath()) / file;
+            std::filesystem::create_directories(path.parent_path());
+            std::ofstream(path, std::ios::binary) << GameConfigToYaml(parsed);
+            Companion::Instance->RegisterModdedAsset(GAMECONFIG_MODDING_NAME, file);
+        } else {
+            SPDLOG_ERROR("aGameConfig: {}", error);
+        }
+    }
     if (!configBlob.empty()) {
         SPDLOG_INFO("BB romhack config detected ({} bytes), writing to o2r as '{}'", configBlob.size(), romName);
         Companion::Instance->RegisterCompanionFile("aGameConfig", configBlob);

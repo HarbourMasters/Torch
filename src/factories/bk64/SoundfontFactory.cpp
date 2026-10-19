@@ -949,6 +949,18 @@ int PlaybackRate(int bankRate, const SoundfontKeyMap* keymap) {
     return static_cast<int>(std::lround(rate));
 }
 
+void EmitModulation(YAML::Emitter& out, const char* name, uint8_t type, uint8_t rate, uint8_t depth, uint8_t delay) {
+    if (type == 0 && rate == 0 && depth == 0 && delay == 0) {
+        return;
+    }
+    out << YAML::Key << name << YAML::Value << YAML::BeginMap;
+    out << YAML::Key << "Type" << YAML::Value << (int)type;
+    out << YAML::Key << "Rate" << YAML::Value << (int)rate;
+    out << YAML::Key << "Depth" << YAML::Value << (int)depth;
+    out << YAML::Key << "Delay" << YAML::Value << (int)delay;
+    out << YAML::EndMap;
+}
+
 void WriteSoundModFiles(const SoundfontData& font, const SoundfontSound& sound, const std::string& rel) {
     const auto env = font.mEnvelopes.find(sound.envelopeOffset);
     const auto keymap = font.mKeyMaps.find(sound.keyMapOffset);
@@ -970,6 +982,9 @@ void WriteSoundModFiles(const SoundfontData& font, const SoundfontSound& sound, 
     out << YAML::Key << "SamplePan" << YAML::Value << (int)sound.samplePan;
     out << YAML::Key << "SampleVolume" << YAML::Value << (int)sound.sampleVolume;
     out << YAML::Key << "Flags" << YAML::Value << (int)sound.flags;
+    if (const auto wave = font.mWaves.find(sound.waveOffset); wave != font.mWaves.end() && wave->second.flags != 0) {
+        out << YAML::Key << "WaveFlags" << YAML::Value << (int)wave->second.flags;
+    }
     if (env != font.mEnvelopes.end()) {
         out << YAML::Key << "Envelope" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "AttackTime" << YAML::Value << env->second.attackTime;
@@ -1034,6 +1049,9 @@ ExportResult SoundfontModdingExporter::Export(std::ostream& write, std::shared_p
             continue;
         }
         bank << YAML::Key << "SampleRate" << YAML::Value << bankIt->second.sampleRate;
+        if (bankIt->second.flags != 0) {
+            bank << YAML::Key << "Flags" << YAML::Value << (int)bankIt->second.flags;
+        }
         bank << YAML::Key << "Instruments" << YAML::Value << YAML::BeginSeq;
 
         for (size_t i = 0; i < bankIt->second.instrumentOffsets.size(); i++) {
@@ -1047,6 +1065,13 @@ ExportResult SoundfontModdingExporter::Export(std::ostream& write, std::shared_p
             bank << YAML::Key << "Pan" << YAML::Value << (int)inst->second.pan;
             bank << YAML::Key << "Priority" << YAML::Value << (int)inst->second.priority;
             bank << YAML::Key << "BendRange" << YAML::Value << inst->second.bendRange;
+            if (inst->second.flags != 0) {
+                bank << YAML::Key << "Flags" << YAML::Value << (int)inst->second.flags;
+            }
+            EmitModulation(bank, "Tremolo", inst->second.tremType, inst->second.tremRate, inst->second.tremDepth,
+                           inst->second.tremDelay);
+            EmitModulation(bank, "Vibrato", inst->second.vibType, inst->second.vibRate, inst->second.vibDepth,
+                           inst->second.vibDelay);
             bank << YAML::Key << "Sounds" << YAML::Value << YAML::BeginSeq;
 
             for (size_t k = 0; k < inst->second.soundOffsets.size(); k++) {
@@ -1127,6 +1152,18 @@ int Field(const YAML::Node& n, const char* key, int def) {
     return n[key] ? n[key].as<int>() : def;
 }
 
+void ReadModulation(const YAML::Node& n, const char* name, uint8_t& type, uint8_t& rate, uint8_t& depth,
+                    uint8_t& delay) {
+    const YAML::Node mod = n[name];
+    if (!mod) {
+        return;
+    }
+    type = static_cast<uint8_t>(Field(mod, "Type", 0));
+    rate = static_cast<uint8_t>(Field(mod, "Rate", 0));
+    depth = static_cast<uint8_t>(Field(mod, "Depth", 0));
+    delay = static_cast<uint8_t>(Field(mod, "Delay", 0));
+}
+
 void TrimSilence(std::vector<int16_t>& pcm, int rate, double& leadSeconds, double& tailSeconds) {
     constexpr int16_t kFloor = 512;
     size_t first = 0;
@@ -1160,8 +1197,7 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
     try {
         bankNode = YAML::Load(std::string(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     } catch (const YAML::ParserException& envelope) {
-        SPDLOG_ERROR("Soundfont: modding yaml is malformed: {}", envelope.what());
-        return std::nullopt;
+        throw std::runtime_error(fmt::format("Soundfont: modding yaml is malformed: {}", envelope.what()));
     }
 
     const std::filesystem::path root = std::filesystem::path(Companion::Instance->GetConfig().moddingPath) /
@@ -1176,6 +1212,7 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
 
     SoundfontBank bank;
     bank.sampleRate = sampleRate;
+    bank.flags = static_cast<uint8_t>(Field(bankNode, "Flags", 0));
 
     for (const auto& instNode : bankNode["Instruments"]) {
         if (instNode["Present"] && !instNode["Present"].as<bool>()) {
@@ -1187,6 +1224,9 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
         inst.pan = static_cast<uint8_t>(Field(instNode, "Pan", 64));
         inst.priority = static_cast<uint8_t>(Field(instNode, "Priority", 5));
         inst.bendRange = static_cast<int16_t>(Field(instNode, "BendRange", 200));
+        inst.flags = static_cast<uint8_t>(Field(instNode, "Flags", 0));
+        ReadModulation(instNode, "Tremolo", inst.tremType, inst.tremRate, inst.tremDepth, inst.tremDelay);
+        ReadModulation(instNode, "Vibrato", inst.vibType, inst.vibRate, inst.vibDepth, inst.vibDelay);
 
         for (const auto& entry : instNode["Sounds"]) {
             const std::string rel = entry.as<std::string>();
@@ -1204,8 +1244,7 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
             try {
                 sound = YAML::LoadFile((root / (rel + ".yaml")).string());
             } catch (const std::exception& envelope) {
-                SPDLOG_ERROR("Soundfont: cannot read {}.yaml: {}", rel, envelope.what());
-                return std::nullopt;
+                throw std::runtime_error(fmt::format("Soundfont: cannot read {}.yaml: {}", rel, envelope.what()));
             }
 
             SoundfontBook book;
@@ -1217,15 +1256,14 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
             if (mode == "raw") {
                 const std::vector<uint8_t> bin = ReadFile(root / (rel + ".bin"));
                 if (bin.empty() || !ParseRawSample(bin, book, loopState, adpcm)) {
-                    SPDLOG_ERROR("Soundfont: {}.bin is missing or malformed", rel);
-                    return std::nullopt;
+                    throw std::runtime_error(fmt::format("Soundfont: {}.bin is missing or malformed", rel));
                 }
                 verbatim++;
             } else {
                 const std::filesystem::path audio = root / std::filesystem::path(rel).parent_path() / mode;
                 if (!std::filesystem::exists(audio)) {
-                    SPDLOG_ERROR("Soundfont: {} names sample '{}', which is not next to it", rel, mode);
-                    return std::nullopt;
+                    throw std::runtime_error(
+                        fmt::format("Soundfont: {} names sample '{}', which is not next to it", rel, mode));
                 }
                 SoundfontKeyMap slot;
                 slot.keyBase = static_cast<uint8_t>(Field(sound, "KeyBase", 60));
@@ -1235,8 +1273,7 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
                 std::vector<int16_t> pcm;
                 std::string error;
                 if (!DecodeAudioFile(audio.string(), playbackRate, pcm, error)) {
-                    SPDLOG_ERROR("Soundfont: {}", error);
-                    return std::nullopt;
+                    throw std::runtime_error(fmt::format("Soundfont: {}", error));
                 }
 
                 const bool trim = sound["TrimSilence"] ? sound["TrimSilence"].as<bool>() : !sound["Loop"];
@@ -1307,6 +1344,7 @@ std::optional<std::shared_ptr<IParsedData>> SoundfontFactory::parse_modding(std:
             wave.base = base;
             wave.len = static_cast<int32_t>(adpcm.size());
             wave.type = 0;
+            wave.flags = static_cast<uint8_t>(Field(sound, "WaveFlags", 0));
             wave.bookOffset = bookKey;
             wave.loopOffset = loopKey;
             const uint32_t waveKey = nextKey++;

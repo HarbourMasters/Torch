@@ -1,4 +1,5 @@
 #include "MusicFactory.h"
+#include "BKByteUtils.h"
 
 #include "Companion.h"
 #include "spdlog/spdlog.h"
@@ -146,8 +147,7 @@ bool DecodeTrack(const uint8_t* data, size_t size, uint32_t start, uint32_t end,
                 }
                 event.byte1 = raw[0];
                 event.byte2 = raw[1];
-                event.aux = (static_cast<uint32_t>(raw[2]) << 24) | (static_cast<uint32_t>(raw[3]) << 16) |
-                            (static_cast<uint32_t>(raw[4]) << 8) | raw[5];
+                event.aux = ReadU32BE(raw + 2);
                 event.kind = static_cast<uint8_t>(MusicEventKind::LoopEnd);
                 running = 0;
             } else {
@@ -237,12 +237,6 @@ void PushVarLen(std::vector<uint8_t>& out, uint32_t value) {
     }
 }
 
-void PushBE(std::vector<uint8_t>& out, uint32_t value, int bytes) {
-    for (int i = bytes - 1; i >= 0; i--) {
-        out.push_back(static_cast<uint8_t>(value >> (i * 8)));
-    }
-}
-
 void PushTag(std::vector<uint8_t>& out, const char* tag) {
     out.insert(out.end(), tag, tag + 4);
 }
@@ -285,7 +279,7 @@ std::vector<uint8_t> BuildSmfTrack(const MusicTrack& track, const std::string& l
             if (type == 0x90) {
                 TimedEvent off;
                 off.tick = tick + event.aux;
-                off.order = -1;
+                off.order = event.aux == 0 ? noteOn.order : -1;
                 off.bytes = { static_cast<uint8_t>(0x80 | (event.status & 0x0F)), event.byte1, 0 };
                 timed.push_back(off);
             }
@@ -356,11 +350,9 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse(std::vector<uint
 
     uint32_t offsets[16];
     for (int i = 0; i < 16; i++) {
-        offsets[i] = (static_cast<uint32_t>(data[i * 4]) << 24) | (static_cast<uint32_t>(data[i * 4 + 1]) << 16) |
-                     (static_cast<uint32_t>(data[i * 4 + 2]) << 8) | data[i * 4 + 3];
+        offsets[i] = ReadU32BE(data + i * 4);
     }
-    music->mDivision = (static_cast<uint32_t>(data[64]) << 24) | (static_cast<uint32_t>(data[65]) << 16) |
-                       (static_cast<uint32_t>(data[66]) << 8) | data[67];
+    music->mDivision = ReadU32BE(data + 64);
 
     for (int i = 0; i < 16; i++) {
         MusicTrack track;
@@ -707,8 +699,7 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
                                                                         YAML::Node& node) {
     SmfReader reader(buffer.data(), buffer.size());
     if (!reader.Tag("MThd")) {
-        SPDLOG_ERROR("Music: not a MIDI file");
-        return std::nullopt;
+        throw std::runtime_error("Music: not a MIDI file");
     }
     const uint32_t headerLength = reader.U32();
     const uint16_t format = reader.U16();
@@ -717,12 +708,10 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
     reader.Seek(8 + headerLength);
 
     if (format > 1) {
-        SPDLOG_ERROR("Music: format {} is not supported; save as format 0 or 1", format);
-        return std::nullopt;
+        throw std::runtime_error(fmt::format("Music: format {} is not supported; save as format 0 or 1", format));
     }
     if ((division & 0x8000) != 0) {
-        SPDLOG_ERROR("Music: SMPTE timing is not supported; use ticks per quarter note");
-        return std::nullopt;
+        throw std::runtime_error("Music: SMPTE timing is not supported; use ticks per quarter note");
     }
 
     std::vector<SmfEvent> events;
@@ -731,20 +720,17 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
     int sequence = 0;
     for (uint16_t i = 0; i < trackCount && reader.Ok(); i++) {
         if (!reader.Tag("MTrk")) {
-            SPDLOG_ERROR("Music: track {} is not an MTrk chunk", i);
-            return std::nullopt;
+            throw std::runtime_error(fmt::format("Music: track {} is not an MTrk chunk", i));
         }
         const uint32_t size = reader.U32();
         const size_t end = reader.At() + size;
         if (!ReadSmfTrack(reader, end, events, sequence, endTicks, volume)) {
-            SPDLOG_ERROR("Music: track {} does not parse", i);
-            return std::nullopt;
+            throw std::runtime_error(fmt::format("Music: track {} does not parse", i));
         }
         reader.Seek(end);
     }
     if (!reader.Ok()) {
-        SPDLOG_ERROR("Music: file ended early");
-        return std::nullopt;
+        throw std::runtime_error("Music: file ended early");
     }
 
     int muting = 0;
@@ -870,10 +856,7 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
                     out.push_back(event->byte1);
                     out.push_back(event->byte2);
                     const uint32_t back = static_cast<uint32_t>(out.size() + 4 - target);
-                    out.push_back(static_cast<uint8_t>(back >> 24));
-                    out.push_back(static_cast<uint8_t>(back >> 16));
-                    out.push_back(static_cast<uint8_t>(back >> 8));
-                    out.push_back(static_cast<uint8_t>(back));
+                    PushBE(out, back, 4);
                     break;
                 }
                 default:
@@ -886,15 +869,9 @@ std::optional<std::shared_ptr<IParsedData>> MusicFactory::parse_modding(std::vec
     }
 
     for (int i = 0; i < 16; i++) {
-        out[i * 4 + 0] = static_cast<uint8_t>(offsets[i] >> 24);
-        out[i * 4 + 1] = static_cast<uint8_t>(offsets[i] >> 16);
-        out[i * 4 + 2] = static_cast<uint8_t>(offsets[i] >> 8);
-        out[i * 4 + 3] = static_cast<uint8_t>(offsets[i]);
+        WriteU32BE(out.data() + i * 4, offsets[i]);
     }
-    out[64] = static_cast<uint8_t>(division >> 24);
-    out[65] = static_cast<uint8_t>(division >> 16);
-    out[66] = static_cast<uint8_t>(division >> 8);
-    out[67] = static_cast<uint8_t>(division);
+    WriteU32BE(out.data() + 64, division);
 
     auto music = std::make_shared<MusicData>(std::move(out));
     music->mDivision = division;
