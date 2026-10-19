@@ -10,6 +10,7 @@
 
 #include <optional>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -108,6 +109,20 @@ inline std::vector<DialogString> ReadModdingDialogSeq(const YAML::Node& seq) {
         entries.push_back(entry);
     }
     return entries;
+}
+
+inline constexpr const char* kPalExtraLangs[] = { "French", "German" };
+inline std::vector<YAML::Node> ReadPalExtraLangs(const YAML::Node& info, const std::string& symbol, const char* kind) {
+    const bool french = static_cast<bool>(info[kPalExtraLangs[0]]);
+    const bool german = static_cast<bool>(info[kPalExtraLangs[1]]);
+    if (french != german) {
+        throw std::runtime_error(fmt::format("BK64 {}: {} has {} but no {}; give it both or neither", kind, symbol,
+                                             kPalExtraLangs[french ? 0 : 1], kPalExtraLangs[french ? 1 : 0]));
+    }
+    if (!french) {
+        return {};
+    }
+    return { info[kPalExtraLangs[0]], info[kPalExtraLangs[1]] };
 }
 
 // Parse a modding-yaml buffer and return the asset's value node (the map under its symbol).

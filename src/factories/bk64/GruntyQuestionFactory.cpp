@@ -75,6 +75,54 @@ void WriteGruntyLangBlock(LUS::BinaryWriter& writer, const std::vector<DialogStr
     }
 }
 
+void EmitGruntyLang(YAML::Emitter& out, const std::vector<DialogString>& text,
+                    const std::vector<OptionString>& options) {
+    out << YAML::Key << "Text";
+    out << YAML::Value;
+    EmitDialogStringSeq(out, text);
+
+    out << YAML::Key << "Options";
+    out << YAML::Value;
+
+    out << YAML::BeginSeq;
+    for (const auto& [cmd, unk0, unk1, str] : options) {
+        out << YAML::Flow;
+        out << YAML::BeginSeq;
+        out << YAML_HEX((uint32_t)cmd);
+        out << YAML_HEX((uint32_t)unk0);
+        out << YAML_HEX((uint32_t)unk1);
+        EmitText(out, str);
+        out << YAML::EndSeq;
+    }
+    out << YAML::EndSeq;
+}
+
+GruntyQuestionLang ReadGruntyLang(const YAML::Node& lang) {
+    auto text = ReadModdingDialogSeq(lang["Text"]);
+
+    std::vector<OptionString> options;
+    auto optionsNode = lang["Options"];
+    for (YAML::iterator it = optionsNode.begin(); it != optionsNode.end(); ++it) {
+        if (options.size() >= kQuestionOptionCount) {
+            SPDLOG_WARN("BK64 GruntyQuestion: Only 3 Options Allowed; extra options ignored");
+            break;
+        }
+        OptionString optionString;
+        optionString.cmd = (*it)[0].as<uint32_t>();
+        optionString.unk0 = (*it)[1].as<uint32_t>();
+        optionString.unk1 = (*it)[2].as<uint32_t>();
+        optionString.str = DecodeText((*it)[3].as<std::string>());
+        optionString.str += '\0';
+        options.push_back(optionString);
+    }
+
+    if (options.size() != kQuestionOptionCount) {
+        throw std::runtime_error("BK64 GruntyQuestion: Requires Exactly 3 Options");
+    }
+
+    return { std::move(text), std::move(options) };
+}
+
 } // namespace
 
 ExportResult GruntyQuestionCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
@@ -151,24 +199,15 @@ ExportResult BK64::GruntyQuestionModdingExporter::Export(std::ostream& write, st
     out.SetIndent(2);
 
     out << YAML::BeginMap;
-    out << YAML::Key << "Text";
-    out << YAML::Value;
-    EmitDialogStringSeq(out, gruntyQuestion->mText);
+    EmitGruntyLang(out, gruntyQuestion->mText, gruntyQuestion->mOptions);
 
-    out << YAML::Key << "Options";
-    out << YAML::Value;
-
-    out << YAML::BeginSeq;
-    for (const auto& [cmd, unk0, unk1, str] : gruntyQuestion->mOptions) {
-        out << YAML::Flow;
-        out << YAML::BeginSeq;
-        out << YAML_HEX((uint32_t)cmd);
-        out << YAML_HEX((uint32_t)unk0);
-        out << YAML_HEX((uint32_t)unk1);
-        EmitText(out, str);
-        out << YAML::EndSeq;
+    for (size_t i = 0; i < gruntyQuestion->mExtraLangs.size() && i < std::size(kPalExtraLangs); i++) {
+        out << YAML::Key << kPalExtraLangs[i];
+        out << YAML::Value;
+        out << YAML::BeginMap;
+        EmitGruntyLang(out, gruntyQuestion->mExtraLangs[i].text, gruntyQuestion->mExtraLangs[i].options);
+        out << YAML::EndMap;
     }
-    out << YAML::EndSeq;
 
     out << YAML::EndMap;
     out << YAML::EndMap;
@@ -204,31 +243,17 @@ std::optional<std::shared_ptr<IParsedData>> GruntyQuestionFactory::parse(std::ve
 
 std::optional<std::shared_ptr<IParsedData>> GruntyQuestionFactory::parse_modding(std::vector<uint8_t>& buffer,
                                                                                  YAML::Node& node) {
-    const YAML::Node info = YamlEntry(buffer, GetSafeNode<std::string>(node, "symbol"));
+    const auto symbol = GetSafeNode<std::string>(node, "symbol");
+    const YAML::Node info = YamlEntry(buffer, symbol);
 
-    auto text = ReadModdingDialogSeq(info["Text"]);
-
-    std::vector<OptionString> options;
-    auto optionsNode = info["Options"];
-    for (YAML::iterator it = optionsNode.begin(); it != optionsNode.end(); ++it) {
-        if (options.size() >= kQuestionOptionCount) {
-            SPDLOG_WARN("BK64 GruntyQuestion: Only 3 Options Allowed; extra options ignored");
-            break;
-        }
-        OptionString optionString;
-        optionString.cmd = (*it)[0].as<uint32_t>();
-        optionString.unk0 = (*it)[1].as<uint32_t>();
-        optionString.unk1 = (*it)[2].as<uint32_t>();
-        optionString.str = DecodeText((*it)[3].as<std::string>());
-        optionString.str += '\0';
-        options.push_back(optionString);
+    auto english = ReadGruntyLang(info);
+    std::vector<GruntyQuestionLang> extraLangs;
+    for (const auto& lang : ReadPalExtraLangs(info, symbol, "GruntyQuestion")) {
+        extraLangs.push_back(ReadGruntyLang(lang));
     }
 
-    if (options.size() != kQuestionOptionCount) {
-        throw std::runtime_error("BK64 GruntyQuestion: Requires Exactly 3 Options");
-    }
-
-    return std::make_shared<GruntyQuestionData>(text, options);
+    return std::make_shared<GruntyQuestionData>(std::move(english.text), std::move(english.options),
+                                                std::move(extraLangs));
 }
 
 } // namespace BK64
