@@ -2800,7 +2800,9 @@ void Companion::BuildGlobalAddrSpace(const std::vector<fs::directory_entry>& ent
     this->gGlobalAddrMap.clear();
     this->gGlobalVtxRanges.clear();
     this->gGlobalVariants.clear();
+#ifdef AC_SUPPORT
     this->gRuntimeBuffers.clear();
+#endif
 
     for (const auto& entry : entries) {
         if (entry.is_directory()) {
@@ -2835,11 +2837,13 @@ void Companion::BuildGlobalAddrSpace(const std::vector<fs::directory_entry>& ent
                 continue;
             }
 
+#ifdef AC_SUPPORT
             if (node["type"] && GetTypeNode(node) == "AC:RUNTIME_BUFFER") {
                 const auto size = GetSafeNode<uint32_t>(node, "size");
                 this->gRuntimeBuffers[offset] = { offset + size, GetSafeNode<uint32_t>(node, "segment"),
                                                   GetSafeNode<uint32_t>(node, "segment_offset"), output };
             }
+#endif
 
             if (auto it = this->gGlobalAddrMap.find(offset); it != this->gGlobalAddrMap.end()) {
                 if (std::get<0>(it->second) != output) {
@@ -2875,6 +2879,7 @@ std::vector<std::tuple<std::string, YAML::Node>> Companion::GetVariantsByAddr(ui
     return {};
 }
 
+#ifdef AC_SUPPORT
 std::optional<uint32_t> Companion::MapRuntimeBuffer(uint32_t addr) {
     auto it = this->gRuntimeBuffers.upper_bound(addr);
     if (it == this->gRuntimeBuffers.begin()) {
@@ -2886,6 +2891,7 @@ std::optional<uint32_t> Companion::MapRuntimeBuffer(uint32_t addr) {
     }
     return ((it->second.segment << 24) | (it->second.segmentOffset + (addr - it->first))) | 1;
 }
+#endif
 
 std::optional<std::tuple<std::string, YAML::Node>> Companion::SearchGlobalVtx(uint32_t addr) {
     auto it = this->gGlobalVtxRanges.upper_bound(addr);

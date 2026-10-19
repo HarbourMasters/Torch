@@ -104,12 +104,14 @@ struct GlobalVtxRange {
     YAML::Node node;
 };
 
+#ifdef AC_SUPPORT
 struct RuntimeBufferRange {
     uint32_t end;
     uint32_t segment;
     uint32_t segmentOffset;
     std::string name;
 };
+#endif
 
 struct GBIConfig {
     GBIVersion version = GBIVersion::f3d;
@@ -281,7 +283,9 @@ public:
     std::optional<std::tuple<std::string, YAML::Node>> GetGlobalNodeByAddr(uint32_t addr);
     std::optional<std::tuple<std::string, YAML::Node>> SearchGlobalVtx(uint32_t addr);
     std::vector<std::tuple<std::string, YAML::Node>> GetVariantsByAddr(uint32_t addr);
+#ifdef AC_SUPPORT
     std::optional<uint32_t> MapRuntimeBuffer(uint32_t addr);
+#endif
 
     static std::vector<std::string> Manifest(const fs::path& root, const std::vector<std::string>& ymls);
 
@@ -312,7 +316,9 @@ private:
     std::unordered_map<uint32_t, std::tuple<std::string, YAML::Node>> gGlobalAddrMap;
     std::map<uint32_t, GlobalVtxRange> gGlobalVtxRanges;
     std::unordered_map<uint32_t, std::vector<std::tuple<std::string, YAML::Node>>> gGlobalVariants;
+#ifdef AC_SUPPORT
     std::map<uint32_t, RuntimeBufferRange> gRuntimeBuffers;
+#endif
     bool gIndividualIncludes = false;
     YAML::Node gHashNode;
     std::shared_ptr<N64::Cartridge> gCartridge;
