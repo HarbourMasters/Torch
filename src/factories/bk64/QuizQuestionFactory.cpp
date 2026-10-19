@@ -39,6 +39,65 @@ void WriteQuizLangBlock(LUS::BinaryWriter& writer, const std::vector<DialogStrin
     WriteDialogStrings(writer, options);
 }
 
+void EmitQuizLang(YAML::Emitter& out, const std::vector<DialogString>& text, const std::vector<DialogString>& options) {
+    out << YAML::Key << "Text";
+    out << YAML::Value;
+    EmitDialogStringSeq(out, text);
+
+    out << YAML::Key << "Options";
+    out << YAML::Value;
+
+    // Options expose their leading control pair as separate fields so a pack can
+    // edit the text without touching them. PAL's options have no pair.
+    out << YAML::BeginSeq;
+    for (const auto& [cmd, str] : options) {
+        out << YAML::Flow;
+        out << YAML::BeginSeq;
+        out << YAML_HEX((uint32_t)cmd);
+        if (str.size() >= 2 && static_cast<uint8_t>(str[0]) == 0xFD) {
+            out << YAML_HEX((uint32_t)static_cast<uint8_t>(str[0]));
+            out << YAML_HEX((uint32_t)static_cast<uint8_t>(str[1]));
+            EmitText(out, str.substr(2));
+        } else {
+            EmitText(out, str);
+        }
+        out << YAML::EndSeq;
+    }
+    out << YAML::EndSeq;
+}
+
+QuizQuestionLang ReadQuizLang(const YAML::Node& lang) {
+    auto text = ReadModdingDialogSeq(lang["Text"]);
+
+    std::vector<DialogString> options;
+    auto optionsNode = lang["Options"];
+    for (YAML::iterator it = optionsNode.begin(); it != optionsNode.end(); ++it) {
+        if (options.size() >= 3) {
+            SPDLOG_WARN("BK64 QuizQuestion: Only 3 Options Allowed; extra options ignored");
+            break;
+        }
+        if ((*it).size() != 4 && (*it).size() != 2) {
+            throw std::runtime_error(
+                "BK64 QuizQuestion: option must be [cmd, 0xfd, 0x6c, \"text\"] or [cmd, \"text\"]");
+        }
+        DialogString optionString;
+        optionString.cmd = (*it)[0].as<uint32_t>();
+        if ((*it).size() == 4) {
+            optionString.str.push_back(static_cast<char>((*it)[1].as<uint32_t>()));
+            optionString.str.push_back(static_cast<char>((*it)[2].as<uint32_t>()));
+        }
+        optionString.str += DecodeText((*it)[(*it).size() - 1].as<std::string>());
+        optionString.str += '\0';
+        options.push_back(optionString);
+    }
+
+    if (options.size() != 3) {
+        throw std::runtime_error("BK64 QuizQuestion: Requires Exactly 3 Options");
+    }
+
+    return { std::move(text), std::move(options) };
+}
+
 } // namespace
 
 ExportResult QuizQuestionCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw,
@@ -108,26 +167,15 @@ ExportResult BK64::QuizQuestionModdingExporter::Export(std::ostream& write, std:
     out.SetIndent(2);
 
     out << YAML::BeginMap;
-    out << YAML::Key << "Text";
-    out << YAML::Value;
-    EmitDialogStringSeq(out, quizQuestion->mText);
+    EmitQuizLang(out, quizQuestion->mText, quizQuestion->mOptions);
 
-    out << YAML::Key << "Options";
-    out << YAML::Value;
-
-    // Options expose their leading control pair as separate fields so a pack can
-    // edit the text without touching them.
-    out << YAML::BeginSeq;
-    for (const auto& [cmd, str] : quizQuestion->mOptions) {
-        out << YAML::Flow;
-        out << YAML::BeginSeq;
-        out << YAML_HEX((uint32_t)cmd);
-        out << YAML_HEX((uint32_t)static_cast<uint8_t>(str[0]));
-        out << YAML_HEX((uint32_t)static_cast<uint8_t>(str[1]));
-        EmitText(out, str.substr(2));
-        out << YAML::EndSeq;
+    for (size_t i = 0; i < quizQuestion->mExtraLangs.size() && i < std::size(kPalExtraLangs); i++) {
+        out << YAML::Key << kPalExtraLangs[i];
+        out << YAML::Value;
+        out << YAML::BeginMap;
+        EmitQuizLang(out, quizQuestion->mExtraLangs[i].text, quizQuestion->mExtraLangs[i].options);
+        out << YAML::EndMap;
     }
-    out << YAML::EndSeq;
 
     out << YAML::EndMap;
     out << YAML::EndMap;
@@ -162,34 +210,17 @@ std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse(std::vect
 
 std::optional<std::shared_ptr<IParsedData>> QuizQuestionFactory::parse_modding(std::vector<uint8_t>& buffer,
                                                                                YAML::Node& node) {
-    const YAML::Node info = YamlEntry(buffer, GetSafeNode<std::string>(node, "symbol"));
+    const auto symbol = GetSafeNode<std::string>(node, "symbol");
+    const YAML::Node info = YamlEntry(buffer, symbol);
 
-    auto text = ReadModdingDialogSeq(info["Text"]);
-
-    std::vector<DialogString> options;
-    auto optionsNode = info["Options"];
-    for (YAML::iterator it = optionsNode.begin(); it != optionsNode.end(); ++it) {
-        if (options.size() >= 3) {
-            SPDLOG_WARN("BK64 QuizQuestion: Only 3 Options Allowed; extra options ignored");
-            break;
-        }
-        if ((*it).size() != 4) {
-            throw std::runtime_error("BK64 QuizQuestion: option must be [cmd, 0xfd, 0x6c, \"text\"]");
-        }
-        DialogString optionString;
-        optionString.cmd = (*it)[0].as<uint32_t>();
-        optionString.str.push_back(static_cast<char>((*it)[1].as<uint32_t>()));
-        optionString.str.push_back(static_cast<char>((*it)[2].as<uint32_t>()));
-        optionString.str += DecodeText((*it)[3].as<std::string>());
-        optionString.str += '\0';
-        options.push_back(optionString);
+    auto english = ReadQuizLang(info);
+    std::vector<QuizQuestionLang> extraLangs;
+    for (const auto& lang : ReadPalExtraLangs(info, symbol, "QuizQuestion")) {
+        extraLangs.push_back(ReadQuizLang(lang));
     }
 
-    if (options.size() != 3) {
-        throw std::runtime_error("BK64 QuizQuestion: Requires Exactly 3 Options");
-    }
-
-    return std::make_shared<QuizQuestionData>(text, options);
+    return std::make_shared<QuizQuestionData>(std::move(english.text), std::move(english.options),
+                                              std::move(extraLangs));
 }
 
 } // namespace BK64

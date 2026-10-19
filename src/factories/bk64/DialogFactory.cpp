@@ -23,6 +23,16 @@ static void WriteLangBlock(LUS::BinaryWriter& writer, const std::vector<DialogSt
     WriteDialogStrings(writer, top);
 }
 
+static void EmitLangBlock(YAML::Emitter& out, const std::vector<DialogString>& bottom,
+                          const std::vector<DialogString>& top) {
+    out << YAML::Key << "Bottom";
+    out << YAML::Value;
+    EmitDialogStringSeq(out, bottom);
+    out << YAML::Key << "Top";
+    out << YAML::Value;
+    EmitDialogStringSeq(out, top);
+}
+
 ExportResult DialogCodeExporter::Export(std::ostream& write, std::shared_ptr<IParsedData> raw, std::string& entryName,
                                         YAML::Node& node, std::string* replacement) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
@@ -84,15 +94,15 @@ ExportResult BK64::DialogModdingExporter::Export(std::ostream& write, std::share
     out.SetIndent(2);
 
     out << YAML::BeginMap;
-    out << YAML::Key << "Bottom";
-    out << YAML::Value;
+    EmitLangBlock(out, dialog->mBottom, dialog->mTop);
 
-    EmitDialogStringSeq(out, dialog->mBottom);
-
-    out << YAML::Key << "Top";
-    out << YAML::Value;
-
-    EmitDialogStringSeq(out, dialog->mTop);
+    for (size_t i = 0; i < dialog->mExtraLangs.size() && i < std::size(kPalExtraLangs); i++) {
+        out << YAML::Key << kPalExtraLangs[i];
+        out << YAML::Value;
+        out << YAML::BeginMap;
+        EmitLangBlock(out, dialog->mExtraLangs[i].bottom, dialog->mExtraLangs[i].top);
+        out << YAML::EndMap;
+    }
 
     out << YAML::EndMap;
     out << YAML::EndMap;
@@ -221,15 +231,23 @@ std::optional<std::shared_ptr<IParsedData>> DialogFactory::parse(std::vector<uin
 
 std::optional<std::shared_ptr<IParsedData>> DialogFactory::parse_modding(std::vector<uint8_t>& buffer,
                                                                          YAML::Node& node) {
-    const YAML::Node info = YamlEntry(buffer, GetSafeNode<std::string>(node, "symbol"));
+    const auto symbol = GetSafeNode<std::string>(node, "symbol");
+    const YAML::Node info = YamlEntry(buffer, symbol);
 
-    auto bottom = ReadModdingDialogSeq(info["Bottom"]);
-    auto top = ReadModdingDialogSeq(info["Top"]);
+    const auto readLang = [](const YAML::Node& lang) {
+        DialogLang out{ ReadModdingDialogSeq(lang["Bottom"]), ReadModdingDialogSeq(lang["Top"]) };
+        EnsureTerminator(out.bottom);
+        EnsureTerminator(out.top);
+        return out;
+    };
 
-    EnsureTerminator(bottom);
-    EnsureTerminator(top);
+    auto english = readLang(info);
+    std::vector<DialogLang> extraLangs;
+    for (const auto& lang : ReadPalExtraLangs(info, symbol, "Dialog")) {
+        extraLangs.push_back(readLang(lang));
+    }
 
-    return std::make_shared<DialogData>(bottom, top);
+    return std::make_shared<DialogData>(std::move(english.bottom), std::move(english.top), std::move(extraLangs));
 }
 
 } // namespace BK64
