@@ -47,9 +47,11 @@ class BKAssetData : public IParsedData {
   public:
     std::vector<BKAssetInfo> mAssetTableInfo;
     std::unordered_map<uint32_t, std::string> mSymbolMap;
+    std::vector<uint32_t> mEmptyIds;
 
-    BKAssetData(std::vector<BKAssetInfo> assetTableInfo, std::unordered_map<uint32_t, std::string> symbolMap)
-        : mAssetTableInfo(std::move(assetTableInfo)), mSymbolMap(std::move(symbolMap)) {
+    BKAssetData(std::vector<BKAssetInfo> assetTableInfo, std::unordered_map<uint32_t, std::string> symbolMap,
+                std::vector<uint32_t> emptyIds)
+        : mAssetTableInfo(std::move(assetTableInfo)), mSymbolMap(std::move(symbolMap)), mEmptyIds(std::move(emptyIds)) {
     }
 };
 
