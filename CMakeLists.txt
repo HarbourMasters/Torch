@@ -267,6 +267,13 @@ else()
     endif()
 endif()
 
+if(BUILD_AC)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC AC_SUPPORT)
+endif()
+if(BUILD_UI)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC BUILD_UI)
+endif()
+
 if (BUILD_STORMLIB)
     add_definitions(-DUSE_STORMLIB)
 endif()
