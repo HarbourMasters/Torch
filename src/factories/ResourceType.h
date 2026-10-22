@@ -97,7 +97,7 @@ enum class ResourceType {
 
     // NAudio v0
     Bank = 0x42414E4B,         // BANK
-    Sample = 0x41554643,       // AIFC
+    Sample = 0x41554643,       // AUFC
     Sequence = 0x53455143,     // SEQC
 
     // NAudio v1
