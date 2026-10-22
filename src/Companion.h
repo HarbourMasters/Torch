@@ -140,7 +140,7 @@ public:
     static Companion* Instance;
 
     explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const bool modding = false,
-                       const std::string& srcDir = "", const std::string& destPath = "") : gCartridge(nullptr),
+                       const std::filesystem::path& srcDir = "", const std::filesystem::path& destPath = "") : gCartridge(nullptr),
                        gSourceDirectory(srcDir), gDestinationDirectory(destPath) {
         this->gRomPath = rom;
         this->gConfig.otrMode = otr;
@@ -151,7 +151,7 @@ public:
     }
 
     explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const bool modding = false,
-                       const std::string& srcDir = "", const std::string& destPath = "") : gCartridge(nullptr),
+                       const std::filesystem::path& srcDir = "", const std::filesystem::path& destPath = "") : gCartridge(nullptr),
                        gSourceDirectory(srcDir), gDestinationDirectory(destPath) {
         this->gRomData = rom;
         this->gConfig.otrMode = otr;
@@ -163,10 +163,10 @@ public:
 
     void SetRomPath(std::filesystem::path path) { this->gRomPath = std::move(path); }
 
-    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
+    explicit Companion(std::filesystem::path rom, const ArchiveType otr, const bool debug, const std::filesystem::path& srcDir = "", const std::filesystem::path& destPath = "") :
                        Companion(rom, otr, debug, false, srcDir, destPath) {}
     
-    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const std::string& srcDir = "", const std::string& destPath = "") :
+    explicit Companion(std::vector<uint8_t> rom, const ArchiveType otr, const bool debug, const std::filesystem::path& srcDir = "", const std::filesystem::path& destPath = "") :
                        Companion(rom, otr, debug, false, srcDir, destPath) {}
 
     void Init(ExportType type);
