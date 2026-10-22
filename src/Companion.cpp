@@ -2805,9 +2805,9 @@ static bool IsAssetYaml(const std::string& path) {
 }
 
 fs::path Companion::GetYamlDirectory(const std::string& yamlPath, YAML::Node& root) const {
-    auto relPath = relative(fs::path(yamlPath), this->gAssetPath).replace_extension("");
+    auto relPath = fs::path(yamlPath).lexically_relative(this->gAssetPath).replace_extension("");
     if (StringHelper::StartsWith(relPath.string(), "../"))
-        relPath = relative(fs::path(yamlPath), this->gCommonAssetPath).replace_extension("");
+        relPath = fs::path(yamlPath).lexically_relative(this->gCommonAssetPath).replace_extension("");
 
     if (auto directory = root[":config"]["directory"]) {
         return directory.as<std::string>();
@@ -2978,7 +2978,7 @@ std::vector<std::string> Companion::Manifest(const fs::path& root, const std::ve
     std::vector<std::string> out;
     for (const auto& file : files) {
         YAML::Node yaml = YAML::LoadFile(file.string());
-        fs::path directory = fs::relative(file, root).replace_extension("");
+        fs::path directory = fs::path(file).lexically_relative(root).replace_extension("");
         if (yaml[":config"] && yaml[":config"]["directory"]) {
             directory = yaml[":config"]["directory"].as<std::string>();
         }
