@@ -168,6 +168,15 @@ namespace fs = std::filesystem;
 static const std::string regular = "[%Y-%m-%d %H:%M:%S.%e] [%l] %v";
 static const std::string line = "[%Y-%m-%d %H:%M:%S.%e] [%l] > %v";
 
+// YAML::LoadFile opens a narrow path, which breaks on utf-8 paths on Windows
+static YAML::Node LoadYaml(const fs::path& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        throw YAML::BadFile(Torch::ToUtf8(path));
+    }
+    return YAML::Load(file);
+}
+
 static std::string ConvertType(std::string type) {
     int index = type.find(':');
 
@@ -398,7 +407,7 @@ void Companion::Init(const ExportType type, std::atomic<size_t>& assetCount, boo
 }
 
 void Companion::ParseEnums(std::string& header) {
-    std::ifstream file(header);
+    std::ifstream file(Torch::FromUtf8(header));
 
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open header files for enums node in config");
@@ -478,7 +487,7 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
     bool executeDef = true;
     std::optional<std::shared_ptr<IParsedData>> result;
     if (this->gConfig.modding && impl->SupportModdedAssets() && Torch::contains(this->gModdedAssetPaths, name)) {
-        auto path = fs::path(this->gConfig.moddingPath) / this->gModdedAssetPaths[name];
+        auto path = Torch::FromUtf8(this->gConfig.moddingPath) / Torch::FromUtf8(this->gModdedAssetPaths[name]);
         if (!exists(path)) {
             SPDLOG_ERROR("Modded asset {} not found", this->gModdedAssetPaths[name]);
         } else {
@@ -486,7 +495,7 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
             std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator(input), {});
             input.close();
 
-            this->gCurrentModdingSource = path.filename().string();
+            this->gCurrentModdingSource = Torch::ToUtf8(path.filename());
             result = impl->parse_modding(data, node);
             this->gCurrentModdingSource.clear();
             executeDef = !result.has_value();
@@ -500,7 +509,7 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
 
         if (executeDef && this->gConfig.parseMode == ParseMode::Directory) {
             auto path = GetSafeNode<std::string>(node, "path");
-            std::ifstream input(path, std::ios::binary);
+            std::ifstream input(Torch::FromUtf8(path), std::ios::binary);
             auto data = std::vector<uint8_t>(std::istreambuf_iterator(input), {});
             result = impl->parse(data, node);
             input.close();
@@ -521,11 +530,11 @@ std::optional<ParseResultData> Companion::ParseNode(YAML::Node& node, std::strin
 }
 
 void Companion::ParseModdingConfig() {
-    auto path = fs::path(this->gConfig.moddingPath) / "modding.yml";
+    auto path = Torch::FromUtf8(this->gConfig.moddingPath) / "modding.yml";
     if (!fs::exists(path)) {
         throw std::runtime_error("No modding config found, please run in export mode first");
     }
-    auto modding = YAML::LoadFile(path.string());
+    auto modding = LoadYaml(path);
     for (auto assets = modding["assets"].begin(); assets != modding["assets"].end(); ++assets) {
         auto name = assets->first.as<std::string>();
         auto asset = assets->second.as<std::string>();
@@ -543,7 +552,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 auto externalFile = externalFiles[i];
                 if (externalFile.size() == 0) {
                     this->gCurrentExternalFiles.push_back(
-                        (this->gSourceDirectory / externalFile.as<std::string>()).generic_string());
+                        Torch::ToGenericUtf8(this->gSourceDirectory / externalFile.as<std::string>()));
                 } else {
                     SPDLOG_INFO("External File size {}", externalFile.size());
                     throw std::runtime_error(
@@ -552,9 +561,11 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
                 }
 
                 std::string externalFileName =
-                    (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
-                const auto relPath = std::filesystem::relative(externalFileName, this->gAssetPath).string();
-                const auto relCommonPath = std::filesystem::relative(externalFileName, this->gCommonAssetPath).string();
+                    Torch::ToGenericUtf8(this->gSourceDirectory / externalFile.as<std::string>());
+                const auto relPath = Torch::ToUtf8(
+                    std::filesystem::relative(Torch::FromUtf8(externalFileName), Torch::FromUtf8(this->gAssetPath)));
+                const auto relCommonPath = Torch::ToUtf8(std::filesystem::relative(
+                    Torch::FromUtf8(externalFileName), Torch::FromUtf8(this->gCommonAssetPath)));
                 if (StringHelper::StartsWith(relPath, "../")) {
                     if (StringHelper::StartsWith(relCommonPath, "../"))
                         throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
@@ -575,9 +586,10 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
 
                     this->gCurrentFile = externalFileName;
                     this->gCurrentDirectory =
-                        std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
+                        std::filesystem::relative(Torch::FromUtf8(externalFileName), Torch::FromUtf8(this->gAssetPath))
+                            .replace_extension("");
 
-                    YAML::Node root = YAML::LoadFile(externalFileName);
+                    YAML::Node root = LoadYaml(Torch::FromUtf8(externalFileName));
 
                     if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
                         ProcessFile(root, assetCount);
@@ -723,7 +735,7 @@ void Companion::ParseHash() {
     const auto out = this->gDestinationDirectory / "torch.hash.yml";
 
     if (fs::exists(out)) {
-        this->gHashNode = YAML::LoadFile(out.string());
+        this->gHashNode = LoadYaml(out);
     } else {
         this->gHashNode = YAML::Node();
     }
@@ -752,7 +764,7 @@ bool Companion::NodeHasChanges(const std::string& path) {
         return true;
     }
 
-    std::ifstream yaml(path);
+    std::ifstream yaml(Torch::FromUtf8(path));
     const std::vector<uint8_t> data = std::vector<uint8_t>(std::istreambuf_iterator(yaml), {});
     this->gCurrentHash = CalculateHash(data);
     bool needsInit = true;
@@ -786,18 +798,19 @@ bool Companion::NodeHasChanges(const std::string& path) {
 }
 
 void Companion::LoadYAMLRecursively(const std::string& dirPath, std::vector<YAML::Node>& result, bool skipRoot) {
-    for (const auto& entry : std::filesystem::directory_iterator(dirPath)) {
+    const auto dir = Torch::FromUtf8(dirPath);
+    for (const auto& entry : std::filesystem::directory_iterator(dir)) {
         if (entry.is_directory()) {
             // Skip the root directory if specified
-            if (skipRoot && entry.path() == dirPath) {
+            if (skipRoot && entry.path() == dir) {
                 continue;
             }
 
             // Recursive call for subdirectories
-            LoadYAMLRecursively(entry.path().generic_string(), result, false);
+            LoadYAMLRecursively(Torch::ToGenericUtf8(entry.path()), result, false);
         } else if (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml") {
             // Load YAML file and add it to the result vector
-            result.push_back(YAML::LoadFile(entry.path().generic_string()));
+            result.push_back(LoadYaml(entry.path()));
         }
     }
 }
@@ -937,9 +950,9 @@ void Companion::ProcessExportFile() {
                             break;
                         }
 
-                        std::string dpath = Instance->GetOutputPath() + "/" + result.name;
-                        if (!exists(fs::path(dpath).parent_path())) {
-                            create_directories(fs::path(dpath).parent_path());
+                        auto dpath = Torch::FromUtf8(Instance->GetOutputPath() + "/" + result.name);
+                        if (!exists(dpath.parent_path())) {
+                            create_directories(dpath.parent_path());
                         }
 
                         this->gModdedAssetPaths[ogname] = result.name;
@@ -949,10 +962,10 @@ void Companion::ProcessExportFile() {
                         file.close();
 
                         for (auto& entry : this->gCompanionFiles) {
-                            auto cpath = (Instance->GetOutputPath() / this->gCurrentDirectory / entry.first).string();
-                            std::replace(cpath.begin(), cpath.end(), '\\', '/');
-                            if (!exists(fs::path(cpath).parent_path())) {
-                                create_directories(fs::path(cpath).parent_path());
+                            auto cpath =
+                                Torch::FromUtf8(Instance->GetOutputPath()) / this->gCurrentDirectory / entry.first;
+                            if (!exists(cpath.parent_path())) {
+                                create_directories(cpath.parent_path());
                             }
 
                             std::ofstream cfile(cpath, std::ios::binary);
@@ -1013,7 +1026,7 @@ void Companion::ProcessExportFile() {
         this->gWriteMap[this->gCurrentFile][result.type].push_back(wEntry);
     }
 
-    auto fsout = fs::path(this->gConfig.outputPath);
+    auto fsout = Torch::FromUtf8(this->gConfig.outputPath);
 
     if (mShouldProcess) {
         if (this->gConfig.exporterType == ExportType::Modding || this->gConfig.exporterType == ExportType::XML) {
@@ -1024,7 +1037,7 @@ void Companion::ProcessExportFile() {
                 modding["assets"][key] = value;
             }
 
-            std::ofstream file(fsout.string(), std::ios::binary);
+            std::ofstream file(fsout, std::ios::binary);
             file << modding;
             file.close();
         } else if (this->gConfig.exporterType != ExportType::Binary) {
@@ -1129,7 +1142,7 @@ void Companion::ProcessExportFile() {
 
                 if (this->gConfig.exporterType == ExportType::Code && this->gIndividualIncludes) {
                     fs::path outinc =
-                        fs::path(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() /
+                        Torch::FromUtf8(this->gConfig.outputPath) / this->gCurrentDirectory.parent_path() /
                         fs::relative(fs::path(result.name + ".inc.c"), this->gCurrentDirectory.parent_path());
 
                     if (!exists(outinc.parent_path())) {
@@ -1158,18 +1171,18 @@ void Companion::ProcessExportFile() {
                     return;
                 }
 
-                std::string output = fsout.string();
+                std::string output = Torch::ToUtf8(fsout);
                 std::replace(output.begin(), output.end(), '\\', '/');
-                if (!exists(fs::path(output).parent_path())) {
-                    create_directories(fs::path(output).parent_path());
+                if (!exists(fsout.parent_path())) {
+                    create_directories(fsout.parent_path());
                 }
 
-                std::ofstream file(output, std::ios::binary);
+                std::ofstream file(fsout, std::ios::binary);
                 SPDLOG_INFO("Writing {} to {}", this->gCurrentFile, output);
 
                 if (this->gConfig.exporterType == ExportType::Header) {
-                    fs::path entryPath = this->gCurrentFile;
-                    std::string symbol = entryPath.stem().string();
+                    fs::path entryPath = Torch::FromUtf8(this->gCurrentFile);
+                    std::string symbol = Torch::ToUtf8(entryPath.stem());
                     std::transform(symbol.begin(), symbol.end(), symbol.begin(), toupper);
                     if (this->IsOTRMode()) {
                         file << "#pragma once\n\n";
@@ -1225,9 +1238,11 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // directory must be resolved before the loop. Default to the file's own
     // path, then honor a :config directory override (used to register a room's
     // assets under its scene's directory).
-    auto relPath = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
-    if (StringHelper::StartsWith(relPath.string(), "../"))
-        relPath = relative(fs::path(this->gCurrentFile), this->gCommonAssetPath).replace_extension("");
+    auto relPath =
+        relative(Torch::FromUtf8(this->gCurrentFile), Torch::FromUtf8(this->gAssetPath)).replace_extension("");
+    if (StringHelper::StartsWith(Torch::ToUtf8(relPath), "../"))
+        relPath = relative(Torch::FromUtf8(this->gCurrentFile), Torch::FromUtf8(this->gCommonAssetPath))
+                      .replace_extension("");
 
     this->gCurrentDirectory = relPath;
 
@@ -1290,7 +1305,7 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     }
 
     // Stupid hack because the iteration broke the assets
-    root = YAML::LoadFile(this->gCurrentFile);
+    root = LoadYaml(Torch::FromUtf8(this->gCurrentFile));
     this->gConfig.segment.local.clear();
     this->gConfig.segment.compressed.clear();
     this->gFileHeader.clear();
@@ -1342,12 +1357,12 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
 std::vector<fs::directory_entry> Companion::GetAssetYMLs(YAML::Node& rom) const {
     if (!this->gSingleYMLPath.empty()) {
         std::vector<fs::directory_entry> single;
-        fs::path assetPath = this->gAssetPath;
+        fs::path assetPath = Torch::FromUtf8(this->gAssetPath);
         fs::directory_entry a(assetPath / this->gSingleYMLPath);
         single.emplace_back(a);
         return single;
     }
-    return Torch::getRecursiveEntries(this->gAssetPath, this->gCommonAssetPath);
+    return Torch::getRecursiveEntries(Torch::FromUtf8(this->gAssetPath), Torch::FromUtf8(this->gCommonAssetPath));
 }
 
 void Companion::Process(std::atomic<size_t>& assetCount) {
@@ -1361,7 +1376,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     }
 
     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    YAML::Node config = YAML::LoadFile(configPath.string());
+    YAML::Node config = LoadYaml(configPath);
 
     bool isDirectoryMode = config["mode"] && config["mode"].as<std::string>() == "directory";
 
@@ -1456,16 +1471,16 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             this->gConfig.segment.global[i + 1] = segments[i];
         }
     }
-    this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
+    this->gAssetPath = Torch::ToUtf8(this->gSourceDirectory / rom["path"].as<std::string>());
     // Optional: a rom that keeps all its ymls under one tree has no common dir, and
     // getRecursiveEntries already treats an empty path as "nothing to add".
     if (rom["common_path"]) {
-        this->gCommonAssetPath = (this->gSourceDirectory / rom["common_path"].as<std::string>()).string();
+        this->gCommonAssetPath = Torch::ToUtf8(this->gSourceDirectory / rom["common_path"].as<std::string>());
     }
 
     if (rom["filelist"]) {
-        const std::string filelistPath = (this->gSourceDirectory / rom["filelist"].as<std::string>()).string();
-        if (!fs::exists(filelistPath)) {
+        const std::string filelistPath = Torch::ToUtf8(this->gSourceDirectory / rom["filelist"].as<std::string>());
+        if (!fs::exists(Torch::FromUtf8(filelistPath))) {
             SPDLOG_ERROR("A filelist was specified but the file doesn't exist");
             return;
         }
@@ -1482,7 +1497,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     }
     auto output_path = this->gDestinationDirectory;
 
-    this->gConfig.moddingPath = (this->gDestinationDirectory / modding_path).string();
+    this->gConfig.moddingPath = Torch::ToUtf8(this->gDestinationDirectory / modding_path);
     // The output path is only consumed by the exporters. In parse-only mode
     // (mShouldProcess == false, e.g. the `ui` viewer) nothing is written, so skip
     // the setup — this also avoids requiring an archive type for Binary parsing.
@@ -1517,7 +1532,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                 break;
             }
         }
-        this->gConfig.outputPath = output_path.string();
+        this->gConfig.outputPath = Torch::ToUtf8(output_path);
     }
     if (auto outParent = output_path.parent_path(); !outParent.empty() && !exists(outParent)) {
         create_directories(outParent);
@@ -1594,7 +1609,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
     if (cfg["enums"]) {
         auto enums = GetSafeNode<std::vector<std::string>>(cfg, "enums");
         for (auto& file : enums) {
-            file = (this->gSourceDirectory / file).string();
+            file = Torch::ToUtf8(this->gSourceDirectory / file);
             this->ParseEnums(file);
         }
     }
@@ -1697,7 +1712,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         if (entry.is_directory()) {
             return false;
         }
-        const auto path = entry.path().generic_string();
+        const auto path = Torch::ToGenericUtf8(entry.path());
         return (path.find(".yaml") != std::string::npos || path.find(".yml") != std::string::npos) &&
                path.find("config.yml") == std::string::npos && path.find("hashes.yaml") == std::string::npos;
     };
@@ -1710,7 +1725,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             if (!isAssetYaml(entry)) {
                 continue;
             }
-            const YAML::Node root = YAML::LoadFile(entry.path().generic_string());
+            const YAML::Node root = LoadYaml(entry.path());
             const auto config = root[":config"];
             if (!config) {
                 continue;
@@ -1722,7 +1737,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             for (const auto& externalFile : externalFiles) {
                 if (externalFile.IsScalar()) {
                     externalDependencies.insert(
-                        (this->gSourceDirectory / externalFile.as<std::string>()).generic_string());
+                        Torch::ToGenericUtf8(this->gSourceDirectory / externalFile.as<std::string>()));
                 }
             }
         }
@@ -1733,9 +1748,9 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             continue;
         }
 
-        const auto yamlPath = entry.path().generic_string();
+        const auto yamlPath = Torch::ToGenericUtf8(entry.path());
 
-        YAML::Node root = YAML::LoadFile(yamlPath);
+        YAML::Node root = LoadYaml(entry.path());
         this->gCurrentFile = yamlPath;
 
         if (!Torch::contains(this->gProcessedFiles, this->gCurrentFile)) {
@@ -1786,11 +1801,11 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                                 if (data.empty())
                                     continue;
 
-                                std::string dpath = this->GetOutputPath() + "/" + result.name;
+                                auto dpath = Torch::FromUtf8(this->GetOutputPath() + "/" + result.name);
                                 {
                                     std::lock_guard<std::mutex> lock(dirCreateMutex);
-                                    if (!exists(fs::path(dpath).parent_path())) {
-                                        create_directories(fs::path(dpath).parent_path());
+                                    if (!exists(dpath.parent_path())) {
+                                        create_directories(dpath.parent_path());
                                     }
                                 }
 
@@ -1829,12 +1844,12 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
 
                 // gModdedAssetPaths is only filled once the threads finish, so write modding.yml here.
                 if (mShouldProcess) {
-                    auto moddingPath = fs::path(this->gConfig.outputPath) / "modding.yml";
+                    auto moddingPath = Torch::FromUtf8(this->gConfig.outputPath) / "modding.yml";
                     YAML::Node modding;
                     for (const auto& [key, value] : this->gModdedAssetPaths) {
                         modding["assets"][key] = value;
                     }
-                    std::ofstream moddingFile(moddingPath.string(), std::ios::binary);
+                    std::ofstream moddingFile(moddingPath, std::ios::binary);
                     moddingFile << modding;
                     moddingFile.close();
                 }
@@ -2507,7 +2522,7 @@ void Companion::RegisterArchiveFile(const std::string& name, std::vector<char> d
 }
 
 std::string Companion::NormalizeAsset(const std::string& name) const {
-    auto path = fs::path(this->gCurrentFile).stem().string() + "_" + name;
+    auto path = Torch::ToUtf8(Torch::FromUtf8(this->gCurrentFile).stem()) + "_" + name;
     return path;
 }
 
@@ -2523,13 +2538,13 @@ std::string Companion::RelativePath(const std::string& path) const {
 }
 
 std::string Companion::RelativePathToDestDir(const std::string& path) const {
-    std::string doutput = fs::path(path).lexically_relative(this->gDestinationDirectory).string();
+    std::string doutput = Torch::ToUtf8(Torch::FromUtf8(path).lexically_relative(this->gDestinationDirectory));
     ConvertWinToUnixSlash(doutput);
     return doutput;
 }
 
 std::string Companion::RelativePathToSrcDir(const std::string& path) const {
-    std::string doutput = fs::path(path).lexically_relative(this->gSourceDirectory).string();
+    std::string doutput = Torch::ToUtf8(Torch::FromUtf8(path).lexically_relative(this->gSourceDirectory));
     ConvertWinToUnixSlash(doutput);
     return doutput;
 }
@@ -2690,7 +2705,7 @@ bool Companion::GetCompressedSegmentOffset(uint32_t* addr) {
 }
 
 void Companion::ParseFilelist(const std::string& filelistPath) {
-    YAML::Node root = YAML::LoadFile(filelistPath);
+    YAML::Node root = LoadYaml(Torch::FromUtf8(filelistPath));
 
     for (const auto f : root["Files"]) {
         for (const auto& kv : f) {

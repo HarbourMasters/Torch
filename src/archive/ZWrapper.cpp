@@ -5,6 +5,7 @@
 
 #include "spdlog/spdlog.h"
 #include <Companion.h>
+#include "utils/TorchUtils.h"
 #include <miniz/zip_file.hpp>
 
 namespace fs = std::filesystem;
@@ -45,6 +46,7 @@ bool ZWrapper::AddFile(const std::string& path, std::vector<char> data) {
 }
 
 int32_t ZWrapper::Close(void) {
-    this->mZip->save(this->mPath);
+    std::ofstream stream(Torch::FromUtf8(this->mPath), std::ios::binary);
+    this->mZip->save(stream);
     return 0;
 }
