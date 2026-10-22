@@ -32,11 +32,16 @@ ExportResult SoundFontBinaryExporter::Export(std::ostream& write, std::shared_pt
     auto writer = LUS::BinaryWriter();
     auto data = std::static_pointer_cast<SoundFontData>(raw);
 
-    WriteHeader(writer, Torch::ResourceType::SoundFont, 0);
+    const bool hasSfx = AudioContext::IsNeos();
+
+    WriteHeader(writer, Torch::ResourceType::SoundFont, hasSfx ? 2 : 0);
     writer.Write(data->numInstruments);
     writer.Write(data->numDrums);
     writer.Write(data->sampleBankId1);
     writer.Write(data->sampleBankId2);
+    if (hasSfx) {
+        writer.Write(data->numSfx);
+    }
 
     for (auto& instrument : data->instruments) {
         auto crc = AudioContext::GetPathByAddr(instrument);
@@ -46,6 +51,13 @@ ExportResult SoundFontBinaryExporter::Export(std::ostream& write, std::shared_pt
     for (auto& drum : data->drums) {
         auto crc = AudioContext::GetPathByAddr(drum);
         writer.Write(crc);
+    }
+
+    if (hasSfx) {
+        for (auto& sfx : data->sfx) {
+            writer.Write(AudioContext::GetPathByAddr(sfx.sample));
+            writer.Write(sfx.tuning);
+        }
     }
 
     writer.Finish(write);
@@ -177,9 +189,18 @@ ExportResult SoundFontXMLExporter::Export(std::ostream& write, std::shared_ptr<I
     }
     root->InsertEndChild(insts);
 
-    // This is ignored since it's an exclusive feature of OoT and MM
     tinyxml2::XMLElement* sfx = doc.NewElement("SfxTable");
-    sfx->SetAttribute("Count", 0);
+    sfx->SetAttribute("Count", (uint32_t)font->sfx.size());
+    for (auto& entry : font->sfx) {
+        tinyxml2::XMLElement* sfxEntry = sfx->InsertNewChildElement("Sfx");
+        if (entry.sample != 0) {
+            sfxEntry->SetAttribute(
+                "SampleRef",
+                (std::get<std::string>(Companion::Instance->GetNodeByAddr(entry.sample).value())).c_str());
+            sfxEntry->SetAttribute("Tuning", entry.tuning);
+        }
+        sfx->InsertEndChild(sfxEntry);
+    }
     root->InsertEndChild(sfx);
 
     doc.InsertEndChild(root);
@@ -196,14 +217,21 @@ std::optional<std::shared_ptr<IParsedData>> SoundFontFactory::parse(std::vector<
     auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].entries[offset];
     auto reader = AudioContext::MakeReader(AudioTableType::FONT_TABLE, entry.addr);
     auto font = std::make_shared<SoundFontData>();
+    const bool neos = AudioContext::IsNeos();
 
     font->numInstruments = (entry.shortData2 >> 8) & 0xFFu;
     font->numDrums = entry.shortData2 & 0xFFu;
     font->sampleBankId1 = (entry.shortData1 >> 8) & 0xFFu;
     font->sampleBankId2 = entry.shortData1 & 0xFFu;
 
+    SampleBankIds banks = { font->sampleBankId1, neos ? font->sampleBankId2 : 0xFFu };
     uint32_t drumBaseAddr = reader.ReadUInt32();
-    uint32_t instBaseAddr = 4;
+    uint32_t sfxBaseAddr = neos ? reader.ReadUInt32() : 0;
+    uint32_t instBaseAddr = neos ? 8 : 4;
+
+    if (neos) {
+        font->numSfx = (uint16_t)entry.shortData3;
+    }
 
     if (drumBaseAddr != 0) {
         reader.Seek(entry.addr + drumBaseAddr, LUS::SeekOffsetType::Start);
@@ -215,25 +243,31 @@ std::optional<std::shared_ptr<IParsedData>> SoundFontFactory::parse(std::vector<
                 continue;
             }
 
-            // SPDLOG_INFO("Found Drum[{}] 0x{:X}", i, addr);
-
             YAML::Node drum;
             drum["type"] = "NAUDIO:V1:DRUM";
             drum["parent"] = entry.addr;
             drum["offset"] = entry.addr + addr;
-            drum["sampleBankId"] = (uint32_t)font->sampleBankId1;
+            drum["sampleBankId"] = banks.bank1;
+            if (banks.bank2 != 0xFF) {
+                drum["sampleBankId2"] = banks.bank2;
+            }
 
             Companion::Instance->AddAsset(drum);
             font->drums.push_back(entry.addr + addr);
         }
+    } else if (neos) {
+        font->drums.assign(font->numDrums, 0);
+    }
 
-        //        YAML::Node table;
-        //        table["type"] = "ASSET_ARRAY";
-        //        table["assetType"] = "Drum";
-        //        table["factoryType"] = "NAUDIO:V1:DRUM";
-        //        table["offset"] = entry.addr + drumBaseAddr;
-        //        table["count"] = (uint32_t) font->numDrums;
-        //        Companion::Instance->AddAsset(table);
+    if (neos) {
+        if (sfxBaseAddr != 0) {
+            reader.Seek(entry.addr + sfxBaseAddr, LUS::SeekOffsetType::Start);
+            for (size_t i = 0; i < font->numSfx; i++) {
+                font->sfx.push_back(AudioContext::LoadTunedSample(reader, entry.addr, banks));
+            }
+        } else {
+            font->sfx.assign(font->numSfx, TunedSample{ 0, 0, 0.0f });
+        }
     }
 
     reader.Seek(entry.addr + instBaseAddr, LUS::SeekOffsetType::Start);
@@ -245,25 +279,18 @@ std::optional<std::shared_ptr<IParsedData>> SoundFontFactory::parse(std::vector<
             continue;
         }
 
-        // SPDLOG_INFO("Found Instrument[{}] 0x{:X}", i, addr);
-
         YAML::Node instrument;
         instrument["type"] = "NAUDIO:V1:INSTRUMENT";
         instrument["parent"] = entry.addr;
         instrument["offset"] = entry.addr + addr;
-        instrument["sampleBankId"] = (uint32_t)font->sampleBankId1;
+        instrument["sampleBankId"] = banks.bank1;
+        if (banks.bank2 != 0xFF) {
+            instrument["sampleBankId2"] = banks.bank2;
+        }
         font->instruments.push_back(entry.addr + addr);
 
         Companion::Instance->AddAsset(instrument);
     }
-
-    //    YAML::Node table;
-    //    table["type"] = "ASSET_ARRAY";
-    //    table["assetType"] = "Instrument";
-    //    table["factoryType"] = "NAUDIO:V1:INSTRUMENT";
-    //    table["offset"] = entry.addr + instBaseAddr;
-    //    table["count"] = (uint32_t) font->numInstruments;
-    //    Companion::Instance->AddAsset(table);
 
     return font;
 }

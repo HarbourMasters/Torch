@@ -11,6 +11,10 @@ extern "C" {
 #include "BaseFactory.h"
 }
 
+#ifdef GX_TEXTURE_SUPPORT
+#include "gc/GXTexture.h"
+#endif
+
 static bool isTable = false;
 static std::vector<std::string> tableEntries;
 
@@ -283,6 +287,57 @@ ExportResult TextureModdingExporter::Export(std::ostream& write, std::shared_ptr
     return std::nullopt;
 }
 
+#ifdef GX_TEXTURE_SUPPORT
+static std::optional<std::shared_ptr<IParsedData>> ParseGXTexture(std::vector<uint8_t>& buffer, YAML::Node& node,
+                                                                  const std::string& format, uint32_t width,
+                                                                  uint32_t height) {
+    const auto offset = GetSafeNode<uint32_t>(node, "offset");
+    const auto symbol = GetSafeNode<std::string>(node, "symbol", "");
+
+    if (format == "TLUT") {
+        const uint32_t size = width * 2;
+        auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
+        if (segment.size < size) {
+            throw std::runtime_error("TLUT " + symbol + " is truncated");
+        }
+        auto tlut = GX::ConvertTlut(segment.data, width);
+        GX::GetStats().RecordTlut(offset, tlut.partialAlpha);
+        if (tlut.partialAlpha != 0) {
+            SPDLOG_INFO("TLUT {} at 0x{:X}: {} of {} entries have partial alpha, exported as RGBA32", symbol, offset,
+                        tlut.partialAlpha, width);
+            auto rgba = GX::ConvertTlutRgba8(segment.data, width);
+            return std::make_shared<TextureData>(sTextureFormats.at("RGBA32"), width, 1, rgba);
+        }
+        return std::make_shared<TextureData>(sTextureFormats.at("TLUT"), width, 1, tlut.data);
+    }
+
+    const auto n64 = GX::ParseN64Format(format);
+    if (!n64.has_value()) {
+        throw std::runtime_error("Texture format " + format + " has no GX source encoding (" + symbol + ")");
+    }
+    const auto source = GX::SourceFormatFor(n64.value()).value();
+    const auto size = GX::TiledSize(source, width, height);
+    auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);
+    if (segment.size < size) {
+        throw std::runtime_error("GX texture " + symbol + " is truncated");
+    }
+
+    auto converted = GX::ConvertToN64(n64.value(), segment.data, segment.size, width, height);
+    auto outFormat = sTextureFormats.at(format);
+    if (converted.format != n64.value()) {
+        outFormat = sTextureFormats.at("RGBA32");
+        GX::GetStats().RecordPromotion(offset, symbol);
+        SPDLOG_INFO("Texture {} at 0x{:X}: RGB5A3 is not lossless as RGBA5551, exported as RGBA32", symbol, offset);
+    }
+
+    SPDLOG_INFO("Texture: {} (GX)", format);
+    SPDLOG_INFO("Width: {}", width);
+    SPDLOG_INFO("Height: {}", height);
+    SPDLOG_INFO("Offset: 0x{:X}", offset);
+    return std::make_shared<TextureData>(outFormat, width, height, converted.data);
+}
+#endif
+
 std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto format = GetSafeNode<std::string>(node, "format");
@@ -330,8 +385,24 @@ std::optional<std::shared_ptr<IParsedData>> TextureFactory::parse(std::vector<ui
         if (node["tlut_ctype"]) {
             tlutNode["ctype"] = GetSafeNode<std::string>(node, "tlut_ctype");
         }
+        if (node["source_encoding"]) {
+            tlutNode["source_encoding"] = GetSafeNode<std::string>(node, "source_encoding");
+        }
         Companion::Instance->AddAsset(tlutNode);
     }
+
+    auto encoding = GetSafeNode<std::string>(node, "source_encoding", "n64");
+    std::transform(encoding.begin(), encoding.end(), encoding.begin(), ::tolower);
+    if (encoding == "gx") {
+#ifdef GX_TEXTURE_SUPPORT
+        return ParseGXTexture(buffer, node, format, width, height);
+#else
+        throw std::runtime_error("source_encoding: gx needs a build with BUILD_GAMECUBE or BUILD_AC");
+#endif
+    } else if (encoding != "n64") {
+        throw std::runtime_error("Unknown source_encoding '" + encoding + "' for " + symbol);
+    }
+
     size = GetSafeNode<uint32_t>(node, "size",
                                  TextureUtils::CalculateTextureSize(sTextureFormats.at(format).type, width, height));
     auto [_, segment] = Decompressor::AutoDecode(node, buffer, size);

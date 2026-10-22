@@ -43,12 +43,17 @@ std::optional<std::shared_ptr<IParsedData>> EnvelopeFactory::parse(std::vector<u
 
     std::vector<EnvelopePoint> temp;
     while (true) {
-        int16_t delay = BSWAP16(reader.ReadInt16());
+        int16_t value = reader.ReadInt16();
+        int16_t delay = BSWAP16(value);
         int16_t arg = BSWAP16(reader.ReadInt16());
 
         temp.push_back({ delay, arg });
 
-        if (1 <= (-delay) % (1 << 16) && (-delay) % (1 << 16) <= 3) {
+        if (AudioContext::IsNeos()) {
+            if (value <= 0 && value >= -3) {
+                break;
+            }
+        } else if (1 <= (-delay) % (1 << 16) && (-delay) % (1 << 16) <= 3) {
             break;
         }
     }

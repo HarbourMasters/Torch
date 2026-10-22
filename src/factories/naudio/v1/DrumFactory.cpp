@@ -41,7 +41,7 @@ ExportResult DrumBinaryExporter::Export(std::ostream& write, std::shared_ptr<IPa
 std::optional<std::shared_ptr<IParsedData>> DrumFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto parent = GetSafeNode<uint32_t>(node, "parent");
-    auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
+    auto banks = AudioContext::GetSampleBankIds(node);
 
     auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].entries[parent];
 
@@ -54,7 +54,7 @@ std::optional<std::shared_ptr<IParsedData>> DrumFactory::parse(std::vector<uint8
     reader.ReadUByte();
     ;
 
-    drum->tunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
+    drum->tunedSample = AudioContext::LoadTunedSample(reader, parent, banks);
 
     auto envAddr = entry.addr + reader.ReadUInt32();
     YAML::Node envelope;

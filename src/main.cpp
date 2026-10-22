@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <filesystem>
+#include <fstream>
 #include "CLI11.hpp"
 #include "Companion.h"
 #ifdef PM64_SUPPORT
@@ -13,6 +14,12 @@
 #endif
 
 Companion* Companion::Instance;
+
+#ifdef GAMECUBE_SUPPORT
+#define INPUT_PATH_CHECK CLI::ExistingPath
+#else
+#define INPUT_PATH_CHECK CLI::ExistingFile
+#endif
 
 #if defined(STANDALONE) && !defined(__EMSCRIPTEN__)
 
@@ -119,7 +126,7 @@ int main(int argc, char* argv[]) {
     /* Generate an OTR */
     const auto otr = app.add_subcommand("otr", "OTR - Generates an otr\n");
 
-    otr->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    otr->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     otr->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
     otr->add_option("-s,--srcdir", srcdir,
                     "Set source directory to locate config.yml and asset metadata for processing")
@@ -139,7 +146,7 @@ int main(int argc, char* argv[]) {
     /* Generate an O2R */
     const auto o2r = app.add_subcommand("o2r", "O2R - Generates an o2r\n");
 
-    o2r->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    o2r->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     o2r->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
     o2r->add_option("-s,--srcdir", srcdir,
                     "Set source directory to locate config.yml and asset metadata for processing")
@@ -165,7 +172,7 @@ int main(int argc, char* argv[]) {
     /* Generate C code */
     const auto code = app.add_subcommand("code", "Code - Generates C code\n");
 
-    code->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    code->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     code->add_flag("-v,--verbose", debug, "Verbose Debug Mode; adds offsets to C code");
     code->add_option("-s,--srcdir", srcdir,
                      "Set source directory to locate config.yml and asset metadata for processing")
@@ -185,7 +192,7 @@ int main(int argc, char* argv[]) {
     /* Generate a binary */
     const auto binary = app.add_subcommand("binary", "Binary - Generates a binary\n");
 
-    binary->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    binary->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     binary
         ->add_option("-s,--srcdir", srcdir,
                      "Set source directory to locate config.yml and asset metadata for processing")
@@ -200,7 +207,7 @@ int main(int argc, char* argv[]) {
     /* Generate headers */
     const auto header = app.add_subcommand("header", "Header - Generates headers only\n");
 
-    header->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    header->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     header->add_flag("-o,--otr", otrModeSelected, "OTR/O2R Mode");
     header
         ->add_option("-s,--srcdir", srcdir,
@@ -217,6 +224,32 @@ int main(int argc, char* argv[]) {
 
         const auto instance = Companion::Instance = new Companion(filename, otrMode, debug, srcdir, destdir);
         instance->Init(ExportType::Header);
+    });
+
+    std::string manifestOut;
+    std::vector<std::string> manifestYmls;
+    const auto manifest =
+        app.add_subcommand("manifest", "Manifest - Lists the archive path of every declared asset (no ROM needed)\n");
+
+    manifest->add_option("<asset-root>", folder, "Asset YAML root, e.g. assets/ymls/gafe01")
+        ->required()
+        ->check(CLI::ExistingDirectory);
+    manifest->add_option("<ymls>", manifestYmls, "YAML files or directories (default: the whole root)");
+    manifest->add_option("-o,--output", manifestOut, "Write the list to a file instead of stdout");
+
+    manifest->parse_complete_callback([&] {
+        const auto paths = Companion::Manifest(folder, manifestYmls);
+        if (manifestOut.empty()) {
+            for (const auto& path : paths) {
+                std::cout << path << "\n";
+            }
+            std::cout << std::flush;
+        } else {
+            std::ofstream out(manifestOut, std::ios::binary);
+            for (const auto& path : paths) {
+                out << path << "\n";
+            }
+        }
     });
 
     /* Pack an archive from a folder */
@@ -251,7 +284,7 @@ int main(int argc, char* argv[]) {
     const auto hashes =
         app.add_subcommand("hashes", "Hashes - Emit per-slot SHA-1 of BK64 asset table for v1.0 baseline\n");
 
-    hashes->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    hashes->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     hashes->add_option("-o,--output", hashesOut, "Output yaml path (default: hashes.yaml in cwd)");
 
     hashes->parse_complete_callback([&] {
@@ -267,7 +300,7 @@ int main(int argc, char* argv[]) {
     const auto modding_export = modding_root->add_subcommand("export", "Export - Export modified files to a folder\n");
 
     modding_import->add_option("mode", mode, "code, otr, o2r or header")->required();
-    modding_import->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    modding_import->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     modding_import->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
     modding_import
         ->add_option(
@@ -300,7 +333,7 @@ int main(int argc, char* argv[]) {
     });
 
     modding_export->add_flag("-x,--xml", xmlMode, "XML Mode");
-    modding_export->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    modding_export->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     modding_export
         ->add_option(
             "-s,--srcdir", srcdir,
@@ -322,7 +355,7 @@ int main(int argc, char* argv[]) {
     /* Launch the interactive viewer */
     const auto ui = app.add_subcommand("ui", "UI - Parses a baserom and opens the interactive asset viewer\n");
 
-    ui->add_option("<baserom.z64>", filename, "")->required()->check(CLI::ExistingFile);
+    ui->add_option("<baserom.z64>", filename, "")->required()->check(INPUT_PATH_CHECK);
     ui->add_flag("-v,--verbose", debug, "Verbose Debug Mode");
     ui->add_option("-s,--srcdir", srcdir, "Set source directory to locate config.yml and asset metadata for processing")
         ->check(CLI::ExistingDirectory);

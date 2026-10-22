@@ -101,8 +101,11 @@ DataChunk* Decompressor::Decode(const std::vector<uint8_t>& buffer, const uint32
                 throw std::runtime_error("Failed to decode YAZ0");
             }
 
-            gCachedChunks[offset] = new DataChunk{ decompressed, size };
-            return gCachedChunks[offset];
+            {
+                std::lock_guard<std::mutex> lock(gDecompCacheMutex);
+                gCachedChunks[offset] = new DataChunk{ decompressed, size };
+                return gCachedChunks[offset];
+            }
         }
         default:
             throw std::runtime_error("Unknown compression type");

@@ -48,7 +48,7 @@ ExportResult InstrumentBinaryExporter::Export(std::ostream& write, std::shared_p
 std::optional<std::shared_ptr<IParsedData>> InstrumentFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto parent = GetSafeNode<uint32_t>(node, "parent");
-    auto sampleBankId = GetSafeNode<uint32_t>(node, "sampleBankId");
+    auto banks = AudioContext::GetSampleBankIds(node);
 
     auto entry = AudioContext::tables[AudioTableType::FONT_TABLE].entries[parent];
 
@@ -67,9 +67,9 @@ std::optional<std::shared_ptr<IParsedData>> InstrumentFactory::parse(std::vector
     instrument->envelope = envAddr;
     Companion::Instance->AddAsset(envelope);
 
-    instrument->lowPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
-    instrument->normalPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
-    instrument->highPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, sampleBankId);
+    instrument->lowPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, banks);
+    instrument->normalPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, banks);
+    instrument->highPitchTunedSample = AudioContext::LoadTunedSample(reader, parent, banks);
 
     return instrument;
 }
