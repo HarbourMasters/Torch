@@ -553,8 +553,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
 
                 std::string externalFileName =
                     (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
-                const auto relPath = std::filesystem::relative(externalFileName, this->gAssetPath).string();
-                const auto relCommonPath = std::filesystem::relative(externalFileName, this->gCommonAssetPath).string();
+                const auto relPath = fs::path(externalFileName).lexically_relative(this->gAssetPath).string();
+                const auto relCommonPath = fs::path(externalFileName).lexically_relative(this->gCommonAssetPath).string();
                 if (StringHelper::StartsWith(relPath, "../")) {
                     if (StringHelper::StartsWith(relCommonPath, "../"))
                         throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
@@ -575,7 +575,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
 
                     this->gCurrentFile = externalFileName;
                     this->gCurrentDirectory =
-                        std::filesystem::relative(externalFileName, this->gAssetPath).replace_extension("");
+                        fs::path(externalFileName).lexically_relative(this->gAssetPath).replace_extension("");
 
                     YAML::Node root = YAML::LoadFile(externalFileName);
 
@@ -1225,9 +1225,9 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // directory must be resolved before the loop. Default to the file's own
     // path, then honor a :config directory override (used to register a room's
     // assets under its scene's directory).
-    auto relPath = relative(fs::path(this->gCurrentFile), this->gAssetPath).replace_extension("");
+    auto relPath = fs::path(this->gCurrentFile).lexically_relative(this->gAssetPath).replace_extension("");
     if (StringHelper::StartsWith(relPath.string(), "../"))
-        relPath = relative(fs::path(this->gCurrentFile), this->gCommonAssetPath).replace_extension("");
+        relPath = fs::path(this->gCurrentFile).lexically_relative(this->gCommonAssetPath).replace_extension("");
 
     this->gCurrentDirectory = relPath;
 
@@ -1518,9 +1518,10 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             }
         }
         this->gConfig.outputPath = output_path.string();
-    }
-    if (auto outParent = output_path.parent_path(); !outParent.empty() && !exists(outParent)) {
-        create_directories(outParent);
+
+        if (auto outParent = output_path.parent_path(); !outParent.empty() && !exists(outParent)) {
+            create_directories(outParent);
+        }
     }
 
     if (gbi) {
