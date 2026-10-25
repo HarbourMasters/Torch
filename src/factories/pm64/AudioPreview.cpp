@@ -139,9 +139,12 @@ std::shared_ptr<Bank> ParseBank(const std::vector<uint8_t>& rom, uint32_t off) {
 }
 
 void RegisterPreviewAssets(const std::vector<uint8_t>& rom, uint32_t sbnBase) {
-    if (RD32(rom, sbnBase) != 0x53424E20) { // 'SBN '
+    const uint32_t magic = RD32(rom, sbnBase);
+    if (magic != 0x53424E20 && magic != 0x53544152) { // 'SBN ', 'STAR' (Star Rod)
         return;
     }
+    // Star Rod leaves file offsets unmasked
+    const uint32_t offsetMask = magic == 0x53544152 ? 0xFFFFFFFF : 0xFFFFFF;
     const uint32_t fileListOff = RD32(rom, sbnBase + 0x10);
     const uint32_t numEntries = RD32(rom, sbnBase + 0x14);
     const uint32_t initOff = RD32(rom, sbnBase + 0x24);
@@ -158,7 +161,7 @@ void RegisterPreviewAssets(const std::vector<uint8_t>& rom, uint32_t sbnBase) {
     for (uint32_t i = 0; i < numEntries; ++i) {
         const uint64_t e = (uint64_t)sbnBase + fileListOff + i * 8;
         const uint32_t data = RD32(rom, e + 4);
-        files[i].romOff = sbnBase + (RD32(rom, e) & 0xFFFFFF);
+        files[i].romOff = sbnBase + (RD32(rom, e) & offsetMask);
         files[i].size = data & 0xFFFFFF;
         files[i].fmt = data >> 24;
     }

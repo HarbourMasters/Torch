@@ -2,6 +2,8 @@
 #include "AudioPreview.h"
 #include "Companion.h"
 #include "spdlog/spdlog.h"
+#include <algorithm>
+#include <cstring>
 #include <set>
 
 // SBN file format constants
@@ -13,6 +15,7 @@
 #define PRG_SIGNATURE 0x50524720  // 'PRG '
 #define BK_SIGNATURE 0x424B       // 'BK'
 #define MSEQ_SIGNATURE 0x4D534551 // 'MSEQ'
+#define STARROD_SBN_MAGIC "STAR ROD"
 
 // Audio file format types (upper byte of SBNFileEntry.data)
 // NOTE: PER and PRG share format 0x40 with MSEQ; distinguished by file signature
@@ -47,6 +50,7 @@
 
 // Helper to check bounds
 #define CHECK_BOUNDS(offset, size, totalSize) ((offset) + (size) <= (totalSize))
+#define ALIGN16(val) (((val) + 0xF) & ~0xF)
 
 static void ByteSwapAudioData(uint8_t* data, size_t size) {
     if (size < SBN_HEADER_SIZE) {
@@ -590,6 +594,108 @@ static void ByteSwapAudioData(uint8_t* data, size_t size) {
     SPDLOG_DEBUG("PM64:AUDIO byte-swap complete, {} bytes processed", size);
 }
 
+// Star Rod writes the SBN with a "STAR ROD" header and unmasked file offsets, moving files that no longer
+// fit past the vanilla span. Gather every file and rebuild a contiguous vanilla-layout SBN.
+static std::optional<std::vector<uint8_t>> RepackStarRodSBN(const std::vector<uint8_t>& rom, uint32_t base) {
+    if (!CHECK_BOUNDS(static_cast<size_t>(base), SBN_HEADER_SIZE, rom.size())) {
+        SPDLOG_ERROR("PM64:AUDIO Star Rod SBN header at 0x{:X} out of range", base);
+        return std::nullopt;
+    }
+    const uint8_t* sbn = rom.data() + base;
+    const size_t avail = rom.size() - base;
+    auto read32 = [sbn](size_t off) { return BSWAP32(*reinterpret_cast<const uint32_t*>(sbn + off)); };
+
+    const uint32_t fileListOffset = read32(0x10);
+    const uint32_t numEntries = read32(0x14);
+    const uint32_t initOffset = read32(0x24);
+    const size_t fileListEnd =
+        static_cast<size_t>(fileListOffset) + static_cast<size_t>(numEntries) * SBN_FILE_ENTRY_SIZE;
+    if (fileListEnd > avail) {
+        SPDLOG_ERROR("PM64:AUDIO Star Rod SBN file list 0x{:X} x {} out of range", fileListOffset, numEntries);
+        return std::nullopt;
+    }
+
+    uint32_t usedEntries = 0;
+    uint32_t prefixEnd = UINT32_MAX;
+    for (; usedEntries < numEntries; usedEntries++) {
+        const uint32_t fileOffset = read32(fileListOffset + usedEntries * SBN_FILE_ENTRY_SIZE);
+        if (fileOffset == 0) {
+            break;
+        }
+        prefixEnd = std::min(prefixEnd, fileOffset);
+    }
+    if (prefixEnd == UINT32_MAX) {
+        prefixEnd = 0;
+    }
+    prefixEnd = std::max<uint32_t>({ prefixEnd, static_cast<uint32_t>(fileListEnd), SBN_HEADER_SIZE });
+    if (prefixEnd > avail) {
+        SPDLOG_ERROR("PM64:AUDIO Star Rod SBN first file at 0x{:X} out of range", prefixEnd);
+        return std::nullopt;
+    }
+
+    uint32_t initSize = 0;
+    if (initOffset != 0) {
+        if (!CHECK_BOUNDS(static_cast<size_t>(initOffset), INIT_HEADER_SIZE, avail)) {
+            SPDLOG_ERROR("PM64:AUDIO Star Rod SBN INIT offset 0x{:X} out of range", initOffset);
+            return std::nullopt;
+        }
+        initSize = read32(initOffset + 4);
+        if (!CHECK_BOUNDS(static_cast<size_t>(initOffset), initSize, avail)) {
+            SPDLOG_ERROR("PM64:AUDIO Star Rod SBN INIT size 0x{:X} out of range", initSize);
+            return std::nullopt;
+        }
+    }
+    const bool initInPrefix = initOffset != 0 && initOffset + initSize <= prefixEnd;
+    if (initOffset != 0 && !initInPrefix && initOffset < prefixEnd) {
+        SPDLOG_ERROR("PM64:AUDIO Star Rod SBN INIT 0x{:X} overlaps the first file at 0x{:X}", initOffset, prefixEnd);
+        return std::nullopt;
+    }
+
+    std::vector<uint8_t> out(sbn, sbn + prefixEnd);
+    out.resize(ALIGN16(out.size()), 0);
+    auto write32 = [&out](size_t off, uint32_t value) {
+        *reinterpret_cast<uint32_t*>(out.data() + off) = BSWAP32(value);
+    };
+
+    for (uint32_t i = 0; i < usedEntries; i++) {
+        const size_t entry = fileListOffset + i * SBN_FILE_ENTRY_SIZE;
+        const uint32_t srcOffset = read32(entry);
+        if (!CHECK_BOUNDS(static_cast<size_t>(srcOffset), 8, avail)) {
+            SPDLOG_ERROR("PM64:AUDIO Star Rod SBN file {} at 0x{:X} out of range", i, srcOffset);
+            return std::nullopt;
+        }
+        // BK entries list only the bank header; copy the whole bank as sized by its own header
+        const uint32_t data = read32(entry + 4);
+        const uint32_t fileSize = std::max<uint32_t>(data & 0xFFFFFF, read32(srcOffset + 4));
+        if (!CHECK_BOUNDS(static_cast<size_t>(srcOffset), fileSize, avail)) {
+            SPDLOG_ERROR("PM64:AUDIO Star Rod SBN file {} at 0x{:X} size 0x{:X} out of range", i, srcOffset, fileSize);
+            return std::nullopt;
+        }
+        const size_t dstOffset = out.size();
+        if (dstOffset + fileSize > 0xFFFFFF) {
+            SPDLOG_ERROR("PM64:AUDIO Star Rod SBN file {} exceeds the 24-bit offset range once repacked", i);
+            return std::nullopt;
+        }
+        out.insert(out.end(), sbn + srcOffset, sbn + srcOffset + fileSize);
+        out.resize(ALIGN16(out.size()), 0);
+        write32(entry, static_cast<uint32_t>(dstOffset));
+    }
+    std::fill(out.begin() + fileListOffset + usedEntries * SBN_FILE_ENTRY_SIZE, out.begin() + fileListEnd, 0);
+
+    if (initOffset != 0 && !initInPrefix) {
+        const uint32_t newInitOffset = static_cast<uint32_t>(out.size());
+        out.insert(out.end(), sbn + initOffset, sbn + initOffset + initSize);
+        out.resize(ALIGN16(out.size()), 0);
+        write32(0x24, newInitOffset);
+    }
+
+    write32(0x00, SBN_SIGNATURE);
+    write32(0x04, static_cast<uint32_t>(out.size()));
+
+    SPDLOG_DEBUG("PM64:AUDIO repacked Star Rod SBN: {} files, 0x{:X} bytes", usedEntries, out.size());
+    return out;
+}
+
 std::optional<std::shared_ptr<IParsedData>> PM64AudioFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
     auto offset = GetSafeNode<uint32_t>(node, "offset");
     auto size = GetSafeNode<size_t>(node, "size");
@@ -597,6 +703,25 @@ std::optional<std::shared_ptr<IParsedData>> PM64AudioFactory::parse(std::vector<
     if (offset + size > buffer.size()) {
         SPDLOG_ERROR("PM64:AUDIO offset 0x{:X} + size 0x{:X} exceeds buffer size 0x{:X}", offset, size, buffer.size());
         return std::nullopt;
+    }
+
+    const auto layout = GetSafeNode<std::string>(node, "sbn_layout", "");
+    if (!layout.empty() && layout != "starrod") {
+        SPDLOG_WARN("PM64:AUDIO unknown sbn_layout '{}', detecting the layout from the header", layout);
+    }
+    const bool starRodLayout =
+        layout == "starrod" || (size >= 8 && std::memcmp(buffer.data() + offset, STARROD_SBN_MAGIC, 8) == 0);
+
+    if (starRodLayout) {
+        auto repacked = RepackStarRodSBN(buffer, offset);
+        if (!repacked.has_value()) {
+            return std::nullopt;
+        }
+        ByteSwapAudioData(repacked->data(), repacked->size());
+        if (PM64Audio::PreviewAssets()) {
+            PM64Audio::RegisterPreviewAssets(buffer, offset);
+        }
+        return std::make_shared<RawBuffer>(*repacked);
     }
 
     // Copy the audio data

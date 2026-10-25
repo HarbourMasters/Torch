@@ -168,6 +168,8 @@ static void CollectSpriteImages(PM64SpriteData& sprite, const std::vector<uint8_
 
     std::vector<uint32_t> descriptors;
     uint32_t imageDataBase = 0, imageDataRom = 0;
+    // Star Rod packs descriptor offsets in 16-byte units; vanilla uses bytes.
+    const uint32_t offsetScale = GetSafeNode<uint32_t>(node, "raster_offset_scale", 1);
     const bool player = node["raster_index"].IsDefined();
     if (player) {
         const auto index = GetSafeNode<uint32_t>(node, "raster_index");
@@ -201,7 +203,7 @@ static void CollectSpriteImages(PM64SpriteData& sprite, const std::vector<uint8_
                     break;
                 }
                 // upper three nibbles give size / 16, lower five the offset
-                const uint32_t romOffset = imageDataRom + ((descriptors[i] & 0xFFFFF) - imageDataBase);
+                const uint32_t romOffset = imageDataRom + ((descriptors[i] & 0xFFFFF) * offsetScale - imageDataBase);
                 const uint32_t descSize = (descriptors[i] >> 16) & 0xFFF0;
                 // Placeholder entries (back-facing sprites, 255x255 dummies) point at a
                 // 16-byte stub; leave those without pixels so nothing is emitted for them.

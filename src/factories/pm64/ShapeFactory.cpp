@@ -56,6 +56,10 @@ static std::unordered_set<uint32_t> gVisitedMatrices;
 static std::unordered_set<uint32_t> gVisitedDisplayLists;
 static std::unordered_set<uint32_t> gVisitedDisplayData;
 static std::unordered_set<uint32_t> gVisitedProperties;
+static std::unordered_set<uint32_t> gVisitedLightSets;
+
+// End (file offset) of the furthest vertex any G_VTX command loads
+static uint32_t gMaxLoadedVertexEnd = 0;
 
 // Collected display lists during parsing
 static std::vector<PM64DisplayListInfo>* gCollectedDisplayLists = nullptr;
@@ -87,6 +91,10 @@ static bool IsValidOffset(uint32_t offset, size_t size) {
     return offset > 0 && offset < size;
 }
 
+static bool IsValidRange(uint32_t offset, size_t length, size_t size) {
+    return offset > 0 && length <= size && offset <= size - length;
+}
+
 // F3DEX2 GBI opcodes used in shape display lists
 #define F3DEX2_G_ENDDL 0xDF
 #define F3DEX2_G_VTX 0x01
@@ -108,7 +116,7 @@ static bool IsValidF3DEX2Opcode(uint8_t opcode) {
 // Byte-swap display list commands, convert embedded N64 addresses to file offsets,
 // and collect the display list for separate resource export
 static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 8))
+    if (!IsValidRange(offset, 8, size))
         return;
     if (gVisitedDisplayLists.count(offset))
         return; // Already processed
@@ -142,6 +150,10 @@ static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
         if (opcode == F3DEX2_G_VTX) {
             // w1 contains the N64 vertex address - convert to file offset first
             uint32_t vtxFileOffset = N64AddrToOffset(w1);
+            uint32_t loadEnd = vtxFileOffset + ((w0 >> 12) & 0xFF) * 16;
+            if (vtxFileOffset >= gVertexTableOffset && vtxFileOffset < size && loadEnd > gMaxLoadedVertexEnd) {
+                gMaxLoadedVertexEnd = loadEnd;
+            }
             // Then convert to vertex-table-relative byte offset (stride is 16, same as sizeof(Vtx))
             if (gVertexTableOffset > 0 && vtxFileOffset >= gVertexTableOffset) {
                 w1 = vtxFileOffset - gVertexTableOffset;
@@ -196,7 +208,7 @@ static void ByteSwapDisplayList(uint8_t* data, uint32_t offset, size_t size) {
 #define MODEL_PROP_KEY_TEXTURE_NAME 0x5E
 
 static void ByteSwapModelNodeProperty(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 0xC))
+    if (!IsValidRange(offset, 0xC, size))
         return;
 
     uint32_t* prop = reinterpret_cast<uint32_t*>(data + offset);
@@ -215,7 +227,7 @@ static void ByteSwapModelNodeProperty(uint8_t* data, uint32_t offset, size_t siz
 }
 
 static void ByteSwapModelDisplayData(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 0x8))
+    if (!IsValidRange(offset, 0x8, size))
         return;
 
     // Track this offset so vertex byte-swapping skips it
@@ -239,7 +251,7 @@ static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size);
 static void ByteSwapModelNode(uint8_t* data, uint32_t offset, size_t size);
 
 static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 0x14))
+    if (!IsValidRange(offset, 0x14, size))
         return;
     if (gVisitedGroups.count(offset))
         return; // Already processed
@@ -265,8 +277,13 @@ static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size) 
     group[3] = static_cast<uint32_t>(numChildren);
     group[4] = childList;
 
+    // Light sets are byte arrays (no swap); track them so vertex byte-swapping skips them
+    if (numLights > 0 && IsValidOffset(lightingGroup, size)) {
+        gVisitedLightSets.insert(lightingGroup);
+    }
+
     // Byte-swap transform matrix — multiple groups can share the same matrix, only convert once
-    if (IsValidOffset(transformMatrix, size - 0x40) && !gVisitedMatrices.count(transformMatrix)) {
+    if (IsValidRange(transformMatrix, 0x40, size) && !gVisitedMatrices.count(transformMatrix)) {
         gVisitedMatrices.insert(transformMatrix);
         uint32_t* raw = reinterpret_cast<uint32_t*>(data + transformMatrix);
         for (int i = 0; i < 16; i++) {
@@ -290,7 +307,7 @@ static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size) 
 
     // Byte-swap child list and recurse into child nodes
     // Sanity check: numChildren should be reasonable (< 1000)
-    if (numChildren > 0 && numChildren < 1000 && IsValidOffset(childList, size - (numChildren * 4))) {
+    if (numChildren > 0 && numChildren < 1000 && IsValidRange(childList, numChildren * 4, size)) {
         uint32_t* children = reinterpret_cast<uint32_t*>(data + childList);
         for (int i = 0; i < numChildren; i++) {
             uint32_t childAddr = BSWAP32(children[i]);
@@ -302,7 +319,7 @@ static void ByteSwapModelGroupData(uint8_t* data, uint32_t offset, size_t size) 
 }
 
 static void ByteSwapModelNode(uint8_t* data, uint32_t offset, size_t size) {
-    if (!IsValidOffset(offset, size - 0x14))
+    if (!IsValidRange(offset, 0x14, size))
         return;
     if (gVisitedNodes.count(offset))
         return; // Already processed
@@ -361,7 +378,7 @@ static uint32_t FindRootNodeOffset(uint8_t* data, size_t size) {
     uint32_t bestExact = 0;   // implied base == 0x80210000 (the known PM64 base)
     uint32_t bestAligned = 0; // implied base aligned to 0x10000
 
-    for (uint32_t offset = 0x20; offset < size - 0x14; offset += 4) {
+    for (uint32_t offset = 0x20; offset + 0x14 <= size; offset += 4) {
         int32_t type = static_cast<int32_t>(BSWAP32(*reinterpret_cast<uint32_t*>(data + offset)));
 
         if (type != 7) // SHAPE_TYPE_ROOT
@@ -423,6 +440,8 @@ static void ByteSwapShapeData(uint8_t* data, size_t size, std::vector<PM64Displa
     gVisitedDisplayLists.clear();
     gVisitedDisplayData.clear();
     gVisitedProperties.clear();
+    gVisitedLightSets.clear();
+    gMaxLoadedVertexEnd = 0;
 
     // Set up collection target
     gCollectedDisplayLists = &collectedDLs;
@@ -512,6 +531,15 @@ static void ByteSwapShapeData(uint8_t* data, size_t size, std::vector<PM64Displa
             if (off > vertexTable && off < minVisitedOffset)
                 minVisitedOffset = off;
         }
+        // Tools such as Star Rod place light sets and transform matrices right after the vertex table
+        for (uint32_t off : gVisitedMatrices) {
+            if (off > vertexTable && off < minVisitedOffset)
+                minVisitedOffset = off;
+        }
+        for (uint32_t off : gVisitedLightSets) {
+            if (off > vertexTable && off < minVisitedOffset)
+                minVisitedOffset = off;
+        }
 
         // Also check name tables and header structures
         uint32_t vtxEnd = minVisitedOffset;
@@ -523,6 +551,10 @@ static void ByteSwapShapeData(uint8_t* data, size_t size, std::vector<PM64Displa
             vtxEnd = colliderNames;
         if (zoneNames > vertexTable && zoneNames < vtxEnd)
             vtxEnd = zoneNames;
+
+        if (gMaxLoadedVertexEnd > vtxEnd) {
+            SPDLOG_WARN("Shape vertex table ends at 0x{:X} but G_VTX loads up to 0x{:X}", vtxEnd, gMaxLoadedVertexEnd);
+        }
 
         size_t vtxSize = vtxEnd - vertexTable;
         size_t numVertices = vtxSize / 16;
@@ -547,11 +579,11 @@ static void ByteSwapShapeData(uint8_t* data, size_t size, std::vector<PM64Displa
     // Each table is an array of BE u32 pointers to null-terminated strings.
     // The terminator is an entry whose pointed-to string content is literally "db".
     auto swapNameTable = [&](uint32_t tableOffset) {
-        if (!IsValidOffset(tableOffset, size - 4))
+        if (!IsValidRange(tableOffset, 4, size))
             return;
 
         uint32_t* names = reinterpret_cast<uint32_t*>(data + tableOffset);
-        while (reinterpret_cast<uint8_t*>(names) < data + size - 4) {
+        while (reinterpret_cast<uint8_t*>(names) + 4 <= data + size) {
             uint32_t nameAddr = BSWAP32(*names);
             if (nameAddr == 0) {
                 *names = 0;
@@ -559,7 +591,7 @@ static void ByteSwapShapeData(uint8_t* data, size_t size, std::vector<PM64Displa
             }
             uint32_t nameOffset = N64AddrToOffset(nameAddr);
             // Check if the pointed-to string is "db" (the sentinel terminator)
-            if (nameOffset < size - 2) {
+            if (static_cast<size_t>(nameOffset) + 3 <= size) {
                 const char* str = reinterpret_cast<const char*>(data + nameOffset);
                 if (str[0] == 'd' && str[1] == 'b' && str[2] == '\0') {
                     *names = nameOffset; // still convert, runtime needs the offset
