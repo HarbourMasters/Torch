@@ -31,6 +31,20 @@ uint32_t Torch::translate(const uint32_t offset) {
     return offset;
 }
 
+fs::path Torch::FromUtf8(const std::string& path) {
+    return fs::path(std::u8string(path.begin(), path.end()));
+}
+
+std::string Torch::ToUtf8(const fs::path& path) {
+    const auto str = path.u8string();
+    return std::string(str.begin(), str.end());
+}
+
+std::string Torch::ToGenericUtf8(const fs::path& path) {
+    const auto str = path.generic_u8string();
+    return std::string(str.begin(), str.end());
+}
+
 int getFileDepth(const fs::path& base, const fs::path& p) {
     return std::distance(base.begin(), p.begin());
 }

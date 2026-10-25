@@ -130,8 +130,8 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream& write, std::sha
     (*replacement) += "." + format;
 
     std::string dpath = Companion::Instance->GetOutputPath() + "/" + (*replacement);
-    if (!exists(fs::path(dpath).parent_path())) {
-        create_directories(fs::path(dpath).parent_path());
+    if (!exists(Torch::FromUtf8(dpath).parent_path())) {
+        create_directories(Torch::FromUtf8(dpath).parent_path());
     }
 
     std::ostringstream imgstream;
@@ -154,7 +154,7 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream& write, std::sha
     }
     imgstream << std::endl;
 
-    std::ofstream file(dpath + ".inc.c", std::ios::binary);
+    std::ofstream file(Torch::FromUtf8(dpath + ".inc.c"), std::ios::binary);
     file << imgstream.str();
     file.close();
 
@@ -198,7 +198,7 @@ ExportResult CompressedTextureCodeExporter::Export(std::ostream& write, std::sha
         }
         compressedStream << std::endl;
 
-        std::ofstream file(dpath + ".incbin.c", std::ios::binary);
+        std::ofstream file(Torch::FromUtf8(dpath + ".incbin.c"), std::ios::binary);
         file << compressedStream.str();
         file.close();
         free(compressedData);

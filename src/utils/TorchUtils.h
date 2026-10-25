@@ -34,6 +34,12 @@ constexpr bool contains(const Container& c, const Key& k) {
 }
 
 uint32_t translate(uint32_t offset);
+
+// Path strings in Torch are utf-8. On Windows, path(std::string) and path::string() use the
+// ANSI code page instead, which breaks folders with accents, so convert through these.
+std::filesystem::path FromUtf8(const std::string& path);
+std::string ToUtf8(const std::filesystem::path& path);
+std::string ToGenericUtf8(const std::filesystem::path& path);
 std::vector<std::filesystem::directory_entry> getRecursiveEntries(const std::filesystem::path baseDir, const std::filesystem::path );
 
 };
