@@ -35,11 +35,15 @@ std::optional<std::shared_ptr<IParsedData>> SM64::DialogFactory::parse(std::vect
     auto width = reader.ReadInt16();
     // Padding
     reader.Read(2);
-    auto str = SEGMENT_OFFSET(reader.ReadInt32());
+    auto ptr = reader.ReadUInt32();
     std::vector<uint8_t> text;
 
-    while (root->data[str] != 0xFF) {
-        auto c = root->data[str++];
+    const uint8_t* data = root ? root->data : buffer.data();
+    size_t size = root ? root->size : buffer.size();
+    size_t str = root ? SEGMENT_OFFSET(ptr) : Decompressor::TranslateAddr(ptr, false);
+
+    while (str < size && data[str] != 0xFF) {
+        auto c = data[str++];
         text.push_back(c);
     }
     text.push_back(0xFF);

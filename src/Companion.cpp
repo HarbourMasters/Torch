@@ -161,6 +161,7 @@
 #endif
 
 #include "preprocess/CompTool.h"
+#include "preprocess/RomPatch.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -1436,6 +1437,30 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                 } else {
                     throw std::runtime_error("Only decompression is supported");
                 }
+            } else if (method == "sm64extend" || method == "patch") {
+                if (method == "sm64extend") {
+                    this->gRomData = RomPatch::SM64Extend(this->gRomData);
+                } else {
+                    const auto file = this->gSourceDirectory / GetSafeNode<std::string>(item, "file");
+                    std::ifstream in(file, std::ios::binary);
+                    if (!in) {
+                        throw std::runtime_error("Preprocess " + name + ": can't read " + file.generic_string());
+                    }
+                    std::vector<uint8_t> patch((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                    this->gRomData = RomPatch::Apply(this->gRomData, patch);
+                }
+                this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
+                this->gCartridge->Initialize();
+                this->gGameTitle = this->gCartridge->GetGameTitle();
+                const auto hash = this->gCartridge->GetHash();
+                SPDLOG_INFO("Preprocess {}: ROM is now {}", name, hash);
+                if (item["target"] && hash != item["target"].as<std::string>()) {
+                    throw std::runtime_error("Preprocess " + name + ": got ROM " + hash + ", expected " +
+                                             item["target"].as<std::string>());
+                }
+                if (item["restart"] && item["restart"].as<bool>()) {
+                    rom = config[hash];
+                }
             } else {
                 throw std::runtime_error("Invalid preprocess method");
             }
@@ -1462,6 +1487,22 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         auto segments = rom["segments"].as<std::vector<uint32_t>>();
         for (int i = 0; i < segments.size(); i++) {
             this->gConfig.segment.global[i + 1] = segments[i];
+        }
+    }
+    if (rom["symbols"]) {
+        // address: name files, for script pointers into code rather than assets. Later files override earlier ones,
+        // so a hack's own file can name the code it added on top of the base game's.
+        std::vector<std::string> files;
+        if (rom["symbols"].IsSequence()) {
+            files = rom["symbols"].as<std::vector<std::string>>();
+        } else {
+            files.push_back(rom["symbols"].as<std::string>());
+        }
+        for (const auto& file : files) {
+            const auto symbols = YAML::LoadFile((this->gSourceDirectory / file).string());
+            for (auto it = symbols.begin(); it != symbols.end(); ++it) {
+                this->gSymbols[it->first.as<uint32_t>()] = it->second.as<std::string>();
+            }
         }
     }
     this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
@@ -2329,6 +2370,14 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
         }
     }
     return std::nullopt;
+}
+
+std::optional<std::string> Companion::GetSymbolByAddr(uint32_t addr) const {
+    const auto it = this->gSymbols.find(addr);
+    if (it == this->gSymbols.end()) {
+        return std::nullopt;
+    }
+    return it->second;
 }
 
 std::optional<std::string> Companion::GetStringByAddr(const uint32_t addr) {
