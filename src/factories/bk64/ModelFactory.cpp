@@ -23,19 +23,19 @@ namespace BK64 {
 static const std::unordered_map<std::string, uint8_t> gF3DTable = {
     { "G_VTX", 0x04 },     { "G_DL", 0x06 },      { "G_MTX", 0x1 },    { "G_ENDDL", 0xB8 },
     { "G_SETTIMG", 0xFD }, { "G_MOVEMEM", 0x03 }, { "G_MV_L0", 0x86 }, { "G_MV_L1", 0x88 },
-    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0xB1 },    { "G_QUAD", -1 }
+    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0xB1 },    { "G_QUAD", -1 },    { "G_LOADBLOCK", 0xF3 }
 };
 
 static const std::unordered_map<std::string, uint8_t> gF3DExTable = {
     { "G_VTX", 0x04 },     { "G_DL", 0x06 },      { "G_MTX", 0x1 },    { "G_ENDDL", 0xB8 },
     { "G_SETTIMG", 0xFD }, { "G_MOVEMEM", 0x03 }, { "G_MV_L0", 0x86 }, { "G_MV_L1", 0x88 },
-    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0xB1 },    { "G_QUAD", 0xB5 }
+    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0xB1 },    { "G_QUAD", 0xB5 },  { "G_LOADBLOCK", 0xF3 }
 };
 
 static const std::unordered_map<std::string, uint8_t> gF3DEx2Table = {
     { "G_VTX", 0x01 },     { "G_DL", 0xDE },      { "G_MTX", 0xDA },   { "G_ENDDL", 0xDF },
     { "G_SETTIMG", 0xFD }, { "G_MOVEMEM", 0xDC }, { "G_MV_L0", 0x86 }, { "G_MV_L1", 0x88 },
-    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0x06 },    { "G_QUAD", 0x07 }
+    { "G_MV_LIGHT", 0xA }, { "G_TRI2", 0x06 },    { "G_QUAD", 0x07 },  { "G_LOADBLOCK", 0xF3 }
 };
 
 static const std::unordered_map<GBIVersion, std::unordered_map<std::string, uint8_t>> gGBITable = {
@@ -452,6 +452,7 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
     auto modelData = std::make_shared<ModelData>(geoType, triCount, vertCount);
 
     uint16_t textureCount;
+    uint32_t texDataStart = 0;
 
     if (geoLayoutOffset != 0) {
         SPDLOG_INFO("HAS GL {}", symbol);
@@ -507,54 +508,13 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
             modelData->mTexInfos.push_back(texInfo);
         }
 
-        uint32_t texDataStart =
-            modelOffset + textureSetupOffset + TEXTURE_HEADER_SIZE + textureCount * TEXTURE_METADATA_SIZE;
+        texDataStart = modelOffset + textureSetupOffset + TEXTURE_HEADER_SIZE + textureCount * TEXTURE_METADATA_SIZE;
         modelData->mTexDataSize = textureDataSize;
 
         // [port] Grab the entire raw texture area so animated frames and any unlisted bytes
         // between textures survive into the binary.
         if (textureDataSize > 0 && texDataStart + textureDataSize <= segment.size) {
             modelData->mRawTexData.assign(segment.data + texDataStart, segment.data + texDataStart + textureDataSize);
-        }
-
-        // [port] Also emit each texture as its own OTEX resource for modders. The raw blob above
-        // already keeps the animated frames intact; these per-texture resources are the hook for
-        // dropping in replacement textures that the importer overlays on top.
-        for (uint16_t i = 0; i < textureCount; i++) {
-            const auto& tex = modelData->mTexInfos[i];
-            uint32_t texOffset = texDataStart + tex.textureDataOffset;
-
-            const TexelFormat* format = ModelTextureFormat(tex.type);
-            if (format == nullptr) {
-                continue;
-            }
-            uint32_t tlutByteSize = tex.tlutColors * 2;
-
-            std::string texSymbol = symbol + "_tex_" + std::to_string(i);
-
-            if (tlutByteSize > 0) {
-                YAML::Node tlut;
-                tlut["type"] = "TEXTURE";
-                tlut["offset"] = texOffset;
-                tlut["format"] = "TLUT";
-                tlut["ctype"] = "u16";
-                tlut["colors"] = (int)tex.tlutColors;
-                tlut["symbol"] = texSymbol + "_TLUT";
-                Companion::Instance->AddAsset(tlut);
-            }
-
-            YAML::Node texture;
-            texture["type"] = "TEXTURE";
-            texture["offset"] = texOffset + tlutByteSize;
-            texture["format"] = format->name;
-            texture["ctype"] = "u16";
-            texture["width"] = (int)tex.width;
-            texture["height"] = (int)tex.height;
-            texture["symbol"] = texSymbol;
-            if (tlutByteSize > 0) {
-                texture["tlut_symbol"] = texSymbol + "_TLUT";
-            }
-            Companion::Instance->AddAsset(texture);
         }
     }
 
@@ -648,6 +608,79 @@ std::optional<std::shared_ptr<IParsedData>> ModelFactory::parse(std::vector<uint
                                 symbol, target, dlCount * GFX_CMD_SIZE);
                 }
             }
+        }
+    }
+
+    // [port] Also emit each texture as its own OTEX resource for modders. The raw blob above
+    // already keeps the animated frames intact; these per-texture resources are the hook for
+    // dropping in replacement textures that the importer overlays on top. A texture holds all
+    // the DL loads from it: a mipmapped one's smaller levels sit after the base, which is all
+    // the texture list's size covers. Registered before the sub-DLs that resolve them.
+    if (textureSetupOffset != 0) {
+        std::unordered_map<uint32_t, uint32_t> loadedBytes; // image offset in segment 2 -> largest load
+        uint32_t image = UINT32_MAX;
+        uint32_t texelBits = 0;
+        for (size_t i = 0; i + 1 < modelData->mRawDLWords.size(); i += 2) {
+            const uint32_t w0 = modelData->mRawDLWords[i];
+            const uint32_t w1 = modelData->mRawDLWords[i + 1];
+            const uint8_t opCode = w0 >> 24;
+            if (opCode == GBI(G_SETTIMG)) {
+                image = SEGMENT_NUMBER(w1) == 2 ? SEGMENT_OFFSET(w1) : UINT32_MAX;
+                texelBits = 4u << ((w0 >> 19) & 3);
+            } else if (opCode == GBI(G_LOADBLOCK) && image != UINT32_MAX) {
+                const uint32_t bytes = (((w1 >> 12) & 0xFFF) + 1) * texelBits / 8;
+                loadedBytes[image] = std::max(loadedBytes[image], bytes);
+            }
+        }
+
+        for (uint16_t i = 0; i < textureCount; i++) {
+            const auto& tex = modelData->mTexInfos[i];
+            uint32_t texOffset = texDataStart + tex.textureDataOffset;
+
+            const TexelFormat* format = ModelTextureFormat(tex.type);
+            if (format == nullptr) {
+                continue;
+            }
+            uint32_t tlutByteSize = tex.tlutColors * 2;
+
+            std::string texSymbol = symbol + "_tex_" + std::to_string(i);
+
+            if (tlutByteSize > 0) {
+                YAML::Node tlut;
+                tlut["type"] = "TEXTURE";
+                tlut["offset"] = texOffset;
+                tlut["format"] = "TLUT";
+                tlut["ctype"] = "u16";
+                tlut["colors"] = (int)tex.tlutColors;
+                tlut["symbol"] = texSymbol + "_TLUT";
+                Companion::Instance->AddAsset(tlut);
+            }
+
+            YAML::Node texture;
+            texture["type"] = "TEXTURE";
+            texture["offset"] = texOffset + tlutByteSize;
+            texture["format"] = format->name;
+            texture["ctype"] = "u16";
+            texture["width"] = (int)tex.width;
+            texture["height"] = (int)tex.height;
+            texture["symbol"] = texSymbol;
+            if (tlutByteSize > 0) {
+                texture["tlut_symbol"] = texSymbol + "_TLUT";
+            }
+            // The texture's data runs to the next texture's, or to the end of the texture area
+            uint32_t dataEnd = modelData->mTexDataSize;
+            for (const auto& other : modelData->mTexInfos) {
+                if (other.textureDataOffset > tex.textureDataOffset && other.textureDataOffset < dataEnd) {
+                    dataEnd = other.textureDataOffset;
+                }
+            }
+            const uint32_t imageStart = tex.textureDataOffset + tlutByteSize;
+            const auto loaded = loadedBytes.find(imageStart);
+            if (loaded != loadedBytes.end() && loaded->second > TexelBytes(*format, tex.width, tex.height) &&
+                imageStart < dataEnd) {
+                texture["size"] = std::min(loaded->second, dataEnd - imageStart);
+            }
+            Companion::Instance->AddAsset(texture);
         }
     }
 
