@@ -184,6 +184,14 @@ static std::string GetTypeNode(YAML::Node& node) {
     return type;
 }
 
+static fs::path RelativeTo(const fs::path& path, const fs::path& base) {
+#ifdef __WINRT__
+    return path.lexically_normal().lexically_relative(base.lexically_normal());
+#else
+    return fs::relative(path, base);
+#endif
+}
+
 void Companion::Init(const ExportType type) {
     std::atomic<size_t> assetCount{ 0 };
 
@@ -553,8 +561,8 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
 
                 std::string externalFileName =
                     (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
-                const auto relPath = fs::path(externalFileName).lexically_relative(this->gAssetPath).string();
-                const auto relCommonPath = fs::path(externalFileName).lexically_relative(this->gCommonAssetPath).string();
+                const auto relPath = RelativeTo(externalFileName, this->gAssetPath).string();
+                const auto relCommonPath = RelativeTo(externalFileName, this->gCommonAssetPath).string();
                 if (StringHelper::StartsWith(relPath, "../")) {
                     if (StringHelper::StartsWith(relCommonPath, "../"))
                         throw std::runtime_error("External File " + externalFileName + " Not In Asset Directory " +
@@ -575,7 +583,7 @@ void Companion::ParseCurrentFileConfig(YAML::Node node, std::atomic<size_t>& ass
 
                     this->gCurrentFile = externalFileName;
                     this->gCurrentDirectory =
-                        fs::path(externalFileName).lexically_relative(this->gAssetPath).replace_extension("");
+                        RelativeTo(externalFileName, this->gAssetPath).replace_extension("");
 
                     YAML::Node root = YAML::LoadFile(externalFileName);
 
@@ -1225,9 +1233,9 @@ void Companion::ProcessFile(YAML::Node root, std::atomic<size_t>& assetCount) {
     // directory must be resolved before the loop. Default to the file's own
     // path, then honor a :config directory override (used to register a room's
     // assets under its scene's directory).
-    auto relPath = fs::path(this->gCurrentFile).lexically_relative(this->gAssetPath).replace_extension("");
+    auto relPath = RelativeTo(this->gCurrentFile, this->gAssetPath).replace_extension("");
     if (StringHelper::StartsWith(relPath.string(), "../"))
-        relPath = fs::path(this->gCurrentFile).lexically_relative(this->gCommonAssetPath).replace_extension("");
+        relPath = RelativeTo(this->gCurrentFile, this->gCommonAssetPath).replace_extension("");
 
     this->gCurrentDirectory = relPath;
 
@@ -1653,16 +1661,16 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
 #ifdef NAUDIO_SUPPORT
     AudioManager::Instance = new AudioManager();
 #endif
-    BinaryWrapper* wrapper = nullptr;
+    std::unique_ptr<BinaryWrapper> wrapper;
 
     if (mShouldProcess) {
         if (this->gConfig.exporterType == ExportType::Binary) {
             switch (this->gConfig.otrMode) {
                 case ArchiveType::OTR:
-                    wrapper = new SWrapper(this->gConfig.outputPath);
+                    wrapper.reset(new SWrapper(this->gConfig.outputPath));
                     break;
                 case ArchiveType::O2R:
-                    wrapper = new ZWrapper(this->gConfig.outputPath);
+                    wrapper.reset(new ZWrapper(this->gConfig.outputPath));
                     break;
                 default:
                     throw std::runtime_error("Invalid archive type for export type Binary");
@@ -1673,7 +1681,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             wrapper->CreateArchive();
         }
 
-        this->gCurrentWrapper = wrapper;
+        this->gCurrentWrapper = wrapper.get();
 
         for (auto& entry : this->gCompanionFiles) {
             auto output = entry.first;
@@ -1911,6 +1919,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         this->gCurrentAssetName = "Writing archive to disk...";
         wrapper->Close();
     }
+    this->gCurrentWrapper = nullptr;
 
     // Write entries hash
     std::ofstream file(this->gDestinationDirectory / "torch.hash.yml", std::ios::binary);

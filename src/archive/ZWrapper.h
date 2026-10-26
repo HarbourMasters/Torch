@@ -17,5 +17,7 @@ public:
 
 private:
     struct mz_zip_archive_tag* mZip = nullptr;
+    std::string mTempPath;
     bool mOpen = false;
+    bool mFinalized = false;
 };

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <stdexcept>
 
 #include "spdlog/spdlog.h"
 #include <Companion.h>
@@ -12,6 +13,7 @@ namespace fs = std::filesystem;
 
 ZWrapper::ZWrapper(const std::string& path) {
     this->mPath = path;
+    this->mTempPath = path + ".tmp";
 }
 
 ZWrapper::~ZWrapper() {
@@ -22,16 +24,19 @@ ZWrapper::~ZWrapper() {
         delete reinterpret_cast<mz_zip_archive*>(this->mZip);
         this->mZip = nullptr;
     }
+    if (!this->mFinalized) {
+        std::error_code ec;
+        fs::remove(this->mTempPath, ec);
+    }
 }
 
 int32_t ZWrapper::CreateArchive(void) {
     auto* zip = new mz_zip_archive;
     std::memset(zip, 0, sizeof(mz_zip_archive));
 
-    if (!mz_zip_writer_init_file(zip, this->mPath.c_str(), 0)) {
-        SPDLOG_ERROR("[ZWrapper] Could not open '{}' for writing", this->mPath);
+    if (!mz_zip_writer_init_file(zip, this->mTempPath.c_str(), 0)) {
         delete zip;
-        return -1;
+        throw std::runtime_error("[ZWrapper] Could not open '" + this->mTempPath + "' for writing");
     }
 
     this->mZip = reinterpret_cast<mz_zip_archive_tag*>(zip);
@@ -55,17 +60,16 @@ bool ZWrapper::AddFile(const std::string& path, std::vector<char> data) {
     }
 
     if (this->mZip == nullptr || !this->mOpen) {
-        SPDLOG_ERROR("[ZWrapper] Cannot add '{}': the archive is not open", path);
-        return false;
+        throw std::runtime_error("[ZWrapper] Cannot add '" + path + "': the archive is not open");
     }
 
     std::lock_guard<std::mutex> guard(this->mMutex);
 
     if (!mz_zip_writer_add_mem(reinterpret_cast<mz_zip_archive*>(this->mZip), path.c_str(), data.data(), fileSize,
-                               MZ_DEFAULT_COMPRESSION)) {
+                               MZ_BEST_COMPRESSION)) {
         // miniz's own error says nothing useful, so log which entry blew up and how big.
         SPDLOG_ERROR("[ZWrapper] Failed to add '{}' ({} bytes)", path, fileSize);
-        return false;
+        throw std::runtime_error("[ZWrapper] Failed to add '" + path + "'");
     }
 
     return true;
@@ -77,14 +81,21 @@ int32_t ZWrapper::Close(void) {
     }
 
     auto* zip = reinterpret_cast<mz_zip_archive*>(this->mZip);
-    int32_t result = 0;
-
-    if (!mz_zip_writer_finalize_archive(zip)) {
-        SPDLOG_ERROR("[ZWrapper] Failed to finalize '{}'", this->mPath);
-        result = -1;
-    }
+    const bool finalized = mz_zip_writer_finalize_archive(zip);
     mz_zip_writer_end(zip);
     this->mOpen = false;
 
-    return result;
+    if (!finalized) {
+        throw std::runtime_error("[ZWrapper] Failed to finalize '" + this->mPath + "'");
+    }
+
+    std::error_code ec;
+    fs::rename(this->mTempPath, this->mPath, ec);
+    if (ec) {
+        throw std::runtime_error("[ZWrapper] Could not move '" + this->mTempPath + "' to '" + this->mPath +
+                                 "': " + ec.message());
+    }
+    this->mFinalized = true;
+
+    return 0;
 }
