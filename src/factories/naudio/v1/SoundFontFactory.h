@@ -2,14 +2,18 @@
 
 #include <factories/BaseFactory.h>
 
+#include "AudioContext.h"
+
 class SoundFontData : public IParsedData {
 public:
     uint8_t numInstruments;
     uint8_t numDrums;
     uint8_t sampleBankId1;
     uint8_t sampleBankId2;
+    uint16_t numSfx = 0;
     std::vector<uint32_t> instruments;
     std::vector<uint32_t> drums;
+    std::vector<TunedSample> sfx;
 };
 
 class SoundFontHeaderExporter : public BaseExporter {

@@ -12,6 +12,11 @@ struct TunedSample {
     float tuning;
 };
 
+struct SampleBankIds {
+    uint32_t bank1;
+    uint32_t bank2;
+};
+
 struct TableEntry {
     std::shared_ptr<AudioTableData> info;
     std::unordered_map<uint32_t, AudioTableEntry> entries;
@@ -20,7 +25,7 @@ struct TableEntry {
 };
 
 enum class NAudioDrivers {
-    SF64, FZEROX, UNKNOWN
+    SF64, FZEROX, NEOS, UNKNOWN
 };
 
 class AudioContext {
@@ -41,7 +46,11 @@ public:
 
     static LUS::BinaryReader MakeReader(AudioTableType type, uint32_t offset);
     static TunedSample LoadTunedSample(LUS::BinaryReader& reader, uint32_t parent, uint32_t sampleBankId);
+    static TunedSample LoadTunedSample(LUS::BinaryReader& reader, uint32_t parent, SampleBankIds banks);
+    static SampleBankIds GetSampleBankIds(YAML::Node& node);
+    static uint32_t ResolveTableIndex(AudioTableType type, uint32_t index);
     static uint64_t GetPathByAddr(uint32_t addr);
+    static bool IsNeos() { return driver == NAudioDrivers::NEOS; }
 
     static const char* GetMediumStr(uint8_t medium);
     static const char* GetCachePolicyStr(uint8_t policy);

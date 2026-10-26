@@ -95,6 +95,12 @@ enum class ResourceType {
     BKSoundBank = 0x424B5342,      // BKSB
     BKMusic = 0x424B4D55,          // BKMU
 
+    // Animal Crossing
+    ACKeyFrameSkel = 0x4F4B4653,     // OKFS
+    ACKeyFrameAnim = 0x4F4B4641,     // OKFA
+    ACTextureAnimation = 0x4F54414E, // OTAN
+    ACNpcAnimation = 0x4F4E5041,     // ONPA
+
     // NAudio v0
     Bank = 0x42414E4B,         // BANK
     Sample = 0x41554643,       // AIFC

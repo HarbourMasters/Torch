@@ -1,6 +1,7 @@
 #include "AudioContext.h"
 #include "spdlog/spdlog.h"
 #include "Companion.h"
+#include "utils/Decompressor.h"
 
 std::unordered_map<AudioTableType, TableEntry> AudioContext::tables;
 uint32_t AudioContext::sessionFrequency = 32000;
@@ -9,13 +10,62 @@ NAudioDrivers AudioContext::driver = NAudioDrivers::UNKNOWN;
 std::unordered_map<uint64_t, std::string> AudioContext::sampleDedup;
 std::unordered_map<uint32_t, std::string> AudioContext::sampleAddrRemap;
 
+struct AudioWindow {
+    uint32_t offset;
+    uint32_t size;
+};
+
+static void SetTableWindow(std::vector<uint8_t>& buffer, AudioTableType type, AudioWindow window, bool translate) {
+    const uint32_t start = translate ? Decompressor::TranslateAddr(window.offset) : window.offset;
+
+    if ((size_t)start + window.size > buffer.size()) {
+        throw std::runtime_error("NAudio table window is outside the input");
+    }
+
+    AudioContext::tables[type].buffer = std::vector<uint8_t>(buffer.begin() + start, buffer.begin() + start + window.size);
+    AudioContext::tables[type].offset = window.offset;
+}
+
+static AudioWindow ReadWindow(YAML::Node& node, const char* key) {
+    auto window = GetSafeNode<YAML::Node>(node, key);
+    return { GetSafeNode<uint32_t>(window, "offset"), GetSafeNode<uint32_t>(window, "size") };
+}
+
+static std::array<AudioWindow, 3> ReadNeosDataHeader(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    const auto header = GetSafeNode<uint32_t>(node, "audio_data");
+    const auto romBase = GetSafeNode<uint32_t>(node, "audiorom");
+    const uint32_t start = Decompressor::TranslateAddr(header);
+
+    LUS::BinaryReader reader((char*)buffer.data() + start, 0x10 + 3 * 0x10);
+    reader.SetEndianness(Torch::Endianness::Big);
+
+    if (reader.ReadInt16() < 3) {
+        throw std::runtime_error("Neos data header has fewer than three entries");
+    }
+    reader.Seek(0x10, LUS::SeekOffsetType::Start);
+
+    std::array<AudioWindow, 3> windows;
+    for (auto& window : windows) {
+        window.offset = romBase + reader.ReadUInt32();
+        window.size = reader.ReadUInt32();
+        reader.Read(8);
+    }
+    return windows;
+}
+
 std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vector<uint8_t>& buffer, YAML::Node& node) {
+    AudioContext::tables.clear();
+    AudioContext::sampleDedup.clear();
+    AudioContext::sampleAddrRemap.clear();
+
     auto driver = GetSafeNode<std::string>(node, "driver");
 
     if (driver == "SF64") {
         AudioContext::driver = NAudioDrivers::SF64;
     } else if (driver == "FZEROX") {
         AudioContext::driver = NAudioDrivers::FZEROX;
+    } else if (driver == "NEOS") {
+        AudioContext::driver = NAudioDrivers::NEOS;
     } else {
         throw std::runtime_error("Unknown NAudio driver");
     }
@@ -23,38 +73,33 @@ std::optional<std::shared_ptr<IParsedData>> AudioContextFactory::parse(std::vect
     AudioContext::sessionFrequency = GetSafeNode<uint32_t>(node, "frequency", 32000);
     AudioContext::numBuffers = GetSafeNode<uint32_t>(node, "buffers", 2);
 
-    auto seq = GetSafeNode<YAML::Node>(node, "audio_seq");
-    auto seqSize = GetSafeNode<uint32_t>(seq, "size");
-    auto seqOffset = GetSafeNode<uint32_t>(seq, "offset");
+    AudioWindow seq, bank, table;
+    if (AudioContext::IsNeos() && node["audio_data"]) {
+        auto windows = ReadNeosDataHeader(buffer, node);
+        seq = windows[0];
+        bank = windows[1];
+        table = windows[2];
+    } else {
+        seq = ReadWindow(node, "audio_seq");
+        bank = ReadWindow(node, "audio_bank");
+        table = ReadWindow(node, "audio_table");
+    }
 
-    auto bank = GetSafeNode<YAML::Node>(node, "audio_bank");
-    auto bankSize = GetSafeNode<uint32_t>(bank, "size");
-    auto bankOffset = GetSafeNode<uint32_t>(bank, "offset");
+    const bool translate = AudioContext::IsNeos();
+    SetTableWindow(buffer, AudioTableType::SEQ_TABLE, seq, translate);
+    SetTableWindow(buffer, AudioTableType::FONT_TABLE, bank, translate);
+    SetTableWindow(buffer, AudioTableType::SAMPLE_TABLE, table, translate);
 
-    auto table = GetSafeNode<YAML::Node>(node, "audio_table");
-    auto tableSize = GetSafeNode<uint32_t>(table, "size");
-    auto tableOffset = GetSafeNode<uint32_t>(table, "offset");
+    SPDLOG_INFO("Sequence Table 0x{:X}", seq.offset);
+    SPDLOG_INFO("Sound Font Table 0x{:X}", bank.offset);
+    SPDLOG_INFO("Sample Bank Table 0x{:X}", table.offset);
 
-    AudioContext::tables[AudioTableType::SEQ_TABLE].buffer =
-        std::vector<uint8_t>(buffer.begin() + seqOffset, buffer.begin() + seqOffset + seqSize);
-    AudioContext::tables[AudioTableType::FONT_TABLE].buffer =
-        std::vector<uint8_t>(buffer.begin() + bankOffset, buffer.begin() + bankOffset + bankSize);
-    AudioContext::tables[AudioTableType::SAMPLE_TABLE].buffer =
-        std::vector<uint8_t>(buffer.begin() + tableOffset, buffer.begin() + tableOffset + tableSize);
-
-    AudioContext::tables[AudioTableType::SEQ_TABLE].offset = seqOffset;
-    AudioContext::tables[AudioTableType::FONT_TABLE].offset = bankOffset;
-    AudioContext::tables[AudioTableType::SAMPLE_TABLE].offset = tableOffset;
-
-    SPDLOG_INFO("Sequence Table 0x{:X}", seqOffset);
-    SPDLOG_INFO("Sound Font Table 0x{:X}", bankOffset);
-    SPDLOG_INFO("Sample Bank Table 0x{:X}", tableOffset);
-
-    return std::nullopt;
+    node["no_export"] = true;
+    return std::make_shared<IParsedData>();
 }
 
 LUS::BinaryReader AudioContext::MakeReader(AudioTableType type, uint32_t offset) {
-    auto entry = AudioContext::tables[type].buffer;
+    auto& entry = AudioContext::tables[type].buffer;
 
     LUS::BinaryReader reader(entry.data(), entry.size());
     reader.SetEndianness(Torch::Endianness::Big);
@@ -64,6 +109,24 @@ LUS::BinaryReader AudioContext::MakeReader(AudioTableType type, uint32_t offset)
 }
 
 TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t parent, uint32_t sampleBankId) {
+    return LoadTunedSample(reader, parent, SampleBankIds{ sampleBankId, 0xFF });
+}
+
+SampleBankIds AudioContext::GetSampleBankIds(YAML::Node& node) {
+    return { GetSafeNode<uint32_t>(node, "sampleBankId"), GetSafeNode<uint32_t>(node, "sampleBankId2", 0xFF) };
+}
+
+uint32_t AudioContext::ResolveTableIndex(AudioTableType type, uint32_t index) {
+    auto& info = tables[type].info;
+    if (info == nullptr || index >= info->entries.size()) {
+        return index;
+    }
+    const auto& entry = info->entries[index];
+    return entry.size == 0 ? entry.addr : index;
+}
+
+TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t parent, SampleBankIds banks) {
+    const uint32_t sampleBankId = banks.bank1;
     auto sampleAddr = reader.ReadUInt32();
     auto tuning = reader.ReadFloat();
 
@@ -80,6 +143,9 @@ TunedSample AudioContext::LoadTunedSample(LUS::BinaryReader& reader, uint32_t pa
     node["offset"] = parent + sampleAddr;
     node["tuning"] = tuning;
     node["sampleBankId"] = sampleBankId;
+    if (banks.bank2 != 0xFF) {
+        node["sampleBankId2"] = banks.bank2;
+    }
     Companion::Instance->AddAsset(node);
 
     return { parent + sampleAddr, sampleBankId, tuning };
