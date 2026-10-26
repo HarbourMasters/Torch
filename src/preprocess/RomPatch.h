@@ -12,7 +12,7 @@ namespace RomPatch {
 // into the extended region, level scripts and code repointed), which ROM Manager hacks are built on.
 std::vector<uint8_t> SM64Extend(const std::vector<uint8_t>& rom);
 
-// Applies a PPF3, IPS or BPS patch, picked by its header. Throws on a patch it can't read.
+// Applies a PPF3, IPS, BPS or xdelta (VCDIFF, no secondary compression) patch, picked by its header. Throws on a patch it can't read.
 std::vector<uint8_t> Apply(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& patch);
 
 // Rewrites the CIC-NUS-6102 header checksum.

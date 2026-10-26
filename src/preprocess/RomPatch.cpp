@@ -203,6 +203,164 @@ std::vector<uint8_t> ApplyBps(const std::vector<uint8_t>& rom, const std::vector
     return out;
 }
 
+struct VcdiffCode {
+    uint8_t type; // 0 NOOP, 1 ADD, 2 RUN, 3 COPY
+    uint8_t size;
+    uint8_t mode;
+};
+
+// RFC 3284's default instruction table: up to two instructions per code.
+std::vector<std::pair<VcdiffCode, VcdiffCode>> VcdiffCodeTable() {
+    std::vector<std::pair<VcdiffCode, VcdiffCode>> table;
+    const VcdiffCode none = { 0, 0, 0 };
+    table.push_back({ { 2, 0, 0 }, none });
+    for (uint8_t size = 0; size <= 17; size++) {
+        table.push_back({ { 1, size, 0 }, none });
+    }
+    for (uint8_t mode = 0; mode < 9; mode++) {
+        table.push_back({ { 3, 0, mode }, none });
+        for (uint8_t size = 4; size <= 18; size++) {
+            table.push_back({ { 3, size, mode }, none });
+        }
+    }
+    for (uint8_t mode = 0; mode < 6; mode++) {
+        for (uint8_t add = 1; add <= 4; add++) {
+            for (uint8_t size = 4; size <= 6; size++) {
+                table.push_back({ { 1, add, 0 }, { 3, size, mode } });
+            }
+        }
+    }
+    for (uint8_t mode = 6; mode < 9; mode++) {
+        for (uint8_t add = 1; add <= 4; add++) {
+            table.push_back({ { 1, add, 0 }, { 3, 4, mode } });
+        }
+    }
+    for (uint8_t mode = 0; mode < 9; mode++) {
+        table.push_back({ { 3, 4, mode }, { 1, 1, 0 } });
+    }
+    return table;
+}
+
+uint64_t VcdiffNumber(const std::vector<uint8_t>& delta, size_t& pos) {
+    uint64_t value = 0;
+    while (true) {
+        const uint8_t b = delta.at(pos++);
+        value = (value << 7) | (b & 0x7F);
+        if (!(b & 0x80)) {
+            return value;
+        }
+    }
+}
+
+uint32_t Adler32(const uint8_t* data, size_t size) {
+    uint32_t a = 1, b = 0;
+    for (size_t i = 0; i < size; i++) {
+        a = (a + data[i]) % 65521;
+        b = (b + a) % 65521;
+    }
+    return (b << 16) | a;
+}
+
+// An xdelta3 patch (VCDIFF, RFC 3284) made without secondary compression.
+std::vector<uint8_t> ApplyVcdiff(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& delta) {
+    const uint8_t indicator = delta.at(4);
+    if (indicator & 1) {
+        throw std::runtime_error("xdelta patches with secondary compression aren't supported (make it with -S none)");
+    }
+    if (indicator & 2) {
+        throw std::runtime_error("VCDIFF custom code tables aren't supported");
+    }
+    size_t pos = 5;
+    if (indicator & 4) {
+        const uint64_t appHeader = VcdiffNumber(delta, pos);
+        pos += appHeader;
+    }
+    const auto table = VcdiffCodeTable();
+    std::vector<uint8_t> out;
+    while (pos < delta.size()) {
+        const uint8_t win = delta.at(pos++);
+        const uint8_t* source = nullptr;
+        std::vector<uint8_t> sourceCopy;
+        uint64_t sourceLen = 0;
+        if (win & 3) {
+            sourceLen = VcdiffNumber(delta, pos);
+            const uint64_t start = VcdiffNumber(delta, pos);
+            // The declared length is what addresses count from, even past the end of the ROM.
+            const std::vector<uint8_t>& from = (win & 1) ? rom : out;
+            sourceCopy.assign(sourceLen, 0);
+            for (uint64_t i = 0; i < sourceLen && start + i < from.size(); i++) {
+                sourceCopy[i] = from[start + i];
+            }
+            source = sourceCopy.data();
+        }
+        VcdiffNumber(delta, pos); // delta encoding length
+        const uint64_t targetLen = VcdiffNumber(delta, pos);
+        if (delta.at(pos++) != 0) {
+            throw std::runtime_error("xdelta patches with compressed sections aren't supported");
+        }
+        const uint64_t dataLen = VcdiffNumber(delta, pos);
+        const uint64_t instLen = VcdiffNumber(delta, pos);
+        const uint64_t addrLen = VcdiffNumber(delta, pos);
+        bool hasChecksum = win & 4;
+        uint32_t checksum = 0;
+        if (hasChecksum) {
+            checksum = (delta.at(pos) << 24) | (delta.at(pos + 1) << 16) | (delta.at(pos + 2) << 8) | delta.at(pos + 3);
+            pos += 4;
+        }
+        size_t d = pos, i = pos + dataLen, a = pos + dataLen + instLen;
+        const size_t instEnd = a;
+        pos = a + addrLen;
+
+        std::vector<uint8_t> target;
+        target.reserve(targetLen);
+        uint64_t near[4] = { 0, 0, 0, 0 };
+        size_t nearSlot = 0;
+        std::vector<uint64_t> same(3 * 256, 0);
+        while (i < instEnd) {
+            const auto& code = table.at(delta.at(i++));
+            for (const VcdiffCode& inst : { code.first, code.second }) {
+                if (inst.type == 0) {
+                    continue;
+                }
+                uint64_t size = inst.size == 0 ? VcdiffNumber(delta, i) : inst.size;
+                if (inst.type == 1) {
+                    target.insert(target.end(), delta.begin() + d, delta.begin() + d + size);
+                    d += size;
+                } else if (inst.type == 2) {
+                    target.insert(target.end(), size, delta.at(d++));
+                } else {
+                    const uint64_t here = sourceLen + target.size();
+                    uint64_t addr;
+                    if (inst.mode == 0) {
+                        addr = VcdiffNumber(delta, a);
+                    } else if (inst.mode == 1) {
+                        addr = here - VcdiffNumber(delta, a);
+                    } else if (inst.mode < 6) {
+                        addr = near[inst.mode - 2] + VcdiffNumber(delta, a);
+                    } else {
+                        addr = same.at((inst.mode - 6) * 256 + delta.at(a++));
+                    }
+                    near[nearSlot] = addr;
+                    nearSlot = (nearSlot + 1) % 4;
+                    same[addr % (3 * 256)] = addr;
+                    for (uint64_t k = 0; k < size; k++) {
+                        const uint64_t at = addr + k;
+                        target.push_back(at < sourceLen ? source[at] : target.at(at - sourceLen));
+                    }
+                }
+            }
+        }
+        if (target.size() != targetLen) {
+            throw std::runtime_error("VCDIFF window decoded to the wrong size");
+        }
+        if (hasChecksum && Adler32(target.data(), target.size()) != checksum) {
+            throw std::runtime_error("VCDIFF window checksum mismatch: the patch isn't for this ROM");
+        }
+        out.insert(out.end(), target.begin(), target.end());
+    }
+    return out;
+}
+
 } // namespace
 
 void FixN64Checksum(std::vector<uint8_t>& rom) {
@@ -338,7 +496,10 @@ std::vector<uint8_t> Apply(const std::vector<uint8_t>& rom, const std::vector<ui
     if (patch.size() >= 4 && std::memcmp(patch.data(), "BPS1", 4) == 0) {
         return ApplyBps(rom, patch);
     }
-    throw std::runtime_error("Unknown patch format (PPF3, IPS and BPS are supported)");
+    if (patch.size() >= 5 && patch[0] == 0xD6 && patch[1] == 0xC3 && patch[2] == 0xC4) {
+        return ApplyVcdiff(rom, patch);
+    }
+    throw std::runtime_error("Unknown patch format (PPF3, IPS, BPS and xdelta are supported)");
 }
 
 } // namespace RomPatch
