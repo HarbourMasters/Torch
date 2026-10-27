@@ -20,6 +20,7 @@ constexpr uint8_t kLoopStart = 0x2E;
 constexpr uint8_t kLoopEnd = 0x2D;
 constexpr uint8_t kBlockCode = 0xFE;
 constexpr uint32_t kLoopEndBytes = 6;
+constexpr uint8_t kLoopForever = 0xFF;
 
 class TrackReader {
   public:
@@ -150,6 +151,14 @@ bool DecodeTrack(const uint8_t* data, size_t size, uint32_t start, uint32_t end,
                 event.aux = ReadU32BE(raw + 2);
                 event.kind = static_cast<uint8_t>(MusicEventKind::LoopEnd);
                 running = 0;
+                // The player never reads past a loop that runs forever, and BB escapes a 0xFE in these raw bytes.
+                if (event.byte2 == kLoopForever) {
+                    out.push_back(event);
+                    MusicEvent end;
+                    end.kind = static_cast<uint8_t>(MusicEventKind::End);
+                    out.push_back(end);
+                    return !reader.Failed();
+                }
             } else {
                 return false;
             }
@@ -421,8 +430,6 @@ ExportResult MusicModdingExporter::Export(std::ostream& write, std::shared_ptr<I
 }
 
 namespace {
-
-constexpr uint8_t kLoopForever = 0xFF;
 
 struct SmfEvent {
     uint32_t tick = 0;
