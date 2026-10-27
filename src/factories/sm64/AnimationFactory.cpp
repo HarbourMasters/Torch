@@ -52,13 +52,18 @@ std::optional<std::shared_ptr<IParsedData>> SM64::AnimationFactory::parse(std::v
     auto length = header.ReadUInt32();
     auto segmented = raw != nullptr;
     auto mainData = segmented ? raw->data : data.data;
+    const bool romSegment = !segmented && IS_SEGMENTED(valuesAddr) && IS_SEGMENTED(indexAddr);
 
     const auto indexLength = ANIMINDEX_COUNT(unusedBoneCount);
-    const auto valuesSize = !segmented ? length * sizeof(int16_t) : indexAddr - valuesAddr;
+    const auto valuesSize = segmented || romSegment ? indexAddr - valuesAddr : length * sizeof(int16_t);
 
     if (segmented) {
         valuesAddr = SEGMENT_OFFSET(valuesAddr);
         indexAddr = SEGMENT_OFFSET(indexAddr);
+    } else if (romSegment) {
+        mainData = buffer.data();
+        valuesAddr = Decompressor::TranslateAddr(valuesAddr, false);
+        indexAddr = Decompressor::TranslateAddr(indexAddr, false);
     }
 
     SPDLOG_INFO("Offset: 0x{:X}", offset.as<uint32_t>());

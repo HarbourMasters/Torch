@@ -1,4 +1,5 @@
 #include "LevelScriptFactory.h"
+#include "ScriptBinary.h"
 #include "spdlog/spdlog.h"
 
 #include "Companion.h"
@@ -131,65 +132,10 @@ ExportResult SM64::LevelScriptBinaryExporter::Export(std::ostream& write, std::s
                                                      std::string& entryName, YAML::Node& node,
                                                      std::string* replacement) {
     auto writer = LUS::BinaryWriter();
-    const auto commands = std::static_pointer_cast<LevelScriptData>(raw)->mCommands;
+    const auto& commands = std::static_pointer_cast<LevelScriptData>(raw)->mCommands;
 
     WriteHeader(writer, Torch::ResourceType::LevelScript, 0);
-
-    writer.Write((uint32_t)commands.size());
-
-    for (auto& [opcode, arguments] : commands) {
-        writer.Write(static_cast<uint8_t>(opcode));
-
-        for (auto& args : arguments) {
-            switch (static_cast<LevelArgumentType>(args.index())) {
-                case LevelArgumentType::U8: {
-                    writer.Write(std::get<uint8_t>(args));
-                    break;
-                }
-                case LevelArgumentType::S8: {
-                    writer.Write(std::get<int8_t>(args));
-                    break;
-                }
-                case LevelArgumentType::U16: {
-                    writer.Write(std::get<uint16_t>(args));
-                    break;
-                }
-                case LevelArgumentType::S16: {
-                    writer.Write(std::get<int16_t>(args));
-                    break;
-                }
-                case LevelArgumentType::U32: {
-                    writer.Write(std::get<uint32_t>(args));
-                    break;
-                }
-                case LevelArgumentType::S32: {
-                    writer.Write(std::get<int32_t>(args));
-                    break;
-                }
-                case LevelArgumentType::F32: {
-                    writer.Write(std::get<float>(args));
-                    break;
-                }
-                case LevelArgumentType::PTR: {
-                    auto ptr = static_cast<uint32_t>(std::get<uint64_t>(args));
-                    auto dec = Companion::Instance->GetNodeByAddr(ptr);
-                    if (ptr == 0) {
-                        writer.Write(ptr);
-                    } else if (dec.has_value()) {
-                        uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
-                        SPDLOG_INFO("Found Asset: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
-                        writer.Write(hash);
-                    } else {
-                        SPDLOG_WARN("Could not find Asset at 0x{:X}", ptr);
-                    }
-                    break;
-                }
-                default: {
-                    throw std::runtime_error("Unknown Level Argument Type");
-                }
-            }
-        }
-    }
+    ScriptBinary::WriteScript(writer, GetSafeNode(node, "symbol", entryName), commands);
 
     writer.Finish(write);
     return std::nullopt;
@@ -319,7 +265,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std:
             }
             case LevelOpcode::SKIP:
             case LevelOpcode::SKIP_NOP: {
-                cmd += 0x4 << CMD_SIZE_SHIFT;
+                cmd += (cmd[0x01] ? cmd[0x01] : 0x4) << CMD_SIZE_SHIFT;
                 break;
             }
             case LevelOpcode::CALL:
@@ -327,7 +273,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std:
                 auto arg = cur_level_cmd_s16(0x02);
                 auto func = cur_level_cmd_u32(0x04);
                 arguments.emplace_back(arg);
-                arguments.emplace_back(func);
+                arguments.emplace_back(static_cast<uint64_t>(func));
                 cmd += 0x8 << CMD_SIZE_SHIFT;
                 break;
             }
@@ -465,11 +411,12 @@ std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std:
             }
             case LevelOpcode::WARP_NODE:
             case LevelOpcode::PAINTING_WARP_NODE: {
-                auto id = cur_level_cmd_u8(0x01);
-                auto destLevel = cur_level_cmd_u8(0x02);
-                auto destArea = cur_level_cmd_u8(0x03);
-                auto destNode = cur_level_cmd_u8(0x04);
-                auto flags = cur_level_cmd_u8(0x05);
+                // 26 08 id destLevel | destArea destNode flags 00
+                auto id = cur_level_cmd_u8(0x02);
+                auto destLevel = cur_level_cmd_u8(0x03);
+                auto destArea = cur_level_cmd_u8(0x04);
+                auto destNode = cur_level_cmd_u8(0x05);
+                auto flags = cur_level_cmd_u8(0x06);
                 arguments.emplace_back(id);
                 arguments.emplace_back(destLevel);
                 arguments.emplace_back(destArea);
@@ -551,7 +498,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::LevelScriptFactory::parse(std:
                 break;
             }
             case LevelOpcode::NOP: {
-                cmd += 0x4 << CMD_SIZE_SHIFT;
+                cmd += (cmd[0x01] ? cmd[0x01] : 0x4) << CMD_SIZE_SHIFT;
                 break;
             }
             case LevelOpcode::TRANSITION: {

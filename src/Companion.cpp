@@ -161,6 +161,7 @@
 #endif
 
 #include "preprocess/CompTool.h"
+#include "preprocess/RomPatch.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -1436,6 +1437,30 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                 } else {
                     throw std::runtime_error("Only decompression is supported");
                 }
+            } else if (method == "sm64extend" || method == "patch") {
+                if (method == "sm64extend") {
+                    this->gRomData = RomPatch::SM64Extend(this->gRomData);
+                } else {
+                    const auto file = this->gSourceDirectory / GetSafeNode<std::string>(item, "file");
+                    std::ifstream in(file, std::ios::binary);
+                    if (!in) {
+                        throw std::runtime_error("Preprocess " + name + ": can't read " + file.generic_string());
+                    }
+                    std::vector<uint8_t> patch((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                    this->gRomData = RomPatch::Apply(this->gRomData, patch);
+                }
+                this->gCartridge = std::make_shared<N64::Cartridge>(this->gRomData);
+                this->gCartridge->Initialize();
+                this->gGameTitle = this->gCartridge->GetGameTitle();
+                const auto hash = this->gCartridge->GetHash();
+                SPDLOG_INFO("Preprocess {}: ROM is now {}", name, hash);
+                if (item["target"] && hash != item["target"].as<std::string>()) {
+                    throw std::runtime_error("Preprocess " + name + ": got ROM " + hash + ", expected " +
+                                             item["target"].as<std::string>());
+                }
+                if (item["restart"] && item["restart"].as<bool>()) {
+                    rom = config[hash];
+                }
             } else {
                 throw std::runtime_error("Invalid preprocess method");
             }
@@ -1462,6 +1487,22 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
         auto segments = rom["segments"].as<std::vector<uint32_t>>();
         for (int i = 0; i < segments.size(); i++) {
             this->gConfig.segment.global[i + 1] = segments[i];
+        }
+    }
+    if (rom["symbols"]) {
+        // address: name files, for script pointers into code rather than assets. Later files override earlier ones,
+        // so a hack's own file can name the code it added on top of the base game's.
+        std::vector<std::string> files;
+        if (rom["symbols"].IsSequence()) {
+            files = rom["symbols"].as<std::vector<std::string>>();
+        } else {
+            files.push_back(rom["symbols"].as<std::string>());
+        }
+        for (const auto& file : files) {
+            const auto symbols = YAML::LoadFile((this->gSourceDirectory / file).string());
+            for (auto it = symbols.begin(); it != symbols.end(); ++it) {
+                this->gSymbols[it->first.as<uint32_t>()] = it->second.as<std::string>();
+            }
         }
     }
     this->gAssetPath = (this->gSourceDirectory / rom["path"].as<std::string>()).string();
@@ -1711,15 +1752,17 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                path.find("config.yml") == std::string::npos && path.find("hashes.yaml") == std::string::npos;
     };
 
-    // A file another yaml lists under external_files is looked up again when that yaml is processed,
-    // and a processed file is never reparsed, so only files nothing depends on are freed after export.
-    std::unordered_set<std::string> externalDependencies;
+    // A file another yaml lists under external_files is looked up again when that yaml is processed, and a
+    // processed file is never reparsed, so it is only freed once every yaml that lists it has been processed.
+    std::unordered_map<std::string, std::vector<std::string>> externalFilesOf;
+    std::unordered_map<std::string, int> pendingDependents;
     if (this->gConfig.exporterType == ExportType::Binary) {
         for (const auto& entry : entries) {
             if (!isAssetYaml(entry)) {
                 continue;
             }
-            const YAML::Node root = YAML::LoadFile(entry.path().generic_string());
+            const auto yamlPath = entry.path().generic_string();
+            const YAML::Node root = YAML::LoadFile(yamlPath);
             const auto config = root[":config"];
             if (!config) {
                 continue;
@@ -1730,14 +1773,55 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             }
             for (const auto& externalFile : externalFiles) {
                 if (externalFile.IsScalar()) {
-                    externalDependencies.insert(
-                        (this->gSourceDirectory / externalFile.as<std::string>()).generic_string());
+                    const auto path = (this->gSourceDirectory / externalFile.as<std::string>()).generic_string();
+                    externalFilesOf[yamlPath].push_back(path);
+                    pendingDependents[path]++;
                 }
             }
         }
     }
+    std::unordered_set<std::string> finishedFiles;
 
-    for (const auto& entry : entries) {
+    // Process a yaml right after the files it lists under external_files, when it lists nothing else not yet
+    // reached, so those files can be freed instead of staying in memory until it comes up in directory order.
+    std::vector<fs::directory_entry> orderedEntries;
+    if (this->gConfig.exporterType == ExportType::Binary) {
+        std::unordered_map<std::string, std::vector<const fs::directory_entry*>> dependentsOf;
+        for (const auto& entry : entries) {
+            for (const auto& external : externalFilesOf[entry.path().generic_string()]) {
+                dependentsOf[external].push_back(&entry);
+            }
+        }
+        std::unordered_set<std::string> placed;
+        std::function<void(const fs::directory_entry&)> place = [&](const fs::directory_entry& entry) {
+            const auto path = entry.path().generic_string();
+            if (!placed.insert(path).second) {
+                return;
+            }
+            orderedEntries.push_back(entry);
+            const auto& ownExternals = externalFilesOf[path];
+            for (const auto* dependent : dependentsOf[path]) {
+                bool ready = true;
+                for (const auto& external : externalFilesOf[dependent->path().generic_string()]) {
+                    if (!placed.contains(external) &&
+                        std::find(ownExternals.begin(), ownExternals.end(), external) == ownExternals.end()) {
+                        ready = false;
+                        break;
+                    }
+                }
+                if (ready) {
+                    place(*dependent);
+                }
+            }
+        };
+        for (const auto& entry : entries) {
+            place(entry);
+        }
+    } else {
+        orderedEntries = entries;
+    }
+
+    for (const auto& entry : orderedEntries) {
         if (!isAssetYaml(entry)) {
             continue;
         }
@@ -1869,7 +1953,7 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
             // Keep memory usage low during extraction
             if (this->gConfig.exporterType == ExportType::Binary) {
                 auto freeFile = [&](const std::string& file) {
-                    if (externalDependencies.contains(file)) {
+                    if (pendingDependents[file] > 0) {
                         return;
                     }
                     this->gParseResults.erase(file);
@@ -1877,9 +1961,17 @@ void Companion::Process(std::atomic<size_t>& assetCount) {
                     this->gNodesByTypeCache.erase(file);
                     this->gNodesByTypeCacheValid.erase(file);
                 };
+                finishedFiles.insert(yamlPath);
                 freeFile(yamlPath);
                 for (const auto& subFile : this->gSubFileList) {
                     freeFile(subFile);
+                }
+                for (const auto& external : externalFilesOf[yamlPath]) {
+                    if (--pendingDependents[external] == 0 &&
+                        (finishedFiles.contains(external) || this->gProcessedFiles.contains(external) ||
+                         this->gParseResults.contains(external))) {
+                        freeFile(external);
+                    }
                 }
             }
         }
@@ -2329,6 +2421,14 @@ std::optional<std::tuple<std::string, YAML::Node>> Companion::GetNodeByAddr(uint
         }
     }
     return std::nullopt;
+}
+
+std::optional<std::string> Companion::GetSymbolByAddr(uint32_t addr) const {
+    const auto it = this->gSymbols.find(addr);
+    if (it == this->gSymbols.end()) {
+        return std::nullopt;
+    }
+    return it->second;
 }
 
 std::optional<std::string> Companion::GetStringByAddr(const uint32_t addr) {

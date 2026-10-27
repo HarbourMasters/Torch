@@ -1,4 +1,5 @@
 #include "BehaviorScriptFactory.h"
+#include "ScriptBinary.h"
 #include "spdlog/spdlog.h"
 
 #include "Companion.h"
@@ -119,65 +120,10 @@ ExportResult SM64::BehaviorScriptBinaryExporter::Export(std::ostream& write, std
                                                         std::string& entryName, YAML::Node& node,
                                                         std::string* replacement) {
     auto writer = LUS::BinaryWriter();
-    const auto commands = std::static_pointer_cast<BehaviorScriptData>(raw)->mCommands;
+    const auto& commands = std::static_pointer_cast<BehaviorScriptData>(raw)->mCommands;
 
     WriteHeader(writer, Torch::ResourceType::BehaviorScript, 0);
-
-    writer.Write((uint32_t)commands.size());
-
-    for (auto& [opcode, arguments] : commands) {
-        writer.Write(static_cast<uint8_t>(opcode));
-
-        for (auto& args : arguments) {
-            switch (static_cast<BehaviorArgumentType>(args.index())) {
-                case BehaviorArgumentType::U8: {
-                    writer.Write(std::get<uint8_t>(args));
-                    break;
-                }
-                case BehaviorArgumentType::S8: {
-                    writer.Write(std::get<int8_t>(args));
-                    break;
-                }
-                case BehaviorArgumentType::U16: {
-                    writer.Write(std::get<uint16_t>(args));
-                    break;
-                }
-                case BehaviorArgumentType::S16: {
-                    writer.Write(std::get<int16_t>(args));
-                    break;
-                }
-                case BehaviorArgumentType::U32: {
-                    writer.Write(std::get<uint32_t>(args));
-                    break;
-                }
-                case BehaviorArgumentType::S32: {
-                    writer.Write(std::get<int32_t>(args));
-                    break;
-                }
-                case BehaviorArgumentType::F32: {
-                    writer.Write(std::get<float>(args));
-                    break;
-                }
-                case BehaviorArgumentType::PTR: {
-                    auto ptr = static_cast<uint32_t>(std::get<uint64_t>(args));
-                    auto dec = Companion::Instance->GetNodeByAddr(ptr);
-                    if (ptr == 0) {
-                        writer.Write(ptr);
-                    } else if (dec.has_value()) {
-                        uint64_t hash = CRC64(std::get<0>(dec.value()).c_str());
-                        SPDLOG_INFO("Found Asset: 0x{:X} Hash: 0x{:X} Path: {}", ptr, hash, std::get<0>(dec.value()));
-                        writer.Write(hash);
-                    } else {
-                        SPDLOG_WARN("Could not find Asset at 0x{:X}", ptr);
-                    }
-                    break;
-                }
-                default: {
-                    throw std::runtime_error("Unknown Behavior Argument Type");
-                }
-            }
-        }
-    }
+    ScriptBinary::WriteScript(writer, GetSafeNode(node, "symbol", entryName), commands);
 
     writer.Finish(write);
     return std::nullopt;
@@ -205,7 +151,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::BehaviorScriptFactory::parse(s
                 break;
             }
             case BehaviorOpcode::DELAY: {
-                auto num = cur_behavior_cmd_u8(0x01);
+                auto num = cur_behavior_cmd_s16(0x02); // 01 00 num
                 arguments.emplace_back(num);
                 cmd += 0x4 << CMD_SIZE_SHIFT;
                 break;
@@ -224,6 +170,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::BehaviorScriptFactory::parse(s
             case BehaviorOpcode::GOTO: {
                 uint64_t addr = cur_behavior_cmd_u32(0x04);
                 arguments.emplace_back(addr);
+                processing = false;
                 cmd += 0x8 << CMD_SIZE_SHIFT;
                 break;
             }
@@ -247,7 +194,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::BehaviorScriptFactory::parse(s
                 break;
             }
             case BehaviorOpcode::CALL_NATIVE: {
-                auto func = cur_behavior_cmd_u32(0x04);
+                uint64_t func = cur_behavior_cmd_u32(0x04);
                 arguments.emplace_back(func);
                 cmd += 0x8 << CMD_SIZE_SHIFT;
                 break;
@@ -369,7 +316,7 @@ std::optional<std::shared_ptr<IParsedData>> SM64::BehaviorScriptFactory::parse(s
                 break;
             }
             case BehaviorOpcode::SPAWN_CHILD_WITH_PARAM: {
-                auto bhvParam = cur_behavior_cmd_u8(0x01);
+                auto bhvParam = cur_behavior_cmd_s16(0x02); // 29 00 bhvParam
                 auto modelId = cur_behavior_cmd_s32(0x04);
                 uint64_t behavior = cur_behavior_cmd_u32(0x08);
                 arguments.emplace_back(bhvParam);

@@ -207,6 +207,8 @@ public:
     // gCurrentFile no longer points at the owning file.
     std::optional<std::tuple<std::string, YAML::Node>> GetNodeByAddr(uint32_t addr, const std::string& file);
     std::optional<std::string> GetStringByAddr(uint32_t addr);
+    // Code a script can point at (a behavior, a function) by name, from the game's `symbols:` file.
+    std::optional<std::string> GetSymbolByAddr(uint32_t addr) const;
     std::optional<std::tuple<std::string, YAML::Node>> GetSafeNodeByAddr(const uint32_t addr, std::string type);
     std::optional<std::string> GetSafeStringByAddr(const uint32_t addr, std::string type);
     std::optional<std::vector<std::tuple<std::string, YAML::Node>>> GetNodesByType(const std::string& type, bool includeAutogen = false);
@@ -274,6 +276,7 @@ private:
     fs::path gCurrentDirectory;
     std::string gCurrentHash;
     std::string gAssetPath;
+    std::unordered_map<uint32_t, std::string> gSymbols;
     std::string gCommonAssetPath;
     std::string gVersion;
     std::string gSingleYMLPath;
