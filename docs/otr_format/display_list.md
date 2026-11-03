@@ -8,9 +8,11 @@ If the Resource Type is `ODLT` (`0x4F444C54`), the header is immediately followe
 | Offset | Size | Type | Description |
 | :--- | :--- | :--- | :--- |
 | 0x40 | 1 | int8 | GBI Version (F3D, F3DEX, F3DEX2, etc.) |
-| 0x41 | 7 | - | *Padding* |
-| 0x48 | 8 | u64 | Resource Hash |
-| 0x50 | ... | [u64] | Display List Commands (Gfx) |
+| 0x41 | 7 | - | *Padding* (0xFF) |
+| 0x48 | 4 | u32 | Marker (0x33000000) |
+| 0x4C | 4 | u32 | Marker data (0xBEEFBEEF) |
+| 0x50 | 8 | u64 | Resource Hash |
+| 0x58 | ... | [u64] | Display List Commands (Gfx) |
 
 ## Display List Commands
 
