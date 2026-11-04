@@ -178,7 +178,7 @@ DecompressedData Decompressor::AutoDecode(YAML::Node& node, std::vector<uint8_t>
 
         auto assetPtr = fileOffset + offset;
         auto decoded = DecodeTKMK00(buffer, assetPtr, textureSize, alpha);
-        size_t decodedSize = decoded->size - offset;
+        size_t decodedSize = decoded->size;
         size_t size;
 
         if (node["size"]) {
@@ -303,7 +303,10 @@ DecompressedData Decompressor::AutoDecode(uint32_t offset, std::optional<size_t>
 }
 
 uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress) {
-    if (IS_SEGMENTED(addr) || IS_VIRTUAL_SEGMENT(addr)) {
+    const auto vramEntry = Companion::Instance->GetCurrentVRAM();
+    const bool isVramMapped = vramEntry.has_value() && IS_VIRTUAL_SEGMENT(vramEntry.value().addr);
+
+    if (IS_SEGMENTED(addr) || (IS_VIRTUAL_SEGMENT(addr) && !isVramMapped)) {
         const auto segment = Companion::Instance->GetFileOffsetFromSegmentedAddr(SEGMENT_NUMBER(addr));
         if (!segment.has_value()) {
             const auto compressedSegmentPair =
@@ -319,8 +322,6 @@ uint32_t Decompressor::TranslateAddr(uint32_t addr, bool baseAddress) {
 
         return segment.value() + (!baseAddress ? SEGMENT_OFFSET(addr) : 0);
     }
-
-    const auto vramEntry = Companion::Instance->GetCurrentVRAM();
 
     if (vramEntry.has_value()) {
         const auto vram = vramEntry.value();
