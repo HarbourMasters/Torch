@@ -359,16 +359,9 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
             auto dec = Companion::Instance->GetSafeStringByAddr(ptr, "GFX");
             auto branch = (w0 >> 16) & G_DL_NO_PUSH;
 
-            // Export displaylist segment addresses as an index into a buffer of gfx
-            if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) && (SEGMENT_NUMBER(w1) == 0x07)) {
-                value = gsSPDisplayListOTRIndex(w1);
-                w0 = value.words.w0;
-                w1 = value.words.w1;
-            } else {
-                value = gsSPDisplayListOTRHash(ptr);
-                w0 = value.words.w0;
-                w1 = value.words.w1;
-            }
+            value = gsSPDisplayListOTRHash(ptr);
+            w0 = value.words.w0;
+            w1 = value.words.w1;
 
             writer.Write(w0);
             writer.Write(w1);
@@ -454,16 +447,10 @@ ExportResult DListBinaryExporter::Export(std::ostream& write, std::shared_ptr<IP
                 uint32_t newW0 = (G_SETTIMG_OTR_HASH << 24) | (w0 & 0x00FFFFFF);
                 writer.Write(newW0);
                 writer.Write(ptr);
-            } else if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::Mk64) &&
-                       ((SEGMENT_NUMBER(w1) == 0x03) || (SEGMENT_NUMBER(w1) == 0x05))) {
-                // Export texture segment addresses as segmented addresses
-                w1 |= 1;
-                writer.Write(w0);
-                writer.Write(w1);
-                // Segment 4 and 0x0B-0x0F are BK64's runtime animated-texture slots.
-                // Nothing static to resolve, so the segmented address just passes through.
             } else if ((Companion::Instance->GetGBIMinorVersion() == GBIMinorVersion::BK64) &&
                        (SEGMENT_NUMBER(w1) == 0x04 || (SEGMENT_NUMBER(w1) >= 0x0B && SEGMENT_NUMBER(w1) <= 0x0F))) {
+                // Segment 4 and 0x0B-0x0F are BK64's runtime animated-texture slots.
+                // Nothing static to resolve, so the segmented address just passes through.
                 w1 |= 1;
                 writer.Write(w0);
                 writer.Write(w1);
